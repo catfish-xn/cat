@@ -1008,6 +1008,22 @@
       "currentSha256": "9164136961297336b3fed3376a006ed77c36cdec879635715977ce30c79b80e6",
       "firstDifferentByte": 0
     },
+    "tests/fixtures/cue-dropped-systems.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2510,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "30678b7c74a623c0c7a80c0119bc211b5171350920d7cc0c5eb965f92e1a53c5",
+      "firstDifferentByte": 0
+    },
+    "tests/fixtures/cue-index-systems.json": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6832,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "58ef01a47560e101c798268983013096de4b1a2b873ea6b406a43a13c1cedbb1",
+      "firstDifferentByte": 0
+    },
     "tests/fixtures/epic-loot-oracle.cjs": {
       "previousBytes": 6972,
       "currentBytes": 7105,
@@ -4380,6 +4396,14 @@
       "currentSha256": "976f69d4f9ccda1c7b943c9f0379391d703194e4f3a70c14fb2aaf7327d5c63b",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-cue-dropped.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5178,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6d3fcd1cf9fe812b96f9381743839995f151558de0be3a69f3e81c3b8386c7ec",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-cue-override-627.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4738,9 +4762,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5118,
+      "currentBytes": 5172,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "443f1cd55ac40a176033be079e8ed03e542f6e471b7f4b8a756ff607e2307640",
+      "currentSha256": "fdabc98fa3f9d5bf9f754fb44a1751331a9d887ba0ac4c61e9d98aa7c8fec8a1",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {
