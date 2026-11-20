@@ -39,3 +39,20 @@ describe('Mordekaiser\'s grasp and empowered mace (Fable 11-19)', () => {
     }
   });
 });
+
+describe('Mordekaiser\'s attack swing (Fable 11-19)', () => {
+  it('his attack draws the swing of the attack clip we play, at the attack rank, facing the way he faces', async () => {
+    const { unitAnchor } = await import('../src/rendering/three-mode/vfx-ltk/particles');
+    const { Group } = await import('three');
+    const swing = CUE_OVERRIDES.mordekaiser!.find(cue => cue.system === '867941e7')!;
+    expect([swing.action, swing.variant, swing.event]).toEqual(['attack', undefined, 'cast-start']);
+    // Plain attacks only: his empowered attack clip has no swing.
+    expect(CUE_OVERRIDES.mordekaiser!.filter(cue => cue.system === '867941e7')).toHaveLength(1);
+    expect(effectImportance(swing)).toBe('attack');
+    // Its layout locator only lends its place (his points backward): the swing faces the way the unit faces.
+    const root = new Group(), body = new Group(), layout = new Group();
+    layout.name = 'C_Buffbone_Glb_Layout_Loc'; layout.rotation.y = Math.PI; body.add(layout); root.add(body);
+    const basis = (bone?: string) => [...unitAnchor(root, body, bone).basisInto(0, new Float32Array(9))].map(n => Math.round(n) || 0);
+    expect(basis(swing.bone)).toEqual(basis());
+  });
+});
