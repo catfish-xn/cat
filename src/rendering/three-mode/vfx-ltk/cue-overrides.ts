@@ -113,6 +113,8 @@ export function heimerRocketLandTick(k: number, n: number): number {
 }
 /** The rules' DRMUNDO_BLAST_AFTER_PULSE_TICKS (src/simulation/cast-windup.ts), mirrored like CAST_WINDUP_TICKS (rendering3d-timed-form checks it). */
 export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
+/** The rules' CAMILLE_KICK_TICKS (src/simulation/combat-g2-2.ts), mirrored as CAST_WINDUP_TICKS is (tests/sustain-stops.test.ts checks it). */
+export const CAMILLE_KICK_TICKS = 5;
 /** Tristana's shell flight in seconds (fitted, not original data). */
 const TRISTANA_SHELL_TRAVEL = 0.4;
 /**
@@ -334,7 +336,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   camille: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.3, duration: 1.5 },
     { system: 'b0db024b', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
-    { system: '174f1125', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
+    // Her heal (174f1125) plays as the kick's heal lands: the rules heal her by her kick's damage (CAMILLE_KICK_TICKS).
+    { system: '174f1125', action: 'cast', event: 'cast-start', delay: CAMILLE_KICK_TICKS / 20, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
     { system: '14e5f3aa', action: 'cast', event: 'cast-start', delay: 0.1, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
   ],
   // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out. The chain, the mark and the
@@ -896,10 +899,13 @@ export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
-export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace', readonly string[]>> = {
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'swain-ascension', readonly string[]>> = {
   // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
   'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
-  'twitch-volley': ['900dd2d2'],
+  // The volley's buff glow (2beb0657) goes with the volley's last shot too.
+  'twitch-volley': ['900dd2d2', '2beb0657'],
+  // Swain's demon form (takedowns extend it in the rules).
+  'swain-ascension': ['796b6af2'],
   // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
   'drmundo-heal': [],
   'vander-brace': ['68e8ca37'],
@@ -914,7 +920,7 @@ export const CUE_RULE_STOPS = {
   frenzyEnded: { systems: ['8c054bed'], on: 'source' },
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
-  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'] }, on: 'source' },
+  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
   abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] }, on: 'target' },
@@ -922,4 +928,51 @@ export const CUE_RULE_STOPS = {
   viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
   // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
   shredEnded: { systems: ['88a717e0'], on: 'target' },
+  // A champion's own status from its cast ends (statusChanged on that unit, an end reason): Leona's damage reduction.
+  ownStatusEnded: { systems: { leona: { kind: 'damage-reduction', systems: ['8d9a4ccc'] } }, on: 'source' },
+  // Jayce's back-form forge gives allies attack speed (a 'stat-buff' status): its gate glow plays at his forge
+  // (`<jayce>:g23-forge`, batch2-bridge.ts) and goes when the buff his cast gave ends on an ally (sustain-stops.ts ties each
+  // buffed ally to its forge). Another stat buff on that ally ending first ends it too (the display event names no source).
+  allyStatusEnded: { systems: { 'stat-buff': ['afb2ec69'] }, on: 'source' },
+  // Vex's opening area holds until her delayed second hit lands on that target (the next direct ability hit after the first).
+  vexSecondHit: { systems: ['8682c9ee', 'eb9da1d5'], on: 'target' },
 } as const;
+
+/**
+ * Persistent layers held until a rule event ends them (the stop tables above, or death through stopUnit) instead of the
+ * short cue the index gives: each listed cue runs up to this many seconds, without stopAfter. The rule event ends them;
+ * the cap is only a fallback for a missed event (Fable 11-19): the rule's longest time for that state plus 1 s (自定，非原版;
+ * tests/sustain-stops.test.ts checks each against the ability data). A state without a time limit in the rules has a cap of
+ * our own, said per line.
+ */
+export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
+  '2beb0657': 10, // Twitch volley buff → twitch-volley (no time limit: a recast re-arms the volley; 自定上限)
+  '796b6af2': 20, // Swain demon form → swain-ascension (each takedown extends it; 自定上限)
+  'ea21ae27': 5, // Garen shield → his shield layer ends
+  'e22b48b0': 5, // Loris shield → his shield layer ends
+  '8d9a4ccc': 4, // Leona damage reduction → that status ends
+  'afb2ec69': 4, // Jayce forge attack speed → the ally's status ends
+  'd86cc9bc': 60, // Draven spinning axes: every attack stays empowered after his first cast → his death (自定上限)
+  '56e6971e': 60, // Amumu passive → his death (自定上限)
+  '6889455c': 60, // Kog'Maw attack speed stacks (no end in the rules) → his death (自定上限)
+  '9f805f6e': 60,
+  // Ekko's mark on a target: the shred stays for the whole combat in the rules, so it shows 2 s after each hit, refreshed by
+  // the next (自定，非原版, Fable 11-19 GAP): held until death it would keep a slot per target hit, all fight long.
+  '5af49b76': 2,
+  '8682c9ee': 1.8, // Vex opening area → her delayed second hit
+  'eb9da1d5': 1.8,
+};
+/**
+ * Every held layer's next play replaces the last one instead of drawing a second layer over it: from the same caster, and
+ * for a hit cue on the same target (Ekko's mark). Held layers last seconds to a whole fight, so each recast or pulse would
+ * otherwise stack another (Draven's axes per cast; Amumu's passive per pulse filled 24 slots in a 1 v 2 by 10 s and pushed
+ * Draven's axes out: Node, 11-19).
+ */
+export const SUSTAIN_REFRESH: ReadonlySet<string> = new Set(Object.keys(SUSTAIN_CAPS));
+/**
+ * Held layers ranked below every skill body (Fable 11-19: Draven's axes and Kog'Maw's stacks, shown all fight long, are
+ * decoration): any skill visual takes their slot, and they come back when room frees (SUSTAIN_READMIT).
+ */
+export const SUSTAIN_RANKS: Readonly<Record<string, 'decorative'>> = { 'd86cc9bc': 'decorative', '6889455c': 'decorative', '9f805f6e': 'decorative' };
+/** Held layers that, evicted or kept out by a full board, wait for free room and play the rest of their time then. */
+export const SUSTAIN_READMIT: ReadonlySet<string> = new Set(['d86cc9bc', '6889455c', '9f805f6e']);
