@@ -4341,6 +4341,14 @@
       "currentSha256": "e91a7b48a405008c2abf92bc220adb8156fc14a6cb963a074f0811ca11b26e8c",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-emitter-alpha.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1619,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8a3059ba91059ef1b9e6c3649d3d7c32621a39399a759c34f9cc29931d843913",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-fade-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4571,9 +4579,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4737,
+      "currentBytes": 4769,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "531b026f58c2072db3a738c05781706e4a0384777cf4ed363a2795bdcd67afcd",
+      "currentSha256": "51b174dbc2110ea66574776d72f9d4ebdfe7431aaa1b7ebf5639e72b2a490954",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {
