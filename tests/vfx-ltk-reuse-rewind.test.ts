@@ -12,10 +12,8 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
     return fx;
   } };
 });
-import { createVfxLibrary, parseIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, LTK_RUN_STATS, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { FX_SCALE } from '../src/rendering/three-mode/vfx-ltk/particles';
-import { AXIS_SIGN } from '../src/rendering/three-mode/vfx-ltk/space';
+import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { createLtkRuntime, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
 // A parked system played again starts its run over (driver.reseed), whatever its seed (11-20: a replayed combat repeats
@@ -41,7 +39,6 @@ const skills: Record<string, TimelineCue[]> = {
   duo: [hit('boom', 0, { together: 'duo' })],
 };
 const systems = ['flourish', 'boom', 'shot', 'spark', 'curse', 'glow'];
-const toSystem = (p: { x: number; y: number; z: number }) => [p.x * AXIS_SIGN[0] / FX_SCALE, p.y / FX_SCALE, p.z / FX_SCALE];
 
 const tick = { now: 7 };
 async function setup() {

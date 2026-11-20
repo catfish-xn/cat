@@ -4644,9 +4644,9 @@
     "tests/vfx-ltk-reuse-rewind.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6361,
+      "currentBytes": 6061,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "58dfbe1214a9c02225fd1cce84adf800430a003ab5c027e24cf463c98c59d72c",
+      "currentSha256": "ce4b89152a12ce9f435f46212b07b48a9494aaa8f4061741427c0f200de32013",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {
