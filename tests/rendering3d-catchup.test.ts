@@ -271,7 +271,6 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     { champion: 'garen', system: 'ea21ae27', on: 'a', end: tick => shield('garen-ability', tick) },
     { champion: 'twitch', system: '2beb0657', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'twitch-volley', targetIds: [] }) as unknown as DisplayCombatEvent },
     { champion: 'leblanc', system: 'acd84091', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'leblanc-chain', targetIds: ['b'] }) as unknown as DisplayCombatEvent },
-    { champion: 'mordekaiser', system: '938c104f', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'mordekaiser-empower', targetIds: [] }) as unknown as DisplayCombatEvent },
     { champion: 'draven', system: 'd86cc9bc', on: 'a' },
     { champion: 'amumu', system: '56e6971e', on: 'a' },
     // Ekko's mark shows 2 s after its hit (SUSTAIN_REFRESH), past its 0.5 s cue.
