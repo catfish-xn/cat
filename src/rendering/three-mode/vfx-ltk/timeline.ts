@@ -71,7 +71,7 @@ export interface TimelineCue {
    * Hits of one play on one target merge: a row of this cue lands nothing when an earlier row of the same play at the same
    * target lands under this many rule ticks before (1: the same tick only). It applies to the rows a cue plays once per
    * strike (perStrike) or once per receipt (everyReceipt), whose targets may repeat. Several copies of one burst on one
-   * spot at once add up past white (an additive emitter born white). A display rule of our own, not original data.
+   * spot at once can add up to a flat white block. A display rule of our own, not original data.
    */
   readonly mergeTicks?: number;
   /**

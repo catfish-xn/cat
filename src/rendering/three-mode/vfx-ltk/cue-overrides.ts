@@ -407,8 +407,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // His split bombs, one per bomb the rules sent (receipt targets after the first, repeats kept): each leaves the main
     // bomb's crater when it lands and arcs to its enemy (the same missile, 52963b0a), and bursts there (04c3cba0). The rules
     // still settle every bomb on the cast tick; the display times them off the main bomb's landing until the rules time them.
-    // Bombs landing on one enemy together burst once there (mergeTicks): stacked copies of the burst's white-born additive
-    // heat flash (SmokeHeat) added up to a flat white block (11-20).
+    // Bombs landing on one enemy together burst once there (mergeTicks): stacked copies of the burst at one spot added up
+    // to a flat white block (11-20).
     { system: '52963b0a', action: 'cast', event: 'projectile', everyReceipt: true, fromPrimary: true, delay: ZIGGS_BOMB.lands, duration: ZIGGS_BOMB.split,
       travelSeconds: ZIGGS_BOMB.split, arc: ZIGGS_BOMB.arc, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC', optional: true },
     { system: '04c3cba0', action: 'cast', event: 'hit', everyReceipt: true, mergeTicks: 1, delay: ZIGGS_BOMB.lands + ZIGGS_BOMB.split, duration: 1.2, ownLife: true, optional: true },
