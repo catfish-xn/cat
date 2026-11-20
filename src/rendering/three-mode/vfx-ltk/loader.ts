@@ -171,7 +171,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
         || (cue.selfFlight !== undefined && (typeof cue.selfFlight !== 'boolean' || cue.event !== 'projectile'))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
-        || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self', 'single'].includes(cue.variant)))
+        || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'empowered-alt', 'self', 'single'].includes(cue.variant)))
         || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
