@@ -45,7 +45,7 @@ npx vite --port 5311 --strictPort --host 127.0.0.1
 node dev/castcmp/v-capture.cjs camille out/cast-camille --dist 1 --star 3
 ```
 
-常用参数：`--dist` 是目标距离（格），`--star` 是星级（默认 3）；`--ms` 是时长，或用 `--times` 直接给时间点；`--warm N` 表示正式录之前先放 N 次技能，用于多段技能选段；`--form`、`--move`、`--outcome` 用来指定形态和施法分支；`--slam 1` 是维克托的砸地。
+常用参数：`--dist` 是目标距离（格），`--star` 是星级（默认 3）；`--ms` 是时长，或用 `--times` 直接给时间点；`--warm N` 表示正式录之前先放 N 次技能，用于多段技能选段；`--form`、`--move`、`--outcome` 用来指定形态和施法分支（`--move`、`--outcome` 只用于假人；真实模式 `--real 1` 下带了会直接报错退出，因为真实对局自己决定分支）；`--slam 1` 是维克托的砸地。
 
 `--hide-units 1`：不画单位模型（血条、星级、影子和特效照画），每帧左上角和 keyframes 图头都标“单位已隐藏”。`--pin-foe N`（只用于假人，N 为 1–5）：只放一个假人，在施法者正前方同一列 N 格处，不走动、不还手，施法者也不动，技能只打它；每帧和图头标“假人”，gate.json 记 `pinFoe`、`hideUnits`，`dist` 记为 N。不带这两个参数时行为不变。
 

@@ -52,6 +52,9 @@ async function unbind(page, tick, rebind) {
   await page.evaluate(t => window.__h.events([{ type: 'bindingChanged', tick: t, eventSeq: t, unitId: 'me', bound: true, reason: 'combat-start' }]), tick + 100);
 }
 (async () => {
+  // --move / --outcome pick a dummy's cast branch (harness.ts builds a castOutcome event from them). A real combat decides
+  // its own branch and the harness ignores both there, so refuse them instead of recording something else (Fable 11-20).
+  if (opt('real') && (opt('move') !== undefined || opt('outcome') !== undefined)) throw new Error('--move / --outcome are for dummies only: a real combat picks its own cast branch');
   fs.mkdirSync(out, { recursive: true });
   const mark = timer(); const launch = launchOptions(opt);
   const browser = await chromium.launch(launch.options); mark('launched (' + launch.gl + ')');

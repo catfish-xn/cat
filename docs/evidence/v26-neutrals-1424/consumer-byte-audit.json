@@ -11,9 +11,9 @@
     "tests/ability-effect-ended.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 14056,
+      "currentBytes": 14889,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "027ed553c0b7d24af77a5a2ef3e9d42ae4519f5bf1790de0fb9a2aad3549f175",
+      "currentSha256": "9a482e02e54e0605ce348fd97685b06474e06b8d4725fbc32d614f139b44ada2",
       "firstDifferentByte": 0
     },
     "tests/ambessa-cast-branch.test.ts": {
@@ -1302,7 +1302,7 @@
       "previousBytes": 0,
       "currentBytes": 69922,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "32144089f6bd9ebe8f77018c61a6299ec7b374b9f801d45ab6feb5bdc3532e8a",
+      "currentSha256": "5c0853668146dd3b73ebf8dc379b775a7726632d3703f7d3e5952f6571db8b73",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -2634,9 +2634,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 55610,
+      "currentBytes": 56064,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "5ab99106a64e32e1c4d4c43f5edd487b9e990cdc76be093323417482c3c89a5f",
+      "currentSha256": "752eb82ec37985edbec1db83d17ed30b8c98f5ed7e15f336d96ba41c9a8a572d",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-arena-scale.test.ts": {
@@ -3829,9 +3829,9 @@
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8647,
+      "currentBytes": 10196,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "538268525a154ee9e01875b65577c851e0f7c5468c8e88abfa6df971dae67231",
+      "currentSha256": "b9b9d4ef7be1abc43bf4cf9a41fb7cfb54fcccaf9a52e3d815c4e46465d9248f",
       "firstDifferentByte": 0
     },
     "tests/t10-combat-ops.test.ts": {
@@ -4439,9 +4439,9 @@
     "tests/vfx-ltk-early-stop-a.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2007,
+      "currentBytes": 2063,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "aec5970c7916196a876be371ae30d392acf495edd2130ee40ccb94871446fa6a",
+      "currentSha256": "88ceff68f059145edb8900bebd04d3ae526c4f09824a052fa403478c40f3bf38",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-emission.test.ts": {
@@ -4450,6 +4450,14 @@
       "currentBytes": 6411,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "e91a7b48a405008c2abf92bc220adb8156fc14a6cb963a074f0811ca11b26e8c",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-emitter-alpha.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1619,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8a3059ba91059ef1b9e6c3649d3d7c32621a39399a759c34f9cc29931d843913",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-fade-out.test.ts": {
@@ -4482,6 +4490,14 @@
       "previousSha256": "666186f53e870d54824dae5d18d5d2006f083cf0539877febfb26ebedc77044c",
       "currentSha256": "fe9cfcddd15f19cd58925c247d8a1c4fcd35525be9fab0eff6fcc12ed0076bb2",
       "firstDifferentByte": 7204
+    },
+    "tests/vfx-ltk-from-primary.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5524,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4a06278191f1caf63a9d5f5d3af1a7890693b06909fd266a5aac756013985db1",
+      "firstDifferentByte": 0
     },
     "tests/vfx-ltk-ground-line.test.ts": {
       "previousExists": false,
@@ -4562,6 +4578,14 @@
       "currentSha256": "45dc37dc275fce131c41c073ee4bd0eb99f38d85b1a3dddfc49443c0fd68ed72",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-morde-grasp.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4061,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "69f1f653316bffb789d605d88fc6f260f6cb8dd8d182d4c5fe9dc479fe42ae9b",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-mundo-blast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4581,9 +4605,9 @@
     "tests/vfx-ltk-own-life.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5225,
+      "currentBytes": 7110,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "96d2b2c657c8bc97922d90dbe9f9dc829483eb4c97ea86b20663a90278d24556",
+      "currentSha256": "38bd7cebb9c90e66a1d5bee9963916ff277916c9f5033af346b70299484a7c0d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-particles.test.ts": {
@@ -4631,6 +4655,14 @@
       "currentBytes": 4902,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "ec0fa89430e1f85ecf70df43a222b45d10bf90ae95c3afff196c560042f04ad7",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-reuse-rewind.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6061,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "ce4b89152a12ce9f435f46212b07b48a9494aaa8f4061741427c0f200de32013",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-review-j.test.ts": {
@@ -4682,9 +4714,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4737,
+      "currentBytes": 5118,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "531b026f58c2072db3a738c05781706e4a0384777cf4ed363a2795bdcd67afcd",
+      "currentSha256": "443f1cd55ac40a176033be079e8ed03e542f6e471b7f4b8a756ff607e2307640",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {
