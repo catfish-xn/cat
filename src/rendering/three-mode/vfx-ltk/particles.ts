@@ -5,6 +5,7 @@ import { AXIS_SIGN } from './space';
 import { BOARD_CELL } from './fx-size';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
 import type { MissileFlight } from './engine/model/missile';
+import type { StrikeCurve } from './timeline';
 import { createDriver } from './engine/simulation/driver';
 import type { Source } from './engine/simulation/particleRead';
 import { createQuads } from './rendering/components/Quads';
@@ -140,8 +141,9 @@ function bodyHeightAbove(root: Object3D, body: Object3D): number {
 /** The buff locators that only mark a place on the unit. Their own axes differ per skeleton (11-06 four-way check: the ground
  * locator's +Z faces forward on Zyra but backward on Irelia, Kog'Maw and Akali; Kog'Maw's head and chest locators face
  * backward too, Irelia's chest sideways), while bins author "in front" as the unit's facing. Weapon and named bones keep
- * their own axes (Kog'Maw's W mouth spray rides the weapon locator's +Y toward the target). */
-const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center|chest|head)_loc$/i;
+ * their own axes (Kog'Maw's W mouth spray rides the weapon locator's +Y toward the target). The layout locator is one too
+ * (11-19: on Smeech its +Z faces backward, and his attack swing drew behind him, away from his target). */
+const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center|chest|head|layout)_loc$/i;
 /**
  * `aim` (a cast's primary target) turns the unit-facing basis toward it: the model turns over TURN_SECONDS after the
  * cast event, and a cast-start from a resting unit otherwise faced the camera (11-07: Zyra's roots thrown at open ground).
@@ -186,9 +188,13 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
 }
 /**
  * A cue projectile's flight: it lands `seconds` after it launches, however much of its path is a drop. With `arc` it flies
- * a gravity arc (TimelineCue.arc), still landing after `seconds`.
+ * a gravity arc (TimelineCue.arc), with `curve` a perStrike spline, still landing after `seconds`.
  */
-export function projectileFlight(seconds: number, arc?: { readonly gravity: number; readonly targetOffset: number }): MissileFlight {
+export function projectileFlight(seconds: number, arc?: { readonly gravity: number; readonly targetOffset: number }, curve?: StrikeCurve): MissileFlight {
+  // A perStrike curve (TimelineCue.perStrike.fan): the engine's fixed-time Hermite spline from the launch point, so it
+  // still lands after `seconds`.
+  if (curve) return { ...FIRST_FLIGHT, movement: { kind: 'fixedTimeSpline', travelTime: seconds,
+    spline: { startOffset: [0, 0, 0], control1: curve.control1, control2: curve.control2, fromMissile: true } } };
   return arc
     ? { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds }, height: { kind: 'gravity', gravity: arc.gravity }, targetOffset: arc.targetOffset }
     : { ...FIRST_FLIGHT, movement: { kind: 'fixedTime', travelTime: seconds } };
@@ -199,6 +205,10 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   fixedTime?: boolean;
   /** An arcing projectile's gravity height solver and aimed-point lift (TimelineCue.arc); it implies fixedTime. */
   arc?: { readonly gravity: number; readonly targetOffset: number };
+  /** A perStrike projectile's curve (TimelineCue.perStrike.fan); it implies fixedTime. */
+  curve?: StrikeCurve;
+  /** Each particle's red, green and blue times this when drawn (TimelineCue.brightness). Omitted means 1. */
+  brightness?: number;
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
   fadeOut?: boolean;
   /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
@@ -223,7 +233,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       // Caitlyn's comet, mostly a drop, arrived at a third of its travelSeconds). A falling projectile (fixedTime) flies a
       // fixed time instead; every other cue projectile keeps its speed until that change is reviewed on its own.
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: spec.fixedTime || spec.arc ? projectileFlight(spec.projectileSeconds, spec.arc) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: spec.fixedTime || spec.arc || spec.curve ? projectileFlight(spec.projectileSeconds, spec.arc, spec.curve) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
@@ -303,7 +313,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
+      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.curve = next.curve; spec.brightness = next.brightness; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
@@ -330,7 +340,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
       const fade = (spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1) * (ending ? fadeAt(elapsed, ending.to, ending.from) : 1);
-      withDrawFade(fade, () => { for (const draw of draws) draw.update(state); });
+      withDrawFade(fade, () => { for (const draw of draws) draw.update(state); }, spec.brightness ?? 1);
     },
     dispose() { if (closed) return; closed = true; object.removeFromParent(); for (const draw of draws) draw.dispose(); object.clear(); },
   };
@@ -370,12 +380,14 @@ export function childRoomOf(measured: { room: number; live: number } | null): Ch
 /**
  * The most root particles a run of `prepared` holds at once: the same engine runs it, without drawing, for `seconds` at
  * 1/30 s steps (stopped at `stopAfter` when given). In place, or, given a projectile cue's `travelSeconds`, flown
- * MEASURE_FLIGHT over that time, as the cue flies it. What a first play reserves before any play was seen.
+ * MEASURE_FLIGHT over that time, as the cue flies it, at the cue's `scale`. What a first play reserves before any play was seen.
  */
-export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number, capacity = ROOT_PARTICLES, travelSeconds?: number): number {
+export function measurePeak(prepared: PreparedVfx, seconds: number, stopAfter?: number, capacity = ROOT_PARTICLES, travelSeconds?: number, scale = 1): number {
   const anchor = pointAnchor([0, 0, 0]);
   const flies = travelSeconds !== undefined && travelSeconds > 0;
   const driver = createDriver(1, { capacity, seekable: false, childBudget: CHILD_PARTICLES, maxChildren: 8 });
+  // At the scale the cue runs at: a trail emitting by distance counts the flight in the system's own units (emit.ts rateOf).
+  driver.setScale(scale);
   driver.swap(prepared.model);
   if (prepared.surfaces) driver.setSurfaces(prepared.surfaces);
   driver.steer({ life: 'once', height: 0, joints: () => anchor, stopAt: stopAfter, motion: flies

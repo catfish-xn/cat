@@ -17,6 +17,13 @@ export interface TimelineCue {
   readonly branch?: string;
   readonly primary?: boolean;
   readonly travelSeconds?: number;
+  /**
+   * Flight by distance (fitted, not original data): the flight takes max(min, ceil(cells × perCell)) rule ticks of 50 ms,
+   * cells being the board distance between caster and target where they stand when the play starts. On a projectile it
+   * sets travelSeconds, keeping what the cue holds past its nominal flight; on a hit the cue's delay counts from that
+   * landing. A cue without a target, or whose caster or target is gone, keeps its own times.
+   */
+  readonly flightTicks?: { readonly perCell: number; readonly min: number };
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
   /**
@@ -27,10 +34,12 @@ export interface TimelineCue {
   /** The skill's own body, kept like an impact though it plays on the caster (Nunu's cloud on himself). */
   readonly main?: boolean;
   /**
-   * A hit or projectile held at the body rank instead of critical (effect-budget.ts effectImportance): a frequent passive
-   * visual that must not crowd skill impacts out (Steb's heal share). A display priority decision, not original data.
+   * A decided rank instead of the event's own (effect-budget.ts effectImportance): 'body' for a hit or projectile that must
+   * not crowd skill impacts out (Steb's heal share) or a cast-start that draws the skill itself; 'decorative' for a
+   * flourish a plain attack or a place's run may end (cue-ranks.ts), or a visual that must give way to every skill and
+   * basic-attack visual (Heimerdinger's rocket hits, Fable 11-19). A display priority decision, not original data.
    */
-  readonly rank?: 'body';
+  readonly rank?: 'body' | 'decorative';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
@@ -45,6 +54,22 @@ export interface TimelineCue {
    */
   readonly arc?: { readonly gravity: number; readonly targetOffset: number };
   /**
+   * One row per strike: for a cast whose rules strike several times (its targets list keeps one entry a strike, repeats
+   * included; Heimerdinger's rockets), this cue plays once per entry instead of once per distinct target. The k-th of n
+   * starts `strikeOffsetTicks(k, n, …)` rule ticks after the cue's delay, and a projectile row with `fan` flies a curve that
+   * leaves to the side and climbs before it turns onto its own target (`strikeCurve`). Designed display values, not original
+   * data. Entries naming the caster are left out. `shown` and `tickCap` bound how many projectile rows a volley draws.
+   */
+  readonly perStrike?: {
+    readonly staggerTicks: number; readonly spreadTicks: number; readonly fan?: StrikeFan;
+    /** Rows only for the first `shown` strikes of a cast; later strikes play nothing of this cue (their damage still shows). */
+    readonly shown?: number;
+    /** A strike lands no row of this cue when an earlier strike of the same cast at the same target lands under this many ticks before. */
+    readonly mergeTicks?: number;
+    /** At most this many of this system's rows queued on one rule tick across every caster (runtime); the rest are left out. */
+    readonly tickCap?: number;
+  };
+  /**
    * A projectile whose caster is its own target still flies (from its bone to its own targetBone), instead of being left
    * out with its landing hits moved to its release (the default for a self-projectile). Off unless set per cue.
    */
@@ -57,6 +82,11 @@ export interface TimelineCue {
    * `FX_SCALE`.
    */
   readonly scale?: number;
+  /**
+   * Each particle's red, green and blue times this when drawn, for this cue only (particleRead withDrawFade gain). Omitted
+   * means 1. A display choice per cue (Heimerdinger's rockets, Fable 11-19), never a value from the original.
+   */
+  readonly brightness?: number;
   /**
    * It plays as long as its system does on its own (runtime.ts ownSeconds, read from the asset) and is not cut short:
    * `duration` is only what it keeps where the asset gives no end. Never with `stopAfter`.
@@ -134,12 +164,40 @@ export interface TimelineCue {
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
   readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;
+  /** Which strike of a perStrike cue this row is (0-based), and its flight curve when the cue fans out. */
+  readonly strike?: number;
+  readonly curve?: StrikeCurve;
   /** A board point's spawn faces this point, as a hit faces from its target toward the caster (LtkPlayOptions.boardFacing). */
   readonly facing?: WorldPoint;
   /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
   readonly aimId?: string;
   /** TimelineCue.fromPrimary: the unit whose place the projectile starts from. */
   readonly fromId?: string;
+}
+/** How far a perStrike projectile's curve swings: `side` at most to either side and `lift` up, as shares of its flight. */
+export interface StrikeFan { readonly side: number; readonly lift: number }
+/** One strike's start and end tangents (engine fixedTimeSpline, target-facing frame: right, up, forward; shares of distance). */
+export interface StrikeCurve { readonly control1: readonly [number, number, number]; readonly control2: readonly [number, number, number] }
+/** Rule ticks are 50 ms. */
+export const STRIKE_TICK_SECONDS = 0.05;
+/**
+ * Ticks after the first strike that the k-th of n strikes comes: `stagger` apart, squeezed so the whole volley fits in
+ * `spread` ticks, rounded to whole ticks. Designed, not original data.
+ */
+export function strikeOffsetTicks(k: number, n: number, stagger: number, spread: number): number {
+  if (n <= 1 || k <= 0) return 0;
+  return Math.round(k * Math.min(stagger, spread / (n - 1)));
+}
+/**
+ * The k-th of n strikes' curve: the volley's start directions spread evenly from -side to +side across the caster's
+ * facing, taken alternately from either end so consecutive rockets leave on opposite sides; each climbs about `lift`
+ * (varied a little by k) and comes down onto its target from above. Designed, not traced from any original path.
+ */
+export function strikeCurve(k: number, n: number, fan: StrikeFan): StrikeCurve {
+  const slot = k % 2 === 0 ? k / 2 : n - 1 - (k - 1) / 2;
+  const across = n <= 1 ? 0 : -1 + (2 * slot) / (n - 1);
+  const lift = fan.lift * (0.85 + 0.3 * ((k * 0.6180339887) % 1));
+  return { control1: [fan.side * across, lift, 0.35], control2: [0, -lift * 0.75, 1] };
 }
 export interface TimelineMapping {
   readonly spawns: readonly TimelineSpawn[];
@@ -152,6 +210,20 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
   const unique = [...new Set(targets)], spawns: TimelineSpawn[] = [];
   const unsupported: { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[] = [];
   for (const cue of cues) {
+    if (cue.perStrike && cue.event !== 'cast-start' && cue.location !== 'board') {
+      const strikes = targets.filter(id => id !== sourceId), { staggerTicks, spreadTicks, fan } = cue.perStrike;
+      if (!strikes.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
+      const { shown, mergeTicks } = cue.perStrike, landed = new Map<string, number>();
+      strikes.forEach((targetId, k) => {
+        if (shown !== undefined && k >= shown) return;
+        const at = strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks), last = landed.get(targetId);
+        if (mergeTicks !== undefined && last !== undefined && at - last < mergeTicks) return;
+        landed.set(targetId, at);
+        spawns.push({ ...cue, sourceId, targetId, strike: k, delay: cue.delay + at * STRIKE_TICK_SECONDS,
+          ...(cue.event === 'projectile' && fan ? { curve: strikeCurve(k, strikes.length, fan) } : {}) });
+      });
+      continue;
+    }
     if (cue.location === 'board') {
       if (!board || board.some(n => !Number.isFinite(n))) unsupported.push({ cue, reason: 'missing-point' });
       else spawns.push({ ...cue, sourceId, point: board });

@@ -20,6 +20,16 @@ import { mordekaiserAnimationReplay } from './fixtures/mordekaiser-animation-rep
 
 // Vander is left out: the tests below play him from this index's own synthetic cues.
 const RULE_END_CHAMPIONS = ['warwick', 'blitzcrank', 'vi', 'malzahar', 'drmundo'];
+// Persistent layers held until a rule event (cue-overrides.ts SUSTAIN_CAPS): each played from its index cue (short, as the
+// export gives it) or its champion's override, then held by its cap until the event or a death ends it.
+const SUSTAIN_INDEX: Record<string, TimelineCue[]> = {
+  leona: [{ system: '8d9a4ccc', event: 'cast-start', delay: 0, duration: 2.8 }],
+  loris: [{ system: 'e22b48b0', event: 'cast-start', delay: 0, duration: 0.8 }],
+  draven: [{ system: 'd86cc9bc', event: 'cast-start', delay: 0, duration: 1, stopAfter: 0.5 }],
+  amumu: [{ system: '56e6971e', event: 'cast-start', delay: 0, duration: 0.9, stopAfter: 0.7 }],
+  ekko: [{ system: '5af49b76', event: 'hit', delay: 0, duration: 0.5 }],
+};
+const SUSTAIN_OVERRIDDEN = ['twitch', 'garen'];
 const SINGED_BUFF = 'singed_tft13_singed_base_w_ally_buf';
 describe('real 3D renderer catch-up and effect cleanup', () => {
   let core: typeof import('../src/rendering3d'), three: typeof import('three');
@@ -46,7 +56,7 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     vi.spyOn(console, 'info').mockImplementation(() => {});
     vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => { callbacks.set(++nextId, callback); return nextId; });
     vi.stubGlobal('cancelAnimationFrame', (id: number) => callbacks.delete(id));
-    const manifest = { schemaVersion: 1, models: { ...Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', 'ambessa', 'jumper', 'leblanc', ...RULE_END_CHAMPIONS, ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
+    const manifest = { schemaVersion: 1, models: { ...Object.fromEntries(['toy', 'vander', 'mordekaiser', 'renata', 'singed', 'ambessa', 'jumper', 'leblanc', ...RULE_END_CHAMPIONS, ...Object.keys(SUSTAIN_INDEX), ...SUSTAIN_OVERRIDDEN, ...Object.keys(BATCH1_TIMELINES)].map(id => [id, { path: `${id}.glb` }])),
       // Listed cast clips (overhead-follow.ts CAST_TRAVEL_CLIPS): Ambessa's chain strike, Smeech's leap on the jumper's skeleton.
       ambessa: { path: 'ambessa.glb', animations: { idle: 'idle', attack: 'attack', cast: 'tft13_ambessa_spellchain_strike', death: 'death' } },
       smeech: { path: 'smeech.glb', animations: { idle: 'idle', attack: 'attack', cast: 'spell', death: 'death' } } },
@@ -69,8 +79,9 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     const flight: TimelineCue = { system: 'flight', event: 'projectile', delay: .05, duration: .3, travelSeconds: .3 };
     const ltkIndex = { version: 1, systems: { ...Object.fromEntries(Object.values(BATCH1_TIMELINES).flatMap(cues => cues.map(c => [c.system, c.system + '.json']))),
       // The systems a rule's end stops, LeBlanc's and the status champions' (their cues come from cue-overrides.ts, which wins over this index).
-      ...Object.fromEntries([...Object.values(CUE_END_STOPS).flat(), ...['leblanc', ...RULE_END_CHAMPIONS].flatMap(id => CUE_OVERRIDES[id]!.map(cue => cue.system))].map(system => [system, system + '.json'])), start: 'start.json', hit: 'hit.json', flight: 'flight.json' },
-      assets: { 'synthetic.tex': 'texture.png' }, skills: { ...BATCH1_TIMELINES, vander: [start, hit], kogmaw: [start, flight, hit], leblanc: [start], ...Object.fromEntries(RULE_END_CHAMPIONS.map(id => [id, [start]])) } };
+      ...Object.fromEntries([...Object.values(CUE_END_STOPS).flat(), ...['leblanc', ...RULE_END_CHAMPIONS, ...SUSTAIN_OVERRIDDEN].flatMap(id => CUE_OVERRIDES[id]!.map(cue => cue.system)),
+        ...Object.values(SUSTAIN_INDEX).flat().map(cue => cue.system)].map(system => [system, system + '.json'])), start: 'start.json', hit: 'hit.json', flight: 'flight.json' },
+      assets: { 'synthetic.tex': 'texture.png' }, skills: { ...BATCH1_TIMELINES, vander: [start, hit], kogmaw: [start, flight, hit], leblanc: [start], ...Object.fromEntries(RULE_END_CHAMPIONS.map(id => [id, [start]])), ...SUSTAIN_INDEX, ...Object.fromEntries(SUSTAIN_OVERRIDDEN.map(id => [id, [start]])) } };
     vi.doMock('../src/rendering/three-mode/asset-reader', () => ({ createAssetReader: () => ({
       readJson: async (url: string) => url.includes('/vfx-ltk/') ? url.endsWith('/index.json') ? ltkIndex : syntheticSystem()
         : ({ schemaVersion: 2, limits: { maxParticles: 5, maxDuration: 1 }, emitters: [{ kind: 'quad', texture: 'shared.png', emission: { mode: 'burst', count: 1 }, lifetime: 1 }] }),
@@ -248,6 +259,43 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     // A stopped run lingers at most half a second for its particles to die.
     for (let i = 0; i < 30; i++) await advance(25);
     expect(shown()).not.toContain(system);
+  });
+
+  // Every persistent layer of SUSTAIN_CAPS played through the real loop: held past its export's short cue, ended by its rule
+  // event (within the stop's half second), and gone at once when the unit carrying it dies.
+  const shield = (ability: string, tick: number): DisplayCombatEvent => ({ type: 'shieldLayerChanged', tick, eventSeq: tick, reason: 'expired', remaining: 0,
+    targetId: 'a', key: JSON.stringify(['standalone', 'a', 'ability', ability, 'a', 0, null, 'a', 'source']) }) as unknown as DisplayCombatEvent;
+  const SUSTAIN_CASES: { champion: string; system: string; on: 'a' | 'b'; end?: (tick: number) => DisplayCombatEvent; held?: number }[] = [
+    { champion: 'leona', system: '8d9a4ccc', on: 'a', end: tick => ({ type: 'statusChanged', tick, eventSeq: tick, targetId: 'a', kind: 'damage-reduction', effectiveMagnitudeBps: 0, reason: 'expired' }) as unknown as DisplayCombatEvent },
+    { champion: 'loris', system: 'e22b48b0', on: 'a', end: tick => shield('loris-ability', tick) },
+    { champion: 'garen', system: 'ea21ae27', on: 'a', end: tick => shield('garen-ability', tick) },
+    { champion: 'twitch', system: '2beb0657', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'twitch-volley', targetIds: [] }) as unknown as DisplayCombatEvent },
+    { champion: 'draven', system: 'd86cc9bc', on: 'a' },
+    { champion: 'amumu', system: '56e6971e', on: 'a' },
+    // Ekko's mark shows 2 s after its hit (SUSTAIN_REFRESH), past its 0.5 s cue.
+    { champion: 'ekko', system: '5af49b76', on: 'b', held: 1.5 },
+  ];
+  const sustainBoard = async (champion: string, held = 3.5) => {
+    const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion }, { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
+    listener.frame({ ...board, fighting: false }); await debug().ltk.warm(champion); await flush(); listener.frame(board);
+    listener.events([{ ...cast(1), targetIds: ['b'] } as DisplayCombatEvent]);
+    // Past every short cue the export gives these layers (the longest, Leona's, is 2.8 s).
+    for (let i = 0; i < held * 40; i++) await advance(25);
+  };
+  const sustainShown = () => debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem as string);
+  it.each(SUSTAIN_CASES.filter(c => c.end))('$champion $system: held past its short cue until its rule event ends it', async ({ champion, system, end }) => {
+    await sustainBoard(champion);
+    expect(sustainShown()).toContain(system);
+    listener.events([end!(80)]);
+    for (let i = 0; i < 30; i++) await advance(25);
+    expect(sustainShown()).not.toContain(system);
+  });
+  it.each(SUSTAIN_CASES)('$champion $system: gone at once when the unit carrying it dies', async ({ champion, system, on, held }) => {
+    await sustainBoard(champion, held);
+    expect(sustainShown()).toContain(system);
+    listener.events([{ type: 'death', tick: 80, eventSeq: 80, unitId: on } as unknown as DisplayCombatEvent]);
+    await advance(25);
+    expect(sustainShown()).not.toContain(system);
   });
 
   it('drmundo: his cast and buff systems end with his timed form (at his closing blast\'s tick), not at his heal\'s end', async () => {

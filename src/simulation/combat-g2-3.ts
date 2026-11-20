@@ -286,7 +286,10 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
 /** Timed Swain pulses sample current adjacency; takedown extensions remain in the snapshot. */
 export function advanceG23Skills(ctx:AbilityContext):void{
  for(const u of ctx.units.filter(u=>u.alive&&u.hp>0)){
-  const a=u.g23?.ascension;if(!a||ctx.tick>a.untilTick||ctx.tick<a.nextPulseTick)continue;
+  const a=u.g23?.ascension;
+  // Display only: the demon form is over on the first tick past untilTick (takedowns may have moved it later).
+  if(a&&ctx.tick===a.untilTick+1)ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'swain-ascension',targetIds:[]});
+  if(!a||ctx.tick>a.untilTick||ctx.tick<a.nextPulseTick)continue;
   a.nextPulseTick+=20;
   ctx.heals.push({source:origin(u),targetId:u.id,amount:amount(u,ctx.tick,{ap:variable(u,'HealPerSecond')})});
   for(const t of enemies(u,ctx.units).filter(t=>hexDistance(u.cell,t.cell)<=1))hit(ctx,u,t,amount(u,ctx.tick,{ap:variable(u,'DamagePerSecond')}),a.actionSeq,10000+ctx.tick,'magic',true);

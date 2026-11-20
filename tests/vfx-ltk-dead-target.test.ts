@@ -27,10 +27,14 @@ const skills: Record<string, TimelineCue[]> = {
   later: [hit('boom', 0.3)],
   missile: [shot],
   swing: [{ ...hit('spark', 0), action: 'attack' }],
+  // A plain attack's missile.
+  volley: [{ ...shot, action: 'attack' }],
+  // A cast's own short flourish (decorative by its length): the skill showing.
+  swipe: [{ system: 'flourish', action: 'cast', event: 'cast-start', delay: 0, duration: 0.9 }],
   // An attack and its empowered form (a variant), each landing 0.3 s in.
   bolt: [{ ...hit('spark', 0.3), action: 'attack' }, { ...hit('boom', 0.3), action: 'attack', variant: 'empowered' }],
   curse: [hit('curse', 0.3, { livingTarget: true }), hit('boom', 0.3)],
-  // A long flourish (decorative): a living target's hit may evict it, a hit at a dead target's place may not.
+  // A long flourish (decorative): a living target's hit may evict it, and so may a hit at a dead target's place (Fable 11-17).
   glow: [{ system: 'glow', action: 'passive', event: 'cast-start', delay: 0, duration: 5 }],
   pair: [hit('boom', 0)],
   // One hit on every target, the rows starting together (one together group): a living and a dead target mixed.
@@ -158,8 +162,8 @@ describe('vfx-ltk casts at dead targets', () => {
     expect(() => parseIndex(index({ ...hit('boom', 0), livingTarget: 1 }))).toThrow();
   });
 
-  // Fable 11-13 (A): a row at a dead target's place only takes free room. It never waits, never evicts, so it only adds.
-  it('on a full board a hit at a dead target\'s place is dropped and evicts nothing; the living target\'s hit starts that frame', async () => {
+  // Fable 11-13 (A): a row at a dead target's place never waits. Fable 11-17: it may end the earliest flourish, and only that.
+  it('on a full board of flourishes a hit at a dead target\'s place ends the earliest one; the living target\'s hit starts that frame', async () => {
     const { runtime, scene, units, step, of } = await setup();
     for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
     step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
@@ -171,12 +175,13 @@ describe('vfx-ltk casts at dead targets', () => {
     expect(runtime.play('pair', 'caster', ['b', 'a'])).toBe(true);
     step(1 / 60);
     const booms = of('boom').filter(entry => entry.fx.object.parent === scene);
-    expect(booms).toHaveLength(1);
-    expect(booms[0].options.attachment).toBe(units.get('a'));
-    expect(LTK_RUN_STATS.placeDropped.boom).toBe(1);
+    expect(booms).toHaveLength(2);
+    expect(booms.some(entry => entry.options.attachment === units.get('a'))).toBe(true);
+    expect(LTK_RUN_STATS.placeDropped.boom ?? 0).toBe(0);
     expect(LTK_RUN_STATS.dropped.boom ?? 0).toBe(dropped);
-    // The living hit made its own room (one flourish evicted); the dead one's made none.
+    // One flourish ended, the earliest: the place's run made the room and the living hit took it (a place's run holds no slot).
     expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - 1);
+    expect(of('glow')[0]!.fx.object.parent).toBeNull();
     expect(runtime.queued).toBe(0);
     runtime.dispose();
   });
@@ -203,6 +208,84 @@ describe('vfx-ltk casts at dead targets', () => {
     }
   });
 
+  // Fable 11-17: on a full board each of the four newcomers, by what it may end.
+  it('full board, four newcomers: a hit, an attack and a place run each end the earliest flourish; a flourish ends nothing', async () => {
+    for (const newcomer of ['hit', 'attack', 'place', 'flourish'] as const) {
+      const { runtime, scene, units, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
+      const first = of('glow')[0]!, yielded = LTK_RUN_STATS.yielded.glow ?? 0;
+      if (newcomer === 'place') units.get('b')!.alive = false;
+      if (newcomer === 'hit') expect(runtime.play('pair', 'caster', ['a'])).toBe(true);
+      if (newcomer === 'attack') expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
+      if (newcomer === 'place') expect(runtime.play('pair', 'caster', ['b'])).toBe(true);
+      if (newcomer === 'flourish') expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
+      step(1 / 60);
+      const glows = of('glow').filter(entry => entry.fx.object.parent === scene);
+      expect((LTK_RUN_STATS.yielded.glow ?? 0) - yielded).toBe(newcomer === 'flourish' ? 0 : 1);
+      if (newcomer === 'flourish') { expect(glows).toHaveLength(MAX_LTK_SYSTEMS); expect(first.fx.object.parent).toBe(scene); }
+      else {
+        expect(glows).toHaveLength(MAX_LTK_SYSTEMS - 1);
+        expect(first.fx.object.parent).toBeNull();
+        expect(of(newcomer === 'attack' ? 'spark' : 'boom').filter(entry => entry.fx.object.parent === scene)).toHaveLength(1);
+      }
+      runtime.dispose();
+    }
+  });
+
+  it('attacks and place runs end only flourishes: on a full board of attacks a newcomer attack or place run ends nothing', async () => {
+    for (const newcomer of ['attack', 'place'] as const) {
+      const { runtime, scene, units, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60);
+      const before = of('spark').filter(entry => entry.fx.object.parent === scene).length;
+      if (newcomer === 'place') { units.get('b')!.alive = false; expect(runtime.play('pair', 'caster', ['b'])).toBe(true); }
+      else expect(runtime.play('swing', 'caster', ['b'], 'attack')).toBe(true);
+      step(1 / 60);
+      expect(of('spark').filter(entry => entry.fx.object.parent === scene).length).toBe(before);
+      expect(of('boom').filter(entry => entry.fx.object.parent === scene)).toHaveLength(0);
+      runtime.dispose();
+    }
+  });
+
+  // Fable 11-18: a plain attack's missile with no flourish to end ends the earliest plain attack's hit; never the other way.
+  it('a plain attack missile on a board full of attack hits ends the earliest hit; hits and missiles never end their own kind', async () => {
+    for (const fill of ['swing', 'volley'] as const) for (const newcomer of ['swing', 'volley'] as const) {
+      const { runtime, scene, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play(fill, 'caster', ['a'], 'attack')).toBe(true);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60);
+      const filler = fill === 'swing' ? 'spark' : 'shot', first = of(filler)[0]!;
+      const before = of(filler).filter(entry => entry.fx.object.parent === scene).length;
+      expect(runtime.play(newcomer, 'caster', ['b'], 'attack')).toBe(true);
+      step(1 / 60);
+      const ends = fill === 'swing' && newcomer === 'volley';
+      expect(first.fx.object.parent === null).toBe(ends);
+      if (fill !== newcomer) expect(of(newcomer === 'swing' ? 'spark' : 'shot').filter(entry => entry.fx.object.parent === scene)).toHaveLength(ends ? 1 : 0);
+      else expect(of(filler).filter(entry => entry.fx.object.parent === scene)).toHaveLength(before);
+      runtime.dispose();
+    }
+  });
+
+  // Fable 11-18 (8 v 8 B, Ambessa's chain swipe): a cast's own short flourish is the skill showing; a plain attack or a place's
+  // run never ends it, a hit still may.
+  it('a cast\'s own short flourish on a full board: an attack or a place run ends none of them; a hit ends the earliest', async () => {
+    for (const newcomer of ['attack', 'place', 'hit'] as const) {
+      const { runtime, scene, units, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('swipe', 'caster', [], 'cast')).toBe(true);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60);
+      expect(of('flourish').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS);
+      const yielded = LTK_RUN_STATS.yielded.flourish ?? 0;
+      if (newcomer === 'attack') expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
+      if (newcomer === 'place') { units.get('b')!.alive = false; expect(runtime.play('pair', 'caster', ['b'])).toBe(true); }
+      if (newcomer === 'hit') expect(runtime.play('pair', 'caster', ['a'])).toBe(true);
+      step(1 / 60);
+      const ended = newcomer === 'hit' ? 1 : 0;
+      expect(of('flourish').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - ended);
+      expect((LTK_RUN_STATS.yielded.flourish ?? 0) - yielded).toBe(ended);
+      runtime.dispose();
+    }
+  });
+
   // Review 11-13: a together group with a living and a dead target is an ordinary group, whichever target comes first.
   it('a together group mixing a living and a dead target is an ordinary group: a newcomer never takes its living row', async () => {
     for (const order of [['a', 'b'], ['b', 'a']]) {
@@ -214,11 +297,12 @@ describe('vfx-ltk casts at dead targets', () => {
       expect(group).toHaveLength(2);
       for (let i = 0; i < MAX_LTK_SYSTEMS - 1; i++) expect(runtime.play('glow', 'caster', [], 'passive')).toBe(true);
       step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60); // at most six starts a frame
-      // A plain attack on the full board: nothing is spare, so it is dropped and the group stays whole.
+      // A plain attack on the full board ends a flourish, never the group: the group stays whole.
       expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
       step(1 / 60);
       for (const entry of group) expect(entry.fx.object.parent).toBe(scene);
-      expect(of('spark')).toHaveLength(0);
+      expect(of('spark').filter(entry => entry.fx.object.parent === scene)).toHaveLength(1);
+      expect(of('glow').filter(entry => entry.fx.object.parent === scene)).toHaveLength(MAX_LTK_SYSTEMS - 2);
       runtime.dispose();
     }
   });

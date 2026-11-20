@@ -4,9 +4,10 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME, applyStatus, origin } from '../src/simulation/combat-s13-state';
 import { battle, unit } from './combat-helpers';
 
-// ZOMBIE POWER!! as in the original (user 2026-11-11): Nunu is locked in place for DamageDuration (3 s = 60 ticks),
-// neither moving nor attacking, while the fumes and the durability run; then he acts again.
-const LOCK = 60;
+// ZOMBIE POWER!! (user 2026-11-11): Nunu is locked in place for his ability's DamageDuration, neither moving nor
+// attacking, while the fumes and the durability run; then he acts again. LOCK is that duration in ticks.
+// variables hold the value × 10000 (as the rules read them through v()); 20 rule ticks a second.
+const LOCK = Math.round((resolveAbility('nunu-ability', 1) as { variables?: Record<string, number> }).variables!.DamageDuration! / 10000 * 20);
 function nunu(patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit('p', 'player', 3, 4, { definitionId: 'nunu', starLevel: 1, ability: resolveAbility('nunu-ability', 1),
     hp: 100000, maxHp: 100000, mana: 125, maxMana: 125, attackDamage: 10, abilityPower: 100, attackRange: 1,

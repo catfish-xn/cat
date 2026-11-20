@@ -33,3 +33,24 @@ export function spritePick(sprites: readonly Sprite[], client: { x: number; y: n
   return { index: sprites.indexOf(sprite), box: { left: area.left + (a.x + 1) / 2 * area.width, right: area.left + (b.x + 1) / 2 * area.width,
     top: area.top + (1 - a.y) / 2 * area.height, bottom: area.top + (1 - b.y) / 2 * area.height } };
 }
+/** The screen box of camera-facing sprites as they are drawn (a sprite turns to the camera, so its world box would not fit),
+ * or undefined when none is visible on screen. */
+export function spritesScreenBox(sprites: readonly Sprite[], camera: Camera, area: ScreenArea): BoardScreenBox | undefined {
+  if (area.width <= 0 || area.height <= 0) return;
+  camera.updateMatrixWorld();
+  const right = new Vector3().setFromMatrixColumn(camera.matrixWorld, 0), up = new Vector3().setFromMatrixColumn(camera.matrixWorld, 1);
+  let left = Infinity, top = Infinity, rightEdge = -Infinity, bottom = -Infinity;
+  for (const sprite of sprites) {
+    let shown = true; sprite.traverseAncestors(node => { if (!node.visible) shown = false; });
+    if (!sprite.visible || !shown) continue;
+    sprite.updateWorldMatrix(true, false);
+    const position = sprite.getWorldPosition(new Vector3()), size = sprite.getWorldScale(new Vector3());
+    for (const [x, y] of [[-sprite.center.x, 1 - sprite.center.y], [1 - sprite.center.x, -sprite.center.y]] as const) {
+      const point = position.clone().addScaledVector(right, x * size.x).addScaledVector(up, y * size.y).project(camera);
+      if (point.z > 1) return;
+      const cx = area.left + (point.x + 1) / 2 * area.width, cy = area.top + (1 - point.y) / 2 * area.height;
+      left = Math.min(left, cx); rightEdge = Math.max(rightEdge, cx); top = Math.min(top, cy); bottom = Math.max(bottom, cy);
+    }
+  }
+  return Number.isFinite(left) ? { left, top, right: rightEdge, bottom } : undefined;
+}
