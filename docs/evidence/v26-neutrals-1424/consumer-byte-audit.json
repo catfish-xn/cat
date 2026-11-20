@@ -4714,9 +4714,9 @@
     "tests/vfx-ltk-scar-burst.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2531,
+      "currentBytes": 5689,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9710e297678477e86eba7ca525c5e849d18060b0e303a28601587718d2281dab",
+      "currentSha256": "bc06e8572e4f1d8ffc26f297fc7169ec3a1e6c245ef475bc55b4c575234e6594",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-seed.test.ts": {

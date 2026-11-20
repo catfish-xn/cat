@@ -225,8 +225,11 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           const cast = events.find((e): e is Extract<DisplayCombatEvent, { type: 'cast' }> => e.type === 'cast' && e.sourceId === event.sourceId && e.tick === event.tick);
           const struck = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
             && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId);
-          const main = cast?.targetIds?.find(id => struck.includes(id)) ?? struck[0]!;
-          plan.extra.push({ champion: 'scar', sourceId: event.sourceId, targets: [main], action: 'passive', skill: 'scar-burst', snapshotTargets: true });
+          const main = cast?.targetIds?.find(id => struck.includes(id));
+          // The rules deal his damage on the cast tick, so the cast that names the main target is in the same batch. Should
+          // they ever land it later (rules timing alignment), this lookup must change: say so in dev builds, never silently.
+          if (main === undefined && import.meta.env?.DEV) console.warn(`[vfx-ltk] scar-burst: no cast of ${event.sourceId} on tick ${event.tick} names a struck enemy; burst on the first struck instead`);
+          plan.extra.push({ champion: 'scar', sourceId: event.sourceId, targets: [main ?? struck[0]!], action: 'passive', skill: 'scar-burst', snapshotTargets: true });
         }
         // Powder: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather than falling
         // back to the old placeholder cast effect.
