@@ -42,32 +42,28 @@ export function hexDistance(a: HexCell, b: HexCell): number {
 
 /** Cube coordinates of an odd-row offset cell (the same axial q as hexDistance). */
 const toCube = (cell: HexCell) => { const q = cell.col - Math.floor(cell.row / 2); return [q, cell.row, -q - cell.row] as const; };
-/** Nearest cube cell to a fractional cube point (the component with the largest rounding error is recomputed). */
-function roundCube(x: number, y: number, z: number): HexCell {
-  let rx = Math.round(x), ry = Math.round(y), rz = Math.round(z);
-  const dx = Math.abs(rx - x), dy = Math.abs(ry - y), dz = Math.abs(rz - z);
-  if (dx > dy && dx > dz) rx = -ry - rz; else if (dy > dz) ry = -rx - rz; else rz = -rx - ry;
-  return { col: rx + Math.floor(ry / 2), row: ry };
-}
+/** The three hex axes as cube steps, in tie-break order: the row, then the axis rising to the right, then the other. */
+const HEX_AXES = [[1, 0, -1], [0, 1, -1], [-1, 1, 0]] as const;
+/** Board-plane position of a cube offset (a cell's width 1; rows sqrt(3)/2 apart). */
+const plane = (q: number, r: number) => [q + r / 2, r * Math.sqrt(3) / 2] as const;
 /**
- * The cells of a straight line from `from` through `to`, sampled one hex step at a time (cube interpolation, the same steps as
- * hexDistance), from step `first` to step `last` counted from `from` (`to` is step hexDistance(from, to); negative steps lie
- * behind `from`). A sample that falls exactly between two cells takes both (self-chosen, keeps the line mirror-symmetric).
- * Off-board cells are dropped; step 0 (`from` itself) is not listed. Each cell carries its step.
+ * A line across `to`, square to the line from `from` to `to` as near as the hex grid allows: of the three hex axes, the one most
+ * nearly perpendicular to from -> to on the board plane (an exact tie: the row first, then the axis rising to the right;
+ * self-chosen, not original data; both sides alike under the board's half turn). Lists `to` and `half` cells either way along
+ * that axis, off-board cells dropped; each cell carries its signed step from `to`.
  */
-export function hexLine(board: Board, from: HexCell, to: HexCell, first: number, last: number): { cell: HexCell; step: number }[] {
-  const n = hexDistance(from, to);
-  if (n === 0) return [];
-  const a = toCube(from), b = toCube(to), out: { cell: HexCell; step: number }[] = [];
-  for (let step = first; step <= last; step++) {
-    if (step === 0) continue;
-    const p = [0, 1, 2].map(i => a[i] + (b[i] - a[i]) * step / n);
-    const cells: HexCell[] = [];
-    for (const e of [[1e-6, 2e-6, -3e-6], [-1e-6, -2e-6, 3e-6]]) {
-      const cell = roundCube(p[0] + e[0], p[1] + e[1], p[2] + e[2]);
-      if (!cells.some(c => sameCell(c, cell))) cells.push(cell);
-    }
-    for (const cell of cells.sort((x, y) => x.row - y.row || x.col - y.col)) if (contains(board, cell)) out.push({ cell, step });
+export function hexCrossLine(board: Board, from: HexCell, to: HexCell, half: number): { cell: HexCell; step: number }[] {
+  const a = toCube(from), b = toCube(to), [vx, vy] = plane(b[0] - a[0], b[1] - a[1]), length = Math.hypot(vx, vy);
+  if (length === 0) return [];
+  let best: readonly [number, number, number] = HEX_AXES[0], bestDot = Infinity;
+  for (const axis of HEX_AXES) {
+    const [ax, ay] = plane(axis[0], axis[1]), dot = Math.abs(ax * vx + ay * vy) / (Math.hypot(ax, ay) * length);
+    if (dot < bestDot - 1e-9) { best = axis; bestDot = dot; }
+  }
+  const out: { cell: HexCell; step: number }[] = [];
+  for (let step = -half; step <= half; step++) {
+    const q = b[0] + best[0] * step, r = b[1] + best[1] * step, cell = { col: q + Math.floor(r / 2), row: r };
+    if (contains(board, cell)) out.push({ cell, step });
   }
   return out;
 }

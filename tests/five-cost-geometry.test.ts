@@ -71,11 +71,11 @@ it('Mordekaiser bonus stays limited to the globally nearest four, not four new t
   expect(planG22Cast(ctx,p,t,1)).toEqual(['a','b','c','d','e']);
   expect(ctx.packets.map(p=>p.raw)).toEqual([200,200,200,200,160]);
 });
-// Malzahar's line from (3,6) through (3,3) (11-20 line rule: centred on the target, 2 steps either side; sampling self-chosen)
-// covers (3,5), (3,4), (3,3), (4,2), (3,1). Hit order: the target, then by steps from it, the far side first.
-const MALZAHAR_LINE_CELLS:readonly (readonly [number,number])[]=[[3,3],[4,2],[3,4],[3,1],[3,5]];
+// 11-20 line rule (hexCrossLine, self-chosen axis): from (3,4) the line across (3,3) is row 3, cols 1..5. Hit order: the
+// target, then by steps from it, ties by id; the foes are placed in that order (was: cols 1..5 left to right).
+const MALZAHAR_LINE_CELLS:readonly (readonly [number,number])[]=[[3,3],[2,3],[4,3],[1,3],[5,3]];
 it.each([1,2,3,4,5])('Malzahar divides exactly five stacks across %s hits in hit order',(count)=>{
-  const p=hero('malzahar',1,{col:3,row:6}),targets=Array.from({length:count},(_,i)=>foe(String.fromCharCode(97+i),...MALZAHAR_LINE_CELLS[i]!));
+  const p=hero('malzahar',1),targets=Array.from({length:count},(_,i)=>foe(String.fromCharCode(97+i),...MALZAHAR_LINE_CELLS[i]!));
   const ctx=context([p,...targets.slice().reverse()]);
   expect(planG2Cast(ctx,p,foe('center',3,3),1)).toEqual(targets.map(t=>t.id));
   expect(p.tasks).toHaveLength(5);

@@ -47,6 +47,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   emptyAnomaly: 'defer-until-purchase-preserve-affordable-offer',
   damageSharing: 'all-hit-packets-including-mitigated-ricochet-one-transfer-no-recursion',
   ricochet: 'primary-lethal-only-once-per-action-no-redirect-no-recursion',
-  // Malzahar's gate (11-20): a 5-hex line across his target (the 14.24 description); hex sampling and tie rule self-chosen.
-  malzaharGate: 'line-centred-on-target-2-either-side-along-caster-to-target-both-cells-on-tie-target-then-far-then-near-order',
+  // Malzahar's gate (11-20): a 5-hex line across his target (14.24 description), square to him -> target (footage); axis pick self-chosen.
+  malzaharGate: 'line-across-target-hex-axis-most-square-to-caster-target-tie-row-then-rising-2-either-side-target-then-steps-then-id',
 });
