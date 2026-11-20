@@ -210,11 +210,12 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(big.text).toBe(plain.text);
       expect(px(big) / px(plain)).toBeCloseTo(1.9, 1); expect(px(big)).toBe(42);
       expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#36c4ff');
-      // The mark (the user's pick E5): two hard tones of the number's colour, split along the slam, its dark edge and a black hard shadow.
+      // The mark (the user's pick E5): two hard tones of the number's colour, lighter upper left and darker lower right (it reads
+      // top-left to bottom-right, the user's pick 11-20), its dark edge and a black hard shadow.
       const mark = decodeURIComponent(big.style.backgroundImage), blueMark = decodeURIComponent(blue.style.backgroundImage);
       expect(mark).toContain("fill='#f9611c'"); expect(mark).toContain("fill='#b03f15' clip-path='url(#lo)'");
       expect(blueMark).toContain("fill='#4c89c7'"); expect(blueMark).toContain("fill='#335a94' clip-path='url(#lo)'");
-      expect(mark).toContain("<polygon points='-10,-8 40,42 -10,42'/>"); expect(mark).toContain("fill='#000' transform='translate(");
+      expect(mark).toContain("<polygon points='40,-10 40,42 -12,42'/>"); expect(mark).toContain("fill='#000' transform='translate(");
       expect(mark).toContain("stroke='rgba(0,0,0,.9)'");
       // Its wedge's bottom on the digits' bottom: as much room above the line as below, the mark box placed from there.
       expect(big.style.paddingTop).toBe(big.style.paddingBottom); expect(big.style.paddingTop).not.toBe('');

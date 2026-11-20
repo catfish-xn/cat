@@ -62,7 +62,8 @@ const NUMBER_SHIFT_WIDTHS = 1.5;
  * The crit mark left of a crit (自绘，非原版素材; its shape, colours and sizes are our own, the user's pick E5): a heavy wedge
  * slammed in at the number's lower left, its right angle at the bottom-right against the number, one long thick spike and a
  * few shorter ones flung up-left behind it, so the whole reads as a thick arrow pointing down-right. Straight lines and hard
- * corners only; two hard tones split along the slam (lighter upper right, darker lower left), its dark edge and the same hard
+ * corners only; two hard tones split across the slam (lighter upper left, darker lower right: it reads top-left to bottom-right,
+ * the user's pick 11-20), its dark edge and the same hard
  * shadow as the digits. The wedge's bottom lines up with the digits' bottom.
  */
 const CRIT_MARK_PATH = 'M24 9L24 24 11 24 11 22.5 6.5 22 11 20.5 11 17.5 4.5 16.5 11 15 11.5 14.5 1 1 16.2 9.8 17 9 18 9 18.5 4 21.5 9Z';
@@ -74,8 +75,8 @@ const darkTone = (color: string) => { const [r, g, b] = channels(color); return 
 const markBox = 24 * (1 + HARD_SHADOW_EM / MARK_EM), markBoxEm = MARK_EM * markBox / 24;
 const badge = (color: string) => {
   const shift = 24 * HARD_SHADOW_EM / MARK_EM, d = CRIT_MARK_PATH;
-  // The darker tone lies below-left of a line along the slam, top-left to bottom-right.
-  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${markBox} ${markBox}'><defs><clipPath id='lo'><polygon points='-10,-8 40,42 -10,42'/></clipPath></defs>`
+  // The darker tone lies below-right of a line across the slam, top-right to bottom-left (x + y = 30 in the mark's box).
+  const svg = `<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${markBox} ${markBox}'><defs><clipPath id='lo'><polygon points='40,-10 40,42 -12,42'/></clipPath></defs>`
     + `<path d='${d}' fill='#000' transform='translate(${shift} ${shift})'/><path d='${d}' fill='${lightTone(color)}'/><path d='${d}' fill='${darkTone(color)}' clip-path='url(#lo)'/>`
     + `<path d='${d}' fill='none' stroke='rgba(0,0,0,.9)' stroke-width='1'/></svg>`;
   return `url("data:image/svg+xml,${encodeURIComponent(svg)}")`;
