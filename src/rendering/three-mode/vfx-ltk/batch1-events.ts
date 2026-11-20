@@ -5,11 +5,24 @@ import type { TimelineAction, TimelineVariant } from './timeline';
 export const SOFT_STOP_SECONDS = 0.6;
 
 /** Play one extra visual; a `once` visual is skipped while its source already runs that action at full strength. */
-export function playBatch1Visual(ltk: { play(champion: string, sourceId: string, targets: readonly string[], action: TimelineAction, options?: TimelineVariant | { variant?: TimelineVariant; skill?: string; snapshotTargets?: boolean }): boolean; playing(sourceId: string, action: TimelineAction): boolean }, fx: Batch1Visual): boolean {
+export function playBatch1Visual(ltk: { play(champion: string, sourceId: string, targets: readonly string[], action: TimelineAction, options?: TimelineVariant | { variant?: TimelineVariant; skill?: string; snapshotTargets?: boolean; flightSeconds?: number }): boolean; playing(sourceId: string, action: TimelineAction): boolean }, fx: Batch1Visual): boolean {
   if (fx.once && ltk.playing(fx.sourceId, fx.action)) return false;
   return ltk.play(fx.champion, fx.sourceId, fx.targets, fx.action,
-    fx.skill || fx.snapshotTargets ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets } : fx.variant);
+    fx.skill || fx.snapshotTargets || fx.flightSeconds !== undefined
+      ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets, ...(fx.flightSeconds !== undefined ? { flightSeconds: fx.flightSeconds } : {}) }
+      : fx.variant);
 }
+
+/**
+ * Skill projectiles drawn from the rules' launch and landing events, by skill: the owner, and which of its CUE_EXTRA_SKILLS
+ * branches it has (`<skill>-flight` on the launch, `<skill>-land` on a landing that hit). Mordekaiser's claw has no flight
+ * branch: its ground band plays on his cast with its own timeline, which closes on the landing.
+ */
+export const PROJECTILE_VISUALS: ReadonlyMap<string, { readonly owner: string; readonly flight: boolean; readonly land: boolean }> = new Map([
+  ['maddie-shot', { owner: 'maddie', flight: true, land: true }],
+  ['lux-shield', { owner: 'lux', flight: true, land: true }],
+  ['mordekaiser-claw', { owner: 'mordekaiser', flight: false, land: true }],
+]);
 
 export interface Batch1Visual {
   champion: string; sourceId: string; targets: readonly string[]; action: TimelineAction; variant?: TimelineVariant;
@@ -19,6 +32,8 @@ export interface Batch1Visual {
   skill?: string;
   /** Its targets' places are taken when it plays, alive or not (LtkPlayOptions.snapshotTargets): a hit that may have killed them. */
   snapshotTargets?: boolean;
+  /** The rule's flight in seconds (LtkPlayOptions.flightSeconds): a skill projectile's launch to its landing. */
+  flightSeconds?: number;
 }
 export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
@@ -196,9 +211,16 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-stab' });
           smeech.set(event.sourceId, { stabs: seen.stabs + 1, target: event.targetId });
         }
-        // Maddie: one shot per damage packet of her volley, to the enemy it hit.
-        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'maddie')
-          plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-shot' });
+        // Skill projectiles that settle where they land (the rules' abilityProjectileLaunched / Landed): the flight plays on its
+        // launch for the rule's own flight time, the hit on a landing that hit. One that lands on a target already dead plays
+        // no hit (its damage never comes either). Heimerdinger's rockets keep their cast timeline (its times are the rules' own).
+        const projectile = event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded' ? PROJECTILE_VISUALS.get(event.skill) : undefined;
+        if (event.type === 'abilityProjectileLaunched' && projectile?.flight)
+          plan.extra.push({ champion: projectile.owner, sourceId: event.sourceId, targets: [event.targetId], action: 'passive',
+            skill: `${event.skill}-flight`, flightSeconds: Math.max(0, event.arrivalTick - event.tick) * 0.05 });
+        if (event.type === 'abilityProjectileLanded' && event.hit && projectile?.land)
+          plan.extra.push({ champion: projectile.owner, sourceId: event.sourceId, targets: [event.targetId], action: 'passive',
+            skill: `${event.skill}-land` });
         // Maddie: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather
         // than falling back to the old placeholder cast effect.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'maddie') plan.noCastEffect = true;

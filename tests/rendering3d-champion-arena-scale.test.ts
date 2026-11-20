@@ -41,7 +41,9 @@ describe('carousel, scout stage and legends (off by default, Fable 11-12)', () =
     const { measuredAtFxScale, measuredOnBody } = await import('../src/rendering/three-mode/vfx-ltk/fx-size');
     expect(measuredOnBody(1)).toBeCloseTo(measuredAtFxScale(1) * BODY_TO_FX);
     // Zyra's E hits play at her damage event since 2026-11-16 ('zyra-vines'), so they are looked up there too.
-    const scaleOf = (champion: string, system: string) => [...(CUE_OVERRIDES[champion] ?? []), ...(champion === 'zyra' ? CUE_EXTRA_SKILLS['zyra-vines']! : [])]
+    // Lux's shield on an ally plays from the rules' landing event since the landing batch ('lux-shield-land').
+    const scaleOf = (champion: string, system: string) => [...(CUE_OVERRIDES[champion] ?? []), ...(champion === 'zyra' ? CUE_EXTRA_SKILLS['zyra-vines']! : []),
+      ...(champion === 'lux' ? CUE_EXTRA_SKILLS['lux-shield-land']! : [])]
       .filter(cue => cue.system === system).map(cue => cue.scale);
     // Hugging a body: Lux's shield, Zyra's chest hit on each rooted target, Nunu's per-target splash.
     expect(scaleOf('lux', '44c9516a')).toEqual([measuredOnBody(1), measuredOnBody(1)]);

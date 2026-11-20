@@ -38,6 +38,8 @@ export const MADDIE_SHOT_TICKS_PER_HEX = 2, MADDIE_SHOT_MIN_TICKS = 4;
  * larger than the original's. Our own value (Fable 11-19 picked it side by side from 0.55 and 0.4), not original data.
  */
 export const MADDIE_HIT_SCALE = 0.55;
+/** The rules' LUX_SELF_SHIELD_TICKS (src/simulation/cast-windup.ts): her shield on herself lands this many ticks after the cast. Mirrored as CAST_WINDUP_TICKS is (vfx-ltk-landing-render checks it). */
+export const LUX_SELF_SHIELD_TICKS = 5;
 /** Smeech's stab slash: the vertical swing his skill's stab clips carry (CUE_EXTRA_SKILLS smeech-stab). */
 export const SMEECH_STAB_SWING = '90b31f27';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -153,15 +155,23 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
-  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a shot from her rifle's muzzle
-  // (Weapon_Shooter: our skeleton has no barrel-root bone) to the enemy it hit, flying MADDIE_SHOT_TICKS_PER_HEX ticks a
-  // cell and at least MADDIE_SHOT_MIN_TICKS, and the hit there when it lands (TimelineCue.flightTicks). Her damage numbers
-  // still show at the shot's start until the rules move them to its landing (known interim state, Fable 11-19).
-  'maddie-shot': [
-    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.4, bone: 'Weapon_Shooter', travelSeconds: 0.2, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC',
-      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
-    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC', scale: MADDIE_HIT_SCALE,
-      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
+  // Maddie: each shot of her volley flies from her rifle's muzzle (Weapon_Shooter: our skeleton has no barrel-root bone) to
+  // its enemy, timed by the rules' flight; the hit plays where it lands, with its damage.
+  // Skill projectiles that settle where they land (batch1-events.ts, abilityProjectileLaunched/Landed): `<skill>-flight`
+  // plays on the launch, its projectile flying the rule's flight (LtkPlayOptions.flightSeconds); `<skill>-land` plays on a
+  // landing that hit (none when the target died in flight).
+  'maddie-shot-flight': [
+    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.4, bone: 'Weapon_Shooter', travelSeconds: 0.2, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
+  'maddie-shot-land': [
+    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC', scale: MADDIE_HIT_SCALE },
+  ],
+  // Lux's shield on an ally: the shield's flight from her hand, then the bubble on the ally from the landing.
+  'lux-shield-flight': [
+    { system: 'f2d605de', action: 'passive', event: 'projectile', delay: 0, duration: 0.3, travelSeconds: 0.3, bone: 'R_hand', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
+  'lux-shield-land': [
+    { system: '44c9516a', action: 'passive', event: 'hit', delay: 0, duration: 4, stopAfter: 3.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC', scale: hugged(1), livingTarget: true },
   ],
   // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his stab's slash and its
   // hit play with each stab's damage: the thin vertical slash his skill's stab clips carry, and the hit on the enemy stabbed.
@@ -561,7 +571,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
   // It wraps her body, so it shrinks with the body (fx-size.ts measuredOnBody).
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
+  // On an ally the shield's flight and bubble follow the rules' projectile events ('lux-shield-flight' / '-land'), so her cast
+  // keeps only the bubble on herself, from LUX_SELF_SHIELD_TICKS after the cast, when her shield lands.
+  lux: BATCH1_TIMELINES.lux.filter(cue => !(cue.action === 'cast' && cue.variant === undefined && (cue.system === 'f2d605de' || cue.system === '44c9516a')))
+    .map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), delay: LUX_SELF_SHIELD_TICKS * 0.05 } : cue),
   // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
   // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
   // plays from the cast and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS), played at that

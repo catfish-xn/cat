@@ -15,7 +15,7 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import type { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
-import { CUE_END_STOPS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_END_STOPS, CUE_OVERRIDES, LUX_SELF_SHIELD_TICKS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { mordekaiserAnimationReplay } from './fixtures/mordekaiser-animation-replay';
 
 // Vander is left out: the tests below play him from this index's own synthetic cues.
@@ -324,7 +324,12 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
       { ...frame.pieces[0], id: 'b', x: 250 }] };
     listener.frame({ ...board, fighting: false }); await debug().ltk.warm('lux'); await flush(); listener.frame(board); loads.mockClear();
     listener.events([{ ...cast(1), targetIds: [self ? 'a' : 'b'] } as DisplayCombatEvent]);
-    expect(debug().ltk.queued).toBe(self ? 1 : 2); await advance();
+    // Landing batch: on herself the bubble waits LUX_SELF_SHIELD_TICKS; on an ally her cast plays nothing, the shield's
+    // flight comes with the rules' launch event.
+    expect(debug().ltk.queued).toBe(self ? 1 : 0);
+    if (!self) listener.events([{ type: 'abilityProjectileLaunched', tick: 1, eventSeq: 2, sourceId: 'a', targetId: 'b', arrivalTick: 7,
+      skill: 'lux-shield', ordinal: 0, actionSeq: 1, count: 1 } as unknown as DisplayCombatEvent]);
+    await advance(self ? LUX_SELF_SHIELD_TICKS * 50 + 16 : 16);
     expect(debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem)).toEqual([self ? '44c9516a' : 'f2d605de']);
     expect(loads).not.toHaveBeenCalled();
   });

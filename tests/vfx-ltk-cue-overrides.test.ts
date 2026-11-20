@@ -243,8 +243,10 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(cueSize({ bone: 'Cstm_Buffbone_Pistol', event: 'cast-start', location: 'board' })).toBe(SKILL_FX_SIZE);
     const drawn = (cue: TimelineCue) => (cue.scale ?? 1) * cueSize(cue);
     expect(drawn(CUE_EXTRA_SKILLS['irelia-swipe']!.find(cue => cue.system === '08b7a939')!)).toBeCloseTo(1, 12); // swipe reaches the front row
-    for (const cue of CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')) expect(drawn(cue)).toBeCloseTo(BODY_TO_FX, 12); // shield wraps her, so it shrinks with her body
-    expect(CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a')).toHaveLength(2);
+    // Shield wraps its holder, so it shrinks with the body: on herself from her cast, on an ally from the landing ('lux-shield-land').
+    const luxShield = [...CUE_OVERRIDES.lux.filter(c => c.system === '44c9516a'), ...CUE_EXTRA_SKILLS['lux-shield-land']!.filter(c => c.system === '44c9516a')];
+    for (const cue of luxShield) expect(drawn(cue)).toBeCloseTo(BODY_TO_FX, 12);
+    expect(luxShield).toHaveLength(2);
     // Jinx's pistol missile carries its muzzle flash and travels, so it takes the arena scale (muzzle583-report).
     const pistol = S13_TIMELINES.jinx.find(c => c.system === '3496e112')!;
     expect(drawn(pistol)).toBe(SKILL_FX_SIZE);
