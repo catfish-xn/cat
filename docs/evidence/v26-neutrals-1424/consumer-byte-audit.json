@@ -4649,6 +4649,14 @@
       "currentSha256": "ec0fa89430e1f85ecf70df43a222b45d10bf90ae95c3afff196c560042f04ad7",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-reuse-rewind.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6061,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "ce4b89152a12ce9f435f46212b07b48a9494aaa8f4061741427c0f200de32013",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-review-j.test.ts": {
       "previousBytes": 9385,
       "currentBytes": 9710,

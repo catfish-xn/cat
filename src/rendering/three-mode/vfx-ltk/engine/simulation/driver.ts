@@ -550,9 +550,9 @@ export function createDriver(
       lanes.reach(phaseAt(rig, stepper.now, span, tail));
     },
     restart: rewind,
+    /* A replay always starts over, under the same seed too: a parked system played again with an unchanged seed kept
+       the time it ended at (a replayed combat repeats ticks, so its seeds repeat), and showed only its tail. */
     reseed(next) {
-      if (next === seed) return;
-
       seed = next;
       lineage.seed = next;
       marks.clear();
