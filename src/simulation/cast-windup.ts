@@ -62,7 +62,7 @@ export function rangedAttackFlightTicks(hexes: number, championId = ''): number 
   return Math.max(1, Math.ceil(hexes * (RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION[championId] ?? RANGED_ATTACK_TICKS_PER_HEX)));
 }
 
-/** Malzahar's line (11-19, inferred/self-chosen, not original data): hex steps behind him, and at least this many ahead (it always
- * reaches the target). docs/S13_RULES_GAP.md (玛尔扎哈技能直线). */
-export const MALZAHAR_LINE_BACK = 2;
-export const MALZAHAR_LINE_FRONT = 3;
+/** Malzahar's line (11-20, centred on the target per the 14.24 description "a 5-hex line across the target"; the hex sampling and
+ * the tie rule are self-chosen): this many hex steps on either side of the target, along the line from Malzahar through it.
+ * docs/S13_RULES_GAP.md (玛尔扎哈技能直线). */
+export const MALZAHAR_LINE_HALF = 2;

@@ -50,16 +50,16 @@ function roundCube(x: number, y: number, z: number): HexCell {
   return { col: rx + Math.floor(ry / 2), row: ry };
 }
 /**
- * The cells of a straight line through `from` toward `to`, sampled one hex step at a time (cube interpolation, the same steps as
- * hexDistance): `back` steps behind `from` and max(`front`, distance to `to`) steps ahead, so `to` is always on it. A sample that
- * falls exactly between two cells takes both (self-chosen, keeps the line mirror-symmetric). Off-board cells are dropped; `from`
- * itself is not listed. Each cell carries its step (negative behind). Not original data: the decided Malzahar line (11-19).
+ * The cells of a straight line from `from` through `to`, sampled one hex step at a time (cube interpolation, the same steps as
+ * hexDistance), from step `first` to step `last` counted from `from` (`to` is step hexDistance(from, to); negative steps lie
+ * behind `from`). A sample that falls exactly between two cells takes both (self-chosen, keeps the line mirror-symmetric).
+ * Off-board cells are dropped; step 0 (`from` itself) is not listed. Each cell carries its step.
  */
-export function hexLine(board: Board, from: HexCell, to: HexCell, back: number, front: number): { cell: HexCell; step: number }[] {
+export function hexLine(board: Board, from: HexCell, to: HexCell, first: number, last: number): { cell: HexCell; step: number }[] {
   const n = hexDistance(from, to);
   if (n === 0) return [];
   const a = toCube(from), b = toCube(to), out: { cell: HexCell; step: number }[] = [];
-  for (let step = -back; step <= Math.max(front, n); step++) {
+  for (let step = first; step <= last; step++) {
     if (step === 0) continue;
     const p = [0, 1, 2].map(i => a[i] + (b[i] - a[i]) * step / n);
     const cells: HexCell[] = [];
