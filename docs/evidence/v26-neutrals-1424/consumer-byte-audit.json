@@ -4078,10 +4078,10 @@
     },
     "tests/v20-traits.test.ts": {
       "previousBytes": 30738,
-      "currentBytes": 31425,
+      "currentBytes": 32070,
       "previousSha256": "306db3e2e9990c8e5ae43c10897bc689428b864fbc5ac687f0aad1e329d3d62d",
-      "currentSha256": "ad25afb5555fde5b4d7c3bdf2515a9eb65c7a021188cc759fd5d94e337aab1ed",
-      "firstDifferentByte": 56
+      "currentSha256": "e4f6ebffa743e3c3b7ec8326fe92e062bcd7b31657591d1ea803f1d5177c3e48",
+      "firstDifferentByte": 9
     },
     "tests/v23-restore-fuzz.test.ts": {
       "previousBytes": 18126,

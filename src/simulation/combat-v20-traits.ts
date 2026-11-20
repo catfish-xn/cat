@@ -1,3 +1,4 @@
+import { sampleAugmentDeath } from './augment-death-samples';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { CombatTask, CombatOrigin, CombatUnit } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
@@ -109,6 +110,8 @@ export function advanceV20Minions(ctx:AbilityContext):void {
       if(t)derived(ctx,u,t,m.damage,m.rootActionSeq,40000+(5-m.remaining),{ownerId:u.id,sourceKind:'trait',definitionId:'menaces',instanceId:u.id,effectIndex:0});
       u.v20Traits={minion:{...m,remaining:m.remaining-1,nextAttackTick:m.nextAttackTick+m.periodTicks}};
     }
-    if(ctx.tick>=m.untilTick){u.alive=false;u.hp=0;ctx.events.push({type:'death',tick:ctx.tick,unitId:u.id});}
+    // An expiring Menaces minion's death carries an augment death sample like every other death: the settlement's executed
+    // death history (recordRoomBattleDeaths, Loot Explosion) requires one per death event and faulted the room without it.
+    if(ctx.tick>=m.untilTick){u.alive=false;u.hp=0;ctx.events.push(sampleAugmentDeath({type:'death',tick:ctx.tick,unitId:u.id},u));}
   }
 }
