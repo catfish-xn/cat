@@ -4145,9 +4145,9 @@
     "tests/vfx-ltk-batch1.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 16718,
+      "currentBytes": 16802,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8606f34dd985730cfd44593f1d0da638602c9ac9c843414f650e11173828a1d3",
+      "currentSha256": "abd755bd7729e6b2897d3f7c5cd4a0da01c297d333e71bfa5c67fa548ea9eebe",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-batch2-release.test.ts": {
@@ -4315,6 +4315,14 @@
       "currentBytes": 24140,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "e022a467551ce66f2551ccb49b273ce45200d047c690ef8cc8dfd2f453cc58a2",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-draven-axes.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2544,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "7dcfee0248b5760d416d08f4c92292944135c5331aca4a83b06965507d309a93",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draw-buffer-pool.test.ts": {
