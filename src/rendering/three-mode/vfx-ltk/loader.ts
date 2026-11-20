@@ -176,6 +176,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.brightness !== undefined && (!finite(cue.brightness) || Number(cue.brightness) <= 0 || Number(cue.brightness) > 4))
         || (cue.perStrike !== undefined && (typeof cue.perStrike !== 'object' || cue.perStrike === null || cue.event === 'cast-start'
           || !finite((cue.perStrike as { staggerTicks?: unknown }).staggerTicks) || !finite((cue.perStrike as { spreadTicks?: unknown }).spreadTicks)))
+        || (cue.mergeTicks !== undefined && (!finite(cue.mergeTicks) || Number(cue.mergeTicks) < 1 || (cue.perStrike === undefined && cue.everyReceipt !== true)))
         || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
         || ((cue.rowToEnd !== undefined || cue.rowSpeed !== undefined || cue.rowBeyond !== undefined) && (cue.rowSide === undefined || (cue.rowToEnd !== undefined && typeof cue.rowToEnd !== 'boolean')
           || (cue.rowBeyond !== undefined && !(cue.rowToEnd === true && finite(cue.rowBeyond) && Number(cue.rowBeyond) >= 0 && Number(cue.rowBeyond) <= 1))
