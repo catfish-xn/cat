@@ -4711,6 +4711,14 @@
       "currentSha256": "59e64416e76bc5703162090d59a7cdf2131afed6b92c4c7a4667c7f5f413d585",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-scar-burst.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2531,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "9710e297678477e86eba7ca525c5e849d18060b0e303a28601587718d2281dab",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-seed.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

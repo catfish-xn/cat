@@ -186,6 +186,13 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
   // Powder: her blast's target burst plays when its damage lands, on each enemy it hits (batch1-events.ts); its explosion
   // plays once, on the cell her monkey arrives at ('powder-arrive', placeholder-renderer.ts powder-monkey-arrived).
+  // Scar: his big burst on his main target's ground, with his skill's damage (batch1-events.ts). Its own time (ownLife).
+  // Fitted, not original data: the place is read from the original footage (the burst sits at the main target); the time
+  // is the rules' damage event, which lands at the cast while the original's burst comes clearly later, with the heal:
+  // until the rules' timing is aligned, it plays early (known difference, 11-21).
+  'scar-burst': [
+    { system: '9f028364', action: 'passive', event: 'hit', bone: ground, delay: 0, duration: 2, ownLife: true },
+  ],
   'powder-blast': [
     { system: '8747b362', action: 'passive', event: 'hit', delay: 0, duration: 1 },
   ],
@@ -339,6 +346,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
   ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
+  // The big burst on the main target plays with his damage (CUE_EXTRA_SKILLS 'scar-burst'). The two crystal-flight systems stay out:
+  // the original's cast shows no such flight (11-21 review). The original's arcs stand between him and each enemy; his
+  // missile here flies instead (known difference).
   scar: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.2990000089009603, duration: 1.5 },
     { system: 'bef025dc', action: 'cast', event: 'projectile', delay: 0.1, duration: 0.9, travelSeconds: 0.25, bone: 'L_Hand', targetBone: chest, targetLimit: 3 },

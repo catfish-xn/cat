@@ -217,6 +217,17 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           const skill = name === 'trundle' ? 'trundle-bite' : 'zyra-vines';
           plan.extra.push({ champion: name, sourceId: event.sourceId, targets: hitTargets, action: 'passive', skill });
         }
+        // Scar: his big burst (scar-burst) plays once with his skill's damage, on his main target (the cast's first target, the
+        // nearest enemy struck; else the first struck), so it lands with the damage and heal numbers, not at a fixed time.
+        if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'scar'
+          && !events.some(e => e !== event && e.type === 'packetDamage' && e.sourceId === event.sourceId && e.tick === event.tick
+            && isAbilityDirect(e) && e.eventSeq < event.eventSeq)) {
+          const cast = events.find((e): e is Extract<DisplayCombatEvent, { type: 'cast' }> => e.type === 'cast' && e.sourceId === event.sourceId && e.tick === event.tick);
+          const struck = events.filter((e): e is Extract<DisplayCombatEvent, { type: 'packetDamage' }> => e.type === 'packetDamage'
+            && e.sourceId === event.sourceId && e.tick === event.tick && isAbilityDirect(e)).map(e => e.targetId);
+          const main = cast?.targetIds?.find(id => struck.includes(id)) ?? struck[0]!;
+          plan.extra.push({ champion: 'scar', sourceId: event.sourceId, targets: [main], action: 'passive', skill: 'scar-burst', snapshotTargets: true });
+        }
         // Powder: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather than falling
         // back to the old placeholder cast effect.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'powder') plan.noCastEffect = true;
