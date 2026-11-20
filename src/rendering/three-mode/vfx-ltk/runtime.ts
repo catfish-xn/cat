@@ -123,7 +123,9 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
    */
-  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number> };
+  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number>,
+  /** Recording only (rec branch): each start later than its planned time, by how much and what share of its run was skipped. */
+  lateStarts: [] as { system: string; event: string; kind: 'hit' | 'sustained'; late: number; duration: number; skipped: number }[] };
 /**
  * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
  * was dead and the cue does not keep a dead target's place (a plain attack, a link, a state the target carries), or its
@@ -1136,6 +1138,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // timeline end, so a late flight start cannot displace its landing cue.
           fx.object.userData.ltkSystem = spawn.system;
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
+          if (clock - when > 0.02) LTK_RUN_STATS.lateStarts.push({ system: spawn.system, event: spawn.event,
+            kind: (spawn.event === 'hit' || spawn.event === 'projectile') && runFor <= 1.5 ? 'hit' : 'sustained', late: +(clock - when).toFixed(3),
+            duration: +runFor.toFixed(3), skipped: +Math.min(1, (clock - when) / Math.max(1e-3, runFor)).toFixed(3) });
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
