@@ -4509,9 +4509,9 @@
     "tests/vfx-ltk-projectile-play-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11988,
+      "currentBytes": 12354,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "51a747398a6dd66e3e1dfea1310f4f5a732f0a3e3457a8d53c8519c0823675bd",
+      "currentSha256": "8cfa051c025ae8a144d50c1932498acab9472778b3e2c11a87255a6bab3eb19e",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-renni-q.test.ts": {
@@ -4611,9 +4611,9 @@
     "tests/vfx-ltk-strike-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5218,
+      "currentBytes": 5789,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f53a9afe97bf6cee5fbd558a02c1ac3630456380fbf83e21255d8d43ecc2880f",
+      "currentSha256": "ae1aa4e761454b109586bcfc454c685d53e7cd194a673671e4643b5f73d11845",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {
