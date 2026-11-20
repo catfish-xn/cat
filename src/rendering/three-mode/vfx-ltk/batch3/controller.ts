@@ -12,13 +12,6 @@ type Runtime = ReturnType<typeof createLtkRuntime>;
 /** Public combat tick, used only to see whether a caught-up drawing is still inside its display life. */
 const TICK_SECONDS = 0.05;
 const SWAIN_TAIL_SECONDS = 1.25;
-/**
- * Seconds between two of Swain's drain bursts, at least (our own value, 自定，非原版; Fable 11-20). The rules drain four times
- * a second, each drain a packet on every enemy beside him; one burst on him stands for all of a drain's packets (Fable 11-20:
- * not one per enemy hit), and only one a second is drawn: four a second with four enemies beside him held twelve, half the
- * board's effect slots (Node, 11-20). The numbers keep every drain.
- */
-const SWAIN_PULSE_SECONDS = 1;
 /** Effect keys are public nine-field tuples; use their source identity, never
  * interpret another caster's item/ally shield as this champion's ability. */
 export function ownAbilityShield(key: string, target: string): boolean {
@@ -57,8 +50,6 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
   const blasts = new Map<string, number>();
   const summons = new Map<string, PendingSummon>();
   const ascension = new Map<string, { lastTick: number }>();
-  // Each Swain's last drawn drain burst, on this controller's clock (SWAIN_PULSE_SECONDS).
-  const pulses = new Map<string, number>();
   const channels = new Set<string>();
   let clock = 0, latestTick = 0;
   const allowed = () => !options.reduced?.();
@@ -222,11 +213,8 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
             if (event.damageType === 'true' && loops.has(`${event.sourceId}:illaoi-channel`)) play(event.sourceId, 'illaoi-drain', [event.targetId]);
             else if (event.damageType === 'magic' && ended.get(event.sourceId) === event.tick) play(event.sourceId, 'illaoi-slam', [event.targetId]);
           }
-          if (source.definitionId === 'swain' && source.form === 'front' && event.damageType === 'magic' && ability && ascension.has(event.sourceId)) {
-            // One burst on Swain himself for every enemy his drain hits that tick, and at most one a second.
-            const at = pulses.get(event.sourceId);
-            if (at === undefined || clock - at >= SWAIN_PULSE_SECONDS - 1e-9) { pulses.set(event.sourceId, clock); play(event.sourceId, 'swain-pulse', [event.sourceId]); }
-          }
+          // Swain's drains draw nothing of their own (Fable 11-20: the original shows no flash or ring between them; their
+          // numbers do). His burst (swain-pulse) is for his ascension's extension by a takedown, not for each drain.
           // Loris's only magic ability damage is the shield-end blast. It lands whether the shield ran out or broke early
           // (11-06: keyed to the 'expired' tick it never showed in the field). One shockwave per blast, at its first recipient.
           if (source.definitionId === 'loris' && event.damageType === 'magic' && ability && blasts.get(event.sourceId) !== event.tick) {
@@ -278,7 +266,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
       for (const rec of [...summons.values()]) dropSummon(rec);
       for (const key of loops.keys()) stop(key);
       proxies.clear(); shields.clear(); unbound.clear(); last.clear(); ended.clear(); blasts.clear(); cohorts.clear(); reviving.clear(); poses.clear();
-      ascension.clear(); channels.clear(); pulses.clear();
+      ascension.clear(); channels.clear();
       // A new combat's ticks start again from 0: the last combat's latest tick would make every early fact look long past
       // (Swain's ascension dropped at once, Silco's and Elise's summons never shown in any combat after the first).
       latestTick = 0;
