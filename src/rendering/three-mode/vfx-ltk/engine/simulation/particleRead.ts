@@ -191,6 +191,17 @@ export function appearance(
   }
   out.color[3] *= drawFade;
   if (drawGain !== 1) for (let channel = 0; channel < 3; channel += 1) out.color[channel] *= drawGain;
+  // REC ONLY (claude/rec-dark-ab, never merged): colour as linear (lin) or as sRGB-encoded (srgb) before it blends, and
+  // the per-emitter probe: per frame, the most opaque particle's [r, g, b, a] and how many particles drew.
+  const ab = (globalThis as { __LTK_DARKAB?: Set<string> }).__LTK_DARKAB;
+  if (ab?.has('lin')) for (let channel = 0; channel < 3; channel += 1) out.color[channel] = Math.pow(Math.max(out.color[channel], 0), 2.2);
+  if (ab?.has('srgb')) for (let channel = 0; channel < 3; channel += 1) out.color[channel] = Math.pow(Math.max(out.color[channel], 0), 1 / 2.2);
+  const probe = (globalThis as { __LTK_ALPHA_PROBE?: { names: string[]; frame: Record<string, number[]> } | null }).__LTK_ALPHA_PROBE;
+  if (probe && emitter.name && probe.names.some(n => emitter.name!.includes(n))) {
+    const held = probe.frame[emitter.name] ??= [0, 0, 0, -1, 0];
+    held[4]++;
+    if (out.color[3] > held[3]) { held[0] = out.color[0]; held[1] = out.color[1]; held[2] = out.color[2]; held[3] = out.color[3]; }
+  }
 }
 
 /**

@@ -1,5 +1,9 @@
 // Dev-only cast capture harness (dev/castcmp): a fake board feed, a virtual clock, one cast event.
 const params = new URLSearchParams(location.search);
+// REC ONLY (claude/rec-dark-ab, never merged): dark-layer A/B switches and the per-emitter alpha probe.
+(globalThis as any).__LTK_DARKAB = new Set((params.get('darkab') ?? '').split(',').filter(Boolean));
+if (params.get('degrade') !== null) (globalThis as any).__LTK_DEGRADE_AT = params.get('degrade') === 'off' ? Infinity : Number(params.get('degrade'));
+(globalThis as any).__LTK_ALPHA_PROBE = params.get('alphaprobe') ? { names: params.get('alphaprobe')!.split(','), frame: {} as Record<string, number[]> } : null;
 let clock = 0;
 let seq = 100;
 const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;

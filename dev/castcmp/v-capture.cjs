@@ -58,7 +58,7 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','critstyle','attached','nfoes','foestar','ally','allystar','ally2','ally2star','mute','solo','nocolor','noerode'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('as-scale') !== undefined ? `asscale=${encodeURIComponent(opt('as-scale'))}&` : ''}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') || opt('render-probe') === '1' ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['me-cell', 'mecell'], ['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell'], ['ally2-cell', 'ally2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}${opt('items') !== undefined ? `items=${encodeURIComponent(opt('items'))}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','critstyle','attached','nfoes','foestar','ally','allystar','ally2','ally2star','mute','solo','nocolor','noerode','darkab','degrade','alphaprobe'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('as-scale') !== undefined ? `asscale=${encodeURIComponent(opt('as-scale'))}&` : ''}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') || opt('render-probe') === '1' ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['me-cell', 'mecell'], ['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell'], ['ally2-cell', 'ally2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}${opt('items') !== undefined ? `items=${encodeURIComponent(opt('items'))}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
@@ -144,14 +144,18 @@ async function unbind(page, tick, rebind) {
   await (opt('unbind') ? unbind(page, 900000, false) : page.evaluate(() => window.__h.cast()));
   // LOCAL: Viktor's slam lands on his own ability-direct magic packet after the cast
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 900000, eventSeq: 900000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
-  let at = 0; const files = [];
+  let at = 0; const files = []; const alphaLog = [];
   for (const t of times) {
+    // REC ONLY (claude/rec-dark-ab): the alpha probe's readings over this step ([r, g, b, a] of the most opaque particle, count).
+    if (opt('alphaprobe')) await page.evaluate(() => { const p = globalThis.__LTK_ALPHA_PROBE; if (p) p.frame = {}; });
     await g.beforeStep();
     await page.evaluate(ms => window.__h.step(ms), t - at); at = t;
     await g.frame(t);
     await page.waitForTimeout(t === times[0] ? 400 : 40);
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
+    if (opt('alphaprobe')) alphaLog.push({ t, emitters: await page.evaluate(() => JSON.parse(JSON.stringify(globalThis.__LTK_ALPHA_PROBE?.frame ?? {}))) });
   }
+  if (opt('alphaprobe')) fs.writeFileSync(path.join(out, 'alpha.json'), JSON.stringify(alphaLog));
   // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
   fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));

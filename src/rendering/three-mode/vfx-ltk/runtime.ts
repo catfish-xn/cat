@@ -154,7 +154,8 @@ export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags
   for (const fx of systems) {
     needs.early ||= fx.passes.early; needs.late ||= fx.passes.late; needs.soft ||= fx.passes.soft;
   }
-  if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
+  // REC ONLY (claude/rec-dark-ab): ?degrade=N|off from the castcmp harness.
+  if (slots >= ((globalThis as { __LTK_DEGRADE_AT?: number }).__LTK_DEGRADE_AT ?? LTK_PASS_DEGRADE_AT)) return { early: needs.early, late: false, soft: false };
   return needs;
 }
 export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
