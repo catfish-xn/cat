@@ -4,7 +4,7 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { CRIT_ATTACK_HIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -61,6 +61,25 @@ export const MAX_LTK_SYSTEMS = 28, MAX_LTK_QUEUED = 64;
  */
 export const OFF_SLOT_MAX = 8;
 export const LONG_RUN_SECONDS = 3, LONG_RUN_OPEN = 1;
+/**
+ * Crit flashes (CRIT_ATTACK_HIT.crit) playing or waiting at once; a crit past them plays the plain hit. Crits come often in
+ * a brawl (a few in one tick): the flash only swaps a hit, so it takes no extra slot, and this keeps its own count small.
+ * A fitted value, not the original's.
+ */
+export const CRIT_FLASH_MAX = 4;
+/**
+ * An attack's cues as a crit plays them (CRIT_ATTACK_HIT): the champion's own crit variants swap in, and with `flash` the
+ * shared hit plays as the crit flash (not for keepHit champions), or the champion's own flash cue joins. A system `ready`
+ * does not have keeps the cue as it was.
+ */
+function critAttack(champion: string, cues: readonly TimelineCue[], flash: boolean, ready: (id: string) => boolean): TimelineCue[] {
+  const own = Object.hasOwn(CRIT_ATTACK_HIT.own, champion) ? CRIT_ATTACK_HIT.own[champion] : undefined;
+  const swap = (cue: TimelineCue, id: string | undefined) => id && ready(id) ? { ...cue, system: id } : cue;
+  const out = cues.map(cue => (cue.action ?? 'cast') !== 'attack' ? cue
+    : own?.swap && Object.hasOwn(own.swap, cue.system) ? swap(cue, own.swap[cue.system])
+    : flash && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit && !CRIT_ATTACK_HIT.keepHit.has(champion) ? swap(cue, CRIT_ATTACK_HIT.crit) : cue);
+  return flash && own?.flash && ready(own.flash.system) && cues.some(cue => (cue.action ?? 'cast') === 'attack') ? [...out, own.flash] : out;
+}
 /** LTK systems a plain attack may take without shared fallback room. Kept at six when the cap went from 12 to 20: the
  * audit above measured 20 with six. */
 const ATTACK_FREE_SLOTS = 6;
@@ -178,6 +197,10 @@ export interface LtkPlayOptions {
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
+  /** This attack crits (its packetDamage, same tick and target): its shared hit plays as the crit flash (CRIT_ATTACK_HIT). */
+  crit?: boolean;
+  /** This play is a crit flash of its own (CRIT_SKILL_HIT): refused while CRIT_FLASH_MAX of them are out. */
+  critFlash?: boolean;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its random seed, fixed when it was queued (seedOf). */
@@ -264,6 +287,39 @@ export function groundLine(from: WorldPoint, toward: WorldPoint, cells: number, 
   if (!(length > 1e-3)) return null;
   const ux = dx / length, uz = dz / length, sx = from[0] - ux * back * cell, sz = from[2] - uz * back * cell;
   return [[sx, from[1], sz], [sx + ux * cells * cell, from[1], sz + uz * cells * cell]];
+}
+/** Rule ticks a flight by distance takes (TimelineCue.flightTicks): `cells` is the hex distance, in cells. */
+export function flightTicksFor(cells: number, perCell: number, min: number): number {
+  return Math.max(min, Math.ceil(cells * perCell - 1e-9));
+}
+/** A board cell, as the rules name it (column, row). */
+export interface HexCell { readonly col: number; readonly row: number }
+/** The rules' hex distance between two cells (src/simulation/board.ts hexDistance; a test keeps the two equal). */
+export function hexDistance(a: HexCell, b: HexCell): number {
+  const aq = a.col - Math.floor(a.row / 2), bq = b.col - Math.floor(b.row / 2), dq = aq - bq, dr = a.row - b.row;
+  return Math.max(Math.abs(dq), Math.abs(dr), Math.abs(dq + dr));
+}
+/** The board cell a world point stands on (hex-layout.ts: odd rows sit half a cell to the right). */
+export function cellAt(at: WorldPoint, board: RowBoard): HexCell {
+  const row = Math.round((at[2] - board.origin.y) / (1.5 * board.radius));
+  return { row, col: Math.round((at[0] - board.origin.x) / (Math.sqrt(3) * board.radius) - (((row % 2) + 2) % 2) / 2) };
+}
+/**
+ * Cells between two standing points for a flight by distance: the rules' hex distance between the cells they stand on,
+ * or, with no board known, the straight distance in cells.
+ */
+export function flightCells(from: WorldPoint, to: WorldPoint, board: RowBoard | null): number {
+  return board ? hexDistance(cellAt(from, board), cellAt(to, board)) : Math.hypot(to[0] - from[0], to[2] - from[2]) / BOARD_CELL;
+}
+/**
+ * A cue with TimelineCue.flightTicks, its times set for a flight over `cells` cells (one rule tick = 50 ms). Null cells (its
+ * caster or target is gone) takes the shortest flight, so a hit still lands after a flight rather than at once.
+ */
+export function withFlight<T extends TimelineCue>(cue: T, cells: number | null): T {
+  if (!cue.flightTicks) return cue;
+  const { perCell, min } = cue.flightTicks, seconds = (cells === null ? min : flightTicksFor(cells, perCell, min)) * 0.05;
+  if (cue.event === 'projectile') return { ...cue, travelSeconds: seconds, duration: seconds + cue.duration - (cue.travelSeconds ?? 0) };
+  return { ...cue, delay: cue.delay + seconds };
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
@@ -527,13 +583,22 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
+  const critFlashesOut = () => {
+    let out = 0;
+    for (const run of running) if (run.system === CRIT_ATTACK_HIT.crit) out++;
+    for (const wait of waiting) if (wait.spawn.system === CRIT_ATTACK_HIT.crit) out++;
+    return out;
+  };
   const warm = (champion: string) => {
     if (closed) return Promise.resolve();
     const held = warming.get(champion); if (held) return held;
     const pending = library.champion(champion).then(async catalog => {
       if (closed || !catalog) return;
       catalogs.set(champion, catalog);
-      const cues = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      const own = Object.entries(catalog.index?.skills ?? {}).filter(([key]) => key === champion || key.startsWith(champion + '-')).flatMap(([, list]) => list ?? []);
+      // A crit plays its attack as critAttack does (CRIT_ATTACK_HIT): those systems are loaded and measured with their cues.
+      const cues = [...own, ...critAttack(champion, own.filter(cue => (cue.action ?? 'cast') === 'attack'), true, id => !!catalog.index?.systems[id])
+        .filter(cue => !own.includes(cue))];
       await Promise.allSettled([...new Set(cues.map(cue => cue.system))].map(id => catalog.load(id)));
       // Each system's first play reserves what it was measured to hold over its longest cue (stopped where that cue stops).
       // One system per task: a champion's whole set took up to about 50 ms on the 11-12 Linux box, so it never runs in one go.
@@ -551,12 +616,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
         const most = skill ? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
-        const travel = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds)?.travelSeconds;
+        const flying = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds);
+        const travel = flying?.travelSeconds, scale = flying ? (flying.scale ?? 1) * cueSize(flying) : 1;
         const seconds = Math.min(longest.duration, 10);
-        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel), wide = rootRoomOf(unlimited, most);
+        const unlimited = measurePeak(prepared, seconds, stopAt, most, travel, scale), wide = rootRoomOf(unlimited, most);
         if (wide > ROOT_PARTICLES) roots.set(id, wide);
         // A room at or past what it measured holds that measure again; only a room the limit cut short is measured anew.
-        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel);
+        const peak = wide >= unlimited ? unlimited : measurePeak(prepared, seconds, stopAt, wide, travel, scale);
         needs.set(id, reserveOf(peak, kids ? kids.particles : prepared.drawn.some(definition => !!definition.path)));
       }
     }).catch(() => { /* No replacement until every system of the action is usable. */ });
@@ -674,6 +740,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
+      if (context.critFlash && critFlashesOut() >= CRIT_FLASH_MAX) return false;
+      // A crit plays its attack as critAttack does; its crit flash only while fewer than CRIT_FLASH_MAX of them are out.
+      if (context.crit && action === 'attack' && selected) selected = critAttack(champion, selected, critFlashesOut() < CRIT_FLASH_MAX, id => !!catalog.get(id));
       if (context.delay !== undefined) {
         if (!Number.isFinite(context.delay) || context.delay < 0 || context.delay > 2) return false;
         const shift = context.delay;
@@ -732,7 +801,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       const fanned = new Map<string, Set<string>>();
       for (const { spawn, together } of rows) if (spawn.targetId !== undefined && !together && !spawn.together) {
         let targets = fanned.get(spawn.system); if (!targets) fanned.set(spawn.system, targets = new Set()); targets.add(spawn.strike !== undefined ? `${spawn.targetId}#${spawn.strike}` : spawn.targetId); }
-      for (const { spawn, snapshot: taken, place, atPlace, part, together } of rows) {
+      for (const { spawn: cued, snapshot: taken, place, atPlace, part, together } of rows) {
+        let spawn = cued;
         const fan = spawn.targetId !== undefined && !together && !spawn.together && (fanned.get(spawn.system)?.size ?? 0) > 1 ? `${play}:${spawn.system}` : undefined;
         let snapshot = taken;
         if (!snapshot && spawn.lineCells && spawn.targetId) {
@@ -740,6 +810,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           // so a cast that kills its target still draws its line (11-13, Gangplank's killing slash drew nothing).
           const unit = findUnit(spawn.targetId);
           if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
+        }
+        // A flight by distance (TimelineCue.flightTicks) is timed now, from where caster and target stand.
+        if (spawn.flightTicks) {
+          const caster = findUnit(spawn.sourceId), aimed = spawn.targetId ? findUnit(spawn.targetId) : undefined;
+          const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
+          spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
         }
         waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
