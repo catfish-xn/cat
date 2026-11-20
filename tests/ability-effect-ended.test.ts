@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatUnit, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
-import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
 import { battle, unit } from './combat-helpers';
 import { readFileSync } from 'node:fs';
@@ -71,6 +71,44 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     expect(brace[0]!.tick).toBeGreaterThan(cast.tick);
   });
 
+  it('Mordekaiser: one event the tick his empowered time runs out (mordeUntilTick)', () => {
+    const untils = new Set<number>();
+    const r = advance(battle([hero('mordekaiser'), dummy()], { rngState: 42 }), 260,
+      state => { untils.add((state.units.find(u => u.id === 'p') as { g22?: { mordeUntilTick: number } } | undefined)?.g22?.mordeUntilTick ?? 0); });
+    const cast = r.events.find(e => e.type === 'cast')!;
+    const empower = ended(r.events).filter(e => e.effect === 'mordekaiser-empower');
+    expect(empower.length).toBeGreaterThan(0);
+    expect(empower[0]).toMatchObject({ unitId: 'p', targetIds: [] });
+    expect(empower[0]!.tick).toBeGreaterThan(cast.tick);
+    // Each signal comes the tick an empowered time the rules set runs out.
+    for (const e of empower) expect(untils.has(e.tick)).toBe(true);
+  });
+
+  it('Swain: one event the first tick past his demon form (takedown extensions included)', () => {
+    let until = 0;
+    const r = advance(battle([hero('swain'), dummy()], { rngState: 42 }), 400,
+      state => { until = Math.max(until, (state.units.find(u => u.id === 'p') as { g23?: { ascension: { untilTick: number } | null } } | undefined)?.g23?.ascension?.untilTick ?? 0); });
+    const cast = r.events.find(e => e.type === 'cast')!;
+    const form = ended(r.events).filter(e => e.effect === 'swain-ascension');
+    expect(form.length).toBeGreaterThan(0);
+    expect(form[0]).toMatchObject({ unitId: 'p', targetIds: [] });
+    expect(form[0]!.tick).toBeGreaterThan(cast.tick);
+    expect(form.map(e => e.tick)).toContain(until + 1);
+  });
+
+  it('the rule events the persistent layers end on are there: Garen and Loris shields, Leona damage reduction, Jayce attack speed', () => {
+    for (const name of ['garen', 'loris']) {
+      const run = advance(battle([hero(name), dummy()], { rngState: 42 }), 260);
+      const own = run.events.filter(e => e.type === 'shieldLayerChanged' && e.layer.key.includes(JSON.stringify(`${name}-ability`))) as Extract<CombatEvent, { type: 'shieldLayerChanged' }>[];
+      expect(own.some(e => e.reason === 'granted' && e.layer.targetId === 'p'), name).toBe(true);
+      expect(own.some(e => e.reason !== 'granted' && e.reason !== 'absorbed' && e.reason !== 'decayed'), name).toBe(true);
+    }
+    const leona = advance(battle([hero('leona'), dummy()], { rngState: 42 }), 220);
+    const dr = leona.events.filter(e => e.type === 'statusChanged' && e.group.kind === 'damage-reduction' && e.group.targetId === 'p') as Extract<CombatEvent, { type: 'statusChanged' }>[];
+    expect(dr.some(e => e.reason === 'applied')).toBe(true);
+    expect(dr.some(e => e.reason !== 'applied' && e.reason !== 'refreshed')).toBe(true);
+  });
+
   it('the existing rule events the renderer ends visuals on are there: Blitzcrank and Vi shield layers, Malzahar shred', () => {
     for (const name of ['vi', 'blitzcrank']) {
       const run = advance(battle([hero(name), dummy()], { rngState: 42 }), 220);
@@ -94,11 +132,15 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
       // 2026-11-16: shields on others (Mel's, Jayce's forge) end with the shielded ally's layer (abilityShieldEndedOnHolder).
       ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!];
     const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
-      Array.isArray(v.systems) ? [[k, v.systems as readonly string[]]] : Object.entries(v.systems as Record<string, readonly string[]>).map(([a, l]) => [`${k} ${a}`, l]));
+      Array.isArray(v.systems) ? [[k, v.systems as readonly string[]]] : Object.entries(v.systems as Record<string, readonly string[] | { systems: readonly string[] }>)
+        .map(([a, l]) => [`${k} ${a}`, Array.isArray(l) ? l as readonly string[] : (l as { systems: readonly string[] }).systems]));
     // Dr. Mundo's heal end stops nothing: his systems end with his timed form (TIMED_FORM_STOPS), listed here instead.
     expect(CUE_END_STOPS['drmundo-heal']).toEqual([]);
     const endLists = Object.entries(CUE_END_STOPS).filter(([k]) => k !== 'drmundo-heal');
-    const lists = { ...Object.fromEntries(endLists), ...Object.fromEntries(ruleLists),
+    // Layers held by SUSTAIN_CAPS keep their index cue (not an override): their cap, not their own life, bounds them.
+    const held = (list: readonly string[]) => list.filter(s => !Object.hasOwn(SUSTAIN_CAPS, s));
+    const lists: Record<string, readonly string[]> = { ...Object.fromEntries(endLists.map(([k, v]): [string, readonly string[]] => [k, held(v)]).filter(([, v]) => v.length)),
+      ...Object.fromEntries(ruleLists.map(([k, v]): [string, readonly string[]] => [k, held(v)]).filter(([, v]) => v.length)),
       ...Object.fromEntries(Object.entries(TIMED_FORM_STOPS).map(([k, v]) => [`form ${k}`, v])) };
     for (const [effect, systems] of Object.entries(lists)) {
       expect(systems.length, effect).toBeGreaterThan(0);

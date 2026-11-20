@@ -210,7 +210,10 @@ export function eventSource(event: LedgerCombatEvent): CombatOrigin | null {
 export function eventStatusName(event: Extract<LedgerCombatEvent, { type: 'statusChanged' }>): string {
   return STATUS_KIND_NAMES[event.group.kind];
 }
-/** Harmful status kinds worth a short float on the board when applied. */
+/**
+ * The short word a harmful status kind reads as when applied (击飞 for a knock-up stun). The board no longer floats it: combat
+ * floats show only damage and heals (#780). The frozen feedback fixture (tests/fixtures/stage5-feedback-before.ts) still reads it.
+ */
 export function appliedStatusFloat(event: SceneCombatEvent): string | null {
   if (event.type !== 'statusChanged' || (event.reason !== 'applied' && event.reason !== 'refreshed')) return null;
   // Local ledger events carry the whole group; the §14.2 wire event only its kind.

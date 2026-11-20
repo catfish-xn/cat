@@ -56,6 +56,8 @@ import { freezeCompanions, registerDeaths, advanceReactions } from './m8/compani
 import { executeDamageControlSequence, executeMechanismEffect } from './m8/s13-mechanisms';
 import { completeCast, damageMana, planManaCost, refundCast, resolveMana } from './m8/mana';
 import { S13_COMBAT_RULES } from './s13-rules';
+import { effectSourceUnit, sourceSpellCrit } from './effect-source';
+import { namedAsEffectSource } from './seat-mechanics/combat-events';
 import { getNeighbors, hexDistance, type HexCell } from './board';
 import { compareIds, eliminationResult, type CombatState, type CombatStep, type CombatEvent, type CombatOrigin } from './combat-types';
 import { invocationEvent, stampCombatStep } from './combat-effects';
@@ -225,7 +227,7 @@ function rollPlannedPackets(ctx: AbilityContext, unit: S13Unit, firstPacket: num
     if (packet.locked) continue; // a landing shot's crit was rolled on its attack tick
     const piercing = champion(unit) === 'twitch' && packet.delivery === 'basic-attack';
     const shared = piercing ? piercingCrit.get(packet.actionSeq) : undefined;
-    packet.critical = p3ChargedAttacks.has(packet.actionSeq) && packet.delivery === 'basic-attack' ? p3Roll(ctx, unit, packet, true, shared) : shared ?? (packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, p2PacketCrit(packet.source.ownerId===unit.id?unit:units.find(u=>u.id===packet.source.ownerId),packet.targetId,units,packet.source.ownerId === unit.id ? authorization : spellCrit(units.find(u => u.id === packet.source.ownerId)!)), ctx.draw));
+    packet.critical = p3ChargedAttacks.has(packet.actionSeq) && packet.delivery === 'basic-attack' ? p3Roll(ctx, unit, packet, true, shared) : shared ?? (packet.inherited ? packet.inherited.critical : rollCrit(packet.critEligibility, p2PacketCrit(packet.source.ownerId===unit.id?unit:units.find(u=>u.id===packet.source.ownerId),packet.targetId,units,packet.source.ownerId === unit.id ? authorization : sourceSpellCrit(ctx, packet.source.ownerId)), ctx.draw));
     if(packet.actionSeq===guaranteedAttackSeq&&packet.critEligibility==='basic')packet.critical=true;
     if (piercing) piercingCrit.set(packet.actionSeq, packet.critical);
   }
@@ -254,7 +256,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   const voidcaller = state.voidcaller?.map(c=>({...c})) ?? [], voidlings: B5VoidlingBirth[] = [];
   let itemRandomStreams = state.itemRandomStreams;
   let itemGoldReceipts=state.itemGoldReceipts;
-  const ctx: AbilityContext = { manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
+  const ctx: AbilityContext = { ...(hasBanish ? { roster: fullRoster } : {}), ...(state.departedUnits ? { departedUnits: state.departedUnits.map(u => structuredClone(u) as S13Unit) } : {}), manaRequests: [], castReceipts: [], resolutionFacts: EMPTY_FACTS, nextTriggerEventSeq: state.nextTriggerEventSeq ?? 0, tick, combatId: state.combatId ?? 'standalone', board: state.board, units, events, packets: [], heals: [], draw: () => {
     const next = nextRandom(rngState); rngState = next.state; rngDraws++; return next.word;
   } };
   const awardItemGold=(owner:S13Unit,item:NonNullable<S13Unit['mechanics']>[number],kind:ItemGoldKind,ordinal:number)=>{
@@ -438,7 +440,8 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   if (openingState) {
     const advanced = advanceOpeningTasks(openingState, tick, openingUnits()); openingState = advanced.state;
     for (const task of advanced.ready) {
-      const holder = units.find(u => u.id === task.source.ownerId)!, seq = actionSeq++;
+      const holder = effectSourceUnit(ctx, task.source.ownerId); if (!holder) continue;
+      const seq = actionSeq++;
       for (const id of task.targetIds) {
         const target = units.find(u => u.id === id && u.alive && u.hp > 0); if (!target) continue;
         executeDamageControlSequence(ctx, holder, task.source, target, task.effects, seq);
@@ -805,7 +808,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       emitStuns();
       if (ctx.packets.length > beforeDerived) {
         const children = ctx.packets.splice(beforeDerived).sort((a,b) => compareText(canonicalSource(asSource(a.source)), canonicalSource(asSource(b.source))) || compareText(a.targetId,b.targetId) || a.ordinal-b.ordinal);
-        for (const child of children) child.critical = rollCrit(child.critEligibility, p2PacketCrit(units.find(u=>u.id===child.source.ownerId),child.targetId,units,spellCrit(units.find(u => u.id === child.source.ownerId)!)), ctx.draw);
+        for (const child of children) child.critical = rollCrit(child.critEligibility, p2PacketCrit(units.find(u=>u.id===child.source.ownerId),child.targetId,units,sourceSpellCrit(ctx, child.source.ownerId)), ctx.draw);
         ctx.packets.splice(packetIndex + 1, 0, ...children);
       }
     }
@@ -907,6 +910,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   }
   settleMana();
   const trenchMembership=splitTrenchHolders(ctx,state,trenchEligible);
+  if(trenchMembership.departedUnits)ctx.departedUnits=[...ctx.departedUnits??[],...trenchMembership.departedUnits.slice(state.departedUnits?.length??0).map(u=>structuredClone(u) as S13Unit)];
   observeBatch5RevivalDeaths(ctx, () => deathAnomalies(ctx));
   deathG23Sion(ctx);
   settleSixCostDeaths(ctx,killed);
@@ -958,7 +962,10 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   settleFamilyReunionDeaths(ctx, fullRoster);
   batch2Tick(ctx);
   settleAugmentDeaths(ctx, units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive), state.strategy?.traits);
+  const beforeAnomalyRemoval=[...ctx.units];
   const anomalyRemoved=removeBoundAnomalySummons(ctx,fullRoster);
+  const anomalyDeparted=beforeAnomalyRemoval.filter(u=>anomalyRemoved.includes(u.id)&&namedAsEffectSource(ctx.units,u.id));
+  const departedUnits=[...trenchMembership.departedUnits??state.departedUnits??[],...anomalyDeparted];
   if(hasBanish&&anomalyRemoved.length)for(let i=fullRoster.length-1;i>=0;i--)if(anomalyRemoved.includes(fullRoster[i].id))fullRoster.splice(i,1);
   if (companionState) {
     const deaths = units.filter(u => (startHp.get(u.id) ?? 0) > 0 && !u.alive && u.unitKind === 'neutral' && u.encounterId && u.monsterFamily).map(u => ({ combatId: ctx.combatId!, tick, deadUnitId: u.id, team: u.team, encounterId: u.encounterId!, monsterFamily: u.monsterFamily!, eventId: JSON.stringify([ctx.combatId, tick, (state.nextEventSeq ?? 0) + events.findIndex(e => e.type === 'death' && e.unitId === u.id)]) }));
@@ -983,5 +990,5 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     const order=new Map(state.units.map((u,i)=>[u.id,i]));
     fullRoster.sort((a,b)=>(order.get(a.id)??state.units.length)-(order.get(b.id)??state.units.length));
   }
-  return stampCombatStep({ ...state,...trenchMembership, ...(batch5RebelSummons?{batch5RebelSummons}:{}), ...(voidcaller.length?{voidcaller}:{}), ...(anomalyRemoved.length?{removedUnitIds:[...trenchMembership.removedUnitIds??state.removedUnitIds??[],...anomalyRemoved]}:{}), ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
+  return stampCombatStep({ ...state,...trenchMembership, ...(batch5RebelSummons?{batch5RebelSummons}:{}), ...(voidcaller.length?{voidcaller}:{}), ...(departedUnits.length?{departedUnits}:{}), ...(anomalyRemoved.length?{removedUnitIds:[...trenchMembership.removedUnitIds??state.removedUnitIds??[],...anomalyRemoved]}:{}), ...(itemGoldReceipts ? {itemGoldReceipts} : {}), ...(itemRandomStreams ? {itemRandomStreams} : {}), ...(openingState ? { openingState } : {}), ...(trackAssists ? { damageContributors } : {}), nextTriggerEventSeq: ctx.nextTriggerEventSeq, ...(companionState ? { companionState } : {}), units:fullRoster, tick, rngState, rngDraws, nextActionSeq: actionSeq, status: result ? 'finished' : 'running', result }, events);
 }

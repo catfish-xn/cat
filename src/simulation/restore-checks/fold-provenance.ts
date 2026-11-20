@@ -26,6 +26,7 @@ import { receiptId, SHOP_AUGMENT_SOURCE } from '../shop-augments';
 import { getUnitSellPrice } from '../unit-stats';
 import type { UnitUpgradedEvent } from '../unit-types';
 import { UNIT_DEFINITIONS } from '../units';
+import { persistentGrowthSteps, validCombatGrowthDelta } from '../persistent-growth';
 
 const compareIds = (a: { readonly id: string }, b: { readonly id: string }) => compareCodePoints(a.id, b.id);
 
@@ -421,18 +422,21 @@ export function foldResourceProvenance(value: unknown, context: ResourceProvenan
         || (fact.kind === 'unit-acquired' || fact.kind === 'item-acquired') && fact.source.kind === 'loot')), 'combat resource suffix');
       requireValue(start === entries.length || entries[start]?.kind !== 'unit-upgraded', 'combat start transaction boundary');
       const originalUnits = unitPrefixes.get(start)!;
+      const seatAugments = context.scheduleReceipts.flatMap(r => r.kind === 'augment' && r.definitionId !== null && r.round <= round.ordinal ? [r.definitionId] : []);
       let previousId = '';
       for (const delta of entry.sourceDeltas) {
         keys(delta, ['sourceUnitId', 'attackDamageBps']); nonempty(delta.sourceUnitId); integer(delta.attackDamageBps, 1);
-        requireValue(compareCodePoints(previousId, delta.sourceUnitId) < 0 && delta.attackDamageBps % 125 === 0
-          && originalUnits.get(delta.sourceUnitId)?.definitionId === 'tristana', 'combat growth source/step');
+        const source = originalUnits.get(delta.sourceUnitId);
+        requireValue(compareCodePoints(previousId, delta.sourceUnitId) < 0 && !!source
+          && validCombatGrowthDelta(delta.attackDamageBps, source.definitionId, seatAugments), 'combat growth source/step');
         previousId = delta.sourceUnitId;
       }
       const pending = mergeGrowthLedger(entry.sourceDeltas.map(delta => ({ unitId: delta.sourceUnitId, attackDamageBps: delta.attackDamageBps })),
         suffix.filter((fact): fact is Extract<ResourceProvenanceEntry, { kind: 'unit-upgraded' }> => fact.kind === 'unit-upgraded').map(fact => fact.event));
       const next = new Map(growth.map(value => [value.unitId, value.attackDamageBps]));
       for (const delta of pending) {
-        requireValue(units.get(delta.unitId)?.definitionId === 'tristana', 'migrated growth owner');
+        const owner = units.get(delta.unitId);
+        requireValue(!!owner && persistentGrowthSteps(owner.definitionId, seatAugments).length > 0, 'migrated growth owner');
         const total = (next.get(delta.unitId) ?? 0) + delta.attackDamageBps; integer(total, 1); next.set(delta.unitId, total);
       }
       growth = [...next].map(([unitId, attackDamageBps]) => ({ unitId, attackDamageBps })).sort(compareGrowth);

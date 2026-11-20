@@ -16,7 +16,7 @@ export const BODY_YIELD_SHARE = 0.7;
  * Damage, projectiles, beams, impacts, ground areas and sustained cast bodies stay. A short caster flourish (cast windup
  * on the source under `CAST_BODY_SECONDS`) is decorative and is the first thing removed to make room.
  */
-export function effectImportance(cue: { event?: string; anchor?: string; location?: string; action?: string; variant?: string; main?: boolean; rank?: 'body'; duration?: number }): EffectImportance {
+export function effectImportance(cue: { event?: string; anchor?: string; location?: string; action?: string; variant?: string; main?: boolean; rank?: 'body' | 'critical' | 'decorative'; duration?: number }): EffectImportance {
   // 11-06 field recording: every unit's basic-attack hit filled the board's slots, so skill bodies on the caster never got in.
   // An empowered attack (Nocturne, Twitch) is the skill showing, so it keeps the usual ranks.
   if (cue.action === 'attack' && !cue.variant) return 'attack';
@@ -34,7 +34,9 @@ export function effectImportance(cue: { event?: string; anchor?: string; locatio
 
 /**
  * `full` means every live slot is taken. Any skill newcomer first replaces the earliest plain attack;
- * a critical or body one may otherwise replace the earliest decorative slot; a critical one may finally
+ * a critical or body one may otherwise replace the earliest decorative slot, and so may a plain attack (Fable 11-17: a
+ * flourish that started on a quiet board gives way when the board fills; attacks never replace one another or anything
+ * above a flourish; the runtime shows an attack only the flourishes it may end, not a cast's own); a critical one may finally
  * replace the oldest body that has played at least `BODY_YIELD_SECONDS` and `BODY_YIELD_SHARE` of its `spans` entry
  * (its duration; omitted means no share is required). A decorative newcomer waits outside:
  * it never displaces damage, control feedback or a skill body.
@@ -42,8 +44,9 @@ export function effectImportance(cue: { event?: string; anchor?: string; locatio
  */
 export function admitEffect(live: readonly EffectImportance[], incoming: EffectImportance, full: boolean, ages?: readonly number[], spans?: readonly number[]): { admit: boolean; evict: number } {
   if (!full) return { admit: true, evict: -1 };
-  // A basic-attack visual is the lowest rank: any skill visual replaces the earliest one, and it never displaces anything.
-  if (incoming === 'attack') return { admit: false, evict: -1 };
+  // A basic-attack visual is the lowest rank but a flourish's: any skill visual replaces the earliest one, and it displaces
+  // only the earliest decorative run, never another attack, a body or damage.
+  if (incoming === 'attack') { const decorative = live.indexOf('decorative'); return decorative < 0 ? { admit: false, evict: -1 } : { admit: true, evict: decorative }; }
   let evict = live.indexOf('attack');
   if (evict < 0 && (incoming === 'critical' || incoming === 'body')) evict = live.indexOf('decorative');
   if (evict < 0 && incoming === 'critical') {
