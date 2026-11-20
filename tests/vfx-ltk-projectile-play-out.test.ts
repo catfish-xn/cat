@@ -18,7 +18,10 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 const LISTED = Object.keys(PLAY_OUT_SYSTEMS)[0]!, END = PLAY_OUT_SYSTEMS[LISTED]!, PLAIN = 'sample', HELD = 'held', LATE = 'late';
 const flight = (system: string): TimelineCue => ({ system, event: 'projectile', delay: 0, duration: 0.6, travelSeconds: 0.6, bone: 'ground', targetBone: 'ground' });
 const index = (cues: readonly TimelineCue[], filler: readonly TimelineCue[]) => ({ version: 1, systems: Object.fromEntries([LISTED, PLAIN, HELD, LATE].map(id => [id, `systems/${id}.json`])),
-  assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...(filler.length ? { vi: filler.slice(0, 10), ...(filler.length > 10 ? { 'vi-b': filler.slice(10) } : {}) } : {}) } });
+  assets: { 'synthetic.tex': 'texture.png' }, skills: { gangplank: cues, ...Object.fromEntries(fillerLists(filler).map((list, at) => [fillerKey(at), list])) } });
+// The filler in lists of ten (a skill list holds at most 12 cues): 'vi', then 'vi-b', 'vi-c', … as MAX_LTK_SYSTEMS needs.
+const fillerLists = (filler: readonly TimelineCue[]) => Array.from({ length: Math.ceil(filler.length / 10) }, (_, at) => filler.slice(at * 10, at * 10 + 10));
+const fillerKey = (at: number) => at === 0 ? 'vi' : `vi-${String.fromCharCode(97 + at)}`;
 
 // `filler` plays first, from another champion's list, so the board is already holding it when the cast lands.
 async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAIN)], filler: readonly TimelineCue[] = [], budget?: { live: number; max: number }, attack = false) {
@@ -30,10 +33,10 @@ async function setup(cues: readonly TimelineCue[] = [flight(LISTED), flight(PLAI
   }));
   const runtime = createLtkRuntime(library, scene, id => units.get(id), budget ? { budget } : {});
   await runtime.warm('gangplank');
-  // A skill list holds at most 12 cues: a filler longer than ten plays as two casts. All of it is running before the cast.
+  // A skill list holds at most 12 cues: a filler longer than ten plays as one cast per ten. All of it is running before the cast.
   if (filler.length) {
-    await runtime.warm('vi'); expect(runtime.play('vi', 'caster', ['target'])).toBe(true);
-    if (filler.length > 10) expect(runtime.play('vi', 'caster', ['target'], 'cast', { skill: 'vi-b' })).toBe(true);
+    await runtime.warm('vi');
+    fillerLists(filler).forEach((_, at) => expect(at === 0 ? runtime.play('vi', 'caster', ['target']) : runtime.play('vi', 'caster', ['target'], 'cast', { skill: fillerKey(at) })).toBe(true));
     for (let i = 0; i < Math.ceil(filler.length / 6); i++) runtime.update(1 / 30, new Camera());
   }
   expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
