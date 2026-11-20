@@ -67,3 +67,27 @@ describe('Malzahar line: files written before it', () => {
     expect(() => restoreMatch(JSON.stringify({ ...state, contentDigest: BEFORE_LINE_DIGEST }))).toThrow('content-digest');
   });
 });
+
+// Display only: the cast receipt carries the gate's cells for the renderer (Malzahar's gate, cast receipt area).
+import { stepCombat } from '../src/simulation/combat';
+import { resolveAbility } from '../src/simulation/combat-abilities';
+import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
+import { toCombatViewEvents } from '../src/simulation/combat-replay-view';
+import { toLedgerEvents } from '../src/simulation/combat-ledger';
+import { battle, unit } from './combat-helpers';
+describe('Malzahar gate cells on the cast receipt', () => {
+  it("the receipt's area is the gate's on-board cells, end to end; the replay view keeps it; other casts have none", () => {
+    const m = unit('p', 'player', 3, 6, { definitionId: 'malzahar', starLevel: 1, ability: resolveAbility('malzahar-ability', 1), hp: 10000, maxHp: 10000, mana: 100, maxMana: 100,
+      attackDamage: 100, abilityPower: 100, attackRange: 20, baseAttackSpeedBps: 1, cooldownTicks: 1000, moveCooldownTicks: 1000, targetId: 'e',
+      runtime: { ...EMPTY_RUNTIME }, statuses: [], tasks: [], shieldLayers: [], mechanics: [] } as any);
+    const foe = (id: string, col: number, row: number) => unit(id, 'enemy', col, row, { definitionId: 'neutral-stage-2', ability: resolveAbility('neutral-attack', 1),
+      hp: 100000, maxHp: 100000, mana: 0, maxMana: 0, attackDamage: 0, cooldownTicks: 1000, moveCooldownTicks: 1000, runtime: { ...EMPTY_RUNTIME }, statuses: [], tasks: [], shieldLayers: [] } as any);
+    const r = stepCombat(battle([m, foe('e', 3, 3), foe('f', 0, 0)], { strategy: { traits: [], units: [] }, combatId: 'malzahar-area', rngState: 42 } as any));
+    const cast = r.events.find(e => e.type === 'cast') as any;
+    expect(cast.receipt.area).toEqual({ cells: hexCrossLine(DEFAULT_BOARD, { col: 3, row: 6 }, { col: 3, row: 3 }, MALZAHAR_LINE_HALF).map(l => l.cell) });
+    expect(cast.receipt.area.cells).toEqual([{ col: 1, row: 3 }, { col: 2, row: 3 }, { col: 3, row: 3 }, { col: 4, row: 3 }, { col: 5, row: 3 }]);
+    expect(cast.receipt.targetIds).toEqual(['e']);
+    expect(toCombatViewEvents(toLedgerEvents(r.events)).find(e => e.type === 'cast')).toMatchObject({ type: 'cast', sourceId: 'p', area: cast.receipt.area });
+    expect(r.events.filter(e => e.type === 'cast' && (e as any).receipt.source.ownerId !== 'p').every(e => (e as any).receipt.area === undefined)).toBe(true);
+  });
+});

@@ -130,6 +130,7 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       // either way, clipped by the board. Enemies on it are hit in this order (it splits the infection): the target, then
       // by steps from it, ties by id.
       const line = hexCrossLine(ctx.board, unit.cell, target.cell, MALZAHAR_LINE_HALF);
+      ctx.castArea = line.map(l => l.cell); // display only: the gate's cells for the renderer (cast receipt area)
       const stepOf = (u: S13Unit) => line.find(l => l.cell.col === u.cell.col && l.cell.row === u.cell.row)?.step;
       const targets = areaEnemies(unit, ctx.units).filter(u => stepOf(u) !== undefined)
         .sort((a, b) => Math.abs(stepOf(a)!) - Math.abs(stepOf(b)!) || compareText(a.id, b.id));
