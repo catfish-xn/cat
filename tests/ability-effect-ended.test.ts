@@ -4,6 +4,7 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
+import { loris } from '../src/rendering/three-mode/vfx-ltk/batch3/loris';
 import { battle, unit } from './combat-helpers';
 import { readFileSync } from 'node:fs';
 import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
@@ -130,7 +131,9 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     const cues = [...CUE_OVERRIDES.leblanc!, ...CUE_OVERRIDES.twitch!, ...CUE_OVERRIDES.drmundo!, ...CUE_OVERRIDES.vander!, ...CUE_OVERRIDES.blitzcrank!,
       ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!, ...CUE_OVERRIDES.vi!, ...CUE_OVERRIDES.viktor!,
       // 2026-11-16: shields on others (Mel's, Jayce's forge) end with the shielded ally's layer (abilityShieldEndedOnHolder).
-      ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!];
+      ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!,
+      // 2026-11-20: Loris's Q ground ring (his index list, held per skill: SUSTAIN_SKILL_CAPS) ends with his shield layer.
+      ...loris.loris!];
     const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
       Array.isArray(v.systems) ? [[k, v.systems as readonly string[]]] : Object.entries(v.systems as Record<string, readonly string[] | { systems: readonly string[] }>)
         .map(([a, l]) => [`${k} ${a}`, Array.isArray(l) ? l as readonly string[] : (l as { systems: readonly string[] }).systems]));
