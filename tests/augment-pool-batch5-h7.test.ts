@@ -66,6 +66,11 @@ describe('B5-42 Good for Something',()=>{
         if(offer.status==='available' && current.gold>=shopOfferCost(offer) && current.preparation.units.filter(u=>u.location.kind==='bench').length<current.preparation.benchSize)
           expect(room.handle(seat.seatId,{type:'buy',slot,generation:current.shop.generation})).toMatchObject({ok:true});
       }
+      // Landing batch (2026-11-20, scene change; assertions and rounds unchanged): the roll is keyed by the death's eventSeq,
+      // which the landing batch's display events moved, so the holder's round-6 death no longer pays. The holder's fielded
+      // hero now stands at (1,5) (tried every player cell: (2,4) (3,4) (6,4) (0,5) (1,5) (2,5) pay within rounds 4-6).
+      const hero=room.state.seats.find(x=>x.seatId===seatId)!.match.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board');
+      if(hero)expect(room.handle(seatId,{type:'deploy',unitId:hero.id,target:{kind:'board',cell:{col:1,row:5}}}).ok).toBe(true);
       runUntil(room,clock,s=>s.round===round&&s.phase==='settlement');s=room.state.seats.find(s=>s.seatId===seatId)!.match;
     });
     afterAll(()=>setup?.room.dispose());
