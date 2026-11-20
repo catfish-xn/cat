@@ -4,7 +4,7 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { CRIT_ATTACK_HIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { CRIT_ATTACK_HIT, SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -216,12 +216,16 @@ interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snaps
   /** The clock of the first frame it was put back to wait for room. */
   waitingSince?: number;
   /** One play() call's cue on several targets, a row each (`${play}:${system}`): its rows after the first take no slot (OFF_SLOT_MAX). */
-  fan?: string }
+  fan?: string;
+  /** A held layer that waits for free room instead of being dropped (cue-overrides.ts SUSTAIN_READMIT). */
+  readmit?: boolean }
 interface Running { reserved: number; system: string; stopped?: boolean;
   /** Its cue's event (a plain attack's missile may end a plain attack's hit: see the admission loop). */
   event?: TimelineCue['event'];
   /** Its cue asked for the decorative rank (TimelineCue.rank): a flourish a plain attack or a place's run may end. */
   ranked?: boolean;
+  /** The row it started from, for a held layer that comes back after it is evicted (SUSTAIN_READMIT). */
+  again?: Waiting;
   /** fadeAction is easing it out: it no longer counts as playing. */
   fading?: boolean; source: string; target?: string; action: TimelineAction; until: number; started: number; span: number; fx: LtkParticles; persistent?: boolean; boundToSource: boolean; group?: string; importance: EffectImportance;
   /** Its unit died or left: the host-body overlays go at once, while the rest of the system's tail plays out. */
@@ -870,6 +874,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         run.fx.stop(); run.stopped = true; run.bodyGone = true;
         for (const draw of run.fx.attached) draw.object.visible = false;
         if (run.group) run.until = Math.min(run.until, clock + .5);
+        // A layer held until a rule event (SUSTAIN_CAPS) shows a state of this unit: with the unit gone it goes now, never
+        // waiting out the long hold its cap gave it.
+        if (Object.hasOwn(SUSTAIN_CAPS, run.system)) run.until = clock;
         // A listed projectile (cue-overrides.ts PLAY_OUT_SYSTEMS) plays out from here too: a killing hit lands as its unit
         // dies, and the landed projectile's tail must not go whole with it. Only those: Vi's row shockwave, accepted as it
         // is (Fable 11-13), keeps its planned end with emission stopped when its caster or target goes.
@@ -932,7 +939,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const atPlace = placeRow(row) && (!row.together || (waiting.every(other => other.together !== row.together || placeRow(other))
           && [...running].every(run => run.together !== row.together || run.atPlace)));
         const countMiss = atPlace ? countPlaceDrop : countDrop;
-        if (overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
+        // A layer that comes back (SUSTAIN_READMIT) waits for free room through its whole time; past it, it is over.
+        const readmit = row.readmit ?? SUSTAIN_READMIT.has(spawn.system);
+        if (readmit && clock - when >= spawn.duration) continue;
+        if (!readmit && overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
         if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
         // A target dead by now: a row that kept its place plays there, any other is dropped.
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
@@ -944,7 +954,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
         // and frees that run's room before this one asks for its own.
-        if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId) { release(run, true); running.delete(run); }
+        if (spawn.refresh) for (const run of running) if (run.system === spawn.system && run.source === spawn.sourceId
+          && (spawn.event !== 'hit' || run.target === spawn.targetId)) { release(run, true); running.delete(run); }
         // A row projectile (TimelineCue.rowSide) runs between two board points taken now: where its target stands (its
         // snapshot point once it is dead) and rowCells along the row. With neither it does not play: it never falls back
         // to a flight from the caster.
@@ -1056,8 +1067,12 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const victim = [...running][decision.evict];
           if (!victim) break;
           if (victim.importance === 'decorative') countYield(victim.system);
+          // A held layer that comes back waits for room with the rest of its time (Fable 11-19: Draven's axes).
+          if (victim.again && victim.until > clock) waiting.push({ ...victim.again, at: clock, readmit: true, waitingSince: undefined,
+            spawn: { ...victim.again.spawn, delay: 0, duration: victim.until - clock, stopAfter: undefined } });
           leave(victim);
         }
+        if (blocked() && readmit && !atPlace) { waiting.splice(at, 0, row); at++; continue; }
         if (blocked()) {
           // Six damage/projectile runs fill the board: a critical or body cue waits in line instead of being dropped (11-07 brawl:
           // every remaining critical drop was on six critical slots, half of them ending within 0.5 s). The overdue
@@ -1122,7 +1137,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}) }); starts++;
+            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
+            ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
           LTK_RUN_STATS.peakRunning = Math.max(LTK_RUN_STATS.peakRunning, running.size);
