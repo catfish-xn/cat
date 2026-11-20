@@ -36,6 +36,10 @@ const mixerUpdate = AnimationMixer.prototype.update;
 AnimationMixer.prototype.update = function (this: AnimationMixer, delta: number) { mixers.add(this); return mixerUpdate.call(this, delta); };
 (window as any).__resetClocks = () => { for (const m of mixers) m.setTime(0); frameAfter(0); return mixers.size; };
 // Installed before the renderer mounts, so the running-system and overhead probes see it from its first frame.
+// The browser keeps 250 resource timings by default and then stops listing new loads: waitQuiet (common.cjs) counts them to
+// see the loads settle, and an 8 v 8 board passes 250 before its effects load (Windows 11-19: 245 listed, every later load
+// unseen). Room for every load of a session.
+performance.setResourceTimingBufferSize(100000);
 const probes = installProbes(() => clock);
 const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y: 50 + 34 * 1.5 * row });
 (async () => {

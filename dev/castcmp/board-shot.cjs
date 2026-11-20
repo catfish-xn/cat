@@ -1,10 +1,12 @@
 // node dev/castcmp/board-shot.cjs <unit> <outdir> --board a,b,... --foes c,d,... [--star 3] [--anchor SYSTEM --at 0,350,...]
-//   [--abs MS,MS,...] [--port 5311] [--assetPort 5419] [--gl gpu|swift]
+//   [--abs MS,MS,...] [--port 5311] [--assetPort 5419] [--gl gpu|swift] [--quiet-ms 30000]
 // One whole real combat of up to 8 against 8 (the board-load harness), a warm pass, then the measured pass stepped 50 ms at
 // a time. Shots: --at MS after the anchor system first starts (LTK_RUN_STATS.started), and --abs MS after the measured
 // pass began. Writes <outdir>/shots/*.jpg and stats.json: the admission counters of the measured pass (runtime.ts
 // LTK_RUN_STATS: peak running, started, dropped, place rows, runs that gave way to a newcomer) and `yields`, the time of
 // each step a run gave way (for --abs). <unit> is only the job's label. Dev tool: it decides nothing.
+// stats.json also gives notReady (casts refused while an effect was still loading, measured pass only), warmPending and
+// quiet: compare only runs with notReady 0, warmPending 0 and quiet true.
 const { chromium } = require('playwright');
 const { launchOptions, timer, waitQuiet } = require('./common.cjs');
 const path = require('path'), fs = require('fs');
@@ -36,10 +38,10 @@ const at = (opt('at') ?? '300,600,900,1300,1800').split(',').map(Number);
     for (let i = 0; i < 300 && state.pending > 0; i++) await new Promise(resolve => setTimeout(resolve, 100));
     return state.pending;
   });
-  const quiet = await waitQuiet(page); mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
+  const quiet = await waitQuiet(page, { maxMs: Number(opt('quiet-ms') ?? 30000) }); mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
   await page.evaluate(() => window.__h.fresh());
   const run = (clear = false) => page.evaluate(async c => { const r = (await import('/src/rendering/three-mode/vfx-ltk/runtime.ts')).LTK_RUN_STATS;
-    if (c) Object.assign(r, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [] }); return JSON.parse(JSON.stringify(r)); }, clear);
+    if (c) Object.assign(r, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [], refused: {}, skipped: {} }); return JSON.parse(JSON.stringify(r)); }, clear);
   await run(true);
   fs.mkdirSync(path.join(out, 'shots'), { recursive: true });
   let t = 0, t0 = null; const shots = []; const todo = [...at]; const yields = []; let yieldN = 0;
@@ -57,7 +59,10 @@ const at = (opt('at') ?? '300,600,900,1300,1800').split(',').map(Number);
   }
 
   const stats = await run();
-  fs.writeFileSync(path.join(out, 'stats.json'), JSON.stringify({ board, foes, star, anchorAt: t0, shots, yields, stats, errors }, null, 2));
+  // Casts refused because an effect was still loading (runtime.ts refuse 'not-ready'): counted from the measured pass only.
+  // A run with any is not comparable: those casts are neither started nor dropped, so the board reads lighter than it was.
+  const notReady = stats.refused?.['not-ready'] ?? null;
+  fs.writeFileSync(path.join(out, 'stats.json'), JSON.stringify({ board, foes, star, anchorAt: t0, notReady, warmPending: warming, quiet: quiet.ok, shots, yields, stats, errors }, null, 2));
   console.log(JSON.stringify({ anchorAt: t0, peakRunning: stats.peakRunning, dropped: stats.dropped, errors: errors.length }));
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
