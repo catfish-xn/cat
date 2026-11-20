@@ -19,6 +19,10 @@ import { validatePeriodicTask } from './periodic';
 import { validateShield } from './shield';
 import { integer } from './stats';
 function check(value: unknown, message: string): asserts value { if (!value) throw new Error(`Invalid Match save: ${message}`); }
+/** A saved status or shield must name a source that is still in the combat roster. */
+function sourceOwner<U extends { readonly id: string }>(units: readonly U[], ownerId: string): U {
+  const owner = units.find(u => u.id === ownerId); check(owner, 'missing effect source unit'); return owner;
+}
 export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[], tick: number, combatId: string, finished: boolean, nextActionSeq: number, neutralStatuses: ReadonlySet<string> = new Set(), parsedJsonInput = false, traits?: readonly TraitSnapshot[], abilityStatuses: ReadonlySet<string> = new Set()): void {
   const same = parsedJsonInput ? equalValidatedContent : (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
   const state = unit.mechanismState, definitions = unit.mechanismDefinitions;
@@ -52,13 +56,13 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       if(c && (neutralStatuses.has(c.key) || replayedAbility || (c.source.sourceKind==='item'||c.source.sourceKind==='augment'||c.source.sourceKind==='anomaly'||c.source.sourceKind==='trait') && isDeclaredStatus(c.source,c.application,units,combatId))) {
         check(!covered.has(key) && c.targetId===unit.id && same(c.source,asSource(legacy.source)) && legacy.key===c.key && c.appliedAtTick===legacy.startsAtTick && (c.expiresAtTick ?? 1201)===legacy.expiresAtTick, 'item status source/timing projection');
         if (c.source.sourceKind === 'augment' && c.source.definitionId === 'blistering-strikes') {
-          const owner = units.find(u => u.id === c.source.ownerId)!;
+          const owner = sourceOwner(units, c.source.ownerId);
           check(owner.team !== unit.team && c.appliedAtTick > 0 && c.appliedAtTick <= tick
             && owner.triggerLedger?.runtimes.some(r => r.source.definitionId === c.source.definitionId && r.source.instanceId === c.source.instanceId
               && r.source.effectIndex <= c.source.effectIndex && c.source.effectIndex < r.source.effectIndex + 2 && r.triggerCount > 0 && r.startsAtTick <= c.appliedAtTick), 'augment attack status receipt');
         } else if (c.source.sourceKind === 'augment' && ['piercing-lotus-i','piercing-lotus-ii'].includes(c.source.definitionId)) {
           // A later critical refreshes the same contribution: it keeps appliedAtTick and moves expiry to that hit + 60 (status.ts).
-          const owner=units.find(u=>u.id===c.source.ownerId)!;
+          const owner=sourceOwner(units, c.source.ownerId);
           const d=owner.mechanismDefinitions?.eventTriggers?.find(t=>t.id==='lotus-critical'&&t.source.effectIndex<=c.source.effectIndex&&c.source.effectIndex<t.source.effectIndex+t.effects.length);
           check(owner.team!==unit.team&&d&&owner.mechanics?.some(m=>m.mechanic==='s13P3'&&m.source.definitionId===c.source.definitionId)&&c.expiresAtTick!==null&&c.expiresAtTick>=c.appliedAtTick+60&&c.expiresAtTick<=tick+60&&c.appliedAtTick>0&&c.appliedAtTick<=tick&&owner.triggerLedger?.runtimes.some(r=>canonicalSource(r.source)===canonicalSource(d.source)&&r.triggerCount>=(c.expiresAtTick===c.appliedAtTick+60?1:2)&&r.startsAtTick<=c.appliedAtTick),'P3 lotus critical receipt');
         } else if (c.source.sourceKind === 'augment' && c.source.definitionId === 'all-for-one-i') {
@@ -68,13 +72,13 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
         } else if (c.source.sourceKind === 'augment' && units.find(u => u.id === c.source.ownerId)?.mechanics?.some(m => m.mechanic === 'corrosion' && canonicalSource(asSource(m.source)) === canonicalSource(c.source))) {
           // Local shape check only: validateDynamicCombat authenticates the complete Corrosion set
           // from the trusted opening strategy, including contributions deleted from both projections.
-          const owner = units.find(u => u.id === c.source.ownerId)!, m = owner.mechanics!.find(m => m.mechanic === 'corrosion')!;
+          const owner = sourceOwner(units, c.source.ownerId), m = owner.mechanics!.find(m => m.mechanic === 'corrosion')!;
           const [tickOf, index] = JSON.parse(JSON.parse(c.key)[8]).slice(1) as [number, number];
           check(owner.team !== unit.team && c.expiresAtTick === null && c.appliedAtTick > 0 && c.appliedAtTick <= tick && c.appliedAtTick % m.values.periodTicks === 0
             && tickOf === c.appliedAtTick && JSON.parse(c.key)[8] === JSON.stringify(['corrosion', c.appliedAtTick, index])
             && same(statusDeclaration(augmentCombatEffects(m)[index], owner, c.source), c.application), 'augment corrosion pulse');
         } else if (c.source.sourceKind === 'augment') {
-          const owner = units.find(u => u.id === c.source.ownerId)!;
+          const owner = sourceOwner(units, c.source.ownerId);
           const m = owner.mechanics?.find(m => canonicalSource(asSource(m.source)) === canonicalSource(c.source));
           check(m && owner.team === unit.team && c.expiresAtTick === null && c.appliedAtTick > 0 && c.appliedAtTick <= tick, 'augment status source/timing');
           const application = JSON.parse(c.key)[8];
@@ -110,7 +114,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       const kind = legacy.kind === 'stun' ? 'stun' : legacy.kind === 'armorReduction' ? 'sunder' : legacy.kind === 'damageReduction' ? 'damage-reduction' : legacy.amount < 0 ? 'stat-debuff' : 'stat-buff';
       check(app.kind === kind && app.onEnd === null, 'uncompiled status kind/end rewards');
       if (app.modifier) {
-        const owner = units.find(u => u.id === c.source.ownerId)!;
+        const owner = sourceOwner(units, c.source.ownerId);
         const firelight = owner.mechanics?.find(m => m.mechanic === 'firelight' && canonicalSource(asSource(m.source)) === canonicalSource(asSource(legacy.source)));
         const speed = legacy.kind === 'attackSpeed' && app.modifier.stat === 'attackSpeed' && app.modifier.unit === 'bps'
           && app.activation === 'immediate' && app.duration.kind === 'ticks'
@@ -185,7 +189,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
     if(declared) {
       check(same(declared.effect,grant), 'declared shield grant');
       validateItemEffectConsumption(shield.source,shield.startsAtTick,units,combatId);
-      const holder=units.find(u=>u.id===shield.source.ownerId)!;
+      const holder=sourceOwner(units, shield.source.ownerId);
       const pulse=holder.mechanismState?.periodicTasks.find(t=>canonicalSource(t.source)===canonicalSource(shield.source)&&t.nextPulseAtTick-t.periodTicks===shield.startsAtTick);
       const remainder=pulse?.remainders.find(r=>r.targetId===unit.id&&r.effectIndex===0);
       const reave=(unit.g22?.reaveUntilTick??0)>shield.startsAtTick?unit.g22!.reaveBps:0;
@@ -205,7 +209,7 @@ export function validateMechanisms(unit: CombatUnit, units: readonly CombatUnit[
       && grant.amount.shieldAbsorbedBps === 0 && grant.amount.cap === null && grant.amount.hpBasis === 'holder'
       , 'uncompiled shield grant');
     integer(grant.durationTicks, 1); integer(grant.amount.flat);
-    const owner = units.find(u => u.id === shield.source.ownerId)!;
+    const owner = sourceOwner(units, shield.source.ownerId);
     if (shield.decay.kind === 'linear-initial-grant') {
       check(owner.ability.kind === 's13' && Object.hasOwn(owner.ability.variables, 'PercentShieldDamage') && grant.endTiming === 'next-action-planning' && grant.decay.kind === 'linear-initial-grant'
         && same(grant.onEnd, ['depleted', 'expired']) && grant.endEffects.length === 1, 'decaying shield end binding');

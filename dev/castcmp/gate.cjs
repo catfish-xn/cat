@@ -61,6 +61,11 @@ const readLayers = page => page.evaluate(async () => {
 });
 /** Systems running now, and those that started since the last read (the harness probe). */
 const readRunning = page => page.evaluate(() => { const s = window.__h.systems?.(); window.__h.resetStarts?.(); return s ?? null; });
+/** Systems whose rows the runtime skipped as empty (runtime.ts LTK_RUN_STATS.emptySkipped: a definition that draws nothing). */
+const readEmpty = page => page.evaluate(async () => {
+  const r = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
+  return Object.keys(r?.LTK_RUN_STATS?.emptySkipped ?? {});
+});
 
 /** Share of `me`'s screen box covered by each foe's box in one frame. */
 function cover(boxes) {
@@ -119,8 +124,9 @@ function createGate(opt, ctx) {
       if (probeOverhead) fs.writeFileSync(path.join(record.out, 'overhead.json'), JSON.stringify(overheadDrift(frames.map(f => ({ t: f.t, ...(f.overhead ?? {}) }))).points, null, 2));
       if (!enabled) return true;
       const audit = ctx.real ? await ctx.page.evaluate(ms => window.__h.audit ? { ...window.__h.audit(ms), combatStart: window.__h.real?.combatStart } : null, ctx.times[ctx.times.length - 1]) : null;
-      const v = verdict({ systems, absent, layerIds, column, real: ctx.real, ckout, audit, pre, frames, from, to, actionAtMs: ctx.actionAtMs, sampleLayers, probeOverhead });
-      const out = { ...v, unit: ctx.unit, column, actionAtMs: ctx.actionAtMs, systems, absent, layers: layerIds, window: { from: Number.isFinite(from) ? from : null, to: Number.isFinite(to) ? to : null },
+      const empty = await readEmpty(ctx.page).catch(() => []);
+      const v = verdict({ systems, absent, layerIds, column, real: ctx.real, ckout, audit, pre, frames, from, to, actionAtMs: ctx.actionAtMs, sampleLayers, probeOverhead, empty });
+      const out = { ...v, unit: ctx.unit, column, actionAtMs: ctx.actionAtMs, systems, absent, empty, layers: layerIds, window: { from: Number.isFinite(from) ? from : null, to: Number.isFinite(to) ? to : null },
         snapshot: opt('snapshot') ?? null, machine: `${os.hostname()} ${process.platform}`, at: new Date().toISOString(), checkout: ckout, audit, preAction: pre, ...record.meta, frames };
       fs.writeFileSync(path.join(record.out, 'gate.json'), JSON.stringify(out, null, 2));
       console.log('gate', v.ok ? 'PASS' : 'FAIL', v.fails.join(' | '), v.exempt.length ? '(exempt: ' + v.exempt.join('; ') + ')' : '');
@@ -129,7 +135,7 @@ function createGate(opt, ctx) {
   };
 }
 
-function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, frames, from, to, actionAtMs, sampleLayers, probeOverhead, sampledRunning = true }) {
+function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, frames, from, to, actionAtMs, sampleLayers, probeOverhead, sampledRunning = true, empty = [] }) {
   const fails = [], exempt = [], notes = [], warnings = [];
   notes.push('play() return: not read; a named system that started is the evidence that play() returned true');
   const judged = frames.filter(f => f.t >= from && f.t <= to);
@@ -158,7 +164,10 @@ function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, f
   } else exempt.push('rules checks (not --real: dummies, no rules run)');
   // Running systems.
   const ran = new Set(judged.flatMap(f => f.running ?? []));
-  const report = { ran: systems.filter(id => ran.has(id)), missing: systems.filter(id => !ran.has(id)), absentButRan: absent.filter(id => ran.has(id)), runningBeforeAction: [...systems, ...absent].filter(id => pre.running.includes(id)) };
+  // A named system whose definition draws nothing never runs (the runtime skips it when due): not applicable, not missing.
+  const emptyNamed = systems.filter(id => !ran.has(id) && empty.includes(id));
+  if (emptyNamed.length) exempt.push(`systems: ${emptyNamed.join(',')} not applicable (empty system: its definition draws nothing)`);
+  const report = { ran: systems.filter(id => ran.has(id)), missing: systems.filter(id => !ran.has(id) && !emptyNamed.includes(id)), empty: emptyNamed, absentButRan: absent.filter(id => ran.has(id)), runningBeforeAction: [...systems, ...absent].filter(id => pre.running.includes(id)) };
   notes.push(`systems: ${JSON.stringify(report)}`);
   if (!sampledRunning) exempt.push('running systems (gate.json from before the running-system probe: layers only)');
   else if (column === 'before') exempt.push('system presence/absence (column before: recorded only)');
@@ -223,7 +232,7 @@ function regate(raw) {
   const v = verdict({ systems: g.systems ?? [], absent: g.absent ?? [], layerIds: g.layers ?? [], column: g.column, real: !!g.real, ckout: g.checkout,
     audit: g.audit, pre: g.preAction ?? { running: [], layers: [] }, frames: g.frames ?? [], from: g.window?.from ?? -Infinity, to: g.window?.to ?? Infinity,
     actionAtMs: g.actionAtMs ?? (g.real ? 500 : 0), sampleLayers: (g.frames ?? []).some(f => 'layers' in f), probeOverhead: g.overhead != null,
-    sampledRunning: !g.oldFormat });
+    sampledRunning: !g.oldFormat, empty: g.empty ?? [] });
   return { ...g, ...v, regated: { at: new Date().toISOString(), was: { ok: raw.ok, fails: raw.fails } } };
 }
 

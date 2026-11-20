@@ -65,7 +65,8 @@ export function bindR3Copies(strategy: StrategySnapshot, copies: readonly ItemSu
     if (!copy) return unit;
     const frozen = equipmentBasis?.units.find(u => u.unitId === unit.unitId);
     if (frozen) return frozen;
-    const owner = strategy.units.find(u => u.unitId === copy.ownerId)!;
+    const owner = strategy.units.find(u => u.unitId === copy.ownerId);
+    if (!owner) throw new RangeError('Missing R3 copy owner');
     const base = owner.effectiveStarLevel && owner.effectiveStarLevel !== copy.unit.starLevel
       ? familyCombatBase(copy.unit, owner.effectiveStarLevel) : undefined;
     const resolved = base ? resolveEffects(base.base, base.ability, unit.sources) : unit;

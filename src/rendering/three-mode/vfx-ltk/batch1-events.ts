@@ -29,7 +29,7 @@ export interface Batch1EventPlan {
   /** The cast plays none of its effects, but the caster still turns and moves as for any cast (skipCast drops all of it). */
   noCastEffect?: boolean;
 }
-interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaUntil: number; pulseTick: number }
+interface SeenUnit { attacks: number; empoweredThrows: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaFrom: number; pulseTick: number }
 const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne', 'kogmaw', 'twitch']);
 /** Presentation memory of observed events only. No resource, targeting or damage rules.
  * 14.24b visual forms: Zeri every third observed attack; Twitch eight bolts after cast;
@@ -92,14 +92,16 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const strikes = new Map<string, { tick: number; struck: Set<string> }>();
   /** Smeech since his last cast: stabs drawn (his swing turns with each) and the enemy his last stab hit (a new one is a leap). */
   const smeech = new Map<string, { stabs: number; target: string | undefined }>();
+  /** Mordekaisers whose cast's empowered time is running (from the cast to the rules' mordekaiser-empower end). */
+  const empoweredMorde = new Set<string>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
-    if (!state) { state = { attacks: 0, cast: false, luxAttack: false, twitchShots: 0, nocturneUntil: -1, leonaUntil: -1, pulseTick: -1 }; units.set(id, state); }
+    if (!state) { state = { attacks: 0, empoweredThrows: 0, cast: false, luxAttack: false, twitchShots: 0, nocturneUntil: -1, leonaFrom: -1, pulseTick: -1 }; units.set(id, state); }
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); empoweredMorde.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -165,6 +167,10 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: struck.has(grab.held) ? [grab.held, ...[...struck].filter(id => id !== grab.held)] : [...struck],
             action: 'passive', skill: 'renni-slam', snapshotTargets: true });
         }
+        // Draven: an empowered axe that lands flies back up to his hand in an arc (CUE_EXTRA_SKILLS draven-return), from the
+        // enemy it hit; it goes with either of them dying (placeholder-renderer.ts stops DRAVEN_AXE on a death).
+        if (event.type === 'attackLanded' && event.hit && definition(event.attackerId) === 'draven' && unit(event.attackerId).cast)
+          plan.extra.push({ champion: 'draven', sourceId: event.targetId, targets: [event.attackerId], action: 'passive', skill: 'draven-return' });
         // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
         // vladimir-ability, actual > 0), not on his cast's enemies. With Blood Pact his cast heals nothing, so no ring; item or
         // vamp heals draw nothing here.
@@ -290,6 +296,11 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
+        // Mordekaiser: his attacks while his cast's empowered time runs are his empowered ones (the mace glow, CUE_OVERRIDES).
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'mordekaiser') empoweredMorde.add(event.sourceId);
+        if (event.type === 'abilityEffectEnded' && event.effect === 'mordekaiser-empower') empoweredMorde.delete(event.unitId);
+        if (event.type === 'death') empoweredMorde.delete(event.unitId);
+        if (event.type === 'attack' && empoweredMorde.has(event.attackerId)) plan.variant = 'empowered';
         if (!tracked) return plan;
         // Nocturne's strike (P_tar) plays on every enemy his empowered swing bleeds: its own target with the swing's hit, each
         // other one when its first bleed tick lands. The rules name no bleed targets at the swing (Fable 11-18, C71 option A).
@@ -306,7 +317,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           if (champion === 'lux') { state.luxAttack = true; if (event.targetIds[0] === event.sourceId) plan.variant = 'self'; }
           if (champion === 'twitch') state.twitchShots = 8;
           if (champion === 'nocturne') { state.nocturneUntil = event.tick + 120; plan.stopCast = event.sourceId; }
-          if (champion === 'leona') { state.leonaUntil = event.tick + 60; plan.stopCast = event.sourceId; }
+          // Leona's W runs from her cast until the rules' damage reduction on her expires (its own event, not a fixed tick count).
+          if (champion === 'leona') { state.leonaFrom = event.tick; plan.stopCast = event.sourceId; }
         } else if (event.type === 'attack') {
           const champion = definition(event.attackerId), state = unit(event.attackerId);
           state.attacks++;
@@ -314,6 +326,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             || champion === 'lux' && state.luxAttack || champion === 'nocturne' && event.tick < state.nocturneUntil
             || champion === 'twitch' && state.twitchShots > 0) plan.variant = 'empowered';
           if (champion === 'lux') state.luxAttack = false;
+          // Draven throws his empowered axes from each hand in turn: every second one is the other hand's axe.
+          if (champion === 'draven' && plan.variant === 'empowered' && ++state.empoweredThrows % 2 === 0) plan.variant = 'empowered-alt';
           if (champion === 'nocturne' && plan.variant === 'empowered') strikes.set(event.attackerId, { tick: event.tick, struck: new Set([event.targetId]) });
           if (champion === 'twitch' && state.twitchShots > 0) {
             state.twitchShots--;
@@ -321,8 +335,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             plan.targets = packets.get(key(event.tick, event.attackerId, 'physical')) ?? [event.targetId];
           }
         } else if (event.type === 'statusChanged' && event.kind === 'damage-reduction' && event.reason === 'expired'
-          && definition(event.targetId) === 'leona' && unit(event.targetId).leonaUntil === event.tick) {
-          unit(event.targetId).leonaUntil = -1; plan.stopCast = event.targetId;
+          && definition(event.targetId) === 'leona' && unit(event.targetId).leonaFrom >= 0) {
+          unit(event.targetId).leonaFrom = -1; plan.stopCast = event.targetId;
           plan.extra.push({ champion: 'leona', sourceId: event.targetId, targets: [], action: 'end' });
           const targets = packets.get(key(event.tick, event.targetId, 'magic'));
           if (targets?.length) plan.extra.push({ champion: 'leona', sourceId: event.targetId, targets, action: 'passive' });
@@ -332,7 +346,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'amumu', sourceId: event.sourceId, targets: packets.get(key(event.tick, event.sourceId, 'magic'))!, action: 'passive' });
         } else if (event.type === 'death') {
           const state = units.get(event.unitId);
-          if (state) { state.leonaUntil = -1; state.nocturneUntil = -1; }
+          if (state) { state.leonaFrom = -1; state.nocturneUntil = -1; }
           if (definition(event.unitId) === 'leona' || definition(event.unitId) === 'nocturne') plan.stopCast = event.unitId;
         }
         return plan;
