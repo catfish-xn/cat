@@ -93,7 +93,7 @@ describe('stage5 floating text equivalence and DOM work', () => {
     next.dispose();
   });
 
-  it('merges one source\'s same-tick packets, preserves status/heal text, shows no shield number and keeps the exact expiry boundary', () => {
+  it('merges one source\'s same-tick packets, keeps heal text, shows no status word and no shield number, and keeps the exact expiry boundary', () => {
     setup(); const newHost = host(), next = createCombatFeedbackRenderer(newHost);
     const events: SceneCombatEvent[] = [damage(1), damage(1, 'a', 5), { ...damage(1, 'b'), damageType: 'magic', absorbed: 12 },
       { type: 'heal', tick: 1, eventSeq: 5, targetId: 'c', actual: 24, shares: [] },
@@ -103,8 +103,9 @@ describe('stage5 floating text equivalence and DOM work', () => {
     next.push(events, 0);
     for (const now of [-10, 0, 600, 899.999, 900]) {
       next.render(now, anchors);
-      if (now === 0) expect(snapshot(newHost)[0].children.map(e => e.text)).toEqual(['15', '10', '+24', '眩晕', '10']);
-      if (now === 899.999) expect(snapshot(newHost)[0].children).toHaveLength(5);
+      // A stun (any status) floats no word: only damage and heals do, as in the original.
+      if (now === 0) expect(snapshot(newHost)[0].children.map(e => e.text)).toEqual(['15', '10', '+24', '10']);
+      if (now === 899.999) expect(snapshot(newHost)[0].children).toHaveLength(4);
     }
     expect(snapshot(newHost)[0].children).toHaveLength(0);
   });

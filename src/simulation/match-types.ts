@@ -98,7 +98,7 @@ export type MatchState = MatchBase & (
 );
 export type MatchFailure = import('./battle-equipment').BattleEquipmentFailure | import('./opening-encounter').OpeningEncounterFailure | DeploymentFailure | CombatStartFailure | 'wrong-phase' | 'invalid-slot' | 'stale-shop'
   | 'purchased-slot' | 'insufficient-gold' | 'bench-full' | 'stale-round' | 'unsettled-round' | 'max-level' | 'population-cap' | 'unknown-item' | 'item-not-inventory' | 'invalid-recipe' | 'item-slot-occupied'
-  | 'stale-choice' | 'invalid-choice' | 'invalid-target' | 'augment-rerolls-exhausted' | 'augment-pool-too-small'
+  | 'stale-choice' | 'invalid-choice' | 'invalid-target' | 'augment-rerolls-exhausted' | 'augment-pool-too-small' | 'shared-pool-required'
   | import('./m8/ui-contracts').EquipmentFailure | import('./consumable-types').ConsumableFailure
   | import('./seat-mechanics/types').SeatMechanicFailure;
 export type MatchCommandResult = { readonly ok: true; readonly state: MatchState; readonly events: readonly MatchEvent[] }

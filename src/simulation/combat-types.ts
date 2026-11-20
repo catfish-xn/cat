@@ -129,6 +129,11 @@ export interface CombatState {
   readonly itemGoldReceipts?: readonly import('./g2-4b-item-gold').ItemGoldReceipt[];
   readonly itemRandomStreams?: import('./g2-4b-item-kernel').ItemRandomStreams;
   readonly removedUnitIds?:readonly string[];
+  /** Last snapshot of a removed unit (removedUnitIds) that a remaining unit's status or periodic effect still names as
+   * its source: the effect runs to its end with its original source and stats. Absent when no removal left such a reference.
+   * Kept, on purpose, after those effects end (like removedUnitIds): pruning would add a per-tick scan and change the
+   * combat bytes mid-run for no rules effect, and the list only grows by one entry per removal. */
+  readonly departedUnits?: readonly CombatUnit[];
   readonly neutralReceipts?: import('./neutral-receipts').NeutralReceipts;
   readonly openingDefinitions?: readonly import('./m8/opening').OpeningDefinition[];
   readonly openingState?: import('./m8/opening').OpeningState;

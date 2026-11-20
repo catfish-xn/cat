@@ -88,6 +88,8 @@ export function validateDynamicCombat(candidate:CombatState,basis:CombatInputBas
     if(candidate.units.some(u=>u.d11Kills!==undefined))throw new RangeError('Unexpected D11 kill runtime');
     if(candidate.units.some(u=>u.anomalyState!==undefined||u.anomalySummon!==undefined))throw new RangeError('Unexpected anomaly runtime');
     if(candidate.trenchSplits!==undefined)throw new RangeError('Unexpected Trench splits');
+    // Only Trench and anomaly removals keep a departed effect source; both combats are replay-authenticated above.
+    if(candidate.departedUnits!==undefined)throw new RangeError('Unexpected departed units');
     if(candidate.units.some(u=>u.itemSummon?.kind==='trench'))throw new RangeError('Unexpected Trench copy');
     if(candidate.units.some(u=>u.itemSummon?.kind==='experiment'||u.experimentClone!==undefined))throw new RangeError('Unexpected Experiment copy');
     if(candidate.units.some(u=>u.itemBanish!==undefined))throw new RangeError('Unexpected item banishment');
