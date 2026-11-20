@@ -34,8 +34,12 @@ function needsLivingSource(spawn: TimelineSpawn): boolean {
  * of 170 and from 42 to 73 of 212. Frame time (frame-time.cjs v2, one GTX 1080, caps 12/16/20/24 alternated over three
  * rounds) showed no difference between the caps. 24 was not taken: there the 1500 budget refused first (43 rows in the
  * 9 v 9 against 8 at 20, none in the 8 v 8 at 20). Weaker GPUs were not measured, so the pass degrade stays.
+ *
+ * 28 since 11-19 (user-approved value change; 24 if weak machines cannot hold it). With the shared budget at 2250, the
+ * 11-19 Windows runs (8 v 8, cap 20 against 24, frame time unchanged) dropped about half the rows cap 20 refused, all of
+ * those for the system count. The budget, OFF_SLOT_MAX and LTK_PASS_DEGRADE_AT are unchanged.
  */
-export const MAX_LTK_SYSTEMS = 20, MAX_LTK_QUEUED = 64;
+export const MAX_LTK_SYSTEMS = 28, MAX_LTK_QUEUED = 64;
 /**
  * Runs that keep drawing without taking a system slot, at most OFF_SLOT_MAX of them at once (the earliest started); any
  * more hold a slot as before. All of them still hold their particles in the budget. Three kinds share this one room:

@@ -9,7 +9,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: any) => { built.push({ options }); return real.createLtkParticles(prepared, options); } };
 });
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MAX_LTK_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
 // A perStrike projectile's tickCap: at most that many rocket rows queued on one rule tick across every caster; the strikes
@@ -29,7 +29,7 @@ async function setup() {
     ? { version: 1, systems: { rocket: 'systems/rocket.json', boom: 'systems/boom.json', spark: 'systems/spark.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills }
     : syntheticSystem(), readTexture: async () => new Texture() });
   const scene = new Scene(), units = new Map<string, { root: Group; body: null; alive: boolean }>();
-  ['c1', 'c2', 'a', 'b', ...Array.from({ length: 30 }, (_, i) => `t${i}`)].forEach((id, i) => { const root = new Group(); root.position.set(10 + i * 60, 0, 20); scene.add(root); root.updateMatrixWorld(); units.set(id, { root, body: null, alive: true }); });
+  ['c1', 'c2', 'a', 'b', ...Array.from({ length: 60 }, (_, i) => `t${i}`)].forEach((id, i) => { const root = new Group(); root.position.set(10 + i * 60, 0, 20); scene.add(root); root.updateMatrixWorld(); units.set(id, { root, body: null, alive: true }); });
   let tick: number | undefined;
   const runtime = createLtkRuntime(library, scene, id => units.get(id), { tick: () => tick });
   for (const skill of Object.keys(skills)) await runtime.warm(skill);
@@ -68,10 +68,18 @@ describe('perStrike tickCap', () => {
     setTick(30);
     expect(runtime.play('wide', 'c1', Array.from({ length: 12 }, (_, i) => `t${i}`))).toBe(true);
     step(0.2);
-    // Twelve rockets and twelve hits run, on two slots; eighteen single-hit casts take the other eighteen.
-    for (let i = 0; i < 18; i++) { setTick(31 + i); expect(runtime.play('other', 'c2', [`t${12 + i}`])).toBe(true); step(1 / 60); }
+    // Twelve rockets and twelve hits run, on two slots; MAX_LTK_SYSTEMS − 2 single-hit casts take the other slots.
+    const others = MAX_LTK_SYSTEMS - 2;
+    for (let i = 0; i < others; i++) { setTick(31 + i); expect(runtime.play('other', 'c2', [`t${12 + i}`])).toBe(true); step(1 / 60); }
     step(0.3);
     expect(dropped() - before).toBe(0);
     expect(built.filter(b => b.options.projectileSeconds !== undefined)).toHaveLength(12);
+    expect(runtime.slots).toBe(MAX_LTK_SYSTEMS);
+    // At the edge: one more single-hit cast finds every slot taken, so it does not start at once beside the others.
+    const sparks = () => built.filter(b => b.options.projectileSeconds === undefined).length;
+    const startedBefore = sparks();
+    setTick(31 + others); expect(runtime.play('other', 'c2', [`t${12 + others}`])).toBe(true); step(1 / 60);
+    expect(runtime.slots).toBe(MAX_LTK_SYSTEMS);
+    expect(sparks() - startedBefore).toBe(0);
   });
 });
