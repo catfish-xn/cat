@@ -10,7 +10,7 @@
  * measured against footage at the older 0.44 base, drawn as it was: a range in cells (ground rings, blasts, swipes).
  * `hugged(x)` is such a size that wraps or hugs a body (shields, binds, per-target splashes): it shrinks with the body.
  */
-import type { TimelineCue } from './timeline';
+import { strikeOffsetTicks, type TimelineCue } from './timeline';
 import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
 import { jinxSkills } from './champions/jinx';
@@ -23,6 +23,21 @@ import { S13_TIMELINES } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/** Draven's empowered axe, thrown and (CUE_EXTRA_SKILLS draven-return) flying back. */
+export const DRAVEN_AXE = '5d31debe';
+/** Seconds his landed axe takes to fly back to his hand (自定，非原版). */
+const DRAVEN_RETURN_SECONDS = 1.2;
+/**
+ * Maddie's volley shot flies this many rule ticks a cell, and at least MADDIE_SHOT_MIN_TICKS (fitted, not original data).
+ * The rules will time each shot's damage by the same flight (src/simulation/cast-windup.ts, coming): until then these
+ * stand in for it, and are to be imported from there once it lands.
+ */
+export const MADDIE_SHOT_TICKS_PER_HEX = 2, MADDIE_SHOT_MIN_TICKS = 4;
+/**
+ * Maddie's volley hit (b1b77889, her R target effect) drawn at this size: drawn as exported, every shot's flash was much
+ * larger than the original's. Our own value (Fable 11-19 picked it side by side from 0.55 and 0.4), not original data.
+ */
+export const MADDIE_HIT_SCALE = 0.55;
 /** Smeech's stab slash: the vertical swing his skill's stab clips carry (CUE_EXTRA_SKILLS smeech-stab). */
 export const SMEECH_STAB_SWING = '90b31f27';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -75,6 +90,31 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
  * vfx-ltk-windup-hits checks the two stay equal.
  */
 export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6, tristana: 12, renata: 17 } as const);
+/**
+ * Heimerdinger's rockets, one a rule strike (combat-g2-2.ts strikes once per rocket, all on the cast tick today): the k-th of
+ * n leaves HEIMER_ROCKETS.launchTicks plus its stagger after the mana bar empties and lands flightTicks later, so it lands at
+ * cast tick + heimerRocketLandTick(k, n). The first rocket keeps the launch, flight and hit of the exported cue; the
+ * stagger is 1 tick a rocket, the whole volley squeezed into 9 ticks (0.45 s) when it has
+ * more than 10 rockets. A cast draws at most `shown` rockets (its later strikes play only their hits, on the same stagger),
+ * and every Heimerdinger together queues at most `tickCap` rockets on one rule tick, so several casting at once do not crowd
+ * other effects out (11-19 Windows hrB). So a 3-star cast, and the extra rocket each later cast adds, look like a 2-star first
+ * cast's five: a known difference. The strikes past `shown` play neither rocket nor hit (their damage numbers still show).
+ * Hits: decorative rank, so they never take a slot from a skill or basic-attack visual; at most hitTickCap queued on one rule
+ * tick across casters; a strike's hit is merged away when the same cast hit the same target under hitMergeTicks before.
+ * A perStrike cast's rows past its first take no system slot (runtime slotsNow), so one cast holds two slots (rocket, hit);
+ * every row still needs particle room. Each rocket draws at rocketScale and rocketBrightness, thicker and brighter than the
+ * exported system (Fable 11-19 picked this over the as-exported look side by side). All designed display values (Fable
+ * 11-19), not original data.
+ * This is the one definition of when each rocket lands. When the rules move each rocket's damage to its landing
+ * (Fable 11-19 (b), L2), the rules side gets a copy in src/simulation/cast-windup.ts beside CAST_WINDUP_TICKS, and a test
+ * checks the two stay equal (as vfx-ltk-windup-hits does for CAST_WINDUP_TICKS) so neither side changes alone.
+ */
+export const HEIMER_ROCKETS = Object.freeze({ launchTicks: 4, flightTicks: 10, staggerTicks: 1, spreadTicks: 9, shown: 5, tickCap: 8, rocketScale: 1.5, rocketBrightness: 2,
+  hitTickCap: 8, hitMergeTicks: 3 } as const);
+/** The rule tick, counted from the cast, on which Heimerdinger's k-th of n rockets lands (HEIMER_ROCKETS). */
+export function heimerRocketLandTick(k: number, n: number): number {
+  return HEIMER_ROCKETS.launchTicks + HEIMER_ROCKETS.flightTicks + strikeOffsetTicks(k, n, HEIMER_ROCKETS.staggerTicks, HEIMER_ROCKETS.spreadTicks);
+}
 /** The rules' DRMUNDO_BLAST_AFTER_PULSE_TICKS (src/simulation/cast-windup.ts), mirrored like CAST_WINDUP_TICKS (rendering3d-timed-form checks it). */
 export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
 /** The rules' CAMILLE_KICK_TICKS (src/simulation/combat-g2-2.ts), mirrored as CAST_WINDUP_TICKS is (tests/sustain-stops.test.ts checks it). */
@@ -104,15 +144,24 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.6, bone: chest, others: true, scale: hugged(1) },
   ],
+  // Draven (batch1-events.ts): an empowered axe that lands bounces off the enemy it hit and comes down into his hand in a
+  // high arc. Travel and arc are our own (自定，非原版); decoration, never taking a slot from a skill; it goes at once when either
+  // unit dies (placeholder-renderer.ts).
+  'draven-return': [{ system: DRAVEN_AXE, action: 'passive', event: 'projectile', delay: 0, duration: DRAVEN_RETURN_SECONDS,
+    travelSeconds: DRAVEN_RETURN_SECONDS, bone: chest, targetBone: 'R_hand', arc: { gravity: 2200, targetOffset: 80 }, rank: 'decorative' }],
   // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
-  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a short shot from her gun to the enemy it
-  // hit and the hit there (travel fitted, not original data).
+  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a shot from her rifle's muzzle
+  // (Weapon_Shooter: our skeleton has no barrel-root bone) to the enemy it hit, flying MADDIE_SHOT_TICKS_PER_HEX ticks a
+  // cell and at least MADDIE_SHOT_MIN_TICKS, and the hit there when it lands (TimelineCue.flightTicks). Her damage numbers
+  // still show at the shot's start until the rules move them to its landing (known interim state, Fable 11-19).
   'maddie-shot': [
-    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.3, bone: 'Weapon_Shooter', travelSeconds: 0.1, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0.1, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.4, bone: 'Weapon_Shooter', travelSeconds: 0.2, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC',
+      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
+    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC', scale: MADDIE_HIT_SCALE,
+      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
   ],
   // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his stab's slash and its
   // hit play with each stab's damage: the thin vertical slash his skill's stab clips carry, and the hit on the enemy stabbed.
@@ -197,6 +246,14 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
 
 /** Singed's flask: released this long into his cast (a fitted display value), then in flight this long. */
 const SINGED_FLASK_RELEASE = 0.5, SINGED_FLASK_FLIGHT = 0.35;
+/**
+ * Ziggs's bomb, as drawn (C71): his main bomb's release and flight (fitted, as before), when it lands, and his split bombs'
+ * flight from there: 10 combat ticks (0.05 s each), a display rhythm of our own, not the original's; their lob too is our own.
+ */
+const ZIGGS_BOMB = (() => {
+  const release = 0.3, flight = 0.5;
+  return { release, flight, lands: release + flight, split: 10 * 0.05, arc: { gravity: 6000, targetOffset: 0 } } as const;
+})();
 /** When the flask lands on the ally's head: what it brings starts then. */
 const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
@@ -371,13 +428,22 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 1, ownLife: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0) at its index timing. The
-  // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. His split
-  // minibombs have no exported system.
+  // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. It leaves his
+  // weapon buff bone, as his attack does: the skeleton has no bone named `weapon`, which fell back to his feet (C71). The explosion is the
+  // primary target's and plays its whole own life (its smoke clouds included, ownLife).
   ziggs: [
-    { system: '7f403068', action: 'attack', event: 'projectile', bone: 'weapon', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '7f403068', action: 'attack', event: 'projectile', bone: 'buffbone_glb_weapon_1', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6333333333333333, duration: 1.5 },
-    { system: '52963b0a', action: 'cast', event: 'projectile', bone: 'weapon', delay: 0.3, duration: 0.5, travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '04c3cba0', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2 },
+    { system: '52963b0a', action: 'cast', event: 'projectile', bone: 'buffbone_glb_weapon_1', delay: ZIGGS_BOMB.release, duration: ZIGGS_BOMB.flight, travelSeconds: ZIGGS_BOMB.flight, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '04c3cba0', action: 'cast', event: 'hit', delay: ZIGGS_BOMB.lands, duration: 1.2, ownLife: true, primary: true },
+    // His split bombs, one per bomb the rules sent (receipt targets after the first, repeats kept): each leaves the main
+    // bomb's crater when it lands and arcs to its enemy (the same missile, 52963b0a), and bursts there (04c3cba0). The rules
+    // still settle every bomb on the cast tick; the display times them off the main bomb's landing until the rules time them.
+    // Bombs landing on one enemy together burst once there (mergeTicks): stacked copies of the burst at one spot added up
+    // to a flat white block (11-20).
+    { system: '52963b0a', action: 'cast', event: 'projectile', everyReceipt: true, fromPrimary: true, delay: ZIGGS_BOMB.lands, duration: ZIGGS_BOMB.split,
+      travelSeconds: ZIGGS_BOMB.split, arc: ZIGGS_BOMB.arc, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC', optional: true },
+    { system: '04c3cba0', action: 'cast', event: 'hit', everyReceipt: true, mergeTicks: 1, delay: ZIGGS_BOMB.lands + ZIGGS_BOMB.split, duration: 1.2, ownLife: true, optional: true },
   ],
   // Sett's slam (11-15): the cast plays his whole E_cas (f7d4d344, the exported cue's E_cas_child twice plus its ground
   // lines and ground planes) in the child's place, from the cast itself (fitted: lines its bright light up with the
@@ -392,6 +458,18 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
   ],
+  // Draven: his index list, plus his other hand's axe for every second empowered attack (variant empowered-alt, chosen in
+  // batch1-events.ts), from his left hand, with the same hit.
+  draven: [
+    { action: 'attack', system: '617e850e', event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'R_hand', targetBone: chest },
+    { action: 'attack', system: '0f2af66b', event: 'hit', delay: .54, duration: .45, bone: chest, stopAfter: .1 },
+    { action: 'cast', system: '3381c8eb', event: 'cast-start', delay: 0, duration: .6, stopAfter: .2, bone: 'R_Weapon' },
+    { action: 'cast', system: 'd86cc9bc', event: 'cast-start', delay: 0, duration: 1, stopAfter: .5, bone: 'L_Weapon' },
+    { action: 'attack', variant: 'empowered', system: DRAVEN_AXE, event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'R_hand', targetBone: chest },
+    { action: 'attack', variant: 'empowered', system: '5e3986cd', event: 'hit', delay: .54, duration: .6, stopAfter: .1, bone: chest },
+    { action: 'attack', variant: 'empowered-alt', system: '5a268f4e', event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'L_hand', targetBone: chest },
+    { action: 'attack', variant: 'empowered-alt', system: '5e3986cd', event: 'hit', delay: .54, duration: .6, stopAfter: .1, bone: chest },
+  ],
   // Maddie: her volley's shots and hits moved from one estimated time after her cast to each shot's damage (maddie-shot).
   // Her attack shot leaves her rifle's Weapon_Shooter, as her volley's do: her skeleton has no C_Barrel_Root, which fell back
   // to her feet (11-18 cue bone scan).
@@ -403,6 +481,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // (CUE_EXTRA_SKILLS smeech-stab, smeech-leap); his cast keeps the launch and the trail on him.
   smeech: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.30833333333333335, duration: 1.5 },
+    // The horizontal swing his attack clip carries, with that clip (the one our renderer plays for his attacks), at its
+    // layout point: decoration at the attack rank (Fable 11-19).
+    { system: '343e410d', action: 'attack', event: 'cast-start', delay: 8 / 30, duration: 0.7, bone: 'C_Buffbone_Glb_Layout_Loc' },
     { system: '17b8eb5c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '5cde9f59', action: 'cast', event: 'cast-start', delay: 0.2, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
   ],
@@ -614,6 +695,24 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
+  // Exported to the asset index (0c59) and repeated as exported, but for the cast's W_Mis rocket and W_Tar hit: one each
+  // per rule strike (perStrike), staggered by HEIMER_ROCKETS and each flying its own side-then-in curve to its own target,
+  // where the export flew one rocket to the first target and hit every target at once (the original footage, Aub1UkT6uYM,
+  // shows many rockets in the air at once). The rockets are body rank (Fable 11-19). Curve sizes are designed, not traced
+  // from the original.
+  heimerdinger: [
+    { system: '9ad2672c', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.20078125, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.50078125, duration: 1.5 },
+    { system: 'c44d51d0', action: 'cast', event: 'cast-start', delay: 0, duration: 0.3, bone: 'C_Buffbone_Cstm_Rocket' },
+    { system: 'c8d6ee2e', action: 'cast', event: 'projectile', delay: HEIMER_ROCKETS.launchTicks * 0.05, duration: HEIMER_ROCKETS.flightTicks * 0.05,
+      bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: HEIMER_ROCKETS.flightTicks * 0.05, rank: 'body', scale: HEIMER_ROCKETS.rocketScale,
+      brightness: HEIMER_ROCKETS.rocketBrightness,
+      perStrike: { staggerTicks: HEIMER_ROCKETS.staggerTicks, spreadTicks: HEIMER_ROCKETS.spreadTicks, fan: { side: 0.9, lift: 0.6 },
+        shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.tickCap } },
+    { system: '07c9833a', action: 'cast', event: 'hit', delay: (HEIMER_ROCKETS.launchTicks + HEIMER_ROCKETS.flightTicks) * 0.05, duration: 1,
+      rank: 'decorative', perStrike: { staggerTicks: HEIMER_ROCKETS.staggerTicks, spreadTicks: HEIMER_ROCKETS.spreadTicks,
+        shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.hitTickCap }, mergeTicks: HEIMER_ROCKETS.hitMergeTicks },
+  ],
   // Exported to the asset index; repeated here so the R heal plays its own life (up to the index cap) and ends
   // with the heal (CUE_END_STOPS).
   drmundo: [
@@ -726,6 +825,11 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's large birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a birth scale that big. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // TEMPORARY departure from the data (Fable 11-18): the shared crit flash's two dark backing layers (alpha-blended dark grey
+  // and dark red) are authored to scale with the struck unit's size (scaleBirthScaleByBoundObjectSize), which the engine
+  // does not do yet; drawn at their fixed size they left a black-edged blot over the target. Restore them once the engine
+  // scales by the bound object (docs/S13_RULES_GAP.md, 2026-11-18).
+  '2436e086': ['flash2', 'flash3'],
 };
 
 /**
@@ -757,6 +861,30 @@ export interface PlayOut {
    */
   readonly hold?: boolean;
 }
+/**
+ * A basic attack that crits (the display's packetDamage: delivery basic-attack, critical) plays the shared crit flash in
+ * place of the shared attack hit, at the same bone and moment (a swap, never both). The binding per champion is the
+ * original's: `keepHit` champions keep the plain hit on a crit. Skill crits are not bound here yet.
+ */
+export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string>;
+  /** A champion's own crit variants: `swap` replaces its attack systems on a crit, `flash` is its crit flash cue when its hit is its own. */
+  own: Readonly<Record<string, { readonly swap?: Readonly<Record<string, string>>; readonly flash?: TimelineCue }>> }> = {
+  hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
+  own: {
+    // Warwick: his hit is his own slash, so the crit flash plays on the target beside it at the slash's moment. His own crit
+    // swipe (BA_Swipe_crit 94adb056 in place of 6b46d17d) waits for the original's footage (Fable 11-17): not swapped here.
+    warwick: { flash: { system: '2436e086', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.2, duration: 1 } },
+  },
+};
+/**
+ * A skill's direct damage that crits (packetDamage: delivery ability-direct, critical) flashes the same crit system on its
+ * target, beside the skill's own hit (Fable 11-16: the original's binding for skill crits is inferred, not read). Every
+ * champion whose package has the system gets this display branch `<champion>-crit`; a periodic tick does not flash.
+ */
+export const CRIT_SKILL_HIT: Readonly<{ skill: (champion: string) => string; cue: TimelineCue }> = {
+  skill: champion => `${champion}-crit`,
+  cue: { system: '2436e086', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+};
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
   // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether
@@ -783,6 +911,22 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '938c104f': ['Alpha_Glow_Dark'],
   // Mordekaiser's grasp: the pit it opens and its walls stay off; the claw, swipes, cracks and burn draw (Fable 11-19).
   'a7c49a29': ['Stencil_Cap', 'Mesh_Edge', 'Stencil_Gradient', 'Mesh_Edge_Red', 'Mesh_Edge_Dark', 'Stencil_InnerDarkness', 'Mesh_Walls_Red', 'Mesh_Walls_Dark'],
+  // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
+  // difference (Fable 11-19); the rest of the hit draws.
+  '9acdae50': ['Alpha_BgGlow_GreenBrown'],
+  // Irelia's shield: the cyan ring glow round the bubble is left out, with the bubble itself fainter (EMITTER_ALPHA; Fable
+  // 11-20, picked from a three-column toggle).
+  '67665513': ['Alpha_RingGlow'],
+};
+
+/**
+ * Emitters drawn fainter here, by system and emitter name: each particle's alpha is multiplied by the factor. The factors
+ * are fitted/own values (拟合/自定，非原版), picked by eye on our board; colours are left as the asset has them.
+ */
+export const EMITTER_ALPHA: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  // Irelia's shield bubble read as a solid ball over her at full strength; half lets her body show through it (Fable 11-20,
+  // three-column toggle: this is that column as recorded, the swirl meshes included).
+  '67665513': { Add_Shield: 0.5, Swirl_Mesh: 0.5, Swirl_Mesh1: 0.5 },
 };
 
 /**

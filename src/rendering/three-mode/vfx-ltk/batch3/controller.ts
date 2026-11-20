@@ -268,6 +268,9 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
       for (const key of loops.keys()) stop(key);
       proxies.clear(); shields.clear(); unbound.clear(); last.clear(); ended.clear(); blasts.clear(); cohorts.clear(); reviving.clear(); poses.clear();
       ascension.clear(); channels.clear();
+      // A new combat's ticks start again from 0: the last combat's latest tick would make every early fact look long past
+      // (Swain's ascension dropped at once, Silco's and Elise's summons never shown in any combat after the first).
+      latestTick = 0;
     },
     get proxyCount() { return proxies.count; },
   };

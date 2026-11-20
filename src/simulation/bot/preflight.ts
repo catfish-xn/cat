@@ -19,7 +19,11 @@ export function legal(state: MatchState, action: ClientCommand): boolean {
     case 'buyXp': return buyXp(state).ok;
     case 'reroll': return rerollShop(state).ok;
     case 'shopLock': return setShopLock(state, action.locked, action.generation).ok;
-    case 'choose': return selectChoice(state, action.choiceId, action.generation, action.definitionId).ok;
+    case 'choose': {
+      // A pick only the room's shared-pool transaction can evaluate is left to the room, which runs it with the pool.
+      const result = selectChoice(state, action.choiceId, action.generation, action.definitionId);
+      return result.ok || result.reason === 'shared-pool-required';
+    }
     case 'anomalyTarget': return selectAnomalyTarget(state, action.choiceId, action.generation, action.unitId).ok;
     case 'rerollAugment': return rerollAugment(state, action.choiceId, action.generation,
       (action as ClientCommand & { readonly optionIndex?: number }).optionIndex).ok;

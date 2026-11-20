@@ -29,7 +29,7 @@ export interface Batch1EventPlan {
   /** The cast plays none of its effects, but the caster still turns and moves as for any cast (skipCast drops all of it). */
   noCastEffect?: boolean;
 }
-interface SeenUnit { attacks: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaFrom: number; pulseTick: number }
+interface SeenUnit { attacks: number; empoweredThrows: number; cast: boolean; luxAttack: boolean; twitchShots: number; nocturneUntil: number; leonaFrom: number; pulseTick: number }
 const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne', 'kogmaw', 'twitch']);
 /** Presentation memory of observed events only. No resource, targeting or damage rules.
  * 14.24b visual forms: Zeri every third observed attack; Twitch eight bolts after cast;
@@ -97,7 +97,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
-    if (!state) { state = { attacks: 0, cast: false, luxAttack: false, twitchShots: 0, nocturneUntil: -1, leonaFrom: -1, pulseTick: -1 }; units.set(id, state); }
+    if (!state) { state = { attacks: 0, empoweredThrows: 0, cast: false, luxAttack: false, twitchShots: 0, nocturneUntil: -1, leonaFrom: -1, pulseTick: -1 }; units.set(id, state); }
     return state;
   };
   return {
@@ -167,6 +167,10 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'renni', sourceId: event.sourceId, targets: struck.has(grab.held) ? [grab.held, ...[...struck].filter(id => id !== grab.held)] : [...struck],
             action: 'passive', skill: 'renni-slam', snapshotTargets: true });
         }
+        // Draven: an empowered axe that lands flies back up to his hand in an arc (CUE_EXTRA_SKILLS draven-return), from the
+        // enemy it hit; it goes with either of them dying (placeholder-renderer.ts stops DRAVEN_AXE on a death).
+        if (event.type === 'attackLanded' && event.hit && definition(event.attackerId) === 'draven' && unit(event.attackerId).cast)
+          plan.extra.push({ champion: 'draven', sourceId: event.targetId, targets: [event.attackerId], action: 'passive', skill: 'draven-return' });
         // Vladimir: his heal ring plays on him when his ability really heals him (sourceKind ability, definitionId
         // vladimir-ability, actual > 0), not on his cast's enemies. With Blood Pact his cast heals nothing, so no ring; item or
         // vamp heals draw nothing here.
@@ -322,6 +326,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             || champion === 'lux' && state.luxAttack || champion === 'nocturne' && event.tick < state.nocturneUntil
             || champion === 'twitch' && state.twitchShots > 0) plan.variant = 'empowered';
           if (champion === 'lux') state.luxAttack = false;
+          // Draven throws his empowered axes from each hand in turn: every second one is the other hand's axe.
+          if (champion === 'draven' && plan.variant === 'empowered' && ++state.empoweredThrows % 2 === 0) plan.variant = 'empowered-alt';
           if (champion === 'nocturne' && plan.variant === 'empowered') strikes.set(event.attackerId, { tick: event.tick, struck: new Set([event.targetId]) });
           if (champion === 'twitch' && state.twitchShots > 0) {
             state.twitchShots--;
