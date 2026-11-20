@@ -1,3 +1,5 @@
+import { SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
+import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
@@ -178,7 +180,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       for(const center of targets){strike(center,mag('MagicDamage'));for(const x of foes().filter(x=>x.id!==center.id&&hexDistance(center.cell,x.cell)<=1))strike(x,mag('SecondaryDamage'),'magic',true);}break;
     }
     case 'swain':{
-      heal(mag('Heal'));g23State(u).ascension={untilTick:ctx.tick+Math.round(v('Duration')*20),nextPulseTick:ctx.tick+20,actionSeq:seq,takedowns:[]};break;
+      heal(mag('Heal'));g23State(u).ascension={untilTick:ctx.tick+Math.round(v('Duration')*20),nextPulseTick:ctx.tick+SWAIN_PULSE_TICKS,actionSeq:seq,takedowns:[],pulse:0};break;
     }
     case 'swain-ranged':
       strike(t,mag('MagicDamage'));
@@ -290,9 +292,11 @@ export function advanceG23Skills(ctx:AbilityContext):void{
   // Display only: the demon form is over on the first tick past untilTick (takedowns may have moved it later).
   if(a&&ctx.tick===a.untilTick+1)ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'swain-ascension',targetIds:[]});
   if(!a||ctx.tick>a.untilTick||ctx.tick<a.nextPulseTick)continue;
-  a.nextPulseTick+=20;
-  ctx.heals.push({source:origin(u),targetId:u.id,amount:amount(u,ctx.tick,{ap:variable(u,'HealPerSecond')})});
-  for(const t of enemies(u,ctx.units).filter(t=>hexDistance(u.cell,t.cell)<=1))hit(ctx,u,t,amount(u,ctx.tick,{ap:variable(u,'DamagePerSecond')}),a.actionSeq,10000+ctx.tick,'magic',true);
+  // 11-20 (user-approved): SWAIN_PULSE_TICKS apart, each pulse a 1/SWAIN_PULSES_PER_SECOND part of the per-second heal and
+  // damage (splitTotal: the parts of each second add up to the per-second value); adjacency is taken every pulse.
+  const part=a.pulse%SWAIN_PULSES_PER_SECOND;a.pulse++;a.nextPulseTick+=SWAIN_PULSE_TICKS;
+  ctx.heals.push({source:origin(u),targetId:u.id,amount:splitTotal(amount(u,ctx.tick,{ap:variable(u,'HealPerSecond')}),SWAIN_PULSES_PER_SECOND)[part]!});
+  for(const t of enemies(u,ctx.units).filter(t=>hexDistance(u.cell,t.cell)<=1))hit(ctx,u,t,splitTotal(amount(u,ctx.tick,{ap:variable(u,'DamagePerSecond')}),SWAIN_PULSES_PER_SECOND)[part]!,a.actionSeq,10000+ctx.tick,'magic',true);
  }
 }
 export function recordG23SkillDamage(ctx:AbilityContext,u:S13Unit|undefined,t:S13Unit,actual:number,packet:S13Packet):void{

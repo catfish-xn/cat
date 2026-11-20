@@ -99,3 +99,8 @@ export const MORDEKAISER_CLAW_TICKS: Readonly<Record<1 | 2 | 3, { readonly appea
 /** Heimerdinger's focus (11-20, user-approved; self-chosen, not original data): this share of each volley's rockets, rounded
  * down, goes to his current target; the rest pick at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火). */
 export const HEIMER_FOCUS_SHARE_BPS = 5000;
+
+/** Swain's demon form (11-20, user-approved; aligned to the original frame by frame, see docs/S13_RULES_GAP.md 斯维因吸取跳频):
+ * it drains every SWAIN_PULSE_TICKS, the first that long after the cast; each pulse settles one of SWAIN_PULSES_PER_SECOND
+ * parts of the per-second heal and damage (splitTotal), so each second's total is unchanged. */
+export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
