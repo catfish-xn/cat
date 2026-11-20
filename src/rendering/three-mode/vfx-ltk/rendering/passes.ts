@@ -79,7 +79,8 @@ export function createVfxPasses(gl: WebGLRenderer, floors?: () => readonly Objec
           // The floor keeps its colour but not its depth on and under the play surface: a particle reaching below the board
           // is not cut by it, while walls, ledges and terrain write their depth again (floorDepthMaterial), and units drawn
           // after write theirs. A floor mesh that writes no depth of its own (the arena's cell overlay) is left out.
-          gl.clearDepth();
+          // REC ONLY (claude/rec-dark-ab): ?darkab=floordepth keeps the floor's depth, so a particle below the board is cut.
+          if (!(globalThis as { __LTK_DARKAB?: Set<string> }).__LTK_DARKAB?.has('floordepth')) gl.clearDepth();
           const { play, quiet, flat, solid } = survey.survey(floorRoots), shown = quiet.map(mesh => mesh.visible);
           setPlaySurface(play);
           for (const mesh of quiet) mesh.visible = false;
