@@ -116,7 +116,8 @@ describe('production representation preserves runtime semantics', () => {
     // 14.24b 七项英雄数值 (2026-11-12): f37c6970 → db6dc9b6.
     // 施法事件带 castIndex、回放格式 8→9 (2026-11-12, #628): db6dc9b6 → d94c78f1 (content-digest.ts covers replayFormatVersion).
     // 远程普攻命中才结算、存档/回放格式 9→10 (2026-11-19, #739): d94c78f1 → cf212873 (content-digest.ts covers M8_VERSION).
-    expect(parsed.content).toBe('fnv1a32-utf16:cf212873');
+    // 技能落地结算批 (2026-11-20): cf212873 → 2f642cc0 (S13_COMBAT_RULES.skillLanding).
+    expect(parsed.content).toBe('fnv1a32-utf16:2f642cc0');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
