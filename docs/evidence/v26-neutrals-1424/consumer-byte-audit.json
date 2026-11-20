@@ -1576,9 +1576,9 @@
     "tests/landing-settle.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11730,
+      "currentBytes": 12763,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3927f8968e73bad329f021f1040c6790a82a0ab3c90eebc25b246f1a19608d72",
+      "currentSha256": "5c389ffb26926287dfd0c55cc251a2c1585c3354d00caaf6927bb903c6643e4b",
       "firstDifferentByte": 0
     },
     "tests/late-lag-effects.test.ts": {
@@ -3549,9 +3549,9 @@
     "tests/server/orb-ledger-partial-forge-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6737,
+      "currentBytes": 7249,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "77ba61c945ba6b43de090d6ed962f6272d28d364d2babd62f252ba74dced9572",
+      "currentSha256": "f6f7fc9b1616ea82b1bd3b22adb1f19489277af7443a0659d1a7c32825b0aa1b",
       "firstDifferentByte": 0
     },
     "tests/server/pairing-room.test.ts": {
@@ -3564,9 +3564,9 @@
     "tests/server/placeholder-augment-history.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 16321,
+      "currentBytes": 16746,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "2585efb4726e433444f82c834fb2c3dbce3300ef6cdb33e494fa274464992ba8",
+      "currentSha256": "28100468dc5bc9306b5794f0a1788df124551728798b838b8a1d3db088285f7d",
       "firstDifferentByte": 0
     },
     "tests/server/placeholder-resolver-helper.ts": {
