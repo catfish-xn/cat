@@ -668,13 +668,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     return aimed && !usable ? null : placed;
   };
 
-  // A waiting row at a dead target's place: taken so when the cast played (Waiting.atPlace), or its target has died since.
-  const placeRow = (row: Waiting) => {
-    if (row.atPlace) return true;
-    if (!row.place || row.snapshot || !row.spawn.targetId) return false;
-    const unit = findUnit(row.spawn.targetId);
-    return !unit?.alive || !!unit.disposed;
-  };
+  // A waiting row at a dead target's place: only one taken so when the cast played (Waiting.atPlace). A row whose target
+  // was alive at the cast and died since (often by this very cast's damage, which the rules land before the drawn hit)
+  // still competes for room as any row does, and plays at the place its target last stood (Waiting.place; Fable 11-20).
+  const placeRow = (row: Waiting) => !!row.atPlace;
   const enqueue = (champion: string, variant: string, sourceId: string, targetIds: readonly string[], action: 'cast' | 'attack', group?: string, partialTargets = false): boolean => {
       if (closed) return false;
       void warm(champion);

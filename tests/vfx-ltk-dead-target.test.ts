@@ -378,9 +378,37 @@ describe('vfx-ltk casts at dead targets', () => {
       expect(of('boom')).toHaveLength(1);
       expect(of('boom')[0].options.attachment).toBeUndefined();
       expect(of('boom')[0].options.anchor.originAt(0)).toEqual(toSystem(at));
-      expect(LTK_RUN_STATS.placeStarted.boom).toBe(spare + 1);
+      // Dead when it played: a spare place run. Alive then and killed before it lands: an ordinary row (Fable 11-20).
+      expect(LTK_RUN_STATS.placeStarted.boom).toBe(spare + (when === 'at play' ? 1 : 0));
       runtime.dispose();
     }
+  });
+
+  // Fable 11-20: only a target already dead when the cast plays makes its rows spare place runs. A target alive then and
+  // killed before its hit starts (often by this cast's own damage, which the rules land first) keeps an ordinary row.
+  it('on a full board of attacks: dead at the cast, its hit is a spare that starts nothing; killed after the cast or alive, an ordinary hit', async () => {
+    const outcome: Record<string, { started: number; atPlace: boolean; spare: number }> = {};
+    for (const when of ['dead at the cast', 'killed after the cast', 'alive'] as const) {
+      const { runtime, scene, units, step, of } = await setup();
+      for (let i = 0; i < MAX_LTK_SYSTEMS; i++) expect(runtime.play('swing', 'caster', ['a'], 'attack')).toBe(true);
+      step(Math.ceil(MAX_LTK_SYSTEMS / 6) / 60);
+      const placed = units.get('b')!.root.position.clone(), spare = (LTK_RUN_STATS.placeStarted.boom ?? 0) + (LTK_RUN_STATS.placeDropped.boom ?? 0);
+      if (when === 'dead at the cast') units.get('b')!.alive = false;
+      expect(runtime.play('later', 'caster', ['b'])).toBe(true);
+      step(0.1);
+      if (when === 'killed after the cast') { units.get('b')!.alive = false; runtime.stopUnit('b'); }
+      step(0.3);
+      const booms = of('boom').filter(entry => entry.fx.object.parent === scene);
+      outcome[when] = { started: booms.length, atPlace: booms.some(entry => entry.options.attachment === undefined), spare: (LTK_RUN_STATS.placeStarted.boom ?? 0) + (LTK_RUN_STATS.placeDropped.boom ?? 0) - spare };
+      if (when === 'killed after the cast') expect(booms[0]?.options.anchor.originAt(0)).toEqual(toSystem(placed));
+      runtime.dispose();
+    }
+    // A spare run ends only flourishes, so on a board of attacks it starts nothing.
+    expect(outcome['dead at the cast']).toMatchObject({ started: 0, spare: 1 });
+    // Killed after the cast: admitted as the living target's hit is, and drawn at its place.
+    expect(outcome['killed after the cast'].started).toBe(outcome.alive.started);
+    expect(outcome['killed after the cast']).toMatchObject({ started: 1, atPlace: true, spare: 0 });
+    expect(outcome.alive).toMatchObject({ started: 1, spare: 0 });
   });
 
   it('a plain attack is unchanged: refused at a dead target, not drawn when its target dies before it lands, on its unit when alive', async () => {

@@ -4407,9 +4407,9 @@
     "tests/vfx-ltk-dead-target.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 24140,
+      "currentBytes": 26479,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "e022a467551ce66f2551ccb49b273ce45200d047c690ef8cc8dfd2f453cc58a2",
+      "currentSha256": "f6719c963f09dd2d95258f166ea33153e2677ffd4c93bc8c62a95c0ac3948cb4",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-draven-axes.test.ts": {
