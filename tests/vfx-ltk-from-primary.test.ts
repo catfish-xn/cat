@@ -61,3 +61,24 @@ describe('vfx-ltk projectile from the primary target (TimelineCue.fromPrimary, C
     runtime.dispose();
   });
 });
+
+describe('hits of one play on one target merge (TimelineCue.mergeTicks)', () => {
+  const burst: TimelineCue = { system: 'sample', action: 'cast', event: 'hit', everyReceipt: true, delay: 0.8, duration: 1 };
+  it('a receipt cue keeps one row per target with mergeTicks, every receipt without it', async () => {
+    const { mapSkillTimeline } = await import('../src/rendering/three-mode/vfx-ltk/timeline');
+    // The rules' targets: the primary, then one entry a split bomb, repeats kept (two bombs on "a").
+    const targets = ['primary', 'a', 'a', 'b'];
+    expect(mapSkillTimeline([burst], 'caster', targets).spawns.map(s => s.targetId)).toEqual(['a', 'a', 'b']);
+    expect(mapSkillTimeline([{ ...burst, mergeTicks: 1 }], 'caster', targets).spawns.map(s => s.targetId)).toEqual(['a', 'b']);
+  });
+  it("Ziggs: every split bomb still flies, but bombs landing on one enemy together burst once there", async () => {
+    const { CUE_OVERRIDES } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    const { mapSkillTimeline } = await import('../src/rendering/three-mode/vfx-ltk/timeline');
+    const split = CUE_OVERRIDES.ziggs!.filter(c => c.everyReceipt);
+    expect(split.find(c => c.event === 'projectile')!.mergeTicks).toBeUndefined();
+    expect(split.find(c => c.event === 'hit')!.mergeTicks).toBe(1);
+    const rows = mapSkillTimeline(split, 'caster', ['foe3', 'foe3', 'foe3', 'foe2']).spawns;
+    expect(rows.filter(r => r.event === 'projectile').map(r => r.targetId)).toEqual(['foe3', 'foe3', 'foe2']);
+    expect(rows.filter(r => r.event === 'hit').map(r => r.targetId)).toEqual(['foe3', 'foe2']);
+  });
+});

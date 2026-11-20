@@ -64,11 +64,16 @@ export interface TimelineCue {
     readonly staggerTicks: number; readonly spreadTicks: number; readonly fan?: StrikeFan;
     /** Rows only for the first `shown` strikes of a cast; later strikes play nothing of this cue (their damage still shows). */
     readonly shown?: number;
-    /** A strike lands no row of this cue when an earlier strike of the same cast at the same target lands under this many ticks before. */
-    readonly mergeTicks?: number;
     /** At most this many of this system's rows queued on one rule tick across every caster (runtime); the rest are left out. */
     readonly tickCap?: number;
   };
+  /**
+   * Hits of one play on one target merge: a row of this cue lands nothing when an earlier row of the same play at the same
+   * target lands under this many rule ticks before (1: the same tick only). It applies to the rows a cue plays once per
+   * strike (perStrike) or once per receipt (everyReceipt), whose targets may repeat. Several copies of one burst on one
+   * spot at once add up past white (an additive emitter born white). A display rule of our own, not original data.
+   */
+  readonly mergeTicks?: number;
   /**
    * A projectile whose caster is its own target still flies (from its bone to its own targetBone), instead of being left
    * out with its landing hits moved to its release (the default for a self-projectile). Off unless set per cue.
@@ -204,6 +209,15 @@ export interface TimelineMapping {
   /** A partial plan is diagnostic only; never enqueue it or suppress the old action. */
   readonly unsupported: readonly { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[];
 }
+/** TimelineCue.mergeTicks for one play: whether a row landing on `targetId` at rule tick `at` merges into an earlier one. */
+function hitMerge(mergeTicks: number | undefined): (targetId: string, at: number) => boolean {
+  const landed = new Map<string, number>();
+  return (targetId, at) => {
+    const last = landed.get(targetId);
+    if (mergeTicks !== undefined && last !== undefined && at - last < mergeTicks) return true;
+    landed.set(targetId, at); return false;
+  };
+}
 /** Hits preserve authoritative self/ally targets. Projectiles need a distinct primary
  * endpoint; never skip self and silently retarget to a later member of the list. */
 export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], board?: WorldPoint): TimelineMapping {
@@ -213,12 +227,11 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     if (cue.perStrike && cue.event !== 'cast-start' && cue.location !== 'board') {
       const strikes = targets.filter(id => id !== sourceId), { staggerTicks, spreadTicks, fan } = cue.perStrike;
       if (!strikes.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
-      const { shown, mergeTicks } = cue.perStrike, landed = new Map<string, number>();
+      const { shown } = cue.perStrike, merged = hitMerge(cue.mergeTicks);
       strikes.forEach((targetId, k) => {
         if (shown !== undefined && k >= shown) return;
-        const at = strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks), last = landed.get(targetId);
-        if (mergeTicks !== undefined && last !== undefined && at - last < mergeTicks) return;
-        landed.set(targetId, at);
+        const at = strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks);
+        if (merged(targetId, at)) return;
         spawns.push({ ...cue, sourceId, targetId, strike: k, delay: cue.delay + at * STRIKE_TICK_SECONDS,
           ...(cue.event === 'projectile' && fan ? { curve: strikeCurve(k, strikes.length, fan) } : {}) });
       });
@@ -238,7 +251,9 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     if (cue.everyReceipt) {
       const each = targets.slice(1);
       if (!each.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
-      for (const targetId of each) spawns.push({ ...cue, sourceId, targetId, ...(cue.fromPrimary ? { fromId: targets[0] } : {}) });
+      // Every row of a receipt cue lands at the same time (its delay), so mergeTicks keeps one row per target.
+      const merged = hitMerge(cue.mergeTicks);
+      for (const targetId of each) if (!merged(targetId, 0)) spawns.push({ ...cue, sourceId, targetId, ...(cue.fromPrimary ? { fromId: targets[0] } : {}) });
       continue;
     }
     const pool = cue.others ? unique.slice(1) : unique;
