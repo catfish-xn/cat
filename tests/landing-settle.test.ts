@@ -149,3 +149,16 @@ describe('landing batch: files written before it', () => {
     expect(admitArchives([file], routeSaveFile).quarantined.map(q => q.runId)).toEqual(['before-landing']);
   });
 });
+
+describe('landing batch: a caster who dies before the landing', () => {
+  it("Darius's spin is void if he dies before it lands: no damage, no heal, no bleed", () => {
+    const start = battle([hero('darius', 2, 3, 4, { targetId: 'e', hp: 5000 }), dummy('e', 'enemy', 3, 3)], { rngState: 42 });
+    const cast = castTick(run(start, 5).out);
+    const mid = structuredClone(run(start, cast - start.tick).state);
+    Object.assign(mid.units.find(u => u.id === 'p')!, { hp: 0, alive: false });
+    const r = run(mid, DARIUS_SPIN_TICKS + 90);
+    expect(hits(r.out)).toEqual([]);
+    expect(r.out.flatMap(s => healViews(s.events).filter(h => h.unitId === 'p'))).toEqual([]);
+    expect(r.state.units.flatMap(u => (u as S13Unit).tasks ?? []).filter(t => t.kind === 'bleed')).toEqual([]);
+  });
+});
