@@ -136,6 +136,10 @@ const countSkips = (skipped: readonly { system: string; reason: LtkSkipReason }[
   for (const { system, reason } of skipped) LTK_RUN_STATS.skipped[`${system} ${reason}`] = (LTK_RUN_STATS.skipped[`${system} ${reason}`] ?? 0) + 1;
 };
 const refuse = (why: 'not-ready' | 'no-target' | 'nothing-left' | 'queue-full' | 'caster-dead') => { LTK_RUN_STATS.refused[why] = (LTK_RUN_STATS.refused[why] ?? 0) + 1; return false; };
+/** Recording only (rec branch): ?probesys=<id> traces one system's rows: queued, due, started (anchor, attachment), per-frame draws, gone, ended. */
+const ltkProbe = () => (globalThis as { __ltkProbe?: { system: string; log: unknown[] } }).__ltkProbe;
+const probeOn = (system: string) => ltkProbe()?.system === system;
+const probeLog = (entry: Record<string, unknown>) => { ltkProbe()?.log.push(entry); };
 const countDrop = (system: string) => { LTK_RUN_STATS.dropped[system] = (LTK_RUN_STATS.dropped[system] ?? 0) + 1; };
 const countPlaceDrop = (system: string) => { LTK_RUN_STATS.placeDropped[system] = (LTK_RUN_STATS.placeDropped[system] ?? 0) + 1; };
 /** Which overlays the screen cap keeps first. */
@@ -897,6 +901,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       // Finish last frame's systems before reserving capacity for new ones.
       for (const run of running) {
         run.fx.update(seconds, camera);
+        if (probeOn(run.system)) {
+          const origin = new Vector3(); run.fx.object.getWorldPosition(origin);
+          probeLog({ t: +clock.toFixed(3), ev: 'frame', target: run.target ?? null, atPlace: !!run.atPlace, pool: run.fx.driver.pool.count, origin: [+origin.x.toFixed(1), +origin.y.toFixed(1), +origin.z.toFixed(1)],
+            inScene: !!run.fx.object.parent, visible: run.fx.object.visible,
+            draws: run.fx.draws.map(d => { const o = d.object as { name?: string; visible?: boolean; count?: number; geometry?: { drawRange?: { count: number }; instanceCount?: number } };
+              return [o.name ?? '?', o.visible !== false ? 1 : 0, o.count ?? o.geometry?.instanceCount ?? o.geometry?.drawRange?.count ?? -1]; }) });
+        }
         // A run that plays out is stopped at its end, not removed: its particles finish their own curves (Fable 11-12:
         // Vi's row shockwave was cut whole at its end while its smoke and rock children still showed).
         if (run.playOut && !run.ending && !run.stopped && (run.fx.finished || clock + 1e-9 >= run.until)) {
@@ -922,6 +933,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (when > clock) { at++; continue; }
         if (starts >= 6) break;
         waiting.splice(at, 1);
+        if (probeOn(spawn.system)) { const unit = spawn.targetId ? findUnit(spawn.targetId) : undefined;
+          probeLog({ t: +clock.toFixed(3), ev: 'due', when: +when.toFixed(3), event: spawn.event, delay: spawn.delay, targetId: spawn.targetId ?? null, targetAlive: unit ? unit.alive && !unit.disposed : null,
+            place: row.place ?? null, snapshot: snapshot ?? null, atPlace: !!row.atPlace, running: running.size, reserved: reservedNow() }); (row as { probeDue?: number }).probeDue = clock; }
         // A full board keeps damage and beams by retiring the earliest caster flourish. Decorative newcomers are dropped.
         // A persistent board run outlives the phase on purpose; it is never a flourish to evict.
         const importance: EffectImportance = persistent ? 'critical' : effectImportance(spawn);
@@ -1141,6 +1155,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           if (clock - when > 0.02) LTK_RUN_STATS.lateStarts.push({ system: spawn.system, event: spawn.event,
             kind: (spawn.event === 'hit' || spawn.event === 'projectile') && runFor <= 1.5 ? 'hit' : 'sustained', late: +(clock - when).toFixed(3),
             duration: +runFor.toFixed(3), skipped: +Math.min(1, (clock - when) / Math.max(1e-3, runFor)).toFixed(3) });
+          if (ltkProbe()) probeLog({ t: +clock.toFixed(3), ev: 'start-any', system: spawn.system, late: +(clock - when).toFixed(3) });
+          if (probeOn(spawn.system)) probeLog({ t: +clock.toFixed(3), ev: 'start', when: +when.toFixed(3), late: +(clock - when).toFixed(3), atPlace, attachment: attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : null,
+            attachmentAlive: attachment ? attachment.alive && !attachment.disposed : null, anchor: anchor.originAt(0).map(n => +n.toFixed(1)), scale, runFor: +runFor.toFixed(3) });
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
           running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,

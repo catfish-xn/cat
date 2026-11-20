@@ -1,5 +1,7 @@
 // Dev-only cast capture harness (dev/castcmp): a fake board feed, a virtual clock, one cast event.
 const params = new URLSearchParams(location.search);
+// Recording only (rec branch): ?probesys=<system> traces that system's rows in the LTK runtime (runtime.ts ltkProbe).
+if (params.get('probesys')) (globalThis as { __ltkProbe?: unknown }).__ltkProbe = { system: params.get('probesys'), log: [] };
 let clock = 0;
 let seq = 100;
 const rafs = new Map<number, FrameRequestCallback>(); let rafId = 0;
