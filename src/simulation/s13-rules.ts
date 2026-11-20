@@ -53,4 +53,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   heimerFocus: 'first-floor-half-of-volley-at-current-target-rest-random',
   // Swain's demon form drain (11-20): four pulses a second, each a quarter of the per-second values (splitTotal).
   swainDrain: 'every-5-ticks-first-at-5-quarter-of-per-second-split-total-adjacency-each-pulse',
+  // Mel's cast (11-20): dash lands later, bolts leave later and settle where they land (abilityProjectile mel-barrage).
+  melBarrage: 'dash-lands-10-bolts-leave-15-fly-2-per-hex-settle-on-landing-channel-until-release',
 });

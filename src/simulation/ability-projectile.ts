@@ -1,5 +1,6 @@
 import { hexDistance } from './board';
-import { HEIMER_ROCKET_TIMING, maddieShotFlightTicks, MORDEKAISER_CLAW_TICKS } from './cast-windup';
+import { HEIMER_ROCKET_TIMING, maddieShotFlightTicks, MEL_BOLT_TICKS_PER_HEX, MORDEKAISER_CLAW_TICKS } from './cast-windup';
+import { melBolts } from './combat-six-cost';
 import type { CombatTask } from './combat-types';
 import type { AbilityContext } from './combat-s13-abilities';
 import { byDistance, enemies, grantShield, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -10,11 +11,11 @@ import { byDistance, enemies, grantShield, origin, path, variable, type S13Unit 
  * (abilityProjectileLaunched) and settles on its arrival tick (abilityProjectileLanded, then its effect). A target that died
  * in flight takes nothing and no other one is picked (hit false), as ranged basic attacks do.
  */
-export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw';
-export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw'];
+export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw' | 'mel-barrage';
+export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw', 'mel-barrage'];
 /** The champion each projectile belongs to. */
 export const ABILITY_PROJECTILE_OWNER: Readonly<Record<AbilityProjectileSkill, string>> =
-  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser' };
+  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser', 'mel-barrage': 'mel' };
 /** A skillShot task: before launch (arrivalTick absent) it runs on its launch tick; after, on arrivalTick (= executeAtTick). */
 export interface SkillShotState { readonly skill: AbilityProjectileSkill; readonly arrivalTick?: number }
 
@@ -52,6 +53,11 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
       const star = (unit.starLevel ?? 1) as 1 | 2 | 3, claw = MORDEKAISER_CLAW_TICKS[star];
       launchShot(ctx, unit, task, task.targetId!, ctx.tick + claw.land - claw.appear); return;
     }
+    if (shot.skill === 'mel-barrage') {
+      // Mel's bolts at one target leave together and fly MEL_BOLT_TICKS_PER_HEX a hex (self-chosen, not original data).
+      const aim = ctx.units.find(u => u.id === task.targetId);
+      launchShot(ctx, unit, task, task.targetId!, ctx.tick + Math.max(1, (aim ? hexDistance(unit.cell, aim.cell) : 1) * MEL_BOLT_TICKS_PER_HEX)); return;
+    }
     throw new RangeError('unlaunched skill shot ' + shot.skill);
   }
   const target = ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0);
@@ -64,6 +70,7 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
     case 'maddie-shot': damage('physical', false); break;
     case 'heimerdinger-rocket': damage('magic', false); break;
     case 'mordekaiser-claw': damage('magic', true); break;
+    case 'mel-barrage': melBolts(ctx, target, task.amount, task.actionSeq, task.source); break;
     case 'lux-shield': grantShield(target, task.source, task.amount, ctx.tick + luxShieldTicks(unit), ctx.tick, ctx.events); break;
   }
 }

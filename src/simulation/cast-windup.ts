@@ -104,3 +104,9 @@ export const HEIMER_FOCUS_SHARE_BPS = 5000;
  * it drains every SWAIN_PULSE_TICKS, the first that long after the cast; each pulse settles one of SWAIN_PULSES_PER_SECOND
  * parts of the per-second heal and damage (splitTotal), so each second's total is unchanged. */
 export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
+
+/** Mel's cast (11-20, user-approved): she lands from her dash MEL_DASH_LAND_TICKS after the cast and her bolts leave
+ * MEL_RELEASE_TICKS after it (both aligned to the original frame by frame, every star level alike, 3 stars inferred; see
+ * docs/S13_RULES_GAP.md 梅尔弹幕). The bolts fly MEL_BOLT_TICKS_PER_HEX a hex (self-chosen, not original data; the original's
+ * hit time is not measured) and settle where they land. */
+export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PER_HEX = 2;
