@@ -580,6 +580,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
   const clear = (preserveWorldEffects = false) => {
     for (let at = waiting.length - 1; at >= 0; at--) if (!preserveWorldEffects || !waiting[at].persistent) waiting.splice(at, 1);
     pruneFlightSeeds(); seedKeys.clear(); seedTick = undefined;
+    // The perStrike tick caps count per rule tick; a new combat restarts its ticks, so a count from the last one never carries.
+    capCounts.clear(); capTick = undefined;
     for (const run of running) if (!preserveWorldEffects || !run.persistent) { release(run, true); running.delete(run); }
     if (!preserveWorldEffects) drainSpare();
   };
