@@ -159,7 +159,8 @@ describe('batch 3 display lifecycle', () => {
     const pulsed = fixture('swain');
     pulsed.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: [] }), true);
     pulsed.controller.event(magic(2, 'ability', 'swain-ability', 'ability-periodic'), true);
-    expect(pulsed.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-pulse', 's', ['t'], undefined);
+    // The burst plays on Swain himself, not on the enemy his drain hit (Fable 11-20).
+    expect(pulsed.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-pulse', 's', ['s'], undefined);
     const illaoi = fixture('illaoi');
     illaoi.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['s'] }), true);
     illaoi.controller.update(.01);
@@ -321,16 +322,17 @@ describe('batch 3 in a second combat', () => {
   });
 });
 
-// Fable 11-20: the rules drain four times a second; Swain's pulse drawing on one enemy is spaced to once a second (自定).
-describe('Swain drain pulse spacing', () => {
+// Fable 11-20: the rules drain four times a second, each drain a packet on every enemy beside Swain. One burst on Swain
+// himself stands for each drain's packets, at most one a second (自定).
+describe('Swain drain burst', () => {
   const magic = (tick: number, targetId: string) => event({ type: 'packetDamage', tick, sourceId: 's', targetId, damageType: 'magic', sourceKind: 'ability', definitionId: 'swain-ability', delivery: 'ability-direct' });
-  it('four drains a second draw one pulse a second on each enemy; a second enemy has its own', () => {
+  it('four drains a second on two enemies draw one burst a second, on Swain himself', () => {
     const { controller, runtime, units } = fixture('swain'); units.set('u', { ...unit('enemy'), team: 'enemy' });
     controller.event(event({ type: 'cast', tick: 100, sourceId: 's', targetIds: [] }), true); controller.update(.05);
-    const pulses = (target: string) => runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse' && c[3]?.[0] === target).length;
+    const bursts = () => runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse');
     for (let i = 0; i < 8; i++) { controller.event(magic(105 + 5 * i, 't'), true); controller.event(magic(105 + 5 * i, 'u'), true); controller.update(.25); }
-    expect(pulses('t')).toBe(2);
-    expect(pulses('u')).toBe(2);
+    expect(bursts()).toHaveLength(2);
+    expect(bursts().every(c => c[2] === 's' && c[3]?.length === 1 && c[3][0] === 's')).toBe(true);
     // Its ascension is still kept alive by every drain.
     expect(runtime.stopGroup).not.toHaveBeenCalledWith('s:swain-ascension');
   });

@@ -13,9 +13,10 @@ type Runtime = ReturnType<typeof createLtkRuntime>;
 const TICK_SECONDS = 0.05;
 const SWAIN_TAIL_SECONDS = 1.25;
 /**
- * Seconds between two drawings of Swain's drain pulse on the same enemy, at least (our own value, 自定，非原版; Fable 11-20):
- * the rules drain four times a second, and a pulse on every enemy at each would hold half the board's effect slots for one
- * Swain. The numbers keep every drain; only the pulse drawing is spaced.
+ * Seconds between two of Swain's drain bursts, at least (our own value, 自定，非原版; Fable 11-20). The rules drain four times
+ * a second, each drain a packet on every enemy beside him; one burst on him stands for all of a drain's packets (Fable 11-20:
+ * not one per enemy hit), and only one a second is drawn: four a second with four enemies beside him held twelve, half the
+ * board's effect slots (Node, 11-20). The numbers keep every drain.
  */
 const SWAIN_PULSE_SECONDS = 1;
 /** Effect keys are public nine-field tuples; use their source identity, never
@@ -56,7 +57,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
   const blasts = new Map<string, number>();
   const summons = new Map<string, PendingSummon>();
   const ascension = new Map<string, { lastTick: number }>();
-  // Swain's last drawn drain pulse on each enemy (source:target), on this controller's clock (SWAIN_PULSE_SECONDS).
+  // Each Swain's last drawn drain burst, on this controller's clock (SWAIN_PULSE_SECONDS).
   const pulses = new Map<string, number>();
   const channels = new Set<string>();
   let clock = 0, latestTick = 0;
@@ -222,8 +223,9 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
             else if (event.damageType === 'magic' && ended.get(event.sourceId) === event.tick) play(event.sourceId, 'illaoi-slam', [event.targetId]);
           }
           if (source.definitionId === 'swain' && source.form === 'front' && event.damageType === 'magic' && ability && ascension.has(event.sourceId)) {
-            const key = `${event.sourceId}:${event.targetId}`, at = pulses.get(key);
-            if (at === undefined || clock - at >= SWAIN_PULSE_SECONDS - 1e-9) { pulses.set(key, clock); play(event.sourceId, 'swain-pulse', [event.targetId]); }
+            // One burst on Swain himself for every enemy his drain hits that tick, and at most one a second.
+            const at = pulses.get(event.sourceId);
+            if (at === undefined || clock - at >= SWAIN_PULSE_SECONDS - 1e-9) { pulses.set(event.sourceId, clock); play(event.sourceId, 'swain-pulse', [event.sourceId]); }
           }
           // Loris's only magic ability damage is the shield-end blast. It lands whether the shield ran out or broke early
           // (11-06: keyed to the 'expired' tick it never showed in the field). One shockwave per blast, at its first recipient.
