@@ -1,3 +1,4 @@
+import { tracksCabalTakedowns, sampleCabalTakedowns } from './augment-pool-batch5-h9-cabal';
 import { sampleAugmentDeath } from './augment-death-samples';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { CombatTask, CombatOrigin, CombatUnit } from './combat-types';
@@ -112,6 +113,9 @@ export function advanceV20Minions(ctx:AbilityContext):void {
     }
     // An expiring Menaces minion's death carries an augment death sample like every other death: the settlement's executed
     // death history (recordRoomBattleDeaths, Loot Explosion) requires one per death event and faulted the room without it.
-    if(ctx.tick>=m.untilTick){u.alive=false;u.hp=0;ctx.events.push(sampleAugmentDeath({type:'death',tick:ctx.tick,unitId:u.id},u));}
+    // Like combat-s13's deaths: no killer (it expires) and, when Cabal tracks takedowns, an empty takedown list, so the death
+    // history readers that require those fields (Golden Find's killer, Cabal's takedowns) see a complete row.
+    if(ctx.tick>=m.untilTick){u.alive=false;u.hp=0;ctx.events.push(sampleAugmentDeath({type:'death',tick:ctx.tick,unitId:u.id},u,null,
+      tracksCabalTakedowns(ctx.units)?sampleCabalTakedowns(ctx.units,u.id,[]):undefined));}
   }
 }

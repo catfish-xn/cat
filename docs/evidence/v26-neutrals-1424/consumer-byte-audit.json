@@ -4076,6 +4076,14 @@
       "currentSha256": "300834c312ebaa149f31b1c39111a6bfa7d41cc4c0fc070e84b6c0d0d8f916e8",
       "firstDifferentByte": 31164
     },
+    "tests/v20-menaces-death-sample.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2928,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "38893b08ab1135721d21dc2e136d4c1e775568742254f8fdc89d5961d9945d00",
+      "firstDifferentByte": 0
+    },
     "tests/v20-traits.test.ts": {
       "previousBytes": 30738,
       "currentBytes": 32070,
