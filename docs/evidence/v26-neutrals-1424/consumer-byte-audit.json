@@ -1568,9 +1568,9 @@
     },
     "tests/knockup-status.test.ts": {
       "previousBytes": 4240,
-      "currentBytes": 5744,
+      "currentBytes": 5753,
       "previousSha256": "2d2a47b7e14ef43dc09c54b5465196da37d360da834b3fd37f469f9a98fc2e64",
-      "currentSha256": "2a365aa9c1800a49fe88407bdb6ea9001605d223ba7dd3e4b6dcad62e6047330",
+      "currentSha256": "8d374a3a20bd043f78d7162851edca70d845bc918c5e6ab5532deb428f73e467",
       "firstDifferentByte": 283
     },
     "tests/late-lag-effects.test.ts": {
@@ -3733,9 +3733,9 @@
     },
     "tests/stage5-feedback.test.ts": {
       "previousBytes": 10181,
-      "currentBytes": 29744,
+      "currentBytes": 29834,
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
-      "currentSha256": "839c6910ad1c7aec3e57776312714ffe345bf8180e14aadb3bdd168745232850",
+      "currentSha256": "ba176bcb1c5ad97bac6d0114e88396a476e33c4522eac079cdbd6f82d90a0372",
       "firstDifferentByte": 216
     },
     "tests/sustain-stops.test.ts": {
