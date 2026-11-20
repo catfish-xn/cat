@@ -125,7 +125,9 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
    */
-  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number> };
+  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number>,
+  /** Rows of a system whose definition draws nothing (an empty system: every emitter culled or none), skipped when due. */
+  emptySkipped: {} as Record<string, number> };
 /**
  * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
  * was dead and the cue does not keep a dead target's place (a plain attack, a link, a state the target carries), or its
@@ -960,7 +962,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A flying projectile at its still living target, from a row that kept its place (a row or a falling projectile has fixed
         // ends; a beam row holds by part): if the target dies it flies on to where it was (Running.holdTarget).
         const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && !row.from && row.part !== 'beam';
-        const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
+        const loaded = catalog.get(spawn.system); if (!loaded) continue;
+        if (loaded.empty) { LTK_RUN_STATS.emptySkipped[spawn.system] = (LTK_RUN_STATS.emptySkipped[spawn.system] ?? 0) + 1; continue; }
         const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
         const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
