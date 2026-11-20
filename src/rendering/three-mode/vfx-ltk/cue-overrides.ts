@@ -878,6 +878,19 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
   // difference (Fable 11-19); the rest of the hit draws.
   '9acdae50': ['Alpha_BgGlow_GreenBrown'],
+  // Irelia's shield: the cyan ring glow round the bubble is left out, with the bubble itself fainter (EMITTER_ALPHA; Fable
+  // 11-20, picked from a three-column toggle).
+  '67665513': ['Alpha_RingGlow'],
+};
+
+/**
+ * Emitters drawn fainter here, by system and emitter name: each particle's alpha is multiplied by the factor. The factors
+ * are fitted/own values (拟合/自定，非原版), picked by eye on our board; colours are left as the asset has them.
+ */
+export const EMITTER_ALPHA: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  // Irelia's shield bubble read as a solid ball over her at full strength; half lets her body show through it (Fable 11-20,
+  // three-column toggle: this is that column as recorded, the swirl meshes included).
+  '67665513': { Add_Shield: 0.5, Swirl_Mesh: 0.5, Swirl_Mesh1: 0.5 },
 };
 
 /**
