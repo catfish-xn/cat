@@ -88,7 +88,7 @@ check skipped as above. SHA-256: `f2be9d16394fc40944810cb7c8461ee33734b1feec4ce4
 fields only melee units). Exported with the same command, v24 gameplay check skipped as above; the export equals the old file
 with that one substitution. SHA-256: `9164136961297336b3fed3376a006ed77c36cdec879635715977ce30c79b80e6`.
 
-2026-11-20 玛尔扎哈技能改为横跨目标的直线 (#783): identity-only refresh, `contentDigest` (×2) `cf212873` → `eb3f023d`
+2026-11-20 玛尔扎哈技能改为横跨目标的直线 (#783): identity-only refresh, `contentDigest` (×2) `cf212873` → `d1f4cd83`
 (`S13_COMBAT_RULES.malzaharGate`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed (the 1-2 fight has
 no Malzahar). Exported with the same command, v24 gameplay check skipped as above; the export equals the old file with that one
-substitution. SHA-256: `a5cd42228f6338abd2bc4b8ea857cf7203cd75f138f31b913bb13b295d2192d5`.
+substitution. SHA-256: `8ede2ef8b38121a13c6744b8eaf116e86143764d26732fee8a54d34e15bce7e6`.
