@@ -3573,6 +3573,14 @@
       "currentSha256": "c224c64f48617fa53b02f94cd486c62a76777831f464521c26f4fee12fa33a05",
       "firstDifferentByte": 323
     },
+    "tests/server/menaces-expiry-room.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7855,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8ff090df3c3f8c9e88bce4844b45ae312473315dee0a953536f7af5f4001ebbd",
+      "firstDifferentByte": 0
+    },
     "tests/server/net/v17-avarice-reconnect.test.ts": {
       "previousBytes": 8760,
       "currentBytes": 8765,
