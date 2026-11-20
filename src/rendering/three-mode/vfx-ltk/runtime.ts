@@ -471,6 +471,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     if (tick !== seedTick) { seedKeys.clear(); seedTick = tick; }
     const key = `${spawn.system}|${spawn.sourceId}|${spawn.targetId ?? spawn.point?.join(',') ?? ''}|${spawn.action ?? 'cast'}|${spawn.variant ?? ''}|${tick ?? '-'}`;
     const n = seedKeys.get(key) ?? 0; seedKeys.set(key, n + 1);
+    if (probeOn(spawn.system)) probeLog({ t: +clock.toFixed(3), ev: 'queued', event: spawn.event, delay: spawn.delay, sourceId: spawn.sourceId, targetId: spawn.targetId ?? null, key: `${key}#${n}` });
     return hashSeed(`${key}#${n}`);
   };
   /**

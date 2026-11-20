@@ -157,7 +157,13 @@ async function unbind(page, tick, rebind) {
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
   }
   // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
-  if (opt('probesys')) fs.writeFileSync(path.join(out, `ltk-probe-${opt('probesys')}.json`), JSON.stringify(await page.evaluate(() => globalThis.__ltkProbe ?? null)));
+  if (opt('probesys')) fs.writeFileSync(path.join(out, `ltk-probe-${opt('probesys')}.json`), JSON.stringify(await page.evaluate(async sys => {
+    // The probe log, and the runtime's admission counters for the recorded window: this system's starts, drops, skips and refusals.
+    const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null), run = runtime?.LTK_RUN_STATS;
+    const mine = o => Object.fromEntries(Object.entries(o ?? {}).filter(([k]) => k.startsWith(sys)));
+    return { ...(globalThis.__ltkProbe ?? {}), runStats: run ? { started: mine(run.started), dropped: mine(run.dropped), placeStarted: mine(run.placeStarted), placeDropped: mine(run.placeDropped),
+      skipped: mine(run.skipped), refused: run.refused, peakRunning: run.peakRunning } : null };
+  }, opt('probesys'))));
   fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
   // The overlay counts of the recorded window (vfx-ltk runtime.ts ATTACHED_LAYER_STATS, cleared before the recorded cast; null on builds before it).
