@@ -19,9 +19,9 @@ import { meshEmission } from './assets/emission';
 import type { EmissionSampler, EmissionSurfaces, EmitterSurfaces } from './engine/simulation/emissionSurface';
 
 
-/** Recording-only (claude/rec-irelia-shield-*): Irelia's shield bubble, alpha one step lower (×0.75). Our own values. */
+/** Recording-only (claude/rec-irelia-shield-*): Irelia's shield bubble, alpha two steps lower (×0.5) and the cyan rim off. Our own values. */
 const REC_EMITTER_ALPHA: Readonly<Record<string, Readonly<Record<string, number>>>> = {
-  '67665513': { Add_Shield: 0.75, Swirl_Mesh: 0.75, Swirl_Mesh1: 0.75 },
+  '67665513': { Add_Shield: 0.5, Swirl_Mesh: 0.5, Swirl_Mesh1: 0.5, Alpha_RingGlow: 0 },
 };
 export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
