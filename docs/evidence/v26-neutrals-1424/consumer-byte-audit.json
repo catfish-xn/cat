@@ -1008,6 +1008,14 @@
       "currentSha256": "9164136961297336b3fed3376a006ed77c36cdec879635715977ce30c79b80e6",
       "firstDifferentByte": 0
     },
+    "tests/fixtures/cue-dropped-systems.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2484,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "f598a1ada0f835b2dc7a4f360a8dbd0cfb09ad5ddacafd9185a4e05b1c6ad6d6",
+      "firstDifferentByte": 0
+    },
     "tests/fixtures/epic-loot-oracle.cjs": {
       "previousBytes": 6972,
       "currentBytes": 7105,
@@ -4378,6 +4386,14 @@
       "currentBytes": 448,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "976f69d4f9ccda1c7b943c9f0379391d703194e4f3a70c14fb2aaf7327d5c63b",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-cue-dropped.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3583,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "19a5b898a2c8649f5a91e7302020d6878184f60e71d4f5d4a365364f3db431e2",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
