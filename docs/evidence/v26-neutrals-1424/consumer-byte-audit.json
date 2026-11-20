@@ -4620,9 +4620,9 @@
     "tests/vfx-ltk-play-out-deadline.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3916,
+      "currentBytes": 3901,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "61389713628b749f8d6cc5d30a678b9cf2e4282be8d370a63286d4da7409b34a",
+      "currentSha256": "591c1583c83fea70ba40cf8ad737277c50ef3822bad56f070a806fde4d089fcb",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-powder-blast.test.ts": {
