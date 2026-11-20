@@ -74,7 +74,16 @@ export function removeCombatUnit(state: CombatState, unitId: string, reason: str
     if (unit.targetId !== unitId) return unit;
     const copy = { ...unit, targetId: null }; delete copy.targetEngaged; delete copy.meleeApproach; return copy;
   });
-  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId] }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+  const removed = state.units.find(unit => unit.id === unitId)!;
+  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId],
+    ...(namedAsEffectSource(units, unitId) ? { departedUnits: [...state.departedUnits ?? [], removed] } : {}) }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+}
+
+/** True when a remaining unit's periodic task or status contribution still names unitId as its source. Such a source
+ * is kept in CombatState.departedUnits on removal so the effect runs to its end with its original source. */
+export function namedAsEffectSource(remaining: readonly CombatUnit[], unitId: string): boolean {
+  return remaining.some(unit => unit.mechanismState?.periodicTasks.some(task => task.source.ownerId === unitId)
+    || unit.mechanismState?.statuses.some(group => group.contributions.some(c => c.source.ownerId === unitId)));
 }
 
 export function castOutcomeEvent(tick: number, unitId: string, abilityKey: string, outcome: string, subOutcomes: readonly string[] = []): CombatEvent {
