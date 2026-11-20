@@ -924,6 +924,9 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Irelia's shield: the cyan ring glow round the bubble is left out, with the bubble itself fainter (EMITTER_ALPHA; Fable
   // 11-20, picked from a three-column toggle).
   '67665513': ['Alpha_RingGlow'],
+  // Swain's drain burst: its dark hollow orb (red turning black) is held off until what triggers it in the original is known
+  // (Fable 11-20: the original's dark shell does not come with every drain); its flash and red lightning ring draw.
+  '7acb599b': ['CenterOrb_Out1'],
 };
 
 /**

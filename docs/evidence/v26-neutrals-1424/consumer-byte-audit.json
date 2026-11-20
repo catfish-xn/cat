@@ -4272,9 +4272,9 @@
     "tests/vfx-ltk-batch3.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 28161,
+      "currentBytes": 28450,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5bde2e513cbdb0ccd644c31406e224f51b16980f7fdb150ce1f5b4e69733bd0e",
+      "currentSha256": "d96ae180cd868e86793bcab39658a87e77aef4b94c6917442ab4508e24469eeb",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-beam-trim.test.ts": {
@@ -4730,9 +4730,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5118,
+      "currentBytes": 5187,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "443f1cd55ac40a176033be079e8ed03e542f6e471b7f4b8a756ff607e2307640",
+      "currentSha256": "3e73198543144a72a6e7eb6de9445055252ebca317a3ca4a5c2f685336316d1d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {

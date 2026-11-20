@@ -336,4 +336,8 @@ describe('Swain drain burst', () => {
     // Its ascension is still kept alive by every drain.
     expect(runtime.stopGroup).not.toHaveBeenCalledWith('s:swain-ascension');
   });
+  it('the burst draws its flash and red lightning ring; its dark orb is held off (Fable 11-20)', async () => {
+    const { DISABLED_EMITTERS } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    expect(DISABLED_EMITTERS['7acb599b']).toEqual(['CenterOrb_Out1']);
+  });
 });
