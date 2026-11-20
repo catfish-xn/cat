@@ -16,7 +16,7 @@ export const BODY_YIELD_SHARE = 0.7;
  * Damage, projectiles, beams, impacts, ground areas and sustained cast bodies stay. A short caster flourish (cast windup
  * on the source under `CAST_BODY_SECONDS`) is decorative and is the first thing removed to make room.
  */
-export function effectImportance(cue: { event?: string; anchor?: string; location?: string; action?: string; variant?: string; main?: boolean; rank?: 'body' | 'decorative'; duration?: number }): EffectImportance {
+export function effectImportance(cue: { event?: string; anchor?: string; location?: string; action?: string; variant?: string; main?: boolean; rank?: 'body' | 'critical' | 'decorative'; duration?: number }): EffectImportance {
   // 11-06 field recording: every unit's basic-attack hit filled the board's slots, so skill bodies on the caster never got in.
   // An empowered attack (Nocturne, Twitch) is the skill showing, so it keeps the usual ranks.
   if (cue.action === 'attack' && !cue.variant) return 'attack';
