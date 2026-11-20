@@ -87,3 +87,8 @@ check skipped as above. SHA-256: `f2be9d16394fc40944810cb7c8461ee33734b1feec4ce4
 (content-digest.ts covers `M8_VERSION`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed (the 1-2 fight
 fields only melee units). Exported with the same command, v24 gameplay check skipped as above; the export equals the old file
 with that one substitution. SHA-256: `9164136961297336b3fed3376a006ed77c36cdec879635715977ce30c79b80e6`.
+
+2026-11-20 远程普攻前摇补规则标识: identity-only refresh, `contentDigest` (×2) `cf212873` → `315b1da6`
+(`S13_COMBAT_RULES.rangedAttackWindup`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed (the 1-2
+fight fields only melee units). Exported with the same command, v24 gameplay check skipped as above; the export equals the old
+file with that one substitution. SHA-256: `5b7af72aefd18f7bb95193fc22ee920e5af701ded136f931240fc1b9eb9170f4`.
