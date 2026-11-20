@@ -18,6 +18,11 @@ import { readMeshBuffer } from './assets/meshBuffer';
 import { meshEmission } from './assets/emission';
 import type { EmissionSampler, EmissionSurfaces, EmitterSurfaces } from './engine/simulation/emissionSurface';
 
+
+/** Recording-only (claude/rec-irelia-shield-*): Irelia's shield bubble, alpha one step lower (×0.75). Our own values. */
+const REC_EMITTER_ALPHA: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  '67665513': { Add_Shield: 0.75, Swirl_Mesh: 0.75, Swirl_Mesh1: 0.75 },
+};
 export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
   constructor(readonly reason: LoadFailure, detail: string) { super(`vfx-ltk:${reason}:${detail}`); }
@@ -286,9 +291,16 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
       const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
-      const model = disabled || whole || heldOn ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
+      const shaped = disabled || whole || heldOn ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
         : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null }
         : heldOn?.includes(e.name ?? '') ? { ...e, lifetime: null } : e) } : parsed;
+      // Recording-only toggle (never merged): scales the alpha of the listed emitters. Values are our own, not data.
+      const alphaScale = REC_EMITTER_ALPHA[id];
+      const model = alphaScale ? { ...shaped, emitters: shaped.emitters.map(e => {
+        const k = alphaScale[e.name ?? '']; if (k === undefined) return e;
+        if (k === 0) return { ...e, disabled: true };
+        const [r, g, b, a] = e.modulation; return { ...e, modulation: [r, g, b, a * k] as const };
+      }) } : shaped;
       const listed = drawnEmitters(model, true);
       // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
