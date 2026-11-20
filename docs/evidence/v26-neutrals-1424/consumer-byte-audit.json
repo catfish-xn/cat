@@ -4264,9 +4264,9 @@
     "tests/vfx-ltk-batch2.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 30072,
+      "currentBytes": 31972,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "70056b12c8f476a48121f3eded80e10d094d8c0a70ff7bf92f293633f9322526",
+      "currentSha256": "593d12b536f18f025841df5037bbf329593bd0fe1c3137257d705330c82de9a2",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-batch3.test.ts": {
@@ -4383,9 +4383,9 @@
     "tests/vfx-ltk-cue-override-627.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3873,
+      "currentBytes": 4062,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "94d7ec3346385a01506f94af480b102cd977e690d7f781285de7d22f507ae66f",
+      "currentSha256": "d96e91d24c63e72f2e9f4a3cb3830dde0a57fab7283c0d22ce8a1436295ffc21",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-overrides.test.ts": {
