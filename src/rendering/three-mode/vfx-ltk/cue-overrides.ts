@@ -348,6 +348,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '0a5d1c08', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
     // Walls and the pit are born a moment into this system (as authored, not hand-tuned). Stop before that and keep the opening slash.
     { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    // The empowered aura on his mace, from his slam's damage (the rules strike at the cast tick: no CAST_WINDUP_TICKS entry)
+    // until his empowered time ends (SUSTAIN_CAPS, CUE_END_STOPS). The skill's body: it never yields (Fable 11-19).
+    { system: '938c104f', action: 'cast', event: 'cast-start', delay: 0, duration: 1.5, bone: 'Buffbone_Glb_Mace_Loc', rank: 'critical' },
   ],
   // The index list without Q_tar: her hit plays at her kick's damage event instead, by damage type (CUE_EXTRA_SKILLS camille-q-*).
   camille: [
@@ -369,6 +372,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 6.4, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
     { system: '29d01632', action: 'cast', event: 'link', delay: 0.78, duration: 5, bone: 'BUFFBONE_GLB_WEAPON_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 6.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    // Her channel glow and swirling petals at her weapon hand, held until the rules' chain ends (SUSTAIN_CAPS, CUE_END_STOPS
+    // 'leblanc-chain'). The skill's body: it never yields (Fable 11-19).
+    { system: 'acd84091', action: 'cast', event: 'cast-start', delay: 0, duration: 0.8, bone: 'BUFFBONE_GLB_WEAPON_1', rank: 'critical' },
     { system: '0a2eef95', action: 'cast', event: 'hit', delay: 0.85, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Cast keeps the green aura; every bolt is an empowered attack (batch1-events aims it at the enemies it pierced).
@@ -879,6 +885,13 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+  // LeBlanc's channel: its dark ground-layer backdrop draws a dark smudge beside her on our board (Windows probe 11-19: only
+  // this emitter darkens that spot). A temporary departure held off as a known difference until its look is checked
+  // (Fable 11-19); the rest of the system draws.
+  'acd84091': ['Alpha_Glow'],
+  // Mordekaiser's aura: its dark ground glow draws a dark red smudge beside him on our board (Windows probe 11-19: it is the
+  // main cause there). Held off as a known difference like LeBlanc's (Fable 11-19); the red glow, scorch and cracks draw.
+  '938c104f': ['Alpha_Glow_Dark'],
   // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
   // difference (Fable 11-19); the rest of the hit draws.
   '9acdae50': ['Alpha_BgGlow_GreenBrown'],
@@ -950,12 +963,14 @@ export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
-export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'swain-ascension', readonly string[]>> = {
-  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
-  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension', readonly string[]>> = {
+  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark;
+  // and her channel glow (acd84091, held for the chain: SUSTAIN_CAPS).
+  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
   // The volley's buff glow (2beb0657) goes with the volley's last shot too.
   'twitch-volley': ['900dd2d2', '2beb0657'],
-  // Swain's demon form (takedowns extend it in the rules).
+  // Mordekaiser's aura on his mace while he is empowered; Swain's demon form (takedowns extend it in the rules).
+  'mordekaiser-empower': ['938c104f'],
   'swain-ascension': ['796b6af2'],
   // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
   'drmundo-heal': [],
@@ -998,6 +1013,8 @@ export const CUE_RULE_STOPS = {
  */
 export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '2beb0657': 10, // Twitch volley buff → twitch-volley (no time limit: a recast re-arms the volley; 自定上限)
+  'acd84091': 6, // LeBlanc channel → leblanc-chain
+  '938c104f': 11, // Mordekaiser empowered aura → mordekaiser-empower
   '796b6af2': 20, // Swain demon form → swain-ascension (each takedown extends it; 自定上限)
   'ea21ae27': 5, // Garen shield → his shield layer ends
   'e22b48b0': 5, // Loris shield → his shield layer ends

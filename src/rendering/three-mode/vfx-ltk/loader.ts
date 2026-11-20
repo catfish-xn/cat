@@ -177,7 +177,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
         || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || (cue.event !== 'cast-start' && cue.event !== 'hit')))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
-        || (cue.rank !== undefined && cue.rank !== 'body' && cue.rank !== 'decorative')
+        || (cue.rank !== undefined && cue.rank !== 'body' && cue.rank !== 'critical' && cue.rank !== 'decorative')
         || (cue.brightness !== undefined && (!finite(cue.brightness) || Number(cue.brightness) <= 0 || Number(cue.brightness) > 4))
         || (cue.perStrike !== undefined && (typeof cue.perStrike !== 'object' || cue.perStrike === null || cue.event === 'cast-start'
           || !finite((cue.perStrike as { staggerTicks?: unknown }).staggerTicks) || !finite((cue.perStrike as { spreadTicks?: unknown }).spreadTicks)))

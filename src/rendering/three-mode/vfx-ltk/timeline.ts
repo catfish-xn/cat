@@ -36,11 +36,13 @@ export interface TimelineCue {
   readonly main?: boolean;
   /**
    * A decided rank instead of the event's own (effect-budget.ts effectImportance): 'body' for a hit or projectile that must
-   * not crowd skill impacts out (Steb's heal share) or a cast-start that draws the skill itself; 'decorative' for a
-   * flourish a plain attack or a place's run may end (cue-ranks.ts), or a visual that must give way to every skill and
-   * basic-attack visual (Heimerdinger's rocket hits, Fable 11-19). A display priority decision, not original data.
+   * not crowd skill impacts out (Steb's heal share) or a cast-start that draws the skill itself; 'critical' for a cast-start
+   * body that must never yield its slot (Mordekaiser's aura, LeBlanc's channel: Fable 11-19); 'decorative' for a flourish a
+   * plain attack or a place's run may end (cue-ranks.ts), a visual that must give way to every skill and basic-attack visual
+   * (Heimerdinger's rocket hits, Fable 11-19), or a layer shown all fight long as decoration (cue-overrides.ts SUSTAIN_RANKS).
+   * A display priority decision, not original data.
    */
-  readonly rank?: 'body' | 'decorative';
+  readonly rank?: 'body' | 'critical' | 'decorative';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */

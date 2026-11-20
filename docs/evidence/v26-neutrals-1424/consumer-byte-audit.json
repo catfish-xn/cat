@@ -11,9 +11,9 @@
     "tests/ability-effect-ended.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 14056,
+      "currentBytes": 14889,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "027ed553c0b7d24af77a5a2ef3e9d42ae4519f5bf1790de0fb9a2aad3549f175",
+      "currentSha256": "9a482e02e54e0605ce348fd97685b06474e06b8d4725fbc32d614f139b44ada2",
       "firstDifferentByte": 0
     },
     "tests/ambessa-cast-branch.test.ts": {
@@ -1302,7 +1302,7 @@
       "previousBytes": 0,
       "currentBytes": 69922,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "32144089f6bd9ebe8f77018c61a6299ec7b374b9f801d45ab6feb5bdc3532e8a",
+      "currentSha256": "5c0853668146dd3b73ebf8dc379b775a7726632d3703f7d3e5952f6571db8b73",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -2634,9 +2634,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 55610,
+      "currentBytes": 56064,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "5ab99106a64e32e1c4d4c43f5edd487b9e990cdc76be093323417482c3c89a5f",
+      "currentSha256": "752eb82ec37985edbec1db83d17ed30b8c98f5ed7e15f336d96ba41c9a8a572d",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-arena-scale.test.ts": {
@@ -3829,9 +3829,9 @@
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8647,
+      "currentBytes": 10196,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "538268525a154ee9e01875b65577c851e0f7c5468c8e88abfa6df971dae67231",
+      "currentSha256": "b9b9d4ef7be1abc43bf4cf9a41fb7cfb54fcccaf9a52e3d815c4e46465d9248f",
       "firstDifferentByte": 0
     },
     "tests/t10-combat-ops.test.ts": {
@@ -4706,9 +4706,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4820,
+      "currentBytes": 4922,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "bb22441d5ae5cfa9417c90df4cae101c2f38ee20464bd7ab1ce1115ba8306fae",
+      "currentSha256": "92e16e27b3dbfcc4537bccf75a986c2c4a68e8e8d7b02ac10e095671ecc38080",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {
