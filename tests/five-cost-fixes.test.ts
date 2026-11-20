@@ -107,13 +107,17 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     expect(raw(r.events)).toEqual([832,140]);expect(damage(r.events).map(d=>d.hpDamage)).toEqual([0,140]);
     expect(r.events.filter(e=>e.type==='death'&&e.unitId==='e')).toHaveLength(1);
   });
-  it.each([1,2,3] as const)('Malzahar %s star gate hits five cells across target, not cells in front',(star)=>{
+  // 11-19 line rule (self-chosen, not original data): the gate is a straight line through Malzahar toward his target, 2 hex steps
+  // behind him and 3 ahead. From (3,3) toward 'a' (3,2) it covers (3,2), (2,1), (2,0) ahead and (4,4), (4,5) behind; the rest of the
+  // target row is not hit. Hit order: the front part by step, then the part behind him.
+  it.each([1,2,3] as const)('Malzahar %s star gate hits the five cells of the line through him toward the target, not the target row',(star)=>{
     const enemies=[0,1,2,3,4,5,6].map(col=>dummy(col===3?'a':`e${col}`,{cell:{col,row:2}}));
-    enemies.push(dummy('front',{cell:{col:3,row:5}}));
+    enemies.push(dummy('f1',{cell:{col:2,row:1}}),dummy('f2',{cell:{col:2,row:0}}),dummy('b1',{cell:{col:4,row:4}}),dummy('b2',{cell:{col:4,row:5}}));
     const r=advance(battle([hero('malzahar',star,{cell:{col:3,row:3},targetId:'a'}),...enemies],{rngState:42}),1+gate(star));
-    expect(damage(r.events).map(d=>d.context.targetId)).toEqual(['a','e1','e2','e4','e5']);
+    // Damage packets come out in packet order (owner, action, target); the infection stacks follow the hit order.
+    expect(damage(r.events).map(d=>d.context.targetId)).toEqual(['a','b1','b2','f1','f2']);
     expect(raw(r.events)).toEqual(Array(5).fill([80,120,1000][star-1]));
-    expect(get(r.state).tasks?.map(t=>t.targetId)).toEqual(['a','e1','e2','e4','e5']);
+    expect(get(r.state).tasks?.map(t=>t.targetId)).toEqual(['a','f1','f2','b1','b2']);
   });
   it.each([1,2,3] as const)('Malzahar %s star all five stacks survive death and retain their pulse clock',(star)=>{
     const opening=advance(battle([hero('malzahar',star),dummy('e',{hp:1,maxHp:1}),

@@ -7,8 +7,8 @@ import { isAttackProxy } from './anomalies/availability';
 import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
-import { hexDistance } from './board';
-import { MALZAHAR_3STAR_GATE_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
+import { hexDistance, hexLine } from './board';
+import { MALZAHAR_3STAR_GATE_TICKS, MALZAHAR_LINE_BACK, MALZAHAR_LINE_FRONT, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -125,8 +125,14 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       strike(target, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), 'physical');
       applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events, false, '', undefined, true); break; // the uppercut knocks up
     case 'malzahar': {
-      // The gate crosses the target row: two hexes on either side, clipped by the board.
-      const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
+      // A straight line through Malzahar toward the target (11-19, inferred/self-chosen, not original): 2 hex steps behind him and
+      // max(3, steps to the target) ahead, clipped by the board; both cells where a step falls between two. Enemies on it are hit,
+      // nearest first: the front part by step, then the part behind him, ties by id.
+      const line = hexLine(ctx.board, unit.cell, target.cell, MALZAHAR_LINE_BACK, MALZAHAR_LINE_FRONT);
+      const stepOf = (u: S13Unit) => line.find(l => l.cell.col === u.cell.col && l.cell.row === u.cell.row)?.step;
+      const order = (step: number) => step > 0 ? step : MALZAHAR_LINE_FRONT + 100 - step;
+      const targets = areaEnemies(unit, ctx.units).filter(u => stepOf(u) !== undefined)
+        .sort((a, b) => order(stepOf(a)!) - order(stepOf(b)!) || compareText(a.id, b.id));
       // Wind-up batch 4: at 3 stars the gate lands MALZAHAR_3STAR_GATE_TICKS after the cast (g2Landing: damage and shred, targets
       // taken now); 1 and 2 stars land on the cast. The infection lands 20 ticks after the gate either way.
       const wait = unit.starLevel === 3 ? MALZAHAR_3STAR_GATE_TICKS : 0;

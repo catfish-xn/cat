@@ -47,4 +47,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   emptyAnomaly: 'defer-until-purchase-preserve-affordable-offer',
   damageSharing: 'all-hit-packets-including-mitigated-ricochet-one-transfer-no-recursion',
   ricochet: 'primary-lethal-only-once-per-action-no-redirect-no-recursion',
+  // Malzahar's gate (11-19, self-chosen, not original data): a straight line through him toward his target.
+  malzaharGate: 'line-through-caster-back-2-front-3-or-to-target-both-cells-on-tie-front-then-back-order',
 });
