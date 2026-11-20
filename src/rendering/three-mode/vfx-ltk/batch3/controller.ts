@@ -12,6 +12,12 @@ type Runtime = ReturnType<typeof createLtkRuntime>;
 /** Public combat tick, used only to see whether a caught-up drawing is still inside its display life. */
 const TICK_SECONDS = 0.05;
 const SWAIN_TAIL_SECONDS = 1.25;
+/**
+ * Seconds between two drawings of Swain's drain pulse on the same enemy, at least (our own value, 自定，非原版; Fable 11-20):
+ * the rules drain four times a second, and a pulse on every enemy at each would hold half the board's effect slots for one
+ * Swain. The numbers keep every drain; only the pulse drawing is spaced.
+ */
+const SWAIN_PULSE_SECONDS = 1;
 /** Effect keys are public nine-field tuples; use their source identity, never
  * interpret another caster's item/ally shield as this champion's ability. */
 export function ownAbilityShield(key: string, target: string): boolean {
@@ -50,6 +56,8 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
   const blasts = new Map<string, number>();
   const summons = new Map<string, PendingSummon>();
   const ascension = new Map<string, { lastTick: number }>();
+  // Swain's last drawn drain pulse on each enemy (source:target), on this controller's clock (SWAIN_PULSE_SECONDS).
+  const pulses = new Map<string, number>();
   const channels = new Set<string>();
   let clock = 0, latestTick = 0;
   const allowed = () => !options.reduced?.();
@@ -214,7 +222,8 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
             else if (event.damageType === 'magic' && ended.get(event.sourceId) === event.tick) play(event.sourceId, 'illaoi-slam', [event.targetId]);
           }
           if (source.definitionId === 'swain' && source.form === 'front' && event.damageType === 'magic' && ability && ascension.has(event.sourceId)) {
-            play(event.sourceId, 'swain-pulse', [event.targetId]);
+            const key = `${event.sourceId}:${event.targetId}`, at = pulses.get(key);
+            if (at === undefined || clock - at >= SWAIN_PULSE_SECONDS - 1e-9) { pulses.set(key, clock); play(event.sourceId, 'swain-pulse', [event.targetId]); }
           }
           // Loris's only magic ability damage is the shield-end blast. It lands whether the shield ran out or broke early
           // (11-06: keyed to the 'expired' tick it never showed in the field). One shockwave per blast, at its first recipient.
@@ -267,7 +276,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
       for (const rec of [...summons.values()]) dropSummon(rec);
       for (const key of loops.keys()) stop(key);
       proxies.clear(); shields.clear(); unbound.clear(); last.clear(); ended.clear(); blasts.clear(); cohorts.clear(); reviving.clear(); poses.clear();
-      ascension.clear(); channels.clear();
+      ascension.clear(); channels.clear(); pulses.clear();
       // A new combat's ticks start again from 0: the last combat's latest tick would make every early fact look long past
       // (Swain's ascension dropped at once, Silco's and Elise's summons never shown in any combat after the first).
       latestTick = 0;

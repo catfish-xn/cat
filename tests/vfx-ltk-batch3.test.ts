@@ -320,3 +320,18 @@ describe('batch 3 in a second combat', () => {
     expect(cast()).toBe(1);
   });
 });
+
+// Fable 11-20: the rules drain four times a second; Swain's pulse drawing on one enemy is spaced to once a second (自定).
+describe('Swain drain pulse spacing', () => {
+  const magic = (tick: number, targetId: string) => event({ type: 'packetDamage', tick, sourceId: 's', targetId, damageType: 'magic', sourceKind: 'ability', definitionId: 'swain-ability', delivery: 'ability-direct' });
+  it('four drains a second draw one pulse a second on each enemy; a second enemy has its own', () => {
+    const { controller, runtime, units } = fixture('swain'); units.set('u', { ...unit('enemy'), team: 'enemy' });
+    controller.event(event({ type: 'cast', tick: 100, sourceId: 's', targetIds: [] }), true); controller.update(.05);
+    const pulses = (target: string) => runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse' && c[3]?.[0] === target).length;
+    for (let i = 0; i < 8; i++) { controller.event(magic(105 + 5 * i, 't'), true); controller.event(magic(105 + 5 * i, 'u'), true); controller.update(.25); }
+    expect(pulses('t')).toBe(2);
+    expect(pulses('u')).toBe(2);
+    // Its ascension is still kept alive by every drain.
+    expect(runtime.stopGroup).not.toHaveBeenCalledWith('s:swain-ascension');
+  });
+});
