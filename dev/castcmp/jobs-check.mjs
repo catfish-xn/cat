@@ -5,7 +5,7 @@
 // to the caster on its row or nearer the camera from the cast to the window's end is a warning only (WARN, never a
 // failure): the browser gate's box overlap is the authority, and it fails a job only when a foe nearer the camera covers
 // over 60% of the caster.
-// Lines without --real are listed as "dummy" (no rules run; nothing to check here; --kill and --pin-foe are allowed there and only there).
+// Lines without --real are listed as "dummy" (no rules run; nothing to check here; --kill, --pin-foe, --move and --outcome are allowed there and only there).
 // --pin-foe N must be 1-5 and comes without --nfoes (or with --nfoes 1); --hide-units takes 1. Both are echoed per line.
 // --cast-index N / --from-start 1 / --lead-ms MS / --anchor attack-hit|event:<type> (real only) choose the window (anchor = the N-th cast, or attack hit or event; start = combat start or
 // MS before the anchor); a real line's --times must start at 0, and that t=0 frame is the start only, never a keyframe (WARN).
@@ -49,6 +49,7 @@ for (const line of lines) {
   // --form melee | ranged only (common.cjs formProblem): any other value records the ranged form. Dummy and real lines alike.
   { const why = formProblem(o('form')); if (why) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [why] }); continue; } }
   if (o('kill') && o('real')) { results.push({ name, unit, mode: 'real', ok: false, why: ['--kill is for dummies only'] }); continue; }
+  if (o('real') && (o('move') !== undefined || o('outcome') !== undefined)) { results.push({ name, unit, mode: 'real', ok: false, why: ['--move / --outcome are for dummies only'] }); continue; }
   // --pin-foe N: dummies only, exactly one dummy N hexes ahead (1-5); --hide-units 1: unit models not drawn (labelled).
   const pinWhy = o('pin-foe') === undefined ? [] : [
     ...(o('real') ? ['--pin-foe is for dummies only (a real combat moves the foes and they hit back)'] : []),
