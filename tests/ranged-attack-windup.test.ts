@@ -136,3 +136,22 @@ describe('ranged attack wind-up: Match save', () => {
     expect(() => restoreMatch(JSON.stringify(json))).toThrow();
   }, 60000);
 });
+
+// The wind-up's rule identifier enters the content digest: files written before it are turned away, never replayed under it.
+import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
+import { CONTENT_DIGEST } from '../src/simulation/content';
+import { readCompatibility, routeSaveFile } from '../src/persistence/compatibility';
+import { admitArchives } from '../src/replay';
+import { M8_VERSION } from '../src/simulation/m8/version';
+import { readyMatch } from './match-helpers';
+describe('ranged attack wind-up: files written before it', () => {
+  const BEFORE = 'fnv1a32-utf16:cf212873';
+  it('has its own identifier; a save with the earlier digest is rejected and its archive quarantined', () => {
+    expect(S13_COMBAT_RULES.rangedAttackWindup).toBe('start-then-launch-after-fitted-windup-cap-7-half-interval-cancel-on-control-death-range-cooldown-reset');
+    expect(CONTENT_DIGEST).not.toBe(BEFORE);
+    const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
+      runId: 'before-windup', createdAt: '2026-11-19T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE }, battles: [], currentBattle: null };
+    expect(readCompatibility(file)).toMatchObject({ status: 'rejected', canResume: false, canReplay: false, reason: 'digest-mismatch' });
+    expect(admitArchives([file], routeSaveFile).quarantined.map(q => q.runId)).toEqual(['before-windup']);
+  });
+});
