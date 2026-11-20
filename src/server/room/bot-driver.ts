@@ -16,6 +16,7 @@
  */
 import { BOT_MAX_STEPS, decideBotAction, type BotContext } from '../../server-entry';
 import { nextRandom } from '../../simulation/rng';
+import { textLogger, type Logger } from '../log';
 import type { Clock, ClockHandle } from './clock';
 import { ownDeadlineChoice, type Room } from './room';
 import { ROOM_CAPACITY, type ClientCommand, type RoomFailure, type RoomState, type SeatController, type SeatState } from './types';
@@ -36,7 +37,10 @@ export interface BotDriverOptions {
   readonly enqueue?: (task: () => void) => void;
   /** Observation hook (tests, logs): one record per executed intention or `done`. */
   readonly onStep?: (record: BotStepRecord) => void;
+  /** Where an exception from the bot policy is reported (stderr JSON lines by default). */
+  readonly logger?: Logger;
 }
+const POLICY_ERROR_LOG = textLogger(line => console.error(line));
 export const BOT_DRIVER_DEFAULTS: BotDriverOptions = { stepMs: 300, takeover: false, takeoverMs: 60_000, maxSteps: BOT_MAX_STEPS };
 
 export interface BotStepRecord {
@@ -224,7 +228,19 @@ export class BotDriver {
       self: { seatId: seat.seatId, hp: seat.hp, round: seat.match.round },
       ...(brain.lastFailure ? { lastFailure: brain.lastFailure } : {}),
     };
-    const decision = decideBotAction(seat.match, context, brain.rng);
+    let decision: ReturnType<typeof decideBotAction>;
+    // The policy only previews rules on a copy; an exception there must not escape the room's timer (the server exits
+    // on an uncaught error). The seat stops for this round, as after a refusal, and the phase timeouts act for it.
+    try { decision = decideBotAction(seat.match, context, brain.rng); }
+    catch (error) {
+      (this.options.logger ?? POLICY_ERROR_LOG)('error', 'bot.policy-error', {
+        roomId: this.room.state.roomId, seatId: seat.seatId, round: seat.match.round, phase: seat.match.phase,
+        error: error instanceof Error ? error.message : String(error), stack: error instanceof Error ? error.stack : undefined,
+      });
+      brain.closed = true; brain.doneEntry = this.entry;
+      this.record(state, seat, brain, 'done', false, 'policy-error');
+      return;
+    }
     brain.rng = decision.rng;
     if (decision.action === 'done') {
       brain.doneEntry = this.entry;

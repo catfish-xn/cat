@@ -23,6 +23,10 @@ import { S13_TIMELINES } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/** Draven's empowered axe, thrown and (CUE_EXTRA_SKILLS draven-return) flying back. */
+export const DRAVEN_AXE = '5d31debe';
+/** Seconds his landed axe takes to fly back to his hand (自定，非原版). */
+const DRAVEN_RETURN_SECONDS = 1.2;
 /**
  * Maddie's volley shot flies this many rule ticks a cell, and at least MADDIE_SHOT_MIN_TICKS (fitted, not original data).
  * The rules will time each shot's damage by the same flight (src/simulation/cast-windup.ts, coming): until then these
@@ -140,6 +144,11 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
     { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.6, bone: chest, others: true, scale: hugged(1) },
   ],
+  // Draven (batch1-events.ts): an empowered axe that lands bounces off the enemy it hit and comes down into his hand in a
+  // high arc. Travel and arc are our own (自定，非原版); decoration, never taking a slot from a skill; it goes at once when either
+  // unit dies (placeholder-renderer.ts).
+  'draven-return': [{ system: DRAVEN_AXE, action: 'passive', event: 'projectile', delay: 0, duration: DRAVEN_RETURN_SECONDS,
+    travelSeconds: DRAVEN_RETURN_SECONDS, bone: chest, targetBone: 'R_hand', arc: { gravity: 2200, targetOffset: 80 }, rank: 'decorative' }],
   // Camille's kick (batch1-events.ts): Q_tar on the target when her ability damage lands, the variant her adaptive damage type
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
@@ -425,6 +434,18 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'c6d42f70', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
     { system: 'f7d4d344', action: 'cast', variant: 'single', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '2794d903', action: 'cast', variant: 'single', event: 'hit', delay: 0.6, duration: 1 },
+  ],
+  // Draven: his index list, plus his other hand's axe for every second empowered attack (variant empowered-alt, chosen in
+  // batch1-events.ts), from his left hand, with the same hit.
+  draven: [
+    { action: 'attack', system: '617e850e', event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'R_hand', targetBone: chest },
+    { action: 'attack', system: '0f2af66b', event: 'hit', delay: .54, duration: .45, bone: chest, stopAfter: .1 },
+    { action: 'cast', system: '3381c8eb', event: 'cast-start', delay: 0, duration: .6, stopAfter: .2, bone: 'R_Weapon' },
+    { action: 'cast', system: 'd86cc9bc', event: 'cast-start', delay: 0, duration: 1, stopAfter: .5, bone: 'L_Weapon' },
+    { action: 'attack', variant: 'empowered', system: DRAVEN_AXE, event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'R_hand', targetBone: chest },
+    { action: 'attack', variant: 'empowered', system: '5e3986cd', event: 'hit', delay: .54, duration: .6, stopAfter: .1, bone: chest },
+    { action: 'attack', variant: 'empowered-alt', system: '5a268f4e', event: 'projectile', delay: .24, duration: .3, travelSeconds: .3, bone: 'L_hand', targetBone: chest },
+    { action: 'attack', variant: 'empowered-alt', system: '5e3986cd', event: 'hit', delay: .54, duration: .6, stopAfter: .1, bone: chest },
   ],
   // Maddie: her volley's shots and hits moved from one estimated time after her cast to each shot's damage (maddie-shot).
   // Her attack shot leaves her rifle's Weapon_Shooter, as her volley's do: her skeleton has no C_Barrel_Root, which fell back
@@ -861,6 +882,19 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
   // difference (Fable 11-19); the rest of the hit draws.
   '9acdae50': ['Alpha_BgGlow_GreenBrown'],
+  // Irelia's shield: the cyan ring glow round the bubble is left out, with the bubble itself fainter (EMITTER_ALPHA; Fable
+  // 11-20, picked from a three-column toggle).
+  '67665513': ['Alpha_RingGlow'],
+};
+
+/**
+ * Emitters drawn fainter here, by system and emitter name: each particle's alpha is multiplied by the factor. The factors
+ * are fitted/own values (拟合/自定，非原版), picked by eye on our board; colours are left as the asset has them.
+ */
+export const EMITTER_ALPHA: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  // Irelia's shield bubble read as a solid ball over her at full strength; half lets her body show through it (Fable 11-20,
+  // three-column toggle: this is that column as recorded, the swirl meshes included).
+  '67665513': { Add_Shield: 0.5, Swirl_Mesh: 0.5, Swirl_Mesh1: 0.5 },
 };
 
 /**

@@ -69,7 +69,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -1551,6 +1551,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       // A replay catching up names old spawns too: only the current ones rise.
       if ((event.type === 'unitSpawned' || event.type === 'unitRevived') && currentEffect) rising.add(event.unitId);
+      // Draven's axe flying back (CUE_EXTRA_SKILLS draven-return) goes where it is when the enemy it left or Draven dies; only
+      // his returning axes have an enemy as their source or Draven as their target. Before stopUnit, which would fly it on.
+      // A Draven who dies may also be the enemy another Draven's axe left: both of his sides stop.
+      if (event.type === 'death') {
+        if (pieces.get(event.unitId)?.definitionId === 'draven') ltk?.stopSystemsOn(event.unitId, [DRAVEN_AXE]);
+        ltk?.stopSystems(event.unitId, [DRAVEN_AXE]);
+      }
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
       // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
       // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.

@@ -82,4 +82,13 @@ describe('perStrike tickCap', () => {
     expect(runtime.slots).toBe(MAX_LTK_SYSTEMS);
     expect(sparks() - startedBefore).toBe(0);
   });
+  it('a new combat after clear() counts its own tick afresh, even on the same tick number as the last combat', async () => {
+    const { runtime, step, setTick, flights } = await setup();
+    // The first combat fills the cap on its tick 10, then a new combat starts (the host clears) and reaches its own tick 10.
+    setTick(10); expect(runtime.play('volley', 'c1', ['a', 'a', 'b'])).toBe(true);
+    runtime.clear();
+    setTick(10); expect(runtime.play('volley', 'c2', ['a', 'b', 'a'])).toBe(true);
+    step(1.5);
+    expect(flights()).toBe(3);
+  });
 });
