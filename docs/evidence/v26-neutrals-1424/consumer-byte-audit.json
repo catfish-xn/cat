@@ -4169,9 +4169,9 @@
     "tests/vfx-ltk-batch3.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 24093,
+      "currentBytes": 26762,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5ef98d496745ae60b52cb70f9c87916f74b3b2d696b12fde34f356e002c18e2a",
+      "currentSha256": "52d29f3dc16fc91d3218434198eecd604293982cfeb67984c8b9039ba35c9847",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-beam-trim.test.ts": {
@@ -4619,9 +4619,9 @@
     "tests/vfx-ltk-strike-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5789,
+      "currentBytes": 6342,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ae1aa4e761454b109586bcfc454c685d53e7cd194a673671e4643b5f73d11845",
+      "currentSha256": "3b1b3f9fd56f5f66f77032a999ab5e3b6ef7240ee24361d816a85f093a3575c0",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-subtract-alpha.test.ts": {
