@@ -116,7 +116,8 @@ describe('production representation preserves runtime semantics', () => {
     // 14.24b 七项英雄数值 (2026-11-12): f37c6970 → db6dc9b6.
     // 施法事件带 castIndex、回放格式 8→9 (2026-11-12, #628): db6dc9b6 → d94c78f1 (content-digest.ts covers replayFormatVersion).
     // 远程普攻命中才结算、存档/回放格式 9→10 (2026-11-19, #739): d94c78f1 → cf212873 (content-digest.ts covers M8_VERSION).
-    expect(parsed.content).toBe('fnv1a32-utf16:cf212873');
+    // 玛尔扎哈技能改为横跨目标的直线 (2026-11-20, #783): cf212873 → eb3f023d (S13_COMBAT_RULES.malzaharGate).
+    expect(parsed.content).toBe('fnv1a32-utf16:eb3f023d');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);
