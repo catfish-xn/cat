@@ -3,6 +3,7 @@ import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
 import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { withCueOverrides, type VfxIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM } from '../src/rendering/three-mode/vfx-ltk/cue-ranks';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
 import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
@@ -62,7 +63,8 @@ describe('Steb heal visuals follow his heal events, never his cast\'s enemy', ()
     const systems = Object.fromEntries(['0f2af66b', '36c79ae9', '8b302521', 'cf50856e'].map(s => [s, `${s}.json`]));
     const index = { version: 1, systems, assets: {}, skills: { steb: [] } } as unknown as VfxIndex;
     const played = withCueOverrides(index).skills;
-    expect(played.steb).toEqual(CUE_OVERRIDES.steb);
+    // The override list, its basic-attack hit held only as long as it shows (cue-ranks.ts ATTACK_HIT_SECONDS, 11-19).
+    expect(played.steb).toEqual(CUE_OVERRIDES.steb!.map(cue => cue.system === ATTACK_HIT_SYSTEM && cue.action === 'attack' ? { ...cue, duration: Math.min(cue.duration, ATTACK_HIT_SECONDS) } : cue));
     expect(played['steb-share']).toBe(CUE_EXTRA_SKILLS['steb-share']);
     expect(played['steb-heal']).toBe(CUE_EXTRA_SKILLS['steb-heal']);
   });

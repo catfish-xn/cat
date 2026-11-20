@@ -10,7 +10,7 @@
  * measured against footage at the older 0.44 base, drawn as it was: a range in cells (ground rings, blasts, swipes).
  * `hugged(x)` is such a size that wraps or hugs a body (shields, binds, per-target splashes): it shrinks with the body.
  */
-import type { TimelineCue } from './timeline';
+import { strikeOffsetTicks, type TimelineCue } from './timeline';
 import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
 import { jinxSkills } from './champions/jinx';
@@ -23,6 +23,17 @@ import { S13_TIMELINES } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/**
+ * Maddie's volley shot flies this many rule ticks a cell, and at least MADDIE_SHOT_MIN_TICKS (fitted, not original data).
+ * The rules will time each shot's damage by the same flight (src/simulation/cast-windup.ts, coming): until then these
+ * stand in for it, and are to be imported from there once it lands.
+ */
+export const MADDIE_SHOT_TICKS_PER_HEX = 2, MADDIE_SHOT_MIN_TICKS = 4;
+/**
+ * Maddie's volley hit (b1b77889, her R target effect) drawn at this size: drawn as exported, every shot's flash was much
+ * larger than the original's. Our own value (Fable 11-19 picked it side by side from 0.55 and 0.4), not original data.
+ */
+export const MADDIE_HIT_SCALE = 0.55;
 /** Smeech's stab slash: the vertical swing his skill's stab clips carry (CUE_EXTRA_SKILLS smeech-stab). */
 export const SMEECH_STAB_SWING = '90b31f27';
 const ground = 'BUFFBONE_GLB_GROUND_LOC';
@@ -75,8 +86,35 @@ export const IRELIA_STANCE_FALLBACK_SECONDS = 4;
  * vfx-ltk-windup-hits checks the two stay equal.
  */
 export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 6, tristana: 12, renata: 17 } as const);
+/**
+ * Heimerdinger's rockets, one a rule strike (combat-g2-2.ts strikes once per rocket, all on the cast tick today): the k-th of
+ * n leaves HEIMER_ROCKETS.launchTicks plus its stagger after the mana bar empties and lands flightTicks later, so it lands at
+ * cast tick + heimerRocketLandTick(k, n). The first rocket keeps the launch, flight and hit of the exported cue; the
+ * stagger is 1 tick a rocket, the whole volley squeezed into 9 ticks (0.45 s) when it has
+ * more than 10 rockets. A cast draws at most `shown` rockets (its later strikes play only their hits, on the same stagger),
+ * and every Heimerdinger together queues at most `tickCap` rockets on one rule tick, so several casting at once do not crowd
+ * other effects out (11-19 Windows hrB). So a 3-star cast, and the extra rocket each later cast adds, look like a 2-star first
+ * cast's five: a known difference. The strikes past `shown` play neither rocket nor hit (their damage numbers still show).
+ * Hits: decorative rank, so they never take a slot from a skill or basic-attack visual; at most hitTickCap queued on one rule
+ * tick across casters; a strike's hit is merged away when the same cast hit the same target under hitMergeTicks before.
+ * A perStrike cast's rows past its first take no system slot (runtime slotsNow), so one cast holds two slots (rocket, hit);
+ * every row still needs particle room. Each rocket draws at rocketScale and rocketBrightness, thicker and brighter than the
+ * exported system (Fable 11-19 picked this over the as-exported look side by side). All designed display values (Fable
+ * 11-19), not original data.
+ * This is the one definition of when each rocket lands. When the rules move each rocket's damage to its landing
+ * (Fable 11-19 (b), L2), the rules side gets a copy in src/simulation/cast-windup.ts beside CAST_WINDUP_TICKS, and a test
+ * checks the two stay equal (as vfx-ltk-windup-hits does for CAST_WINDUP_TICKS) so neither side changes alone.
+ */
+export const HEIMER_ROCKETS = Object.freeze({ launchTicks: 4, flightTicks: 10, staggerTicks: 1, spreadTicks: 9, shown: 5, tickCap: 8, rocketScale: 1.5, rocketBrightness: 2,
+  hitTickCap: 8, hitMergeTicks: 3 } as const);
+/** The rule tick, counted from the cast, on which Heimerdinger's k-th of n rockets lands (HEIMER_ROCKETS). */
+export function heimerRocketLandTick(k: number, n: number): number {
+  return HEIMER_ROCKETS.launchTicks + HEIMER_ROCKETS.flightTicks + strikeOffsetTicks(k, n, HEIMER_ROCKETS.staggerTicks, HEIMER_ROCKETS.spreadTicks);
+}
 /** The rules' DRMUNDO_BLAST_AFTER_PULSE_TICKS (src/simulation/cast-windup.ts), mirrored like CAST_WINDUP_TICKS (rendering3d-timed-form checks it). */
 export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
+/** The rules' CAMILLE_KICK_TICKS (src/simulation/combat-g2-2.ts), mirrored as CAST_WINDUP_TICKS is (tests/sustain-stops.test.ts checks it). */
+export const CAMILLE_KICK_TICKS = 5;
 /** Tristana's shell flight in seconds (fitted, not original data). */
 const TRISTANA_SHELL_TRAVEL = 0.4;
 /**
@@ -106,11 +144,15 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // picks — 69b207a4 for physical, aff93381 (Q_tar_MagicDamage) for magic. Both durations reach past each system's own end.
   // Blitzcrank's shock (batch1-events.ts): the arcs from him and the burst on each enemy play when the shock's damage lands
   // (BLITZ_SHOCK_TICKS after the cast), so the order is shield, damage, arcs. Durations as in his cast list before.
-  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a short shot from her gun to the enemy it
-  // hit and the hit there (travel fitted, not original data).
+  // Maddie: each shot of her volley is drawn with its own damage (batch1-events.ts): a shot from her rifle's muzzle
+  // (Weapon_Shooter: our skeleton has no barrel-root bone) to the enemy it hit, flying MADDIE_SHOT_TICKS_PER_HEX ticks a
+  // cell and at least MADDIE_SHOT_MIN_TICKS, and the hit there when it lands (TimelineCue.flightTicks). Her damage numbers
+  // still show at the shot's start until the rules move them to its landing (known interim state, Fable 11-19).
   'maddie-shot': [
-    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.3, bone: 'Weapon_Shooter', travelSeconds: 0.1, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0.1, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: 'f0aa0d95', action: 'passive', event: 'projectile', delay: 0, duration: 0.4, bone: 'Weapon_Shooter', travelSeconds: 0.2, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC',
+      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
+    { system: 'b1b77889', action: 'passive', event: 'hit', delay: 0, duration: 0.8, bone: 'C_BUFFBONE_GLB_CHEST_LOC', scale: MADDIE_HIT_SCALE,
+      flightTicks: { perCell: MADDIE_SHOT_TICKS_PER_HEX, min: MADDIE_SHOT_MIN_TICKS } },
   ],
   // Smeech (batch1-events.ts): his cast names no target (the rules leap and schedule his stabs), so his stab's slash and its
   // hit play with each stab's damage: the thin vertical slash his skill's stab clips carry, and the hit on the enemy stabbed.
@@ -294,7 +336,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   camille: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BuffBone_Glb_Center_Loc', delay: 0.3, duration: 1.5 },
     { system: 'b0db024b', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
-    { system: '174f1125', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
+    // Her heal (174f1125) plays as the kick's heal lands: the rules heal her by her kick's damage (CAMILLE_KICK_TICKS).
+    { system: '174f1125', action: 'cast', event: 'cast-start', delay: CAMILLE_KICK_TICKS / 20, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
     { system: '14e5f3aa', action: 'cast', event: 'cast-start', delay: 0.1, duration: 0.6, bone: 'R_Buffbone_Glb_Foot_Loc' },
   ],
   // Sigil to the primary, then one rose and a chain to each enemy. Weapon ribbons stay out. The chain, the mark and the
@@ -377,6 +420,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // (CUE_EXTRA_SKILLS smeech-stab, smeech-leap); his cast keeps the launch and the trail on him.
   smeech: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.30833333333333335, duration: 1.5 },
+    // The horizontal swing his attack clip carries, with that clip (the one our renderer plays for his attacks), at its
+    // layout point: decoration at the attack rank (Fable 11-19).
+    { system: '343e410d', action: 'attack', event: 'cast-start', delay: 8 / 30, duration: 0.7, bone: 'C_Buffbone_Glb_Layout_Loc' },
     { system: '17b8eb5c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '5cde9f59', action: 'cast', event: 'cast-start', delay: 0.2, duration: 1, bone: 'C_Buffbone_Glb_Chest_Loc' },
   ],
@@ -588,6 +634,24 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   sevika: sevikaSkills.sevika,
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
+  // Exported to the asset index (0c59) and repeated as exported, but for the cast's W_Mis rocket and W_Tar hit: one each
+  // per rule strike (perStrike), staggered by HEIMER_ROCKETS and each flying its own side-then-in curve to its own target,
+  // where the export flew one rocket to the first target and hit every target at once (the original footage, Aub1UkT6uYM,
+  // shows many rockets in the air at once). The rockets are body rank (Fable 11-19). Curve sizes are designed, not traced
+  // from the original.
+  heimerdinger: [
+    { system: '9ad2672c', action: 'attack', event: 'projectile', bone: 'R_hand', delay: 0.20078125, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.50078125, duration: 1.5 },
+    { system: 'c44d51d0', action: 'cast', event: 'cast-start', delay: 0, duration: 0.3, bone: 'C_Buffbone_Cstm_Rocket' },
+    { system: 'c8d6ee2e', action: 'cast', event: 'projectile', delay: HEIMER_ROCKETS.launchTicks * 0.05, duration: HEIMER_ROCKETS.flightTicks * 0.05,
+      bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: HEIMER_ROCKETS.flightTicks * 0.05, rank: 'body', scale: HEIMER_ROCKETS.rocketScale,
+      brightness: HEIMER_ROCKETS.rocketBrightness,
+      perStrike: { staggerTicks: HEIMER_ROCKETS.staggerTicks, spreadTicks: HEIMER_ROCKETS.spreadTicks, fan: { side: 0.9, lift: 0.6 },
+        shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.tickCap } },
+    { system: '07c9833a', action: 'cast', event: 'hit', delay: (HEIMER_ROCKETS.launchTicks + HEIMER_ROCKETS.flightTicks) * 0.05, duration: 1,
+      rank: 'decorative', perStrike: { staggerTicks: HEIMER_ROCKETS.staggerTicks, spreadTicks: HEIMER_ROCKETS.spreadTicks,
+        shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.hitTickCap, mergeTicks: HEIMER_ROCKETS.hitMergeTicks } },
+  ],
   // Exported to the asset index; repeated here so the R heal plays its own life (up to the index cap) and ends
   // with the heal (CUE_END_STOPS).
   drmundo: [
@@ -700,6 +764,11 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // bubble mesh's large birth scale, the only attached-mesh emitter of Set 13 with a mesh name or a birth scale that big. On
   // the struck unit it drew a 4–12× purple copy of that unit for 0.2 s over the board (11-10 a96aac47 recording).
   '95fb90ce': ['BUBBLE_START1'],
+  // TEMPORARY departure from the data (Fable 11-18): the shared crit flash's two dark backing layers (alpha-blended dark grey
+  // and dark red) are authored to scale with the struck unit's size (scaleBirthScaleByBoundObjectSize), which the engine
+  // does not do yet; drawn at their fixed size they left a black-edged blot over the target. Restore them once the engine
+  // scales by the bound object (docs/S13_RULES_GAP.md, 2026-11-18).
+  '2436e086': ['flash2', 'flash3'],
 };
 
 /**
@@ -731,6 +800,30 @@ export interface PlayOut {
    */
   readonly hold?: boolean;
 }
+/**
+ * A basic attack that crits (the display's packetDamage: delivery basic-attack, critical) plays the shared crit flash in
+ * place of the shared attack hit, at the same bone and moment (a swap, never both). The binding per champion is the
+ * original's: `keepHit` champions keep the plain hit on a crit. Skill crits are not bound here yet.
+ */
+export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string>;
+  /** A champion's own crit variants: `swap` replaces its attack systems on a crit, `flash` is its crit flash cue when its hit is its own. */
+  own: Readonly<Record<string, { readonly swap?: Readonly<Record<string, string>>; readonly flash?: TimelineCue }>> }> = {
+  hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
+  own: {
+    // Warwick: his hit is his own slash, so the crit flash plays on the target beside it at the slash's moment. His own crit
+    // swipe (BA_Swipe_crit 94adb056 in place of 6b46d17d) waits for the original's footage (Fable 11-17): not swapped here.
+    warwick: { flash: { system: '2436e086', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.2, duration: 1 } },
+  },
+};
+/**
+ * A skill's direct damage that crits (packetDamage: delivery ability-direct, critical) flashes the same crit system on its
+ * target, beside the skill's own hit (Fable 11-16: the original's binding for skill crits is inferred, not read). Every
+ * champion whose package has the system gets this display branch `<champion>-crit`; a periodic tick does not flash.
+ */
+export const CRIT_SKILL_HIT: Readonly<{ skill: (champion: string) => string; cue: TimelineCue }> = {
+  skill: champion => `${champion}-crit`,
+  cue: { system: '2436e086', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+};
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
   // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether
@@ -748,6 +841,9 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+  // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
+  // difference (Fable 11-19); the rest of the hit draws.
+  '9acdae50': ['Alpha_BgGlow_GreenBrown'],
 };
 
 /**
@@ -803,10 +899,13 @@ export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
-export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace', readonly string[]>> = {
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'swain-ascension', readonly string[]>> = {
   // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
   'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
-  'twitch-volley': ['900dd2d2'],
+  // The volley's buff glow (2beb0657) goes with the volley's last shot too.
+  'twitch-volley': ['900dd2d2', '2beb0657'],
+  // Swain's demon form (takedowns extend it in the rules).
+  'swain-ascension': ['796b6af2'],
   // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
   'drmundo-heal': [],
   'vander-brace': ['68e8ca37'],
@@ -821,7 +920,7 @@ export const CUE_RULE_STOPS = {
   frenzyEnded: { systems: ['8c054bed'], on: 'source' },
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
-  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'] }, on: 'source' },
+  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
   abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] }, on: 'target' },
@@ -829,4 +928,51 @@ export const CUE_RULE_STOPS = {
   viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
   // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
   shredEnded: { systems: ['88a717e0'], on: 'target' },
+  // A champion's own status from its cast ends (statusChanged on that unit, an end reason): Leona's damage reduction.
+  ownStatusEnded: { systems: { leona: { kind: 'damage-reduction', systems: ['8d9a4ccc'] } }, on: 'source' },
+  // Jayce's back-form forge gives allies attack speed (a 'stat-buff' status): its gate glow plays at his forge
+  // (`<jayce>:g23-forge`, batch2-bridge.ts) and goes when the buff his cast gave ends on an ally (sustain-stops.ts ties each
+  // buffed ally to its forge). Another stat buff on that ally ending first ends it too (the display event names no source).
+  allyStatusEnded: { systems: { 'stat-buff': ['afb2ec69'] }, on: 'source' },
+  // Vex's opening area holds until her delayed second hit lands on that target (the next direct ability hit after the first).
+  vexSecondHit: { systems: ['8682c9ee', 'eb9da1d5'], on: 'target' },
 } as const;
+
+/**
+ * Persistent layers held until a rule event ends them (the stop tables above, or death through stopUnit) instead of the
+ * short cue the index gives: each listed cue runs up to this many seconds, without stopAfter. The rule event ends them;
+ * the cap is only a fallback for a missed event (Fable 11-19): the rule's longest time for that state plus 1 s (自定，非原版;
+ * tests/sustain-stops.test.ts checks each against the ability data). A state without a time limit in the rules has a cap of
+ * our own, said per line.
+ */
+export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
+  '2beb0657': 10, // Twitch volley buff → twitch-volley (no time limit: a recast re-arms the volley; 自定上限)
+  '796b6af2': 20, // Swain demon form → swain-ascension (each takedown extends it; 自定上限)
+  'ea21ae27': 5, // Garen shield → his shield layer ends
+  'e22b48b0': 5, // Loris shield → his shield layer ends
+  '8d9a4ccc': 4, // Leona damage reduction → that status ends
+  'afb2ec69': 4, // Jayce forge attack speed → the ally's status ends
+  'd86cc9bc': 60, // Draven spinning axes: every attack stays empowered after his first cast → his death (自定上限)
+  '56e6971e': 60, // Amumu passive → his death (自定上限)
+  '6889455c': 60, // Kog'Maw attack speed stacks (no end in the rules) → his death (自定上限)
+  '9f805f6e': 60,
+  // Ekko's mark on a target: the shred stays for the whole combat in the rules, so it shows 2 s after each hit, refreshed by
+  // the next (自定，非原版, Fable 11-19 GAP): held until death it would keep a slot per target hit, all fight long.
+  '5af49b76': 2,
+  '8682c9ee': 1.8, // Vex opening area → her delayed second hit
+  'eb9da1d5': 1.8,
+};
+/**
+ * Every held layer's next play replaces the last one instead of drawing a second layer over it: from the same caster, and
+ * for a hit cue on the same target (Ekko's mark). Held layers last seconds to a whole fight, so each recast or pulse would
+ * otherwise stack another (Draven's axes per cast; Amumu's passive per pulse filled 24 slots in a 1 v 2 by 10 s and pushed
+ * Draven's axes out: Node, 11-19).
+ */
+export const SUSTAIN_REFRESH: ReadonlySet<string> = new Set(Object.keys(SUSTAIN_CAPS));
+/**
+ * Held layers ranked below every skill body (Fable 11-19: Draven's axes and Kog'Maw's stacks, shown all fight long, are
+ * decoration): any skill visual takes their slot, and they come back when room frees (SUSTAIN_READMIT).
+ */
+export const SUSTAIN_RANKS: Readonly<Record<string, 'decorative'>> = { 'd86cc9bc': 'decorative', '6889455c': 'decorative', '9f805f6e': 'decorative' };
+/** Held layers that, evicted or kept out by a full board, wait for free room and play the rest of their time then. */
+export const SUSTAIN_READMIT: ReadonlySet<string> = new Set(['d86cc9bc', '6889455c', '9f805f6e']);

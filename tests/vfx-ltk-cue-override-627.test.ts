@@ -43,7 +43,8 @@ describe('#627 batch-2 attack anchors play from CUE_OVERRIDES', () => {
       const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const systems = systemsOf(table); delete systems[table[table.length - 1]!.system];
       const index = indexWith(key, table, systems);
-      expect(withCueOverrides(index).skills[key]).toEqual(index.skills[key]);
+      // The exported list stays (the explicit cast-start ranks of cue-ranks.ts still label it, 11-19).
+      expect(withCueOverrides(index).skills[key]!.map(({ rank: _rank, ...cue }) => cue)).toEqual(index.skills[key]);
       expect(cueOverride(key, systems)).toBeUndefined();
       expect(warn).toHaveBeenCalledTimes(1);
       expect(log()?.skipped[key]).toContain(table[table.length - 1]!.system);
