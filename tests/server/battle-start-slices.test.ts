@@ -8,8 +8,9 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
 import { readLootView } from '../../src/simulation/match';
 import type { BattleInput, RoomState } from '../../src/server/room/types';
+import { captureRoomPrivate, restoreRoomPrivate, type RoomPrivate } from './room-checkpoint';
 
-interface Checkpoint { time: number; seed: number; state: RoomState; expected: { initialHash: string; firstHash: string } }
+interface Checkpoint { time: number; seed: number; state: RoomState; roomPrivate: RoomPrivate; expected: { initialHash: string; firstHash: string } }
 // Recorded from public Room progression by scripts/record-v26-neutrals-1424-battle-start.cjs
 // at the v26 integration (baseline e9384c02); recorder checks sliced versus synchronous tick0/1 bytes.
 const checkpoints = (JSON.parse(readFileSync(new URL('./fixtures/battle-start.json', import.meta.url), 'utf8')) as { checkpoints: Checkpoint[] }).checkpoints;
@@ -27,6 +28,9 @@ function fixture(round: number, sliceNow = budgetClock(), sliceMs = 20) {
     clock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs,
     sliceNow, assertPoolConservation: true, carousel: CAROUSEL_RULES_BINDING });
   seam(room).current = structuredClone(cp.state);
+  // Room fields outside RoomState (preparation clock start, ...): required, so a re-recording cannot drop them.
+  expect(cp.roomPrivate).toBeDefined();
+  restoreRoomPrivate(room, cp.roomPrivate); expect(captureRoomPrivate(room)).toEqual(cp.roomPrivate);
   return { room, clock, cp };
 }
 function finishOpening(room: Room, clock: ManualClock) {
@@ -44,6 +48,10 @@ function fingerprint(room: Room) {
 }
 
 describe('battle opening slices', () => {
+  it('every checkpoint carries the room fields outside RoomState', () => {
+    for (const cp of checkpoints) expect(Object.keys(cp.roomPrivate ?? {}).sort()).toEqual(
+      ['augmentPreparationObserved', 'augmentPreparationStartedAt', 'battleEquipmentSeq', 'phaseDeadline', 'previousAugmentBattles']);
+  });
   it('a fresh public room opens with the deterministic budget in at most 100 continuations', () => {
     const counts: number[] = [];
     for (let run = 0; run < 2; run++) {

@@ -376,7 +376,12 @@ function rateOf(
 ): number {
   const byVelocity = emitter.rateByVelocity;
   if (byVelocity !== null) {
-    const speed = step.dt > 0 ? Math.hypot(...step.moved) / step.dt : 0;
+    /* The speed in the system's own units. `moved` is the rig's travel in the viewport's space, which a cue scale does
+       not touch (SystemStep.scale), while the scale draws the system that many times its authored size: a system drawn
+       at 0.64 of its size that crosses a cell has crossed 1/0.64 cells of its own, and emits for that distance. Reading
+       the travel unscaled emitted 0.64 of the trail a world-sized missile carries (11-19 audit: 54 emitters below their
+       rate cap at any flight, 16 champions). */
+    const speed = step.dt > 0 ? Math.hypot(...step.moved) / step.dt / (cueScale(step.scale) || 1) : 0;
     const rate = Math.min(emitter.maximumRateByVelocity, speed * byVelocity[0] + byVelocity[1]);
     return Math.max(rate * emitter.rateScale, 0);
   }
