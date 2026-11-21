@@ -908,6 +908,26 @@ export const CRIT_SKILL_HIT: Readonly<{ skill: (champion: string) => string; cue
   skill: champion => `${champion}-crit`,
   cue: { system: '2436e086', action: 'passive', event: 'hit', delay: 0, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
 };
+/**
+ * Projectiles whose drawn emitters author a particleLinger: at arrival they stop emitting and their lingering particles
+ * finish on their own (runtime PLAY_OUT_CAP at most), instead of the whole system being removed at the cue's end, which
+ * cut the trails the asset keeps behind a landed missile (Fable 11-21, from Mel's barrage trails). Emitters without a
+ * linger still go at the stop, so a missile head ends on the hit. No forced end or fade: their own curves end them.
+ * The set is the rule applied to the 0c59 asset snapshot; tests/vfx-ltk-linger-play-out.test.ts recomputes it from the
+ * assets (VFX_LTK_ROOT) and fails on any difference. PLAY_OUT_SYSTEMS entries and cues with their own playOut are not here.
+ */
+export const LINGER_PLAY_OUT: ReadonlySet<string> = new Set([
+  '01873936', '022fe9ec', '06e90178', '1e05be94', '215abe6e', '2b0232bc', '3496e112', '36c79ae9',
+  '3c65ee71', '40140250', '45b69079', '4d0368dc', '4ddee85c', '4f2eb343', '4f6da7bc', '4fb68964',
+  '52963b0a', '52da669c', '539901e6', '53b93f82', '5938e29d', '5a18496c', '5a268f4e', '5c6b6f6a',
+  '5d31debe', '617e850e', '6d9e0430', '721e9fbc', '76f80db8', '7d0f4b1e', '7f403068', '809dc7ac',
+  '80ab2d1b', '84b969e0', '85788d2c', '857fe049', '87913524', '8b59c09d', '92bbeaf7', '92ff3d2c',
+  '93fe62de', '952026ec', '98c2c347', '9ad0dd7c', '9ad2672c', '9ad716c2', '9bd80364', '9ea5538e',
+  '9f19f946', 'a0484f04', 'a664114c', 'a6bde11c', 'b5077b11', 'ba5fe1c0', 'bdceb760', 'bef025dc',
+  'c173eb0c', 'c8d6ee2e', 'cbd8e1cc', 'd7fee2d8', 'dcebd22f', 'e0afe94c', 'ec4a03aa', 'ec6aaee6',
+  'ed157b4e', 'ee2e840c', 'ee7fccd1', 'f0aa0d95', 'f16dfc56', 'f2b3f090', 'f2d605de', 'f4e3e1bc',
+  'faf1aeac', 'fe407ac6', 'ffa688fa',
+]);
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear
   // for a while after the line lands and then fades, sooner than its authored curves would end it on their own. Whether

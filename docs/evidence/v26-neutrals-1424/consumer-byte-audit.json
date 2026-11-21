@@ -4638,6 +4638,14 @@
       "currentSha256": "0053fe739dcbe1b0765927e9fb736db7045300b090de5af89f7d7973d2d13e6e",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-linger-play-out.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10430,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "113780b68b79f66ef97ba564b70c3e3e0f906c46eb127367d0498d150e3c7b8a",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-long-background.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
