@@ -1011,9 +1011,9 @@
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2510,
+      "currentBytes": 2357,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "30678b7c74a623c0c7a80c0119bc211b5171350920d7cc0c5eb965f92e1a53c5",
+      "currentSha256": "49f9701a139138cf48b74845ef515b5aa04cf25f251ca5ebce7a2d16503328be",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
@@ -4355,6 +4355,14 @@
       "currentBytes": 2570,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "6dc639f0521290204a1bebb7178628441e3bb8414ea74acc8385dbe46f7859cc",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-cass-ground.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1333,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a7a7903d6522c29e04d83ddd819e57cb6f6d48845365b29c901228c9139b7c07",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cast-branch.test.ts": {
