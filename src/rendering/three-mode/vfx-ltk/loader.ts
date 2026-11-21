@@ -10,7 +10,7 @@ import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
 import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM, CAST_START_RANKS } from './cue-ranks';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -92,6 +92,8 @@ export interface PreparedVfx {
   endFade?: ReadonlySet<string>;
   /** A projectile that plays out when it lands instead of being removed at its cue's end, and how it ends (cue-overrides.ts PLAY_OUT_SYSTEMS). */
   playOut?: PlayOut;
+  /** A projectile whose lingering particles finish on their own when it lands (cue-overrides.ts LINGER_PLAY_OUT). */
+  lingerPlayOut?: true;
 }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
@@ -419,7 +421,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
         system.set(e.index, { mesh: sampler, surface: system.get(e.index)?.surface ?? null });
       }
       if (notes.length) console.warn(`vfx-ltk:${id}:${notes.join(',')}`);
-      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}), ...(TRAIL_END_FADE[id] ? { endFade: new Set(TRAIL_END_FADE[id]) } : {}), ...(PLAY_OUT_SYSTEMS[id] ? { playOut: PLAY_OUT_SYSTEMS[id] } : {}) }; prepared.set(id, result); return result;
+      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}), ...(TRAIL_END_FADE[id] ? { endFade: new Set(TRAIL_END_FADE[id]) } : {}), ...(PLAY_OUT_SYSTEMS[id] ? { playOut: PLAY_OUT_SYSTEMS[id] } : {}), ...(LINGER_PLAY_OUT.has(id) ? { lingerPlayOut: true as const } : {}) }; prepared.set(id, result); return result;
     })().catch(error => {
       if (error instanceof VfxLoadError) throw error;
       throw new VfxLoadError('missing', error instanceof Error ? error.message : String(error));
