@@ -206,6 +206,11 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
             }
           }
         }
+        // Swain's burst (swain-pulse, every layer of it) on himself when a takedown extends his ascension (the rules'
+        // swainAscensionExtended, Fable 11-20); his drains draw none of their own, only their numbers.
+        if (event.type === 'swainAscensionExtended' && current && allowed() && find(event.unitId)?.definitionId === 'swain') {
+          play(event.unitId, 'swain-pulse', [event.unitId]);
+        }
         if (event.type === 'packetDamage' && current) {
           const source = find(event.sourceId); if (!source || !allowed()) return;
           const ability = isAbilityPacket(packetOrigin(event));
@@ -213,8 +218,7 @@ export function createBatch3Vfx(runtime: Runtime, scene: Object3D, find: (id: st
             if (event.damageType === 'true' && loops.has(`${event.sourceId}:illaoi-channel`)) play(event.sourceId, 'illaoi-drain', [event.targetId]);
             else if (event.damageType === 'magic' && ended.get(event.sourceId) === event.tick) play(event.sourceId, 'illaoi-slam', [event.targetId]);
           }
-          // Swain's drains draw nothing of their own (Fable 11-20: the original shows no flash or ring between them; their
-          // numbers do). His burst (swain-pulse) is for his ascension's extension by a takedown, not for each drain.
+          // Swain's drains draw nothing of their own (Fable 11-20: the original shows no flash or ring between them).
           // Loris's only magic ability damage is the shield-end blast. It lands whether the shield ran out or broke early
           // (11-06: keyed to the 'expired' tick it never showed in the field). One shockwave per blast, at its first recipient.
           if (source.definitionId === 'loris' && event.damageType === 'magic' && ability && blasts.get(event.sourceId) !== event.tick) {

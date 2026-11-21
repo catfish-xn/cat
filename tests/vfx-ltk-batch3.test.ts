@@ -334,5 +334,14 @@ describe('Swain drains', () => {
     for (let i = 0; i < 8; i++) { controller.event(magic(105 + 5 * i, 't'), true); controller.event(magic(105 + 5 * i, 'u'), true); controller.update(.25); }
     expect(runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
     expect(runtime.stopGroup).not.toHaveBeenCalledWith('s:swain-ascension');
+  });  it('a takedown that extends his ascension draws one burst on Swain himself; a replayed (old) one draws none', () => {
+    const { controller, runtime } = fixture('swain');
+    controller.event(event({ type: 'cast', tick: 100, sourceId: 's', targetIds: [] }), true); controller.update(.05);
+    const extended = (tick: number) => event({ type: 'swainAscensionExtended', tick, unitId: 's', victimId: 't', beforeUntilTick: 260, untilTick: 300 });
+    controller.event(extended(150), false);
+    expect(runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
+    controller.event(extended(151), true);
+    expect(runtime.playVariant).toHaveBeenLastCalledWith('swain', 'swain-pulse', 's', ['s'], undefined);
+    expect(runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(1);
   });
 });
