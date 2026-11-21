@@ -129,9 +129,9 @@
     "tests/assets3d-submesh-append.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5576,
+      "currentBytes": 5759,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "be645f1afc4096e0a35919484d55274340106db2130ae3b8c718ce67586dad4c",
+      "currentSha256": "feeb4583df552f7976784a3bac33678999ec156dab70da6a95d0489df7c17fcd",
       "firstDifferentByte": 0
     },
     "tests/assets3d-submesh-patch.test.ts": {

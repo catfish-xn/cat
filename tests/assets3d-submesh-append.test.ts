@@ -62,11 +62,13 @@ describe('assets3d submesh append', () => {
     const got = Array.from({ length: wing.getCount() }, (_, i) => wing.getElement(i, [])).flat();
     got.forEach((v, i) => expect(v).toBeCloseTo(WING[i]!, 5));
   });
-  it('refuses skins whose inverse bind matrices disagree on one transform, or a non-uniform one', () => {
+  it('refuses skins whose inverse bind matrices disagree on one transform, or a non-uniform or mirroring one', () => {
     const disagree = [scaled(ibmBase[0]!, 3), scaled(ibmBase[1]!, 2)];
     expect(() => meshSpaceTransform(ibmBase.flat(), disagree.flat())).toThrow('submesh-append-ibm-disagree');
     const stretched = ibmBase.map(m => m.map((v, i) => (i === 0 ? v * 2 : v)));
     expect(() => meshSpaceTransform(ibmBase.flat(), stretched.flat())).toThrow('submesh-append-not-uniform-scale');
+    const mirrored = ibmBase.map(m => scaled(m, -1));
+    expect(() => meshSpaceTransform(ibmBase.flat(), mirrored.flat())).toThrow('submesh-append-not-positive-scale');
   });
   it('refuses an appended primitive with morph targets', async () => {
     await MeshoptDecoder.ready;

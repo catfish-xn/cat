@@ -76,6 +76,7 @@ export function meshSpaceTransform(baseIbm, graftedIbm, tolerance = 1e-4) {
     if (k.some((v, i) => Math.abs(v - first[i]) > tolerance * scale)) throw new Error('submesh-append-ibm-disagree');
   }
   const s = first[0];
+  if (!(s > 0)) throw new Error('submesh-append-not-positive-scale');
   if ([first[5], first[10]].some(v => Math.abs(v - s) > tolerance * Math.abs(s)) || [1, 2, 4, 6, 8, 9].some(i => Math.abs(first[i]) > tolerance * Math.abs(s)))
     throw new Error('submesh-append-not-uniform-scale');
   return first;
