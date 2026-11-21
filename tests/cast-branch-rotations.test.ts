@@ -28,7 +28,9 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // are identical; the first difference is Jinx's first attack at tick 1 (its damage now lands at tick 9, four hexes at two
 // ticks per hex; the attack mana stays at tick 1), and the fight runs 294 -> 303 ticks. With landing switched off the digest
 // is 49e1d29a… again, so nothing but the landing rule moved.
-const MIXED_DIGEST = '66c3a9e462bb536683b06ae66d060bcb8407d0a6e6dd144f2f314c621a36cc5c';
+// Ranged attack wind-up (#791): the ranged heroes' shots now launch after their wind-up, which moves this combat again (was
+// 66c3a9e4…).
+const MIXED_DIGEST = '706f63a096157be6bd535a46fc8f3afc9506555c30229c6d7055266a4f351461';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

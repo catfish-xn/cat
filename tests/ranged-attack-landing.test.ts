@@ -90,7 +90,9 @@ const sha = (x: unknown) => createHash('sha256').update(JSON.stringify(x)).diges
 // Melee only: the whole replay is byte-for-byte what it was before ranged attack landing (hash recorded on e9f33376).
 it('a melee-only battle replays byte-for-byte as before ranged attack landing', () => {
   const source = compileBattle(snapshotForBattle(army(['garen', 'darius', 'vi', 'sett']), 'A'), snapshotForBattle(army(['illaoi', 'trundle', 'vander', 'akali']), 'B'), 42, { battleId: 'melee-only' });
-  expect(sha(toCombatReplay(resolveTwoSidedBattle(source, 901)))).toBe('3c86400202001fafdf75c6726fcdb9bd8a07e4cd2aca262687372995b7f5e2aa');
+  // Landing batch (11-20): Darius's spin now lands DARIUS_SPIN_TICKS after his cast, so this battle changed with it
+  // (was 3c864002…, recorded on e9f33376 before ranged attack landing).
+  expect(sha(toCombatReplay(resolveTwoSidedBattle(source, 901)))).toBe('457d404d0b790e68f140a365ca8ea1eed9972a1ef3485395beca38fafb57bdf9');
 });
 
 it('ranged synchronous / 1- and 7-tick slices / replay preserve complete bytes', () => {

@@ -47,6 +47,10 @@ export const S13_COMBAT_RULES = Object.freeze({
   emptyAnomaly: 'defer-until-purchase-preserve-affordable-offer',
   damageSharing: 'all-hit-packets-including-mitigated-ricochet-one-transfer-no-recursion',
   ricochet: 'primary-lethal-only-once-per-action-no-redirect-no-recursion',
+  // Landing batch (11-20, timing only): these skills settle where they land, with abilityProjectileLaunched/Landed events.
+  skillLanding: 'darius-spin-lux-shield-maddie-shot-heimer-rocket-morde-claw-settle-on-landing-events-launched-landed',
+  // Death-keyed rolls (Good for Something, Loot Explosion; 2026-11-20): keyed by the death's tick and unit, not its eventSeq.
+  deathRollKeys: 'death-roll-key-tick-unit-v1',
   // Ranged attack wind-up (11-19): a ranged attack starts, then launches RANGED_ATTACK_WINDUP_TICKS later (cast-windup.ts).
-  rangedAttackWindup: 'start-then-launch-after-fitted-windup-cap-7-half-interval-cancel-on-control-death-range-cooldown-reset',
+  rangedAttackWindup: 'ranged-attack-start-then-launch-after-windup-v1',
 });

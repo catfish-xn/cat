@@ -145,9 +145,9 @@ import { admitArchives } from '../src/replay';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { readyMatch } from './match-helpers';
 describe('ranged attack wind-up: files written before it', () => {
-  const BEFORE = 'fnv1a32-utf16:cf212873';
+  const BEFORE = 'fnv1a32-utf16:6983672c';
   it('has its own identifier; a save with the earlier digest is rejected and its archive quarantined', () => {
-    expect(S13_COMBAT_RULES.rangedAttackWindup).toBe('start-then-launch-after-fitted-windup-cap-7-half-interval-cancel-on-control-death-range-cooldown-reset');
+    expect(S13_COMBAT_RULES.rangedAttackWindup).toBe('ranged-attack-start-then-launch-after-windup-v1');
     expect(CONTENT_DIGEST).not.toBe(BEFORE);
     const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
       runId: 'before-windup', createdAt: '2026-11-19T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE }, battles: [], currentBattle: null };

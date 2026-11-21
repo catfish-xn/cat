@@ -4,7 +4,6 @@ import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { createSustainStops } from '../src/rendering/three-mode/vfx-ltk/sustain-stops';
 import { CAMILLE_KICK_TICKS, CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_READMIT, SUSTAIN_REFRESH } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { CAMILLE_KICK_TICKS as SIM_CAMILLE_KICK_TICKS } from '../src/simulation/combat-g2-2';
-import { CAST_WINDUP_TICKS as SIM_CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 const status = (targetId: string, kind: string, reason: string, tick = 10) =>
   ({ type: 'statusChanged', tick, eventSeq: tick, targetId, kind, effectiveMagnitudeBps: 0, reason }) as unknown as DisplayCombatEvent;
@@ -77,16 +76,19 @@ describe('persistent layers ended by rule events (sustain-stops.ts)', () => {
 });
 
 describe('skill bodies that never yield their slot (Fable 11-19)', () => {
-  it('Mordekaiser\'s aura and LeBlanc\'s channel are played at the critical rank', async () => {
+  it('LeBlanc\'s channel is played at the critical rank', async () => {
     const { effectImportance } = await import('../src/rendering/three-mode/effect-budget');
-    for (const [champion, system] of [['mordekaiser', '938c104f'], ['leblanc', 'acd84091']] as const) {
-      const cue = CUE_OVERRIDES[champion]!.find(c => c.system === system)!;
-      expect(cue.rank).toBe('critical');
-      expect(effectImportance(cue)).toBe('critical');
-    }
-    // Mordekaiser's aura starts with his slam's damage, which the rules deal at the cast tick (no wind-up for him).
-    expect(CUE_OVERRIDES.mordekaiser!.find(c => c.system === '938c104f')!.delay).toBe(0);
-    expect(Object.hasOwn(SIM_CAST_WINDUP_TICKS, 'mordekaiser')).toBe(false);
+    const cue = CUE_OVERRIDES.leblanc!.find(c => c.system === 'acd84091')!;
+    expect(cue.rank).toBe('critical');
+    expect(effectImportance(cue)).toBe('critical');
+  });
+  it('Mordekaiser\'s slam burst plays once per empowered hit at its main target, for its own time, and is held by nothing (Fable 11-20)', () => {
+    const burst = CUE_OVERRIDES.mordekaiser!.filter(c => c.system === '938c104f');
+    expect(burst).toHaveLength(1);
+    expect(burst[0]).toMatchObject({ action: 'attack', variant: 'empowered', event: 'hit', bone: 'BUFFBONE_GLB_GROUND_LOC', ownLife: true, primary: true });
+    expect(burst[0]!.rank).toBeUndefined();
+    expect(Object.hasOwn(SUSTAIN_CAPS, '938c104f')).toBe(false);
+    expect(CUE_END_STOPS['mordekaiser-empower']).toEqual([]);
   });
 });
 
@@ -96,7 +98,7 @@ describe('fallback caps of held layers (Fable 11-19)', () => {
   it('a layer whose state has a time limit is capped at that limit plus 1 s, so the rule event always ends it first', () => {
     const limited: [string, string, string][] = [['8d9a4ccc', 'leona-ability', 'Duration'], ['afb2ec69', 'jayce-ranged-ability', 'ASDuration'],
       ['ea21ae27', 'garen-ability', 'ShieldDuration'], ['e22b48b0', 'loris-ability', 'Duration'], ['8682c9ee', 'vex-ability', 'DOTDuration'], ['eb9da1d5', 'vex-ability', 'DOTDuration'],
-      ['acd84091', 'leblanc-ability', 'ChainDuration'], ['938c104f', 'mordekaiser-ability', 'EmpowerDuration']];
+      ['acd84091', 'leblanc-ability', 'ChainDuration']];
     for (const [system, ability, variable] of limited) expect(SUSTAIN_CAPS[system], system).toBeCloseTo(longest(ability, variable) + 1, 6);
     // Swain's form also grows with each takedown: its cap is our own, above the base time plus 1 s.
     expect(SUSTAIN_CAPS['796b6af2']).toBeGreaterThan(longest('swain-ability', 'Duration') + 1);
