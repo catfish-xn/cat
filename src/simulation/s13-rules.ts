@@ -64,4 +64,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   viSlam: 'vi-slam-aligned-to-original-v2',
   // Mel's normal-cast bolts v1 (11-21): ten bolts per target, each its own projectile, staggered by target and spread over a span.
   melBolts: 'mel-normal-cast-ten-bolts-per-target-staggered-v1',
+  // Jayce's ranged cast v1 (11-21): his crystals land, stay and explode one after another around their cells (cast-windup.ts).
+  jayceCrystals: 'jayce-crystals-land-then-chain-explode-v1',
 });
