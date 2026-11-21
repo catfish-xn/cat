@@ -33,7 +33,6 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
   'mel-third-bolt': [{ system: '4f2eb343', event: 'projectile', delay: 0, duration: .4, travelSeconds: .4, flightTicks: MEL_BOLT_FLIGHT }],
   'mel-third-hit': [{ system: 'a9cc7bf3', event: 'hit', delay: 0, duration: 1 }],
   'mel-third-blast': [{ system: '3857e78b', event: 'hit', delay: 0, duration: 6.5 }],
-  'mel-energy': [{ system: '3eab3582', event: 'cast-start', delay: 0, duration: .6, stopAfter: .2 }],
   // Her shield's visual plays its own life and ends when that ally's shield from her ability ends (cue-overrides.ts CUE_RULE_STOPS
   // abilityShieldEndedOnHolder). The duration is a cap past the system's own end (fitted, not original data); the old 0.1 s stop
   // came before some of its layers began.

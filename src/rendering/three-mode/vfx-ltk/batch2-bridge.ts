@@ -29,7 +29,6 @@ export function createBatch2VfxBridge(host: Host) {
   const consequences = new Map<string, readonly DisplayCombatEvent[]>();
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
-  const energyTicks = new Map<string, number>();
   // Mel's casts by caster, then action: true for her third cast (its own bolts, hits and explosion). Her latest two casts are
   // kept, enough for bolts still flying from one cast when the next begins.
   const melCasts = new Map<string, Map<number, boolean>>();
@@ -170,9 +169,8 @@ export function createBatch2VfxBridge(host: Host) {
       }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
-      if (event.type === 'melEnergyChanged' && event.after > event.before && energyTicks.get(event.unitId) !== event.tick) {
-        energyTicks.set(event.unitId, event.tick); play('mel', event.unitId, [], 'mel-energy');
-      }
+      // Mel's energy gain plays nothing: its stack visual drew a flat disc at her feet on our board. Held off as a known
+      // difference (Fable 11-21).
       if (event.type === 'shieldLayerChanged' && event.reason === 'granted' && event.remaining > 0) {
         try {
           const key: unknown = JSON.parse(event.key);
@@ -184,7 +182,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); },
   };
   return bridge;
 }
