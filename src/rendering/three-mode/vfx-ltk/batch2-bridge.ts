@@ -97,6 +97,9 @@ export function createBatch2VfxBridge(host: Host) {
         }
         return handled;
       }
+      // Gangplank in his ranged form (the back rows) shoots: his attack flies from his hand and lands with its hit
+      // (CUE_EXTRA_SKILLS 'gangplank-ranged'). In melee form, and for his cast, his own list plays as before.
+      if (champion === 'gangplank' && action === 'attack' && unit.form === 'back') return play(champion, source, targets, 'gangplank-ranged', 'attack');
       if (champion === 'jinx') return play(champion, source, targets, 'jinx', action);
       if (champion === 'mel') return play(champion, source, targets, melSkill(cast?.branch?.branch), action);
       if (champion === 'warwick') {
