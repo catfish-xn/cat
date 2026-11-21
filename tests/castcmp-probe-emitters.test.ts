@@ -1,6 +1,9 @@
 import { CubeTexture, DataTexture, Mesh, ShaderMaterial, Texture, AdditiveBlending } from 'three';
 import { describe, expect, it } from 'vitest';
 import { installProbes } from '../dev/castcmp/probes';
+import { restoreProbeGlobalsAfterAll } from './fixtures/castcmp-probe-globals';
+
+restoreProbeGlobalsAfterAll();
 
 // The emitters probe reads the runtime's running records (any Set holding { system, reserved, fx, until }).
 describe('castcmp emitters probe', () => {
