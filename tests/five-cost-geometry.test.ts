@@ -8,7 +8,7 @@ import { planG22Cast } from '../src/simulation/combat-g2-2';
 import { planG2Cast } from '../src/simulation/combat-g2';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { battle, freeze, unit } from './combat-helpers';
-import { MALZAHAR_3STAR_GATE_TICKS } from '../src/simulation/cast-windup';
+import { MALZAHAR_3STAR_GATE_TICKS, MORDEKAISER_CLAW_TICKS } from '../src/simulation/cast-windup';
 
 function hero(name:string, star:1|2|3=3, cell:HexCell={col:3,row:4}):S13Unit {
   return unit('p','player',cell.col,cell.row,{definitionId:name,starLevel:star,ability:resolveAbility(name+'-ability',star),
@@ -57,7 +57,9 @@ it('integer line boundary vectors: full width 3, length 8, no rear or beyond-end
 it.each([1,2,3] as const)('Mordekaiser %s star picks more enemies over the current-target line',(star)=>{
   const p=hero('mordekaiser',star),t=foe('target',4,4),ctx=context([p,t,foe('a',0,3),foe('b',0,4),foe('c',0,5)]);
   expect(planG22Cast(ctx,p,t,1)).toEqual(['a','b','c']);
-  expect(ctx.packets.map(p=>p.raw)).toEqual(Array(3).fill([200,300,1000][star-1]));
+  // Landing batch (11-20): the claw's amounts are taken now and land later (skillShot tasks), so no packet on the cast.
+  expect(ctx.packets).toEqual([]);
+  expect(p.tasks.filter(x=>x.kind==='skillShot').map(x=>x.amount)).toEqual(Array(3).fill([200,300,1000][star-1]));
 });
 it('Mordekaiser ties prefer a line containing current target, then E before W',()=>{
   const p=hero('mordekaiser'),east=foe('east',6,4),west=foe('west',0,4);
@@ -69,7 +71,8 @@ it('Mordekaiser bonus stays limited to the globally nearest four, not four new t
   const p=hero('mordekaiser',1,{col:2,row:4}),t=foe('a',3,4);
   const ctx=context([p,t,foe('b',4,4),foe('c',5,4),foe('d',6,4),foe('e',7,4)]);
   expect(planG22Cast(ctx,p,t,1)).toEqual(['a','b','c','d','e']);
-  expect(ctx.packets.map(p=>p.raw)).toEqual([200,200,200,200,160]);
+  expect(ctx.packets).toEqual([]); // landing batch (11-20): amounts taken now, landing later
+  expect(p.tasks.filter(x=>x.kind==='skillShot').map(x=>x.amount)).toEqual([200,200,200,200,160]);
 });
 it.each([1,2,3,4,5])('Malzahar divides exactly five stacks across %s hits in hit order',(count)=>{
   const p=hero('malzahar',1),targets=Array.from({length:count},(_,i)=>foe(String.fromCharCode(97+i),i+1,3));
@@ -87,7 +90,8 @@ it.each(['jinx','mordekaiser','malzahar'])('%s whole-step packets/state/RNG surv
   const initial=battle([p,foe('a',4,4),foe('b',5,4),foe('c',5,5)],{rngState:42});
   // Malzahar's 3-star gate lands MALZAHAR_3STAR_GATE_TICKS after his cast (cast wind-up batch 4): the whole-step check runs
   // on that landing step, reached from the frozen input and from the permuted one alike.
-  const lead=name==='malzahar'?MALZAHAR_3STAR_GATE_TICKS:0;
+  // Mordekaiser's claw lands MORDEKAISER_CLAW_TICKS[3].land after his cast (landing batch, 11-20): likewise.
+  const lead=name==='malzahar'?MALZAHAR_3STAR_GATE_TICKS:name==='mordekaiser'?MORDEKAISER_CLAW_TICKS[3].land:0;
   let before: CombatState=freeze(initial),permuted: CombatState={...initial,units:[...initial.units].reverse()};
   for(let n=0;n<lead;n++){before=stepCombat(before).state;permuted=stepCombat(permuted).state;}
   const first=stepCombat(before);expect(damage(first.events).length).toBeGreaterThan(0);expect(first.state.rngDraws).toBe(0);
