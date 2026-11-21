@@ -57,9 +57,14 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
     ctx.events.push({type:'chaosEnergyChanged',tick:ctx.tick,unitId:u.id,before:s.energy,after:0});s.energy=0;
     return targets.map(t=>t.id);
   }
+  // One read decides the third-cast bolts, whether she dashes, and the branch reported (display output only).
+  const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
+  // 11-21 (Fable, from original footage): every normal cast dashes (her own cell is no candidate); the third cast does not move.
+  // Where she lands is self-chosen, not original data: the free cell within dashRadius with the most allies within 2 hexes
+  // (counted up to 2), then the nearest, then row and column. With no free cell she stays.
   const free:HexCell[]=[];
-  for(let row=0;row<ctx.board.rows;row++)for(let col=0;col<ctx.board.columns;col++){
-    const cell={col,row};if(hexDistance(u.cell,cell)<=P.mel.dashRadius&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(t.cell,cell)===0))free.push(cell);
+  if(!third)for(let row=0;row<ctx.board.rows;row++)for(let col=0;col<ctx.board.columns;col++){
+    const cell={col,row};if(hexDistance(u.cell,cell)<=P.mel.dashRadius&&hexDistance(u.cell,cell)>0&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(t.cell,cell)===0))free.push(cell);
   }
   const coverage=(cell:HexCell)=>ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(cell,t.cell)<=2).length;
   free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
@@ -74,8 +79,6 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
   const allies=ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(landing,t.cell)<=2)
     .sort((a,b)=>near(landing)(a)-near(landing)(b)||(a.id<b.id?-1:1)).slice(0,2);
   for(const t of [u,...allies])grantShield(t,origin(u),variable(u,'Shield'),ctx.tick+P.mel.shieldTicks,ctx.tick,ctx.events);
-  // One read decides the third-cast bolts and the branch reported (display output only).
-  const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
   if(third){
     const targets=fromLanding(u,landing,ctx).slice(0,5),total=s.storedEnergy+Math.floor(variable(u,'ThirdDamage')*ap(u,ctx.tick,ctx.units)/100);
     if(targets.length){

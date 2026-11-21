@@ -54,12 +54,44 @@ describe('Mel barrage timing', () => {
     expect(landed.map(l => [l.targetId, l.hit])).toEqual([[victim.targetId, false]]);
   });
 });
+// 11-21 (Fable, from original footage): every normal cast dashes, even when she already stands by her allies; the third cast
+// (the one that releases her stored energy) does not move. Where she lands is self-chosen. docs/S13_RULES_GAP.md (梅尔弹幕).
+describe('Mel dash: every normal cast, never the third', () => {
+  function beside(castCount: number) {
+    const units: any[] = [{ id: 'mel', definitionId: 'mel', team: 'player', starLevel: 1, location: { kind: 'board', cell: { col: 3, row: 6 } } },
+      { id: 'a1', definitionId: 'garen', team: 'player', starLevel: 2, location: { kind: 'board', cell: { col: 2, row: 6 } } },
+      { id: 'a2', definitionId: 'garen', team: 'player', starLevel: 2, location: { kind: 'board', cell: { col: 4, row: 6 } } },
+      ...['amumu', 'sett'].map((definitionId, i) => ({ id: `e${i}`, definitionId, team: 'enemy', starLevel: 3, location: { kind: 'board', cell: { col: 2 + 2 * i, row: 1 } } }))];
+    const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
+    const { state } = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items: [], temporaryEquipment: [], augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'mel-dash', 7) as { state: CombatState };
+    const s = { ...state, units: state.units.map(u => u.id === 'mel' ? { ...u, mana: u.maxMana, moveCooldownTicks: 2000, runtime: { ...(u as any).runtime, castCount } } : { ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 }) } as CombatState;
+    const r = run(s, 60);
+    const cast = r.out.flatMap(o => o.events).find(e => e.type === 'cast' && (e as any).receipt.source.ownerId === 'mel') as any;
+    const moves = r.out.flatMap(o => o.events.filter(e => e.type === 'movement' && (e as any).unitId === 'mel') as any[]).filter(m => m.tick >= cast.tick && m.tick <= cast.tick + MEL_RELEASE_TICKS);
+    return { branch: cast.receipt.branch?.branch, moves, castTick: cast.tick };
+  }
+  it('a normal cast moves her one dash even beside two allies; the third cast keeps her where she is', () => {
+    const seen = new Set<string>();
+    for (const castCount of [0, 1, 2]) {
+      const { branch, moves, castTick } = beside(castCount);
+      seen.add(branch);
+      if (branch === 'third') expect(moves, `castCount ${castCount}`).toEqual([]);
+      else {
+        expect(branch).toBe('normal');
+        expect(moves.map(m => m.tick), `castCount ${castCount}`).toEqual([castTick + MEL_DASH_LAND_TICKS]);
+        expect(hexDistance(moves[0].from, moves[0].to)).toBeGreaterThan(0);
+      }
+    }
+    expect([...seen].sort()).toEqual(['normal', 'third']);
+  });
+});
+
 // The barrage timing changes battle results, so its rule identifier is part of the content digest: a save or replay written
 // under the digest just before it (Swain's drain) is turned away as another version, never replayed under the new rule.
 const BEFORE_DIGEST = 'fnv1a32-utf16:eb2d4cee';
 describe('Mel barrage: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
-    expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-v1');
+    expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-dash-each-normal-cast-v2');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_DIGEST);
   });
   it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
