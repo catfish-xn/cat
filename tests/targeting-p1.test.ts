@@ -173,7 +173,7 @@ describe('hard-control target hold', () => {
     expect(isControlled(get(release.state) as S13Unit, 3)).toBe(false);
     expect(get(release.state).targetId).toBe('near');
     expect(release.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 3, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 3, attackerId: 'p', targetId: 'near', critical: true },
     ]);
   });
 
@@ -188,7 +188,7 @@ describe('hard-control target hold', () => {
     const release = stepCombat(still.state);
     expect(get(release.state).targetId).toBe('near');
     expect(release.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 3, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 3, attackerId: 'p', targetId: 'near', critical: true },
     ]);
   });
 
@@ -211,7 +211,7 @@ describe('hard-control target hold', () => {
     const acting = step([frenzy, enemy('old', 3, 2), enemy('near', 3, 3)]);
     expect(get(acting.state).targetId).toBe('near');
     expect(acting.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 1, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 1, attackerId: 'p', targetId: 'near', critical: true },
     ]);
   });
 });

@@ -35,7 +35,7 @@ describe('P0 target retention', () => {
     const result = run([p, old, near]);
     expect(get(result.state).targetId).toBe(old.id);
     expect(result.events.filter(e => e.type === 'targetChanged' && e.unitId === p.id)).toEqual([]);
-    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1, attackerId: p.id, targetId: old.id }]);
+    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1, attackerId: p.id, targetId: old.id, critical: false }]);
     expect(result.state.rngDraws).toBe(1); // Only the ordinary crit roll.
   });
 
@@ -110,7 +110,7 @@ describe('P0 target retention', () => {
     const release = stepCombat(still.state);
     expect(get(release.state).targetId).toBe(old.id);
     expect(release.events.filter(e => e.type === 'attack')).toEqual([
-      { type: 'attack', tick: 3, attackerId: p.id, targetId: old.id },
+      { type: 'attack', tick: 3, attackerId: p.id, targetId: old.id, critical: false },
     ]);
     expect(release.state.rngDraws).toBe(1);
   });
@@ -137,7 +137,7 @@ describe('P0 engaged-target chase', () => {
     const result = run([p, old, near]);
     expect(get(result.state).cell).toEqual({ col: 2, row: 3 });
     expect(get(result.state).targetId).toBe(old.id);
-    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1, attackerId: p.id, targetId: old.id }]);
+    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1, attackerId: p.id, targetId: old.id, critical: false }]);
   });
 
   it.each(['two-steps', 'occupied'] as const)('reselects when one-step recovery fails: %s', kind => {
@@ -210,7 +210,7 @@ describe('P0 engaged-target chase', () => {
     expect(get(result.state).cell).toEqual(p.cell);
     expect(get(result.state).targetId).toBe('near');
     expect(result.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 1, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 1, attackerId: 'p', targetId: 'near', critical: true },
     ]);
   });
 });
