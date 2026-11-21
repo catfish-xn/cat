@@ -693,9 +693,9 @@
     "tests/cast-branch-renderer.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5324,
+      "currentBytes": 5427,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f6bff4c6cf586c669afb63df3a029bc5ed72f5c9505f0700018ce3baed07ad08",
+      "currentSha256": "d82a21b81cd034af88b7e790eb8c9b66471a6ce9c6941e160295076d32fd1e7a",
       "firstDifferentByte": 0
     },
     "tests/cast-branch-rotations.test.ts": {
@@ -4355,6 +4355,14 @@
       "currentBytes": 2570,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "6dc639f0521290204a1bebb7178628441e3bb8414ea74acc8385dbe46f7859cc",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-cass-bolt-hit.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1277,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "10e7b970b5eff1538f108b8c7f3a0ee04ac285027f7fbadf5e13b0ad92654582",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cast-branch.test.ts": {
