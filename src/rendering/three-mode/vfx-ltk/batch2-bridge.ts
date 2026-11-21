@@ -14,7 +14,7 @@ type Outcome = Extract<DisplayCombatEvent, { type: 'castOutcome' }>;
 interface Host {
   unit(id: string): Unit | undefined;
   board(): Pick<BoardFrame, 'columns' | 'rows' | 'hexRadius' | 'origin'> | null;
-  play(champion: string, source: string, targets: readonly string[], action: 'cast' | 'attack', context: LtkPlayOptions): boolean;
+  play(champion: string, source: string, targets: readonly string[], action: 'cast' | 'attack' | 'passive', context: LtkPlayOptions): boolean;
   /** Ends the source's runs of these systems (cue-overrides.ts CUE_RULE_STOPS); absent where nothing runs them. */
   stopSystems?(source: string, systems: readonly string[]): void;
 }
@@ -29,6 +29,8 @@ export function createBatch2VfxBridge(host: Host) {
   const consequences = new Map<string, readonly DisplayCombatEvent[]>();
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
+  // Attackers whose shot the rules launched in this batch (attackLaunched): Gangplank's ranged shot is drawn from those events.
+  const launchers = new Set<string>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
@@ -51,8 +53,9 @@ export function createBatch2VfxBridge(host: Host) {
       return outcome.outcome === 'jackpot' ? 'four' : ({ flamethrower: 'one', punch: 'two', chomp: 'three' } as Record<string,string>)[outcome.castVariant.move];
     },
     begin(events: readonly DisplayCombatEvent[]) {
-      outcomes.clear(); consequences.clear(); attacks.clear();
+      outcomes.clear(); consequences.clear(); attacks.clear(); launchers.clear();
       events.forEach((event, at) => {
+        if (event.type === 'attackLaunched') launchers.add(event.attackerId);
         if (event.type === 'castOutcome' && event.castVariant) outcomes.set(`${event.unitId}:${event.castVariant.actionSeq}`, event);
         if (event.type === 'attack') attacks.add(`${event.attackerId}:${event.tick}`);
         if (event.type !== 'cast') return;
@@ -97,9 +100,10 @@ export function createBatch2VfxBridge(host: Host) {
         }
         return handled;
       }
-      // Gangplank in his ranged form (the back rows) shoots: his attack flies from his hand and lands with its hit
-      // (CUE_EXTRA_SKILLS 'gangplank-ranged'). In melee form, and for his cast, his own list plays as before.
-      if (champion === 'gangplank' && action === 'attack' && unit.form === 'back') return play(champion, source, targets, 'gangplank-ranged', 'attack');
+      // Gangplank's ranged-form attack: the rules launch and land it (attackLaunched / attackLanded), and event() draws the shot
+      // and its hit from those, so the attack itself plays nothing more. An attack the rules settle at once (his melee form) has
+      // no launch and plays his own list, as does his cast.
+      if (champion === 'gangplank' && action === 'attack' && launchers.has(source)) return true;
       if (champion === 'jinx') return play(champion, source, targets, 'jinx', action);
       if (champion === 'mel') return play(champion, source, targets, melSkill(cast?.branch?.branch), action);
       if (champion === 'warwick') {
@@ -110,6 +114,16 @@ export function createBatch2VfxBridge(host: Host) {
       if (champion === 'viktor') return play(champion, source, targets, 'viktor', action);
     },
     event(event: DisplayCombatEvent, current: boolean) {
+      // Gangplank's ranged shot (CUE_EXTRA_SKILLS gangplank-ranged-flight / -land): it leaves on the rules' launch and flies
+      // their own flight, arrivalTick − tick at 50 ms a tick, so it lands on the tick his damage does; the hit plays on a
+      // landing that hit. One that lands on a target already gone plays no hit (its damage never comes either).
+      if (current && (event.type === 'attackLaunched' || event.type === 'attackLanded') && host.unit(event.attackerId)?.definitionId === 'gangplank') {
+        if (event.type === 'attackLaunched' && event.projectile === 'flight')
+          host.play('gangplank', event.attackerId, [event.targetId], 'passive', { skill: 'gangplank-ranged-flight', board: batch2BoardPoint(host.board()),
+            flightSeconds: Math.max(0, event.arrivalTick - event.tick) * 0.05 });
+        if (event.type === 'attackLanded' && event.hit)
+          host.play('gangplank', event.attackerId, [event.targetId], 'passive', { skill: 'gangplank-ranged-land', board: batch2BoardPoint(host.board()) });
+      }
       // Catch-up still observes every cast and landing in order, even when its
       // warning/impact is too old to play. State must not depend on action().
       if (event.type === 'cast') {

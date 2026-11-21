@@ -25,6 +25,11 @@ export interface TimelineCue {
    * landing. A cue without a target, or whose caster or target is gone, keeps its own times.
    */
   readonly flightTicks?: { readonly perCell: number; readonly min: number };
+  /**
+   * Lasts the rule's flight (LtkPlayOptions.flightSeconds, from abilityProjectileLaunched): duration counts what the cue keeps
+   * after the landing, so a ground band laid at launch clears on the landing frame plus that tail.
+   */
+  readonly spanFlight?: boolean;
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
   /**

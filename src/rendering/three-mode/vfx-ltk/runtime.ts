@@ -205,6 +205,11 @@ export interface LtkPlayOptions {
   crit?: boolean;
   /** This play is a crit flash of its own (CRIT_SKILL_HIT): refused while CRIT_FLASH_MAX of them are out. */
   critFlash?: boolean;
+  /**
+   * The rule's flight in seconds (abilityProjectileLaunched: arrivalTick − tick, 50 ms a tick): projectile cues fly this long
+   * and spanFlight cues last it, in place of a flight estimated from the distance (TimelineCue.flightTicks).
+   */
+  flightSeconds?: number;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its random seed, fixed when it was queued (seedOf). */
@@ -330,6 +335,16 @@ export function withFlight<T extends TimelineCue>(cue: T, cells: number | null):
   const { perCell, min } = cue.flightTicks, seconds = (cells === null ? min : flightTicksFor(cells, perCell, min)) * 0.05;
   if (cue.event === 'projectile') return { ...cue, travelSeconds: seconds, duration: seconds + cue.duration - (cue.travelSeconds ?? 0) };
   return { ...cue, delay: cue.delay + seconds };
+}
+/**
+ * A cue timed by the rule's flight (LtkPlayOptions.flightSeconds): a projectile flies `seconds`, keeping what it holds past
+ * its nominal flight; a spanFlight cue lasts the flight plus its own duration; any other cue keeps its own times.
+ */
+export function withFlightSeconds<T extends TimelineCue>(cue: T, seconds: number): T {
+  if (!(seconds >= 0)) return cue;
+  if (cue.event === 'projectile') return { ...cue, travelSeconds: seconds, duration: seconds + cue.duration - (cue.travelSeconds ?? 0) };
+  if (cue.spanFlight) return { ...cue, duration: seconds + cue.duration };
+  return cue;
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
@@ -828,8 +843,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fromUnit = spawn.fromId !== undefined ? findUnit(spawn.fromId) : undefined;
         const from = fromUnit && !fromUnit.disposed ? standingPoint(fromUnit.root) : undefined;
         if (spawn.fromId !== undefined && !from) continue;
-        // A flight by distance (TimelineCue.flightTicks) is timed now, from where caster and target stand.
-        if (spawn.flightTicks) {
+        // A flight the rule timed (LtkPlayOptions.flightSeconds), else one by distance (TimelineCue.flightTicks), from where
+        // caster and target stand now.
+        if (context.flightSeconds !== undefined) spawn = withFlightSeconds(spawn, context.flightSeconds);
+        else if (spawn.flightTicks) {
           const caster = findUnit(spawn.sourceId), aimed = spawn.targetId ? findUnit(spawn.targetId) : undefined;
           const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
           spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
