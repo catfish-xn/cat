@@ -708,9 +708,9 @@
     "tests/cast-branch-rotations.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7768,
+      "currentBytes": 7826,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "382b002fc1ce15d792a7a882d5bd4d17a2f6b79d330ff79eeceef683bfae17b0",
+      "currentSha256": "7ca4b75592bf4c324c4bf37aafc3a092ccd865d0350d90089cba43f8c5c78059",
       "firstDifferentByte": 0
     },
     "tests/cast-windup-batch1.test.ts": {
@@ -2242,9 +2242,9 @@
     "tests/mel-barrage.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9332,
+      "currentBytes": 11203,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "baee2466fb68e53f23a813b665f9480b426e4f75f3febb3771deaec498133a74",
+      "currentSha256": "0e1782f157cc9abb3dccdb7871b81238ba40599a09769bcd974e50f76c00b460",
       "firstDifferentByte": 0
     },
     "tests/melee-dead-claim.test.ts": {
@@ -4991,7 +4991,7 @@
       "previousBytes": 0,
       "currentBytes": 5707,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3016cc159878324fc4822a9f3751761b4e226f71002c8c5e920e911df00805ec",
+      "currentSha256": "3c9e6b6782fcef906af5611215983a6419ad77a2eea143b13dac8c8ca00fc97d",
       "firstDifferentByte": 0
     }
   }
