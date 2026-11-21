@@ -78,7 +78,8 @@ describe('SR-B8-02 resumable pure tasks', () => {
         definitionId: share.source.definitionId, delivery: healDelivery[share.source.sourceKind] ?? 'attack-extra', actual: share.actual })) })));
     if (count === 9) deepStrictEqual(replay.ticks.flatMap(frame => frame.events).flatMap(event => event.type === 'heal' ? event.shares : [])
       .map(share => [share.sourceKind, share.definitionId, share.delivery, share.actual]),
-    [['ability', 'darius-ability', 'ability-direct', 150], ['ability', 'darius-ability', 'ability-direct', 150], ['ability', 'darius-ability', 'ability-direct', 150]]);
+    // Landing batch: Darius's spin (and its heal) now lands after the cast; this battle settles six of his heals (was three).
+    Array.from({ length: 6 }, () => ['ability', 'darius-ability', 'ability-direct', 150]));
   }); }
   if (mode === 'fast') { it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {

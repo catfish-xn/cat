@@ -353,3 +353,32 @@ describe('batch 2 runtime boundaries', () => {
     await runtime.warm('jinx');expect(runtime.play('jinx','j',[],'cast',{branch:'zap'})).toBe(true);expect(runtime.play('jinx','j',[],'cast',{branch:'chompers'})).toBe(false);runtime.dispose();
   });
 });
+
+// Fable 11-20: Warwick's frenzy claw strikes play on his attacks while his frenzy runs (the rules' bloodFrenzyChanged),
+// taking turns (自定，非原版); outside it his attacks stay plain.
+describe('Warwick frenzy strikes', () => {
+  const frenzy = (active: boolean, tick: number) => ({ type: 'bloodFrenzyChanged', eventSeq: tick, tick, unitId: 'w', active, permanent: false }) as unknown as DisplayCombatEvent;
+  it('plays his attacks plain, then alternate frenzy variants while his frenzy runs (caught up too), then plain again', () => {
+    const { bridge: b, play } = bridge('warwick');
+    const variants = () => play.mock.calls.map(c => c[4].variant ?? 'plain');
+    b.action('attack', 'w', ['target']);
+    b.event(frenzy(true, 10), false);
+    for (let i = 0; i < 3; i++) b.action('attack', 'w', ['target']);
+    b.action('cast', 'w', [], cast('w'));
+    b.event(frenzy(false, 90), true);
+    b.action('attack', 'w', ['target']);
+    expect(variants()).toEqual(['plain', 'empowered', 'empowered-alt', 'empowered', 'plain', 'plain']);
+    b.event(frenzy(true, 100), true); b.clear(); b.action('attack', 'w', ['target']);
+    expect(variants().at(-1)).toBe('plain');
+  });
+  it('each frenzy variant keeps the swipe and hit, adds one strike, and stays within the twelve-cue gate', async () => {
+    const { warwickSkills } = await import('../src/rendering/three-mode/vfx-ltk/champions/warwick');
+    const list = warwickSkills.warwick!;
+    const of = (variant?: string) => list.filter(c => c.action === 'attack' && c.variant === variant).map(c => c.system);
+    expect(of()).toEqual(['6b46d17d', '9371a532']);
+    expect(of('empowered')).toEqual(['6b46d17d', '9371a532', '0e816dad']);
+    expect(of('empowered-alt')).toEqual(['6b46d17d', '9371a532', '5bc6c713']);
+    expect(list.length).toBeLessThanOrEqual(12);
+    expect(list.some(c => c.system === '60ed55cd')).toBe(false);
+  });
+});

@@ -2,7 +2,7 @@ import { jayceForgeSource } from './sustain-stops';
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
 import type { BoardFrame } from '../../board-feed';
 import type { LtkPlayOptions } from './runtime';
-import type { WorldPoint } from './timeline';
+import type { TimelineVariant, WorldPoint } from './timeline';
 import { CUE_RULE_STOPS } from './cue-overrides';
 import { jayceSkill } from './champions/jayce';
 import { SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
@@ -30,6 +30,10 @@ export function createBatch2VfxBridge(host: Host) {
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
   const energyTicks = new Map<string, number>();
+  // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
+  const frenzied = new Map<string, number>();
+  // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
+  let variant: TimelineVariant | undefined;
   // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
   let release: LtkPlayOptions['release'];
   // The attack being played crits (LtkPlayOptions.crit); only attack plays carry it.
@@ -38,7 +42,7 @@ export function createBatch2VfxBridge(host: Host) {
   let branch: string | undefined;
   const play = (champion: string, source: string, targets: readonly string[], skill: string, action: 'cast' | 'attack' = 'cast', snapshotTargets = false, channelSeconds?: number, boardOnly = false, delay?: number) =>
     host.play(champion, source, targets, action, { skill, board: batch2BoardPoint(host.board()), snapshotTargets, channelSeconds, boardOnly, persistAcrossPhase: skill === 'mel-save', ...(delay ? { delay, cancelWithSource: true } : {}),
-      ...(action === 'attack' && release ? { release } : {}), ...(action === 'attack' && crit ? { crit } : {}), ...(action === 'cast' && branch ? { branch } : {}) });
+      ...(action === 'attack' && release ? { release } : {}), ...(action === 'attack' && crit ? { crit } : {}), ...(action === 'attack' && variant ? { variant } : {}), ...(action === 'cast' && branch ? { branch } : {}) });
   const bridge = {
     branch(cast: Cast): string | undefined {
       // The rule's own branch output (cast event `branch`) wins; Sevika's roll still comes from her castOutcome.
@@ -96,7 +100,11 @@ export function createBatch2VfxBridge(host: Host) {
       }
       if (champion === 'jinx') return play(champion, source, targets, 'jinx', action);
       if (champion === 'mel') return play(champion, source, targets, melSkill(cast?.branch?.branch), action);
-      if (champion === 'warwick') return play(champion, source, targets, 'warwick', action);
+      if (champion === 'warwick') {
+        const drawn = action === 'attack' ? frenzied.get(source) : undefined;
+        if (drawn !== undefined) { variant = drawn % 2 ? 'empowered-alt' : 'empowered'; frenzied.set(source, drawn + 1); }
+        try { return play(champion, source, targets, 'warwick', action); } finally { variant = undefined; }
+      }
       if (champion === 'viktor') return play(champion, source, targets, 'viktor', action);
     },
     event(event: DisplayCombatEvent, current: boolean) {
@@ -125,6 +133,10 @@ export function createBatch2VfxBridge(host: Host) {
           }
         }
       }
+      // A frenzy is observed in catch-up too: an attack drawn later in it is still frenzied.
+      if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
+        if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
+      }
       if (!current) return;
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
@@ -142,7 +154,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); frenzied.clear(); },
   };
   return bridge;
 }

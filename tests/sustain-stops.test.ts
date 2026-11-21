@@ -75,12 +75,30 @@ describe('persistent layers ended by rule events (sustain-stops.ts)', () => {
   });
 });
 
+describe('skill bodies that never yield their slot (Fable 11-19)', () => {
+  it('LeBlanc\'s channel is played at the critical rank', async () => {
+    const { effectImportance } = await import('../src/rendering/three-mode/effect-budget');
+    const cue = CUE_OVERRIDES.leblanc!.find(c => c.system === 'acd84091')!;
+    expect(cue.rank).toBe('critical');
+    expect(effectImportance(cue)).toBe('critical');
+  });
+  it('Mordekaiser\'s slam burst plays once per empowered hit at its main target, for its own time, and is held by nothing (Fable 11-20)', () => {
+    const burst = CUE_OVERRIDES.mordekaiser!.filter(c => c.system === '938c104f');
+    expect(burst).toHaveLength(1);
+    expect(burst[0]).toMatchObject({ action: 'attack', variant: 'empowered', event: 'hit', bone: 'BUFFBONE_GLB_GROUND_LOC', ownLife: true, primary: true });
+    expect(burst[0]!.rank).toBeUndefined();
+    expect(Object.hasOwn(SUSTAIN_CAPS, '938c104f')).toBe(false);
+    expect(CUE_END_STOPS['mordekaiser-empower']).toEqual([]);
+  });
+});
+
 describe('fallback caps of held layers (Fable 11-19)', () => {
   // The rule's longest time for the state a layer shows, over every star, from the ability data.
   const longest = (ability: string, variable: string) => Math.max(...(S13_ABILITY_DATA[ability] as unknown as { variables: Record<string, number[]> }).variables[variable]!);
   it('a layer whose state has a time limit is capped at that limit plus 1 s, so the rule event always ends it first', () => {
     const limited: [string, string, string][] = [['8d9a4ccc', 'leona-ability', 'Duration'], ['afb2ec69', 'jayce-ranged-ability', 'ASDuration'],
-      ['ea21ae27', 'garen-ability', 'ShieldDuration'], ['e22b48b0', 'loris-ability', 'Duration'], ['8682c9ee', 'vex-ability', 'DOTDuration'], ['eb9da1d5', 'vex-ability', 'DOTDuration']];
+      ['ea21ae27', 'garen-ability', 'ShieldDuration'], ['e22b48b0', 'loris-ability', 'Duration'], ['8682c9ee', 'vex-ability', 'DOTDuration'], ['eb9da1d5', 'vex-ability', 'DOTDuration'],
+      ['acd84091', 'leblanc-ability', 'ChainDuration']];
     for (const [system, ability, variable] of limited) expect(SUSTAIN_CAPS[system], system).toBeCloseTo(longest(ability, variable) + 1, 6);
     // Swain's form also grows with each takedown: its cap is our own, above the base time plus 1 s.
     expect(SUSTAIN_CAPS['796b6af2']).toBeGreaterThan(longest('swain-ability', 'Duration') + 1);
@@ -115,5 +133,14 @@ describe('a rule stop finds the runs it ends (Fable 11-19: Jayce\'s glow waited 
     const { jayceForgeSource } = await import('../src/rendering/three-mode/vfx-ltk/sustain-stops');
     expect(jayceForgeSource('j')).toBe('j:g23-forge');
     expect(CUE_RULE_STOPS.allyStatusEnded.on).toBe('source');
+  });
+});
+
+describe('LeBlanc\'s channel without its dark backdrop (Fable 11-19 known difference)', () => {
+  it('holds off only Alpha_Glow of acd84091; the rest of the system draws', async () => {
+    const { DISABLED_EMITTERS } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    expect(DISABLED_EMITTERS['acd84091']).toEqual(['Alpha_Glow']);
+    // Mordekaiser's aura: only its dark ground glow (Fable 11-19).
+    expect(DISABLED_EMITTERS['938c104f']).toEqual(['Alpha_Glow_Dark']);
   });
 });

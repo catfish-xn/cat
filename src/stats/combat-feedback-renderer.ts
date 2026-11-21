@@ -1,15 +1,14 @@
-import { appliedStatusFloat } from '../presentation/combat-status';
 import { asDisplayEvents, type SceneCombatEvent } from '../presentation/combat-display';
 export interface FeedbackAnchor { readonly x: number; readonly y: number; readonly radius: number }
 /** A centred rect in the same CSS coordinates as anchors (e.g. a canvas text label) that floats must not cover. */
 export interface FeedbackObstacle { readonly x: number; readonly y: number; readonly w: number; readonly h: number }
 export interface CombatFeedbackRenderer { push(events: readonly SceneCombatEvent[], displayTimeMs: number): void; render(displayTimeMs: number, anchors: ReadonlyMap<string, FeedbackAnchor>, obstacles?: readonly FeedbackObstacle[], bars?: ReadonlyMap<string, FeedbackObstacle>): void; reset(): void; dispose(): void }
-type FloatKind = 'physical' | 'magic' | 'true' | 'heal' | 'status';
+type FloatKind = 'physical' | 'magic' | 'true' | 'heal';
 /** What a float shows (the damage-float table, Fable 11-17): a plain hit, a crit, or a damage-over-time tick. */
 type FloatClass = 'plain' | 'crit' | 'tick';
 type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'paddingTop' | 'paddingBottom' | 'backgroundPosition' | 'backgroundSize' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
-interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; text: string; at: number; measured: number; life: number; px: number }
+interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; at: number; measured: number; life: number; px: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
 function style(item: Label, key: LabelStyle, value: string): void {
   if ((item.styles[key] ?? item.label.style[key]) !== value) item.label.style[key] = value;
@@ -22,7 +21,7 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
  * with a wedge mark slammed in at its lower left (CRIT_MARK_PATH); a damage-over-time tick is a little smaller (a burn white). Every colour, size,
  * scale and timing here is our own choice, not original data.
  */
-const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff8a24', magic: '#36c4ff', true: '#ffffff', heal: '#4fdc84', status: '#ff9d8a' };
+const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff8a24', magic: '#36c4ff', true: '#ffffff', heal: '#4fdc84' };
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
 /** Sizes (own choice, not original): a plain number reads on both a close-up and the whole board; a crit about 1.9× it (42 px), a tick 0.8×. */
@@ -120,11 +119,11 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
    * Every hit shows on its own; only the packets of one hit (one tick, source, target, kind and
    * class) add up to one number. A unit keeps PER_UNIT at once and the board ALL; the earliest plain number gives way first.
    */
-  function add(tick: number, unitId: string, kind: FloatKind, amount: number, at: number, text = '', cls: FloatClass = 'plain', source = '', burn = false): void {
+  function add(tick: number, unitId: string, kind: FloatKind, amount: number, at: number, cls: FloatClass = 'plain', source = '', burn = false): void {
     if (amount <= 0) return;
-    const key = `${tick}/${unitId}/${kind}${text}/${cls}/${source}`;
+    const key = `${tick}/${unitId}/${kind}/${cls}/${source}`;
     const old = floats.find(item => item.key === key);
-    if (old) { if (kind !== 'status') old.amount += amount; return; }
+    if (old) { old.amount += amount; return; }
     const perUnit = floats.filter(item => item.unitId === unitId);
     // One number more than SHOWN on a unit: its earliest one fades out now.
     const showing = perUnit.filter(item => item.at + item.life > at);
@@ -132,7 +131,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     if (perUnit.length >= PER_UNIT) { const first = perUnit.find(item => item.cls !== 'crit') ?? perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= ALL) release(floats.shift()!);
     const l = look(kind, cls, burn);
-    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, text, at, measured: Number.NaN, life: LIFE_MS[cls], px: l.px });
+    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, at, measured: Number.NaN, life: LIFE_MS[cls], px: l.px });
   }
   return {
     push(events, at) {
@@ -142,10 +141,10 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         // Absorbed damage shows on the bar's shield segment, not as a number.
         if (event.type === 'packetDamage') {
           const tick = event.delivery === 'ability-periodic' || event.delivery === 'item-burn';
-          add(event.tick, event.targetId, event.damageType, event.hpDamage, at, '', event.critical ? 'crit' : tick ? 'tick' : 'plain', event.sourceId, event.delivery === 'item-burn');
+          add(event.tick, event.targetId, event.damageType, event.hpDamage, at, event.critical ? 'crit' : tick ? 'tick' : 'plain', event.sourceId, event.delivery === 'item-burn');
         }
+        // Only damage and heals float, as in the original; a status (stun, knock-up, shred, sunder, burn…) shows no word.
         else if (event.type === 'heal') add(event.tick, event.targetId, 'heal', event.actual, at);
-        else { const status = appliedStatusFloat(event); if (status && event.type === 'statusChanged') add(event.tick, event.targetId, 'status', 1, at, status); }
       }
     },
     render(now, anchors, obstacles = [], bars = new Map()) {
@@ -159,7 +158,7 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       const visible: { item: Float; anchor: FeedbackAnchor }[] = [];
       for (const item of floats) {
         const anchor = anchors.get(item.unitId); hidden(item.label, !anchor); if (!anchor) continue;
-        const text = item.kind === 'status' ? item.text : `${item.kind === 'heal' ? '+' : ''}${item.amount}`;
+        const text = `${item.kind === 'heal' ? '+' : ''}${item.amount}`;
         if (item.label.textContent !== text) { item.label.textContent = text; item.measured = Number.NaN; }
         visible.push({ item, anchor });
       }
