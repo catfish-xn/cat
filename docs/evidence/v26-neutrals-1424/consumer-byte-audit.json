@@ -2961,9 +2961,9 @@
     "tests/rendering3d-timed-form.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6272,
+      "currentBytes": 12746,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f935a200afa84aa5311106ac4bdd53a3b75b8c27c42e78fac2d279108138786a",
+      "currentSha256": "07b46fd434d495352fa5f1955f74ddf7ec4f324be582506d612323ed1a5f9173",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-trait-props.test.ts": {

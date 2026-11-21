@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { AnimationClip, Bone, BoxGeometry, Group, Mesh, MeshBasicMaterial, NumberKeyframeTrack, type Object3D } from 'three';
+import { AnimationClip, Bone, BoxGeometry, Float32BufferAttribute, Group, Mesh, MeshBasicMaterial, NumberKeyframeTrack, Skeleton, SkinnedMesh, Uint16BufferAttribute, VectorKeyframeTrack, type Object3D } from 'three';
 import { UnitAnimationMixer } from '../src/rendering3d/animation-mixer';
-import { TIMED_FORMS } from '../src/rendering3d/submesh-visibility';
+import { CUTOUT_ALPHA, CUTOUT_SUBMESHES, TIMED_FORMS, cutOutSubmeshes } from '../src/rendering3d/submesh-visibility';
 import { createTimedFormEvents } from '../src/rendering/three-mode/timed-form-events';
 import { DRMUNDO_BLAST_AFTER_PULSE_TICKS as DRMUNDO_BLAST_3D, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { DRMUNDO_BLAST_AFTER_PULSE_TICKS } from '../src/simulation/cast-windup';
@@ -55,6 +55,50 @@ describe('timed form events (rule events only)', () => {
   });
 });
 
+describe('Swain\'s wings (rule events only)', () => {
+  const swainEnded = (tick: number, id = 's') => ev({ type: 'abilityEffectEnded', tick, unitId: id, effect: 'swain-ascension', targetIds: [] });
+  const forms = (form: 'front' | 'back' | undefined = 'front') => createTimedFormEvents(id => (id === 's' || id === 's2' ? 'swain' : id === 'm' ? 'drmundo' : 'other'), () => form);
+  it('turns on with a completed front-form cast and off when the ascension ends; a recast while on changes nothing', () => {
+    expect(TIMED_FORMS.swain).toEqual({ show: ['wings'], hide: [] });
+    const f = forms();
+    expect(f.next(cast(100, 's'))).toEqual({ id: 's', on: true });
+    expect(f.next(cast(140, 's'))).toBeUndefined();
+    expect(f.next(swainEnded(150, 'm'))).toBeUndefined();
+    expect(f.next(swainEnded(260, 's'))).toEqual({ id: 's', on: false });
+    expect(f.next(swainEnded(261, 's'))).toBeUndefined();
+    // The heal ending of Dr. Mundo's ascension-like effect never touches Swain.
+    expect(f.next(cast(300, 's'))).toEqual({ id: 's', on: true });
+    expect(f.next(ended(301, 's'))).toBeUndefined();
+  });
+  it('ends on death; a back-form cast, an interrupted cast or a replayed event turns nothing on; clear() drops it', () => {
+    const f = forms();
+    f.next(cast(0, 's'));
+    expect(f.next(death(10, 's'))).toEqual({ id: 's', on: false });
+    expect(forms('back').next(cast(0, 's2'))).toBeUndefined();
+    expect(createTimedFormEvents(() => 'swain', () => undefined).next(cast(0, 's2'))).toBeUndefined();
+    const g = forms();
+    expect(g.next(ev({ type: 'cast', tick: 5, sourceId: 's2', targetIds: [], completed: false }))).toBeUndefined();
+    const on = cast(6, 's2');
+    expect(g.next(on)).toEqual({ id: 's2', on: true });
+    expect(g.next(on)).toBeUndefined();
+    g.clear();
+    expect(g.next(swainEnded(20, 's2'))).toBeUndefined();
+  });
+});
+
+describe('cut-out submeshes', () => {
+  it('gives only the named submeshes\' materials the alpha cut-out', () => {
+    expect(CUTOUT_SUBMESHES.swain).toEqual(['wings']);
+    const root = model('Swain_Body_Mat', 'wings');
+    cutOutSubmeshes(root, CUTOUT_SUBMESHES.swain);
+    const tests: Record<string, number> = {};
+    root.traverse(o => { const m = o as Mesh; if (m.isMesh) tests[(m.material as MeshBasicMaterial).name] = (m.material as MeshBasicMaterial).alphaTest; });
+    expect(tests).toEqual({ Swain_Body_Mat: 0, wings: CUTOUT_ALPHA });
+    cutOutSubmeshes(root, undefined);
+    expect(CUTOUT_ALPHA).toBeGreaterThan(0); expect(CUTOUT_ALPHA).toBeLessThan(1);
+  });
+});
+
 /** A model with one mesh per submesh (material of the same name). */
 function model(...submeshes: string[]): Group {
   const root = new Group(), bone = new Bone(); bone.name = 'joint'; root.add(bone);
@@ -85,6 +129,71 @@ describe('timed form over clips', () => {
     mixer.apply({ state: 'idle', previous: 'idle', blendSeconds: 0, loop: true, revision: 1 });
     mixer.setTimedForm(true); mixer.update(0.1);
     expect(visible(root)).toEqual(['Base']);
+    mixer.dispose();
+  });
+});
+
+/** A skinned model: body on bone 'root', the form's submesh 'Alt' on bone 'arm' only. */
+function skinned(): Group {
+  const root = new Group(), rootBone = new Bone(), arm = new Bone(); rootBone.name = 'root'; arm.name = 'arm'; rootBone.add(arm); root.add(rootBone);
+  const skeleton = new Skeleton([rootBone, arm]);
+  for (const [name, bone] of [['Base', 0], ['Alt', 1]] as const) {
+    const geometry = new BoxGeometry(1, 1, 1), count = geometry.getAttribute('position').count;
+    geometry.setAttribute('skinIndex', new Uint16BufferAttribute(new Array(count * 4).fill(0).map((_, i) => i % 4 === 0 ? bone : 0), 4));
+    geometry.setAttribute('skinWeight', new Float32BufferAttribute(new Array(count * 4).fill(0).map((_, i) => i % 4 === 0 ? 1 : 0), 4));
+    const material = new MeshBasicMaterial(); material.name = name;
+    const mesh = new SkinnedMesh(geometry, material); mesh.bind(skeleton); root.add(mesh);
+  }
+  return root;
+}
+const moving = (name: string, bone: string, to: number) => new AnimationClip(name, 1, [new VectorKeyframeTrack(`${bone}.position`, [0, 1], [0, 0, 0, to, 0, 0])]);
+
+describe('timed form entry and exit clips', () => {
+  const build = () => {
+    const root = skinned();
+    const clips = [new AnimationClip('rest', 1, [new VectorKeyframeTrack('root.position', [0, 1], [5, 0, 0, 5, 0, 0]), new VectorKeyframeTrack('arm.position', [0, 1], [1, 0, 0, 1, 0, 0])]),
+      moving('grow', 'arm', 9), moving('shrink', 'arm', -9)];
+    const mixer = new UnitAnimationMixer(root, clips, { idle: 'rest' }, { timedForm: { show: ['Alt'], hide: [] }, submeshVisibility: { initiallyHidden: ['Alt'] }, timedFormClips: { enter: 'grow', exit: 'shrink' } });
+    mixer.apply({ state: 'idle', previous: 'idle', blendSeconds: 0, loop: true, revision: 1 });
+    const bone = (name: string) => { let b: Bone | undefined; root.traverse(o => { if ((o as Bone).isBone && o.name === name) b = o as Bone; }); return b!; };
+    return { root, mixer, bone };
+  };
+  it('plays the entry clip on the form\'s bones only, then hands them back to the body\'s clip', () => {
+    const { root, mixer, bone } = build();
+    mixer.update(0.1);
+    expect(visible(root)).toEqual(['Base']);
+    mixer.setTimedForm(true); mixer.update(0.5);
+    expect(visible(root)).toEqual(['Alt', 'Base']);
+    expect(bone('arm').position.x).toBeCloseTo(4.5, 1);
+    expect(bone('root').position.x).toBeCloseTo(5, 3);
+    mixer.update(0.6); mixer.update(0.3);
+    expect(bone('arm').position.x).toBeCloseTo(1, 3);
+    mixer.dispose();
+  });
+  it('keeps the form shown through the exit clip and hides it when that ends; immediate hides it at once', () => {
+    const { root, mixer } = build();
+    mixer.setTimedForm(true); mixer.update(1.5);
+    mixer.setTimedForm(false); mixer.update(0.5);
+    expect(visible(root)).toEqual(['Alt', 'Base']);
+    mixer.update(0.6);
+    expect(visible(root)).toEqual(['Base']);
+    mixer.setTimedForm(true); mixer.update(0.2);
+    mixer.setTimedForm(false, true);
+    expect(visible(root)).toEqual(['Base']);
+    mixer.dispose();
+  });
+  it('two combats in a row: the second starts with the form off and turns it on again on its own cast', () => {
+    const f = createTimedFormEvents(id => (id === 's' ? 'swain' : 'other'), () => 'front');
+    const { root, mixer } = build();
+    const run = (from: number) => {
+      const on = f.next(cast(from, 's'))!; expect(on).toEqual({ id: 's', on: true }); mixer.setTimedForm(on.on); mixer.update(1.5);
+      expect(visible(root)).toEqual(['Alt', 'Base']);
+    };
+    run(10);
+    // The combat ends mid-form (no ascension end): the renderer clears its events and turns every form off at once.
+    f.clear(); mixer.setTimedForm(false, true);
+    expect(visible(root)).toEqual(['Base']);
+    run(400);
     mixer.dispose();
   });
 });

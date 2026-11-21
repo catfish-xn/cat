@@ -1,6 +1,6 @@
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, PropertyBinding, type AnimationAction, type KeyframeTrack, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
-import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations, type SubmeshVisibility } from './contracts';
+import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations, type SubmeshVisibility, type TimedFormClips } from './contracts';
 import { SUBMESH_EVENT_FPS, SubmeshSwitch, type TIMED_FORMS } from './submesh-visibility';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
@@ -97,6 +97,11 @@ function heldTiming(raw: readonly number[], playback: ActionPlayback, hasOut: bo
 }
 
 /** Applies complete sequences, including overflow across stages in one update. */
+/** A timed form's entry or exit clip outweighs the body's clip on the form's bones (weights blend by share). */
+const FORM_CLIP_WEIGHT = 1e4;
+/** Seconds the entry clip's bones take to hand back to the body's clip after it ends. */
+const FORM_CLIP_FADE = 0.2;
+
 export class UnitAnimationMixer {
   readonly mixer: AnimationMixer;
   private active?: AnimationAction;
@@ -124,7 +129,14 @@ export class UnitAnimationMixer {
   private submeshes?: SubmeshSwitch;
   /** Seconds the active play-once clip has held its last frame: its events keep their frame times past the clip's end. */
   private heldSeconds = 0;
-  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility; timedForm?: (typeof TIMED_FORMS)[string] } = {}) {
+  /**
+   * The timed form's entry or exit clip playing over the base clip, on the bones that move the form's submeshes only:
+   * its weight share (1 while it plays, easing to 0 over FORM_CLIP_FADE once it ends) and whether the form hides when
+   * it ends (the exit clip).
+   */
+  private formClip?: { action: AnimationAction; left: number; share: number; exit: boolean };
+  private formClips = new Map<string, AnimationClip | null>();
+  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility; timedForm?: (typeof TIMED_FORMS)[string]; timedFormClips?: TimedFormClips } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
     this.submeshes = SubmeshSwitch.create(root, metadata.submeshVisibility, metadata.timedForm);
@@ -333,11 +345,53 @@ export class UnitAnimationMixer {
     }
     this.pose.on = on;
   }
-  /** Turn the model's timed form (TIMED_FORMS) on or off; it shows over every clip until turned off. */
-  setTimedForm(on: boolean): void {
+  /**
+   * Turn the model's timed form (TIMED_FORMS) on or off; it shows over every clip until turned off. With the manifest's
+   * timedFormClips, turning it on plays the entry clip on the form's bones (over whatever the body plays), and turning it
+   * off plays the exit clip there first and hides the form when that ends. `immediate` (a new combat or a rewind) turns
+   * it off at once, with no clip.
+   */
+  setTimedForm(on: boolean, immediate = false): void {
     if (!this.submeshes) return;
-    this.submeshes.setForm(on);
+    this.stopFormClip();
+    if (on) {
+      this.submeshes.setForm(true);
+      if (!immediate) this.startFormClip(this.metadata.timedFormClips?.enter, false);
+    } else if (immediate || !this.submeshes.formOn || !this.startFormClip(this.metadata.timedFormClips?.exit, true)) this.submeshes.setForm(false);
     this.switchSubmeshes();
+  }
+  /** The named clip cut to the tracks of the bones that skin the form's submeshes (null when it has none of them). */
+  private formTracks(name: string): AnimationClip | null {
+    if (this.formClips.has(name)) return this.formClips.get(name)!;
+    const source = this.clips.get(name), bones = this.submeshes?.formBones();
+    const tracks = source && bones?.size ? source.tracks.filter(track => bones.has(PropertyBinding.parseTrackName(track.name).nodeName)) : [];
+    const clip = tracks.length ? new AnimationClip(`${name}:form`, source!.duration, tracks) : null;
+    this.formClips.set(name, clip);
+    return clip;
+  }
+  private startFormClip(name: string | undefined, exit: boolean): boolean {
+    const clip = name ? this.formTracks(name) : null;
+    if (!clip || !(clip.duration > 0)) return false;
+    const action = this.mixer.clipAction(clip);
+    action.reset().setLoop(LoopOnce, 1).setEffectiveTimeScale(1).setEffectiveWeight(FORM_CLIP_WEIGHT);
+    action.clampWhenFinished = true;
+    action.play();
+    this.formClip = { action, left: clip.duration, share: 1, exit };
+    return true;
+  }
+  private stopFormClip(): void {
+    this.formClip?.action.stop();
+    this.formClip = undefined;
+  }
+  private updateFormClip(seconds: number): void {
+    const clip = this.formClip;
+    if (!clip) return;
+    if (clip.left > 0) { clip.left -= seconds; if (clip.left > 0) return; }
+    if (clip.exit) { this.stopFormClip(); this.submeshes?.setForm(false); this.switchSubmeshes(); return; }
+    // The entry clip ends in the form's spread pose: hand its bones back to the body's clip over FORM_CLIP_FADE.
+    clip.share = Math.max(0, clip.share - seconds / FORM_CLIP_FADE);
+    if (clip.share <= 0) { this.stopFormClip(); return; }
+    clip.action.setEffectiveWeight(clip.share >= 1 ? FORM_CLIP_WEIGHT : clip.share / (1 - clip.share));
   }
   /** The status pose's share of its bones right now (0 when there is none). */
   get statusPoseFraction(): number { return this.pose?.fraction ?? 0; }
@@ -402,6 +456,7 @@ export class UnitAnimationMixer {
   update(seconds: number): void {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
     this.updatePose(seconds);
+    this.updateFormClip(seconds);
     if (this.releaseLeft > 0) {
       if (seconds < this.releaseLeft) { this.mixer.update(seconds); this.releaseLeft -= seconds; this.switchSubmeshes(); return; }
       this.mixer.update(this.releaseLeft); seconds -= this.releaseLeft; this.releaseLeft = 0;
@@ -431,5 +486,5 @@ export class UnitAnimationMixer {
       this.heldSeconds += Math.max(0, from + seconds * last.timeScale - last.getClip().duration);
     this.switchSubmeshes();
   }
-  dispose(): void { for (const part of this.pose?.parts ?? []) part.action.stop(); this.pose = undefined; this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.releaseLeft = 0; }
+  dispose(): void { this.stopFormClip(); for (const part of this.pose?.parts ?? []) part.action.stop(); this.pose = undefined; this.stopLayers(); this.dropFadedLayers(); this.mixer.stopAllAction(); this.mixer.uncacheRoot(this.root); this.active = undefined; this.queue = []; this.stageLeft = 0; this.releaseLeft = 0; }
 }

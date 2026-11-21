@@ -55,6 +55,7 @@ export function attackReleaseSeconds(release: AttackRelease | undefined, interva
 }
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface SubmeshVisibilityEvent { frame: number; show: readonly string[]; hide: readonly string[] }
+export interface TimedFormClips { enter?: string; exit?: string }
 export interface SubmeshVisibility { initiallyHidden?: readonly string[]; events?: Record<string, readonly SubmeshVisibilityEvent[]> }
 export interface AssetManifest {
   schemaVersion: 1;
@@ -78,6 +79,11 @@ export interface AssetManifest {
      * submeshes are shown or hidden, as the source animation graph's SubmeshVisibilityEventData does.
      */
     submeshVisibility?: SubmeshVisibility;
+    /**
+     * `timedFormClips` (optional, written by scripts/assets3d/clip-append.mjs): the clips that enter and leave the model's
+     * timed form (rendering3d TIMED_FORMS); the renderer plays each on the bones that move the form's submeshes.
+     */
+    timedFormClips?: TimedFormClips;
   } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
@@ -207,6 +213,11 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
       !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
     if (entry.formAnimations !== undefined) assertFormAnimations(entry.formAnimations);
+    if (entry.timedFormClips !== undefined) {
+      const clips = entry.timedFormClips as unknown;
+      if (!isPlainObject(clips) || Object.entries(clips).some(([k, v]) => !['enter', 'exit'].includes(k) || typeof v !== 'string' || !v.trim()))
+        throw new Error('invalid-timed-form-clips');
+    }
     if (entry.clipRanges !== undefined) assertClipRanges(entry.clipRanges);
     if (entry.clipSegments !== undefined) assertClipSegments(entry.clipSegments);
     if (entry.attackSequence !== undefined) assertAttackSequence(entry.attackSequence);

@@ -709,8 +709,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   // Persistent layers ended by a status or a later hit (sustain-stops.ts).
   const sustainStops = createSustainStops(id => pieces.get(id)?.definitionId);
-  // A timed form (Dr. Mundo's ultimate body) follows its rule events over whatever clip plays (timed-form-events.ts).
-  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId);
+  // A timed form (Dr. Mundo's ultimate body, Swain's wings) follows its rule events over whatever clip plays (timed-form-events.ts).
+  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.form);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.
@@ -1191,6 +1191,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
     generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear();
+    // A new combat or a rewind starts every timed form off, at once (its events were just cleared with it).
+    for (const view of pieces.values()) view.mixer?.setTimedForm(false, true);
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
