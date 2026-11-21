@@ -3865,14 +3865,6 @@
       "currentSha256": "2663153f2c1ba3fd1399353f6c35aff675d3902b2074cee5a70c46981a06c035",
       "firstDifferentByte": 0
     },
-    "tests/server/zz-rngstat.test.ts": {
-      "previousExists": false,
-      "previousBytes": 0,
-      "currentBytes": 4875,
-      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "002aaf4945a21c670193c32dce8b6ce703f330e1b16bc74e9f3deaf5881ddd61",
-      "firstDifferentByte": 0
-    },
     "tests/sevika-high-roller-triple.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
