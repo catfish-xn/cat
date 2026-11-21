@@ -32,7 +32,7 @@ describe('Violet combo timing', () => {
     expect(mine(r.out)).toEqual([...VIOLET_JAB_TICKS.map(at => cast + at), cast + VIOLET_UPPERCUT_TICKS]);
   });
   it('the knock-up starts with the uppercut, not on the cast', () => {
-    const stunned = (tick: number) => run(start, tick - start.tick).state.units.find(u => u.id === 'e')!.statuses.some((x: any) => x.kind === 'stun');
+    const stunned = (tick: number) => run(start, tick - start.tick).state.units.find(u => u.id === 'e')!.statuses?.some((x: any) => x.kind === 'stun');
     expect(stunned(cast + VIOLET_UPPERCUT_TICKS - 1)).toBe(false);
     expect(stunned(cast + VIOLET_UPPERCUT_TICKS)).toBe(true);
   });
