@@ -4,6 +4,7 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
+import { loris } from '../src/rendering/three-mode/vfx-ltk/batch3/loris';
 import { battle, unit } from './combat-helpers';
 import { readFileSync } from 'node:fs';
 import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
@@ -71,6 +72,19 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     expect(brace[0]!.tick).toBeGreaterThan(cast.tick);
   });
 
+  it('Mordekaiser: one event the tick his empowered time runs out (mordeUntilTick)', () => {
+    const untils = new Set<number>();
+    const r = advance(battle([hero('mordekaiser'), dummy()], { rngState: 42 }), 260,
+      state => { untils.add((state.units.find(u => u.id === 'p') as { g22?: { mordeUntilTick: number } } | undefined)?.g22?.mordeUntilTick ?? 0); });
+    const cast = r.events.find(e => e.type === 'cast')!;
+    const empower = ended(r.events).filter(e => e.effect === 'mordekaiser-empower');
+    expect(empower.length).toBeGreaterThan(0);
+    expect(empower[0]).toMatchObject({ unitId: 'p', targetIds: [] });
+    expect(empower[0]!.tick).toBeGreaterThan(cast.tick);
+    // Each signal comes the tick an empowered time the rules set runs out.
+    for (const e of empower) expect(untils.has(e.tick)).toBe(true);
+  });
+
   it('Swain: one event the first tick past his demon form (takedown extensions included)', () => {
     let until = 0;
     const r = advance(battle([hero('swain'), dummy()], { rngState: 42 }), 400,
@@ -117,7 +131,9 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
     const cues = [...CUE_OVERRIDES.leblanc!, ...CUE_OVERRIDES.twitch!, ...CUE_OVERRIDES.drmundo!, ...CUE_OVERRIDES.vander!, ...CUE_OVERRIDES.blitzcrank!,
       ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!, ...CUE_OVERRIDES.vi!, ...CUE_OVERRIDES.viktor!,
       // 2026-11-16: shields on others (Mel's, Jayce's forge) end with the shielded ally's layer (abilityShieldEndedOnHolder).
-      ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!];
+      ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!,
+      // 2026-11-20: Loris's Q ground ring (his index list, held per skill: SUSTAIN_SKILL_CAPS) ends with his shield layer.
+      ...loris.loris!];
     const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
       Array.isArray(v.systems) ? [[k, v.systems as readonly string[]]] : Object.entries(v.systems as Record<string, readonly string[] | { systems: readonly string[] }>)
         .map(([a, l]) => [`${k} ${a}`, Array.isArray(l) ? l as readonly string[] : (l as { systems: readonly string[] }).systems]));

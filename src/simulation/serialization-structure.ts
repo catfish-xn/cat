@@ -75,7 +75,7 @@ import { planCatalogRoundEconomy } from './opening-economy';
 import { getCatalogRoundByOrdinal } from './round-selectors';
 import { freezeContent } from './content/freeze';
 import { grantXp } from './progression';
-import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
+import { sourceKey, variable, mechanic, champion, heroLive } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
@@ -84,6 +84,7 @@ import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
 import { validateSeatMechanicsState } from './seat-mechanics/state';
 import { isMechanicChoice, validateMechanicPendingChoice } from './seat-mechanics/choices';
+import { combatGrowthSteps, growthRepresentable, validLedgerGrowth } from './persistent-growth';
 
 // Reuse the pure default-catalog compilation, never any candidate validation.
 // Only local, already authenticated JSON basis inputs enter this byte-keyed map.
@@ -331,7 +332,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   requireValue(same(state.augmentProgress.magicRoll ?? null, expectedMagicRoll(state) ?? null), 'magic roll progress');
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
-    requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
+    requireValue(units.has(growth.unitId) && validLedgerGrowth(growth.attackDamageBps, units.get(growth.unitId)!.definitionId, state.augments.map(a => a.definitionId), state.round) && !growthIds.has(growth.unitId), 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (settled ? batch2HpAfterSettlement(state,state.round,state.roundResults.at(-1)!.hpAfter) : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
   if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round),augmentLevelCap(state.augments)), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
@@ -382,6 +383,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       list(combat.removedUnitIds);
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
+    }
+    if (combat.departedUnits !== undefined) {
+      list(combat.departedUnits); for (const unit of combat.departedUnits) record(unit);
+      requireValue(combat.departedUnits.length > 0 && combat.departedUnits.every(unit => typeof unit.id === 'string' && combat.removedUnitIds?.includes(unit.id))
+        && new Set(combat.departedUnits.map(unit => unit.id)).size === combat.departedUnits.length, 'departed combat units');
     }
     // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
@@ -523,8 +529,9 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
   integer(unit.attackDamageBase); integer(unit.attackDamagePercentBps); integer(unit.abilityPower); integer(unit.baseAttackSpeedBps, 1); integer(unit.attackSpeedBonusBps);
   record(unit.runtime);
   for (const field of ['attackCount','castCount','attackSpeedBps','abilityPowerFlat','rangeBonus','nextAttackMagic','nextAttackPhysical','permanentAdBps']) integer(unit.runtime[field as keyof typeof unit.runtime]);
-  requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick && unit.runtime.permanentAdBps % 125 === 0, 'combat runtime');
-  if (unit.definitionId !== 'tristana') requireValue(unit.runtime.permanentAdBps === 0, 'growth owner');
+  requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick, 'combat runtime');
+  const growthSteps = combatGrowthSteps(unit.definitionId, heroLive(unit));
+  requireValue(unit.runtime.permanentAdBps === 0 || growthRepresentable(unit.runtime.permanentAdBps, growthSteps), growthSteps.length ? 'combat runtime' : 'growth owner');
   if (unit.g22 !== undefined) {
     record(unit.g22); const g = unit.g22;
     requireValue(typeof g.initialized === 'boolean' && typeof g.rebelTriggered === 'boolean', 'G22 flags');
@@ -576,7 +583,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     possibleAp.add(archangels.reduce((sum, m) => sum + Math.floor(at / m.values.periodTicks) * m.values.abilityPower, 0));
   const periodicAp = runtime.abilityPowerFlat - triggeredAbilityPowerGrowth(unit,combatId);
   requireValue(unit.alive ? periodicAp === maximumAp : possibleAp.has(periodicAp), 'derived ability power');
-  requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
+  requireValue(runtime.permanentAdBps <= runtime.castCount * Math.max(0, ...combatGrowthSteps(champion(unit), heroLive(unit))), 'derived growth bound');
   if (runtime.nextAttackMagic > 0) {
     requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...abilityPowerCandidates(unit,0,combatId)].some(ap=>[...possibleAp].some(value =>
       Math.floor((ap + value) * variable(unit, 'Damage') / 100) === runtime.nextAttackMagic)), 'derived empowered magic');

@@ -1049,6 +1049,9 @@ function execute_selectChoice(state: MatchState, choiceId: string, generation: n
   const choice = state.pendingChoice!;
   if (isMechanicChoiceKind(choice.kind)) return completeMechanicChoice(state, definitionId, false,unitLootPolicy);
   if (typeof definitionId !== 'string' || choice.step !== 'offer' || !choice.offers.includes(definitionId)) return fail(state, 'invalid-choice');
+  // Recombobulator draws its transforms from the shared pool: outside the room's pool transaction (a bot's preflight)
+  // a shared seat cannot evaluate it, so it is refused rather than thrown (the room runs it with the pool).
+  if (choice.kind === 'augment' && definitionId === 'recombobulator' && state.sharedPool && !unitLootPolicy) return fail(state, 'shared-pool-required');
   const descriptor=unresolvedLootChoices(state)[0];
   if (descriptor && makeLootPendingChoice(descriptor).choiceId===choiceId) {
     if (choice.kind!=='component' || generation!==0 || !state.combat || state.combat.status!=='finished') return fail(state,'invalid-choice');

@@ -25,7 +25,7 @@ describe('early-stop group A plays to each system\'s own end', () => {
     expect(override.map(c => c.system)).toEqual(exported.map(c => c.system));
     override.forEach((c, i) => { if (c.system !== '6d6525e8') expect(c).toBe(exported[i]); });
   });
-  it('Mordekaiser keeps the commented stop on a7c49a29', () => {
-    expect(cue(CUE_OVERRIDES.mordekaiser, 'a7c49a29')).toMatchObject({ stopAfter: 0.08 });
+  it('Mordekaiser\'s grasp (a7c49a29) plays out whole: its pit and walls are held off by emitter instead (Fable 11-19)', () => {
+    expect(cue(CUE_OVERRIDES.mordekaiser, 'a7c49a29')!.stopAfter).toBeUndefined();
   });
 });

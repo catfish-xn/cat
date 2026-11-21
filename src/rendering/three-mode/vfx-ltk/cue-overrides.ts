@@ -23,6 +23,11 @@ import { S13_TIMELINES } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/**
+ * Seconds a cue that plays out at its end (TimelineCue.playOut) may keep its particles after it, at most: our own cap
+ * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
+ */
+export const PLAY_OUT_AT_DEADLINE = 0.5;
 /** Draven's empowered axe, thrown and (CUE_EXTRA_SKILLS draven-return) flying back. */
 export const DRAVEN_AXE = '5d31debe';
 /** Seconds his landed axe takes to fly back to his hand (自定，非原版). */
@@ -248,6 +253,14 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
 
 /** Singed's flask: released this long into his cast (a fitted display value), then in flight this long. */
 const SINGED_FLASK_RELEASE = 0.5, SINGED_FLASK_FLIGHT = 0.35;
+/**
+ * Ziggs's bomb, as drawn (C71): his main bomb's release and flight (fitted, as before), when it lands, and his split bombs'
+ * flight from there: 10 combat ticks (0.05 s each), a display rhythm of our own, not the original's; their lob too is our own.
+ */
+const ZIGGS_BOMB = (() => {
+  const release = 0.3, flight = 0.5;
+  return { release, flight, lands: release + flight, split: 10 * 0.05, arc: { gravity: 6000, targetOffset: 0 } } as const;
+})();
 /** When the flask lands on the ally's head: what it brings starts then. */
 const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
@@ -334,14 +347,34 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd07052bc', action: 'cast', event: 'hit', delay: 0.4, duration: 0.55, bone: chest, targetLimit: 3 },
     { system: 'f4a6240a', action: 'cast', event: 'cast-start', delay: 1.1, duration: 1.1, bone: chest },
   ],
-  // Mace glow only. E_floor's pit and its claw share one system, so emission stops before the pit. Ult enter stays out.
+  // His cast: the hand glow and trail, his grasp played whole along the struck line (its pit and walls held off in
+  // DISABLED_EMITTERS), its shockwave and flash on each enemy struck, and his aura. His empowered attacks carry the mace
+  // glow and charge. Ult enter stays out.
   mordekaiser: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
-    { system: '04ae533c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
+    // The swing his attack clip carries, with that clip (the one our renderer plays for his attacks), at its layout point;
+    // the lowest, attack rank (Fable 11-19). Plain attacks only: his empowered attack clip carries the mace glow and charge
+    // and no swing, so his empowered attacks (the empowered cues below) draw none.
+    { system: '867941e7', action: 'attack', event: 'cast-start', delay: 16 / 30, duration: 0.8, bone: 'C_Buffbone_Glb_Layout_Loc' },
     { system: '5449dd85', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Mace_Loc' },
     { system: '0a5d1c08', action: 'cast', event: 'cast-start', delay: 0.05, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc' },
-    // Walls and the pit are born a moment into this system (as authored, not hand-tuned). Stop before that and keep the opening slash.
-    { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 1.4, stopAfter: 0.08, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    // His grasp: the claw, its swipes, the cracks and the closing burn play out along the line his cast strikes (the cast's
+    // first target lies on it: the anchor aims there); its pit and walls are held off (DISABLED_EMITTERS). The skill's body.
+    { system: 'a7c49a29', action: 'cast', event: 'cast-start', delay: 0.05, duration: 3.5, bone: 'BUFFBONE_GLB_GROUND_LOC' },
+    // The grasp's ground shockwave and its hit flash on each enemy his cast strikes.
+    { system: '38c1db88', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
+    { system: 'ed3f2170', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
+    // His empowered attacks (batch1-events.ts: while his cast's empowered time runs) light and charge his mace, as his
+    // empowered attack clip carries them (not his cast); decoration.
+    { system: '21bee60f', action: 'attack', variant: 'empowered', event: 'cast-start', delay: 0, duration: 1, bone: 'Buffbone_Glb_Mace_Loc', rank: 'decorative' },
+    { system: '04ae533c', action: 'attack', variant: 'empowered', event: 'cast-start', delay: 0, duration: 0.7, bone: 'Buffbone_Glb_Mace_Loc', rank: 'decorative' },
+    // An empowered attack plays only the empowered cues (a play selects by variant), so it carries its own copy of the attack
+    // hit: without it his empowered attacks would show no hit at all. One hit per attack, not two.
+    { system: '0f2af66b', action: 'attack', variant: 'empowered', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6, duration: 1.5 },
+    // His slam's red ground burst: once on each empowered attack's hit, on the ground at its main target, for the asset's own
+    // time (ownLife); nothing held between hits (Fable 11-20, from the original's slams). The enemies the slam splashes get no
+    // burst of their own. Its dark ground glow stays held off (DISABLED_EMITTERS).
+    { system: '938c104f', action: 'attack', variant: 'empowered', event: 'hit', bone: 'BUFFBONE_GLB_GROUND_LOC', delay: 0.6, duration: 1.5, ownLife: true, primary: true },
   ],
   // The index list without Q_tar: her hit plays at her kick's damage event instead, by damage type (CUE_EXTRA_SKILLS camille-q-*).
   camille: [
@@ -363,6 +396,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 6.4, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
     { system: '29d01632', action: 'cast', event: 'link', delay: 0.78, duration: 5, bone: 'BUFFBONE_GLB_WEAPON_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 6.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    // Her channel glow and swirling petals at her weapon hand, held until the rules' chain ends (SUSTAIN_CAPS, CUE_END_STOPS
+    // 'leblanc-chain'). The skill's body: it never yields (Fable 11-19).
+    { system: 'acd84091', action: 'cast', event: 'cast-start', delay: 0, duration: 0.8, bone: 'BUFFBONE_GLB_WEAPON_1', rank: 'critical' },
     { system: '0a2eef95', action: 'cast', event: 'hit', delay: 0.85, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Cast keeps the green aura; every bolt is an empowered attack (batch1-events aims it at the enemies it pierced).
@@ -399,13 +435,22 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { action: 'attack', variant: 'empowered', system: '6fb6c5e5', event: 'hit', delay: 0.3, duration: 1, ownLife: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
   ],
   // Ziggs's main bomb (Q_mis_01, 52963b0a) flies to the target and lands on the index's explosion (04c3cba0) at its index timing. The
-  // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. His split
-  // minibombs have no exported system.
+  // engine draws it on a straight line, not the original's high lob; its release and flight time are fitted. It leaves his
+  // weapon buff bone, as his attack does: the skeleton has no bone named `weapon`, which fell back to his feet (C71). The explosion is the
+  // primary target's and plays its whole own life (its smoke clouds included, ownLife).
   ziggs: [
-    { system: '7f403068', action: 'attack', event: 'projectile', bone: 'weapon', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '7f403068', action: 'attack', event: 'projectile', bone: 'buffbone_glb_weapon_1', delay: 0.3333333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6333333333333333, duration: 1.5 },
-    { system: '52963b0a', action: 'cast', event: 'projectile', bone: 'weapon', delay: 0.3, duration: 0.5, travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '04c3cba0', action: 'cast', event: 'hit', delay: 0.8, duration: 1.2 },
+    { system: '52963b0a', action: 'cast', event: 'projectile', bone: 'buffbone_glb_weapon_1', delay: ZIGGS_BOMB.release, duration: ZIGGS_BOMB.flight, travelSeconds: ZIGGS_BOMB.flight, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    { system: '04c3cba0', action: 'cast', event: 'hit', delay: ZIGGS_BOMB.lands, duration: 1.2, ownLife: true, primary: true },
+    // His split bombs, one per bomb the rules sent (receipt targets after the first, repeats kept): each leaves the main
+    // bomb's crater when it lands and arcs to its enemy (the same missile, 52963b0a), and bursts there (04c3cba0). The rules
+    // still settle every bomb on the cast tick; the display times them off the main bomb's landing until the rules time them.
+    // Bombs landing on one enemy together burst once there (mergeTicks): stacked copies of the burst at one spot added up
+    // to a flat white block (11-20).
+    { system: '52963b0a', action: 'cast', event: 'projectile', everyReceipt: true, fromPrimary: true, delay: ZIGGS_BOMB.lands, duration: ZIGGS_BOMB.split,
+      travelSeconds: ZIGGS_BOMB.split, arc: ZIGGS_BOMB.arc, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC', optional: true },
+    { system: '04c3cba0', action: 'cast', event: 'hit', everyReceipt: true, mergeTicks: 1, delay: ZIGGS_BOMB.lands + ZIGGS_BOMB.split, duration: 1.2, ownLife: true, optional: true },
   ],
   // Sett's slam (11-15): the cast plays his whole E_cas (f7d4d344, the exported cue's E_cas_child twice plus its ground
   // lines and ground planes) in the child's place, from the cast itself (fitted: lines its bright light up with the
@@ -538,7 +583,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'bdceb760', action: 'attack', event: 'projectile', bone: 'L_hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.6166666666666667, duration: 1.5 },
     { system: '11416b6c', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'Cstm_Buffbone_Cast_FX' },
-    { system: '9cb99eb2', action: 'cast', event: 'projectile', delay: 0.05, duration: 0.4, travelSeconds: 0.25, bone: 'Cstm_Buffbone_Cast_FX', targetBone: chest },
+    // At its end its trail plays out (PLAY_OUT_AT_DEADLINE) instead of being cut while still thick (11-19 evidence).
+    { system: '9cb99eb2', action: 'cast', event: 'projectile', delay: 0.05, duration: 0.4, travelSeconds: 0.25, bone: 'Cstm_Buffbone_Cast_FX', targetBone: chest, playOut: PLAY_OUT_AT_DEADLINE },
     { system: 'd887e7a6', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: ground, primary: true },
     { system: '79219c1e', action: 'cast', event: 'hit', delay: 0.3, duration: 0.8, bone: chest, targetLimit: 3 },
     { system: 'bc884cd6', action: 'cast', event: 'cast-start', delay: 0.7, duration: 0.5, bone: 'Cstm_Buffbone_Cast_FX' },
@@ -634,7 +680,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '952026ec', action: 'attack', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.5833333333333333, duration: 1.5 },
     { system: 'e4b6f1a3', action: 'cast', event: 'cast-start', delay: 0, duration: 0.8, bone: 'Weapon' },
-    { system: 'a64f66ee', action: 'cast', event: 'projectile', delay: 0.3, duration: 1, bone: 'L_Buffbone_Glb_Hand_Loc', travelSeconds: 1 },
+    // At its end it plays out (PLAY_OUT_AT_DEADLINE) instead of being cut while still thick (11-19 evidence).
+    { system: 'a64f66ee', action: 'cast', event: 'projectile', delay: 0.3, duration: 1, bone: 'L_Buffbone_Glb_Hand_Loc', travelSeconds: 1, playOut: PLAY_OUT_AT_DEADLINE },
     { system: '95bbab3d', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
     { system: '03b4d6ac', action: 'cast', event: 'hit', delay: 0.8, duration: 1.5 },
   ],
@@ -673,7 +720,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
         shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.tickCap } },
     { system: '07c9833a', action: 'cast', event: 'hit', delay: (HEIMER_ROCKETS.launchTicks + HEIMER_ROCKETS.flightTicks) * 0.05, duration: 1,
       rank: 'decorative', perStrike: { staggerTicks: HEIMER_ROCKETS.staggerTicks, spreadTicks: HEIMER_ROCKETS.spreadTicks,
-        shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.hitTickCap, mergeTicks: HEIMER_ROCKETS.hitMergeTicks } },
+        shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.hitTickCap }, mergeTicks: HEIMER_ROCKETS.hitMergeTicks },
   ],
   // Exported to the asset index; repeated here so the R heal plays its own life (up to the index cap) and ends
   // with the heal (CUE_END_STOPS).
@@ -864,9 +911,35 @@ export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
  */
 export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   '75cc1285': ['Alpha_Boarder'], '5875fa39': ['Alpha_Boarder'], '85a3c691': ['Alpha_Boarder'], '066fd22b': ['Alpha_Boarder'],
+  // LeBlanc's channel: its dark ground-layer backdrop draws a dark smudge beside her on our board (Windows probe 11-19: only
+  // this emitter darkens that spot). A temporary departure held off as a known difference until its look is checked
+  // (Fable 11-19); the rest of the system draws.
+  'acd84091': ['Alpha_Glow'],
+  // Mordekaiser's aura: its dark ground glow draws a dark red smudge beside him on our board (Windows probe 11-19: it is the
+  // main cause there). Held off as a known difference like LeBlanc's (Fable 11-19); the red glow, scorch and cracks draw.
+  '938c104f': ['Alpha_Glow_Dark'],
+  // Mordekaiser's grasp: the pit it opens and its walls stay off; the claw, swipes, cracks and burn draw (Fable 11-19).
+  'a7c49a29': ['Stencil_Cap', 'Mesh_Edge', 'Stencil_Gradient', 'Mesh_Edge_Red', 'Mesh_Edge_Dark', 'Stencil_InnerDarkness', 'Mesh_Walls_Red', 'Mesh_Walls_Dark'],
   // Smeech's stab hit: its large background glow draws a dark block on the enemy stabbed on our board. Held off as a known
   // difference (Fable 11-19); the rest of the hit draws.
   '9acdae50': ['Alpha_BgGlow_GreenBrown'],
+  // Irelia's shield: the cyan ring glow round the bubble is left out, with the bubble itself fainter (EMITTER_ALPHA; Fable
+  // 11-20, picked from a three-column toggle).
+  '67665513': ['Alpha_RingGlow'],
+  // Renni's final slam: when the slam kills, its dark ground decal draws a large near-black disc on our board where it
+  // lands, for about 0.5 s (Linux probe 11-20, with a kill; without one it never draws). Held off as a known difference
+  // (Fable 11-20, three columns with a kill); the rest of the system draws.
+  '2f79da6f': ['onKill_GlowDecal'],
+};
+
+/**
+ * Emitters drawn fainter here, by system and emitter name: each particle's alpha is multiplied by the factor. The factors
+ * are fitted/own values (拟合/自定，非原版), picked by eye on our board; colours are left as the asset has them.
+ */
+export const EMITTER_ALPHA: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  // Irelia's shield bubble read as a solid ball over her at full strength; half lets her body show through it (Fable 11-20,
+  // three-column toggle: this is that column as recorded, the swirl meshes included).
+  '67665513': { Add_Shield: 0.5, Swirl_Mesh: 0.5, Swirl_Mesh1: 0.5 },
 };
 
 /**
@@ -922,12 +995,14 @@ export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
-export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'swain-ascension', readonly string[]>> = {
-  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark.
-  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'],
+export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension', readonly string[]>> = {
+  // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark;
+  // and her channel glow (acd84091, held for the chain: SUSTAIN_CAPS).
+  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
   // The volley's buff glow (2beb0657) goes with the volley's last shot too.
   'twitch-volley': ['900dd2d2', '2beb0657'],
-  // Swain's demon form (takedowns extend it in the rules).
+  // Swain's demon form (takedowns extend it in the rules). Mordekaiser's slam burst plays per hit and holds nothing to end.
+  'mordekaiser-empower': [],
   'swain-ascension': ['796b6af2'],
   // Dr. Mundo's cast and buff systems end with his timed form instead (TIMED_FORM_STOPS).
   'drmundo-heal': [],
@@ -943,7 +1018,7 @@ export const CUE_RULE_STOPS = {
   frenzyEnded: { systems: ['8c054bed'], on: 'source' },
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
-  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0'] }, on: 'source' },
+  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0', '2f1f3b60'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
   abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] }, on: 'target' },
@@ -970,6 +1045,7 @@ export const CUE_RULE_STOPS = {
  */
 export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '2beb0657': 10, // Twitch volley buff → twitch-volley (no time limit: a recast re-arms the volley; 自定上限)
+  'acd84091': 6, // LeBlanc channel → leblanc-chain
   '796b6af2': 20, // Swain demon form → swain-ascension (each takedown extends it; 自定上限)
   'ea21ae27': 5, // Garen shield → his shield layer ends
   'e22b48b0': 5, // Loris shield → his shield layer ends
@@ -985,6 +1061,13 @@ export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '8682c9ee': 1.8, // Vex opening area → her delayed second hit
   'eb9da1d5': 1.8,
 };
+/**
+ * Held layers whose system also plays elsewhere as a short cue: held as SUSTAIN_CAPS holds them, but only in the skill named
+ * here. Loris's Q ground ring stays until his shield layer ends (CUE_RULE_STOPS abilityShieldEnded), capped at the rules'
+ * longest shield time plus 1 s (自定，非原版; tests check it against the data); the same ring in his blast (loris-retaliation)
+ * keeps its own short cue.
+ */
+export const SUSTAIN_SKILL_CAPS: Readonly<Record<string, Readonly<Record<string, number>>>> = { loris: { '2f1f3b60': 5 } };
 /**
  * Every held layer's next play replaces the last one instead of drawing a second layer over it: from the same caster, and
  * for a hit cue on the same target (Ekko's mark). Held layers last seconds to a whole fight, so each recast or pulse would
