@@ -58,12 +58,17 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // (was 6c5f207e…).
   // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
   // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
-  const back=save.split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 技能落地结算批 (2026-11-20): contentDigest cf212873->2f642cc0 only; loot replay unchanged.
+  // 黑默丁格火箭集火 (2026-11-20): contentDigest 2f642cc0->9ccd5f96 only; loot replay unchanged.
+  // 斯维因吸取节奏 v2 (2026-11-20): contentDigest 9ccd5f96->eb2d4cee only; loot replay unchanged.
+  // 梅尔施法 v2 (2026-11-21): contentDigest eb2d4cee->2acd4414 only.
+  // 蔚奥莱连击 v1 (2026-11-21): contentDigest 2acd4414->40111d4d only.
+  const back=save.split('40111d4d').join('2acd4414').split('2acd4414').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('6dc0e5097ab0843434671cc5b4e6253a6eb73c5abb8d42e4673575f7f9a6d123'); // #739 digest d94c78f1 -> cf212873 (was 91a0760c…)
+    .toBe('b955b034d7b0d657bb2b8df64730d70033c2d7327b1055575a40e257556c0669'); // Violet combo v1 2acd4414 -> 40111d4d (was 3d80d487…, Mel cast v3; c6362193… Mel cast v2)
   expect(restoreMatch(save)).toEqual(started);
 });
 
