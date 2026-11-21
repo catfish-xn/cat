@@ -30,8 +30,9 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // is 49e1d29a… again, so nothing but the landing rule moved.
     // Mel's barrage timing (11-20: her dash lands, bolts leave and settle later) changes this mixed combat (was 66c3a9e4…).
 // Mel dashes on every normal cast and never on the third (11-21), which changes this mixed combat (was a50c5309…).
-// Vi's slam now lands at the original's time (11-21), which changes this mixed combat (was ca099f47…, Mel's dash).
-const MIXED_DIGEST = 'd3cfb7ccf424778393a704fd1f97cddf28115c91b5438b0795f21db8b5b017cb';
+// Vi's slam now lands at the original's time (11-21), which changes this mixed combat (was 67e0c368…, Mel's dash away from foes;
+// ca099f47… her dash on every normal cast).
+const MIXED_DIGEST = '8491e0a605c53fc28b95044cb1a0f489c950a5c6fcd4ffaa877d5b55037cd407';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 
