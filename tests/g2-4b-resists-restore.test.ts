@@ -26,7 +26,9 @@ function threeHeroMatch(): MatchState {
   // v23 batch 3: seed 5's first offer stopped being a quiet card (changes the shield numbers); pick one publicly.
   let state = crestPick(5);
   state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
-  for (const [id, col] of [['maddie', 3], ['lux', 5]] as const) {
+  // Landing batch (11-20, scene change; assertions unchanged): Lux's shield now lands when her missile arrives, which moved
+  // the stacked case off its checkpoint at (5,7); tried every player cell: (2,7), (4,7) and (6,6) hold it, (4,7) is used.
+  for (const [id, col] of [['maddie', 3], ['lux', 4]] as const) {
     const slot = state.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === id);
     state = accepted(buyUnit(state, slot, state.shop.generation));
     const unitId = `unit-${state.nextUnitSerial - 1}`;
@@ -67,7 +69,10 @@ function publicStart(dynamic = false, deathHolder = false, bracer = false): Matc
     state = accepted(deployMatchUnit(state, maddieId, {kind: 'board', cell: {col: 2, row: 4}}));
     // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): a (5,7) Lux now survives the whole fight.
     // Lux at (4,5), still behind the same front line, dies at tick 411 (pre-overtime) with the crest's death grant.
-    state = accepted(deployMatchUnit(state, luxId, {kind: 'board', cell: {col: 4, row: 5}}));
+    // Landing batch (11-20, scene change approved by Fable): at (4,5) she no longer dies with the death grant. Tried every
+    // player cell: (2,4) and (4,4) still die pre-overtime with it (at 285 and 443), (3,6) and (4,6) only in overtime; (4,4) is
+    // used and the death tick re-pinned 411 -> 443.
+    state = accepted(deployMatchUnit(state, luxId, {kind: 'board', cell: {col: 4, row: 4}}));
   }
   for (const [slot, definitionId] of (dynamic && !deathHolder ? [crest, 'gargoyle', ...(bracer ? ['TFT_Item_Artifact_SeekersArmguard'] : [])] : [crest]).entries()) {
     const granted = grantMechanicItem(state, { receiptId: `resists-${slot}`, source: 'resists-restore-test', definitionId });
@@ -167,7 +172,7 @@ it('restores the holder-death grant after live defenses and periodic history', (
     }
   }
   expect(death).toBeDefined();
-  expect(death!.combat!.tick).toBe(411); // v26 re-pin (was 489); before overtime: the resists replay is the restore authority
+  expect(death!.combat!.tick).toBe(443); // landing batch re-pin (was 411; v26 489); before overtime: the resists replay is the restore authority
   const restored = restoreMatch(JSON.stringify(death));
   expect(restored).toEqual(death); expect(stepMatch(restored)).toEqual(stepMatch(death!));
 });
