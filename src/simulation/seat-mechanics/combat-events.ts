@@ -41,7 +41,7 @@ export type G23CombatEventData =
    * Display only, no rule effect (ranged attack landing): a ranged hero's attack sends a shot at targetId, landing on
    * arrivalTick; projectile 'flight' flies there, 'beam' is an instant beam (arrivalTick is the attack tick).
    */
-  | { readonly type: 'attackLaunched'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly arrivalTick: number; readonly projectile: 'flight' | 'beam' }
+  | { readonly type: 'attackLaunched'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly arrivalTick: number; readonly projectile: 'flight' | 'beam'; readonly critical: boolean }
   /** Display only, no rule effect: a flying shot reached targetId; hit false when the target died in flight (the shot did nothing). */
   | { readonly type: 'attackLanded'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly hit: boolean }
   /** Display only, no rule effect: a takedown of victimId extended Swain's demon form from beforeUntilTick to untilTick (once per victim). */

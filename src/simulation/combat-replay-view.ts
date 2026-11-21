@@ -109,7 +109,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'bloodFrenzyChanged':return {...envelope,...pick(event,['type','unitId','active','permanent'])};
     case 'devoured':return {...envelope,...pick(event,['type','unitId','targetId'])};
     case 'movement': return { ...envelope, type: event.type, unitId: event.unitId, from: cellView(event.from), to: cellView(event.to), ...(event.reason ? { reason: event.reason } : {}) };
-    case 'attack': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
+    case 'attack': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'critical']) };
     case 'targetChanged': return { ...envelope, ...pick(event, ['type', 'unitId', 'before', 'after']) };
     case 'unitRevived': return { ...envelope, ...pick(event, ['type','unitId','hp']), sourceId:event.source.ownerId };
     case 'death': return { ...envelope, ...pick(event, ['type', 'unitId']) };
@@ -153,7 +153,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'combatItemGranted': return { ...envelope, ...pick(event, ['type', 'unitId', 'definitionId']), sourceId: event.source.ownerId };
     case 'abilityMarker': return { ...envelope, ...pick(event, ['type', 'unitId', 'marker', 'arrivalTick']), cell: cellView(event.cell) };
     case 'carryChanged': return { ...envelope, ...pick(event, ['type', 'holderId', 'targetId', 'carried']) };
-    case 'attackLaunched': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'arrivalTick', 'projectile']) };
+    case 'attackLaunched': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'arrivalTick', 'projectile', 'critical']) };
     case 'attackLanded': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'hit']) };
     case 'jayceCrystal': return { ...envelope, ...pick(event, ['type', 'unitId', 'phase', 'crystal', 'count', 'cell']) };
     case 'swainAscensionExtended': return { ...envelope, ...pick(event, ['type', 'unitId', 'victimId', 'beforeUntilTick', 'untilTick']) };

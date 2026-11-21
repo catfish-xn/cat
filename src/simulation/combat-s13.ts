@@ -210,7 +210,9 @@ function launchAttack(ctx: AbilityContext, unit: S13Unit, firstPacket: number, s
   const targets = [...new Set([...packets.map(p => p.targetId), ...(shot?.effects ?? []).map(e => e.targetId)])];
   targets.forEach((targetId, ordinal) => {
     const target = ctx.units.find(u => u.id === targetId)!, arrivalTick = ctx.tick + rangedAttackFlightTicks(hexDistance(unit.cell, target.cell), champion(unit));
-    ctx.events.push({ type: 'attackLaunched', tick: ctx.tick, attackerId: unit.id, targetId, arrivalTick, projectile: 'flight' });
+    // Display only: whether this shot crits (its basic-attack packet's crit was rolled on this attack tick).
+    const critical = packets.some(p => p.targetId === targetId && p.delivery === 'basic-attack' && p.critical === true);
+    ctx.events.push({ type: 'attackLaunched', tick: ctx.tick, attackerId: unit.id, targetId, arrivalTick, projectile: 'flight', critical });
     unit.tasks.push({ key: JSON.stringify(['attack-landing', unit.id, seq, targetId]), kind: 'attackLanding', source: { ...origin(unit), sourceKind: 'attack' },
       executeAtTick: arrivalTick, targetId, amount: 0, actionSeq: seq, ordinal, total: targets.length,
       cancellable: false, landing: { packets: packets.filter(p => p.targetId === targetId), effects: (shot?.effects ?? []).filter(e => e.targetId === targetId).map(e => e.effect) } });
@@ -457,7 +459,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
     for (const unit of units) {
       const firstPacket = ctx.packets.length;
-      let shotSeq: number | undefined;
+      let shotSeq: number | undefined, critEvents: { seq: number; targetId: string; events: { critical: boolean }[] } | undefined;
       if(isAttackProxy(unit))continue;
       let guaranteedAttackSeq: number | undefined;
       const prior = targets.get(unit.id);
@@ -532,10 +534,12 @@ export function advanceS13Tick(state: CombatState): CombatStep {
             emitMechanismSignal(ctx, {event:'target-changed',tick,actionSeq:seq,actorId:unit.id,targetId:attackTarget.id,cast:null});
           }
         }
-        unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
+        // critical is display only, filled in once this tick's packets are rolled (below).
+        const attackEvent = { type: 'attack' as const, tick, attackerId: unit.id, targetId: attackTarget.id, critical: false };
+        unit.runtime.attackCount++; events.push(attackEvent); critEvents = { seq, targetId: attackTarget.id, events: [attackEvent] };
         const shot = shotKind(unit);
         if (shot === 'flight') { shotSeq = seq; ctx.attackLanding = { seq, attackerId: unit.id, effects: [] }; }
-        else if (shot) events.push({ type: 'attackLaunched', tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: shot });
+        else if (shot) { const beam = { type: 'attackLaunched' as const, tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: shot, critical: false }; events.push(beam); critEvents.events.push(beam); }
         if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
         batch2Attack(ctx,unit,attackTarget,seq,defenses(unit,true,tick,units)+defenses(unit,false,tick,units));
         const oldInterval = interval(unit, tick, units); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); attackAnomaly(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;
@@ -547,6 +551,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         if (!neutral) attackMana.set(unit.id, S13_COMBAT_RULES.attackMana + mechanic(unit, 'extraAttackMana', 'amount'));
       }
       rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);
+      // Display only: the attack (and a beam's launch) carry whether its basic-attack packet on the target crits, as rolled now.
+      if (critEvents) { const c = critEvents, crit = ctx.packets.slice(firstPacket).some(p => p.actionSeq === c.seq && p.source.ownerId === unit.id && p.targetId === c.targetId && p.delivery === 'basic-attack' && p.critical === true);
+        for (const e of c.events) e.critical = crit; }
       if (shotSeq !== undefined) launchAttack(ctx, unit, firstPacket, shotSeq);
     }
   }
