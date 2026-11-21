@@ -1,3 +1,4 @@
+import { augmentDeathsFromEvents } from '../src/simulation/augment-death-samples';
 import { describe, it, expect } from 'vitest';
 import { POWDER_MONKEY_RELEASE_TICKS } from '../src/simulation/cast-windup';
 import { createMatch, buyUnit } from '../src/simulation/match';
@@ -135,6 +136,11 @@ describe('v20-traits approved custom rules',()=>{
     expect(b.state.units.filter(u=>u.definitionId==='v20-silco-minion')).toHaveLength(3);
     const run=ticks(b.state,240);expect(run.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.definitionId==='menaces')).toHaveLength(15);
     expect(run.state.units.filter(u=>u.definitionId==='v20-silco-minion'&&u.alive)).toHaveLength(0);
+    // Regression (2026-11-21): the expiring minions' death events carry augment death samples like every other death, so the
+    // room's executed death history (Loot Explosion) no longer faults with "missing executed death samples".
+    const minionDeaths=run.events.filter(e=>e.type==='death'&&run.state.units.some(u=>u.id===e.unitId&&u.definitionId==='v20-silco-minion'));
+    expect(minionDeaths).toHaveLength(3);
+    expect(augmentDeathsFromEvents(minionDeaths).map(d=>[d.definitionId,d.ordinaryHero])).toEqual(Array(3).fill(['v20-silco-minion',false]));
     expect(stepCombat({...run.state,status:'finished',result:'playerWin'}).events).toEqual([]);
   });
   it.each([1,2,3] as const)('Menaces suppresses only Powder reunion promotion at star %i, preserving count, other heroes and death linkage',star=>{
