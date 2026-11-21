@@ -6,7 +6,7 @@ import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit } from './combat-helpers';
 import { packets, heals, casts } from './helpers/replay2-views';
 import { BLITZ_SHOCK_TICKS } from '../src/simulation/combat-g2';
-import { POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from '../src/simulation/cast-windup';
+import { VIOLET_UPPERCUT_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 
 // Ranged attack landing (window only): a ranged hero's attack on the dummy one hex away lands LANDING ticks later.
@@ -36,9 +36,13 @@ describe('G2-1 independent fixed-seed skill oracles (seed 42)', () => {
     expect(heals(r.events).find(h => h.unitId === 'p')?.actual).toBe(200);
   });
   it('Violet: two 135% AD jabs then 330% AD + 20 AP, five next-tick stun ticks', () => {
-    const r = stepCombat(battle([hero('violet'), dummy()], { rngState: 42 }));
-    expect(raw(r.events)).toEqual([135, 135, 350]);
-    expect(r.state.units.find(u => u.id === 'e')!.statuses).toContainEqual(expect.objectContaining({ kind: 'stun', startsAtTick: 2, expiresAtTick: 7 }));
+    // 11-21: the jabs and the uppercut land on their own ticks, the last VIOLET_UPPERCUT_TICKS after the cast (was all on the
+    // cast); the hits and the stun are unchanged, only later (startsAtTick 2 -> 2 + VIOLET_UPPERCUT_TICKS, expiresAtTick 7 -> 7 + it).
+    let r = stepCombat(battle([hero('violet'), dummy()], { rngState: 42 })); const events = [...r.events];
+    for (let n = 0; n < VIOLET_UPPERCUT_TICKS; n++) { r = stepCombat(r.state); events.push(...r.events); }
+    // Her skill's packets only: on the uppercut's tick the channel is over and her next basic attack may land too.
+    expect(packets(events).filter(p => p.source.ownerId === 'p' && p.source.sourceKind === 'ability').map(p => p.raw)).toEqual([135, 135, 350]);
+    expect(r.state.units.find(u => u.id === 'e')!.statuses).toContainEqual(expect.objectContaining({ kind: 'stun', startsAtTick: 2 + VIOLET_UPPERCUT_TICKS, expiresAtTick: 7 + VIOLET_UPPERCUT_TICKS }));
   });
   it('Powder: center 350, one hex 245, wound/burn anchored for 100 ticks', () => {
     // Wind-up batches 3–4: nothing on the cast; she lets the monkey go POWDER_MONKEY_RELEASE_TICKS later and it explodes on

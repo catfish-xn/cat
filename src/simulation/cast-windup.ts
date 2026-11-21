@@ -110,3 +110,8 @@ export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
  * docs/S13_RULES_GAP.md 梅尔弹幕). The bolts fly MEL_BOLT_TICKS_PER_HEX a hex (self-chosen, not original data; the original's
  * hit time is not measured) and settle where they land. */
 export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PER_HEX = 2;
+
+/** Violet's combo (11-21, authorization ②): two jabs then an uppercut on the target taken at the cast, each landing on its own
+ * tick after the cast (aligned to the original frame by frame; which hit is hers is not fully verified, see
+ * docs/S13_RULES_GAP.md 蔚奥莱连击). The uppercut's knock-up starts with it. */
+export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TICKS = 29;

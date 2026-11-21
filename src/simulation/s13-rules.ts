@@ -56,4 +56,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   // Mel's barrage, settle on landing v1 (11-20): her dash lands and her bolts leave later (MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS in
   // cast-windup.ts); the bolts settle where they land (abilityProjectile mel-barrage).
   melBarrage: 'mel-barrage-settle-on-landing-v1',
+  // Violet's combo v1 (11-21): two jabs and the uppercut each settle on their own tick (cast-windup.ts); the knock-up starts with the uppercut.
+  violetCombo: 'violet-combo-settle-per-hit-v1',
 });
