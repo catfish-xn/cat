@@ -29,7 +29,13 @@ export function createBatch2VfxBridge(host: Host) {
   const consequences = new Map<string, readonly DisplayCombatEvent[]>();
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
-  const energyTicks = new Map<string, number>();
+  // Mel's casts by caster, then action: whether it is her third cast (its own bolts, hits and explosion), and the targets a
+  // bolt of it has landed on (a plain cast's hit plays once per target, on its first bolt). Her latest two casts are kept,
+  // enough for bolts still flying from one cast when the next begins.
+  const melCasts = new Map<string, Map<number, { third: boolean; struck: Set<string> }>>();
+  // Mel casters whose cast has begun and whose bolts have not left yet: their next movement is that cast's dash landing.
+  // The value: that cast is her third, which has no dash (the rules move her on her plain casts only).
+  const melDashing = new Map<string, boolean>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
@@ -133,16 +139,47 @@ export function createBatch2VfxBridge(host: Host) {
           }
         }
       }
+      // Mel (rules 'mel-barrage'): her dash lands, then her bolts leave and land, each reported by the rules; observed in
+      // catch-up too, so a later bolt still knows its cast.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'mel') {
+        const casts = melCasts.get(event.sourceId) ?? new Map<number, { third: boolean; struck: Set<string> }>();
+        casts.set(event.actionSeq, { third: event.branch?.branch === 'third', struck: new Set() });
+        for (const seq of [...casts.keys()].slice(0, -2)) casts.delete(seq);
+        melCasts.set(event.sourceId, casts); melDashing.set(event.sourceId, event.branch?.branch === 'third');
+      }
+      const melDash = event.type === 'movement' && melDashing.get(event.unitId) === false;
+      if (event.type === 'movement') melDashing.delete(event.unitId);
+      // Her plain cast fires several bolts at each target, each its own rule projectile ('mel-bolt', 11-21); her third cast's
+      // beams are 'mel-barrage'.
+      const melBolt = (event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded')
+        && (event.skill === 'mel-barrage' || event.skill === 'mel-bolt');
+      if (melBolt && event.type === 'abilityProjectileLaunched') melDashing.delete(event.sourceId);
       // A frenzy is observed in catch-up too: an attack drawn later in it is still frenzied.
       if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
         if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
       }
       if (!current) return;
+      if (melDash) play('mel', event.unitId, [], 'mel-dash');
+      if (melBolt) {
+        const record = melCasts.get(event.sourceId)?.get(event.actionSeq), third = record?.third === true;
+        // Each bolt flies the rules' own flight (champions/mel.ts MEL_BOLT_FLIGHT) from where she stands as it leaves: one
+        // small arc per bolt of her plain cast.
+        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : 'mel-bolt');
+        // Its hit when it lands on a target still there (a bolt whose target died in flight lands on nothing). A plain cast's
+        // hit plays once per target, as its first bolt lands; its later bolts land with their arcs only (self-chosen: a hit
+        // for every bolt would crowd the board: self-chosen, not original, for the on-screen cap; a known-difference candidate, Fable 11-21).
+        const firstOnTarget = third || !record || !record.struck.has(event.targetId);
+        if (event.type === 'abilityProjectileLanded' && event.hit && firstOnTarget) {
+          record?.struck.add(event.targetId);
+          play('mel', event.sourceId, [event.targetId], third ? 'mel-third-hit' : 'mel-bolt-hit', 'cast', true);
+          // The third cast's explosion, on its main target (the first bolt's, the enemy nearest where she landed).
+          if (third && event.ordinal === 0) play('mel', event.sourceId, [event.targetId], 'mel-third-blast', 'cast', true);
+        }
+      }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
-      if (event.type === 'melEnergyChanged' && event.after > event.before && energyTicks.get(event.unitId) !== event.tick) {
-        energyTicks.set(event.unitId, event.tick); play('mel', event.unitId, [], 'mel-energy');
-      }
+      // Mel's energy gain plays nothing: its stack visual drew a flat disc at her feet on our board. Held off as a known
+      // difference (Fable 11-21).
       if (event.type === 'shieldLayerChanged' && event.reason === 'granted' && event.remaining > 0) {
         try {
           const key: unknown = JSON.parse(event.key);
@@ -154,7 +191,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); frenzied.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); },
   };
   return bridge;
 }
