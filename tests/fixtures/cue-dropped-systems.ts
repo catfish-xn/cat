@@ -36,8 +36,8 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
     c83f1f21: { status: 'pending', reason: 'left out by mistake when the row was first written (11-03); to be played or dropped' },
   },
   scar: {
-    '95d62c6a': { status: 'dropped', reason: 'not seen in the original cast footage (11-21 review): left out' },
-    '4a8b0fd3': { status: 'dropped', reason: 'not seen in the original cast footage (11-21 review): left out' },
+    '95d62c6a': { status: 'pending', reason: 'the footage it was judged against is not taken as evidence (11-21): waits for reliable footage' },
+    '4a8b0fd3': { status: 'pending', reason: 'the footage it was judged against is not taken as evidence (11-21): waits for reliable footage' },
     '9f028364': { status: 'pending', reason: 'not checked against the original yet (11-21 scan)' },
   },
 };
