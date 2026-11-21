@@ -132,7 +132,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     expect(bytesHash(JSON.parse(back))).toBe('4855c22c0529a7622d5d6145178390a1c76a8f1d71b2d6c299d64dd298d61a4c');
     // #739 save/replay 9 -> 10: record.version carries replayFormatVersion 10 and contentDigest cf212873 (was d94c78f1), so the
     // record hash moves again (was 4a7302a1… with replay 9 / d94c78f1); the chain above substitutes both back, so its pins hold.
-    expect(bytesHash(record)).toBe('bd21423e93d39726cbfe5677a9c03bb4f7dc1d95e0ac469c2d0e6900d6416aca');
+    // #795: the record's contentDigest is now the death-keyed rolls' digest, so the record hash moves (was bd21423e…, landing
+    // batch); events and terminal below are unchanged.
+    expect(bytesHash(record)).toBe('856e39a92e59ca54cbb907c26f0a04005469fae14763a2fcff392c2f21be47b0');
     expect(bytesHash(record.events)).toBe('3d9c7fc139b05e5795d4133ffaeff78a9e7084e14912bc9599fa23e69722fa7a');
     expect(bytesHash(expected.terminal)).toBe('fbf3b60ecf7829825848d88d79ade4df4076b05e2cbbc71a8b5ece3b689ee12e');
     // An external JSON record is cold on each constructor, like browser fixtures.
