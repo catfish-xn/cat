@@ -26,9 +26,19 @@ const victim = (state: CombatState) => state.units.find(u => u.id === 'p')!;
 // Ranged attack wind-up (#791): an attack started in the first step launches its shot after its wind-up, so the shots to wait
 // for are the ones launched there plus the ones that start winding up there (less any wind-up cancelled).
 function landed(first: ReturnType<typeof stepCombat>): ReturnType<typeof stepCombat> {
-  const count = (r: ReturnType<typeof stepCombat>, type: string) => r.events.filter(e => e.type === type).length;
-  let r = first, launched = count(first, 'attackLaunched') + count(first, 'attackWindup'), done = 0;
-  while (done < launched) { r = stepCombat({ ...r.state, units: r.state.units.map(u => u.id === 'p' ? u : { ...u, cooldownTicks: 1000 }) }); done += count(r, 'attackLanded'); launched -= count(r, 'attackWindupCancelled'); }
+  const of = (r: ReturnType<typeof stepCombat>, type: string) => r.events.filter(e => e.type === type);
+  let r = first, launched = of(first, 'attackLaunched').length, done = 0;
+  const winding = new Set(of(first, 'attackWindup').map(e => (e as any).attackerId as string));
+  while (done < launched || winding.size > 0) {
+    r = stepCombat({ ...r.state, units: r.state.units.map(u => u.id === 'p' ? u : { ...u, cooldownTicks: 1000 }) });
+    // A wound-up attack launches one shot per target on its launch tick; each lands on its own.
+    for (const id of [...winding]) {
+      const shots = of(r, 'attackLaunched').filter(e => (e as any).attackerId === id);
+      if (shots.length) { winding.delete(id); launched += shots.length; }
+      else if (of(r, 'attackWindupCancelled').some(e => (e as any).attackerId === id)) winding.delete(id);
+    }
+    done += of(r, 'attackLanded').length;
+  }
   return r;
 }
 const hit = (damage: number, patch: Partial<CombatUnit> = {}, attackers = 1) => landed(stepCombat(battle([
