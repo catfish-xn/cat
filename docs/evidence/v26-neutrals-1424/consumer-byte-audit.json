@@ -4547,6 +4547,14 @@
       "currentSha256": "4a06278191f1caf63a9d5f5d3af1a7890693b06909fd266a5aac756013985db1",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-gangplank-ranged-attack.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2465,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8751f978052ee1a6e960f509e24e3f42b46c28770d0aa689c198b67a4a29c89b",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-ground-line.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
