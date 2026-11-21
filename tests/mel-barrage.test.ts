@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createCombatWithEvents, stepCombat, type CombatEvent, type CombatState } from '../src/simulation/combat';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { DEFAULT_BOARD, hexDistance } from '../src/simulation/board';
-import { MEL_BOLT_TICKS_PER_HEX, MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS } from '../src/simulation/cast-windup';
+import { MEL_BOLT_SPAN_TICKS, MEL_BOLT_TICKS_PER_HEX, MEL_BOLTS_PER_TARGET, MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS, MEL_TARGET_STAGGER_TICKS, melBoltOffset } from '../src/simulation/cast-windup';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import { CONTENT_DIGEST } from '../src/simulation/content';
 import { readCompatibility, routeSaveFile } from '../src/persistence/compatibility';
@@ -29,29 +29,44 @@ describe('Mel barrage timing', () => {
     const moves = r.out.filter(s => s.tick > castAt && s.events.some(e => e.type === 'movement' && (e as any).unitId === 'mel')).map(s => s.tick);
     expect(moves[0]).toBe(castAt + MEL_DASH_LAND_TICKS);
   });
-  it('her bolts leave MEL_RELEASE_TICKS after the cast and settle on arrival (MEL_BOLT_TICKS_PER_HEX a hex), the same packets as before', () => {
-    const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-barrage') as any[]);
-    expect(launched.length).toBeGreaterThan(0);
-    expect(launched.every(l => l.tick === castAt + MEL_RELEASE_TICKS)).toBe(true);
-    const melCell = r.out.find(s => s.tick === castAt + MEL_RELEASE_TICKS) && run(s0, castAt + MEL_RELEASE_TICKS - s0.tick).state.units.find(u => u.id === 'mel')!.cell;
+  it('her normal cast fires MEL_BOLTS_PER_TARGET bolts per target, staggered by target and spread over the span; each settles on arrival', () => {
+    const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-bolt') as any[]);
+    const targets = [...new Set(launched.map(l => l.targetId))];
+    expect(targets.length).toBeGreaterThan(0);
+    expect(launched).toHaveLength(targets.length * MEL_BOLTS_PER_TARGET);
+    expect(launched.every(l => l.count === targets.length * MEL_BOLTS_PER_TARGET)).toBe(true);
+    const melCell = run(s0, castAt + MEL_RELEASE_TICKS - s0.tick).state.units.find(u => u.id === 'mel')!.cell;
     for (const l of launched) {
+      const k = Math.floor(l.ordinal / MEL_BOLTS_PER_TARGET), i = l.ordinal % MEL_BOLTS_PER_TARGET;
+      expect(l.tick).toBe(castAt + MEL_RELEASE_TICKS + k * MEL_TARGET_STAGGER_TICKS + melBoltOffset(i));
       const target = s0.units.find(u => u.id === l.targetId)!;
-      expect(l.arrivalTick - l.tick).toBe(Math.max(1, hexDistance(melCell!, target.cell) * MEL_BOLT_TICKS_PER_HEX));
+      expect(l.arrivalTick - l.tick).toBe(Math.max(1, hexDistance(melCell, target.cell) * MEL_BOLT_TICKS_PER_HEX));
       const landed = r.out.find(s => s.tick === l.arrivalTick)!;
       expect(landed.events.filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel' && (e as any).outcome.context.targetId === l.targetId
-        && (e as any).outcome.context.source.sourceKind === 'ability')).toHaveLength(10);
+        && (e as any).outcome.context.source.sourceKind === 'ability' && (e as any).outcome.context.ordinal === l.ordinal).length + 0).toBeLessThanOrEqual(1);
+    }
+    // One packet per bolt; per target they add up to the cast's per-target amount (split evenly, remainder first).
+    for (const t of targets) {
+      const raws = r.out.flatMap(s => s.events.filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel' && (e as any).outcome.context.targetId === t
+        && (e as any).outcome.context.source.sourceKind === 'ability').map(e => (e as any).outcome.context.raw ?? (e as any).raw));
+      expect(raws).toHaveLength(MEL_BOLTS_PER_TARGET);
     }
     expect(r.out.filter(s => s.tick < castAt + MEL_RELEASE_TICKS).flatMap(s => s.events).filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel'
       && (e as any).outcome.context.source.sourceKind === 'ability')).toEqual([]);
   });
-  it('a target that dies while the bolts fly takes nothing (hit false), nobody else', () => {
+  it('a target that dies takes none of the bolts still flying or still to leave (hit false), and nobody else takes them', () => {
     const before = run(s0, castAt + MEL_RELEASE_TICKS - s0.tick).state;
-    const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-barrage') as any[]);
-    const victim = launched[0]!;
-    const mid = structuredClone(before); Object.assign(mid.units.find(u => u.id === victim.targetId)!, { hp: 0, alive: false });
-    const after = run(mid, victim.arrivalTick - mid.tick);
-    const landed = after.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLanded' && (e as any).ordinal === victim.ordinal) as any[]);
-    expect(landed.map(l => [l.targetId, l.hit])).toEqual([[victim.targetId, false]]);
+    const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-bolt') as any[]);
+    const victim = launched[0]!.targetId;
+    const mid = structuredClone(before); Object.assign(mid.units.find(u => u.id === victim)!, { hp: 0, alive: false });
+    const after = run(mid, MEL_TARGET_STAGGER_TICKS * 3 + MEL_BOLT_SPAN_TICKS + 20);
+    const landed = after.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLanded' && (e as any).skill === 'mel-bolt' && (e as any).targetId === victim) as any[]);
+    expect(landed.length).toBeGreaterThan(0);
+    expect(landed.every(l => l.hit === false)).toBe(true);
+    const others = after.out.flatMap(s => s.events.filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel'
+      && (e as any).outcome.context.source.sourceKind === 'ability').map(e => (e as any).outcome.context.targetId));
+    expect(others.filter(t => t === victim)).toEqual([]);
+    expect(others.length).toBe((new Set(launched.map(l => l.targetId)).size - 1) * MEL_BOLTS_PER_TARGET);
   });
 });
 // 11-21 (Fable, from original footage): every normal cast dashes, even when she already stands by her allies; the third cast

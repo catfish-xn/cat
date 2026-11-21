@@ -110,3 +110,11 @@ export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
  * docs/S13_RULES_GAP.md 梅尔弹幕). The bolts fly MEL_BOLT_TICKS_PER_HEX a hex (self-chosen, not original data; the original's
  * hit time is not measured) and settle where they land. */
 export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PER_HEX = 2;
+
+/** Mel's normal cast fires MEL_BOLTS_PER_TARGET bolts at each target (11-21, authorization ②). Target k starts
+ * MEL_TARGET_STAGGER_TICKS × k after her release and its bolts spread over MEL_BOLT_SPAN_TICKS, first to last (both aligned to
+ * the original frame by frame). The single-bolt spacing is fitted, not original data: the bolts are laid evenly over the span,
+ * rounding to the nearest tick (melBoltOffset). */
+export const MEL_BOLTS_PER_TARGET = 10, MEL_TARGET_STAGGER_TICKS = 1, MEL_BOLT_SPAN_TICKS = 16;
+/** Ticks after its target's start that bolt i (0..MEL_BOLTS_PER_TARGET-1) leaves. */
+export function melBoltOffset(i: number): number { return Math.round(i * MEL_BOLT_SPAN_TICKS / (MEL_BOLTS_PER_TARGET - 1)); }

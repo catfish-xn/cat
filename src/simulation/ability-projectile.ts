@@ -11,11 +11,11 @@ import { byDistance, enemies, grantShield, origin, path, variable, type S13Unit 
  * (abilityProjectileLaunched) and settles on its arrival tick (abilityProjectileLanded, then its effect). A target that died
  * in flight takes nothing and no other one is picked (hit false), as ranged basic attacks do.
  */
-export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw' | 'mel-barrage';
-export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw', 'mel-barrage'];
+export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw' | 'mel-barrage' | 'mel-bolt';
+export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw', 'mel-barrage', 'mel-bolt'];
 /** The champion each projectile belongs to. */
 export const ABILITY_PROJECTILE_OWNER: Readonly<Record<AbilityProjectileSkill, string>> =
-  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser', 'mel-barrage': 'mel' };
+  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser', 'mel-barrage': 'mel', 'mel-bolt': 'mel' };
 /** A skillShot task: before launch (arrivalTick absent) it runs on its launch tick; after, on arrivalTick (= executeAtTick). */
 export interface SkillShotState { readonly skill: AbilityProjectileSkill; readonly arrivalTick?: number }
 
@@ -53,7 +53,7 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
       const star = (unit.starLevel ?? 1) as 1 | 2 | 3, claw = MORDEKAISER_CLAW_TICKS[star];
       launchShot(ctx, unit, task, task.targetId!, ctx.tick + claw.land - claw.appear); return;
     }
-    if (shot.skill === 'mel-barrage') {
+    if (shot.skill === 'mel-barrage' || shot.skill === 'mel-bolt') {
       // Mel's bolts at one target leave together and fly MEL_BOLT_TICKS_PER_HEX a hex (self-chosen, not original data).
       const aim = ctx.units.find(u => u.id === task.targetId);
       launchShot(ctx, unit, task, task.targetId!, ctx.tick + Math.max(1, (aim ? hexDistance(unit.cell, aim.cell) : 1) * MEL_BOLT_TICKS_PER_HEX)); return;
@@ -71,6 +71,8 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
     case 'heimerdinger-rocket': damage('magic', false); break;
     case 'mordekaiser-claw': damage('magic', true); break;
     case 'mel-barrage': melBolts(ctx, target, task.amount, task.actionSeq, task.source); break;
+    // One bolt of a normal cast: one magic packet (ordinal = the bolt's place in the cast).
+    case 'mel-bolt': damage('magic', true); break;
     case 'lux-shield': grantShield(target, task.source, task.amount, ctx.tick + luxShieldTicks(unit), ctx.tick, ctx.events); break;
   }
 }
