@@ -1,3 +1,4 @@
+import { MEL_RELEASE_TICKS } from '../src/simulation/cast-windup';
 import { describe, it, expect } from 'vitest';
 import { createMatch, claimOrb } from '../src/simulation/match';
 import { getUnitStats } from '../src/simulation/unit-stats';
@@ -118,7 +119,11 @@ describe('v19 six costs',()=>{
   });
   it('Mel absorbs only her own shield, keeps integer half remainder, and third cast conserves total across fewer than 5 enemies and ten packets',()=>{
     let c=idle(start(army(['mel','lux'])).state,['mel']);c={...c,units:c.units.map(u=>u.id==='mel'?{...u,mana:40,runtime:{...u.runtime!,castCount:2},sixCost:{...sixState(unit(c,'mel')),storedEnergy:11}}:{...u,hp:100000,maxHp:100000})};
-    const r=stepCombat(c),packets=r.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='mel');
+    // 11-20 Mel timing: her bolts leave MEL_RELEASE_TICKS after the cast and settle where they land, so the ten packets come
+    // later; the shield and the energy reset stay on the cast step (r).
+    const r=stepCombat(c);let later=r.state;const events=[...r.events];
+    for(let n=0;n<MEL_RELEASE_TICKS+40&&later.status==='running';n++){const step=stepCombat(later);later=step.state;events.push(...step.events);}
+    const packets=events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='mel'&&e.outcome.context.source.sourceKind==='ability');
     expect(packets).toHaveLength(10);expect(packets.reduce((n,e)=>n+(e.type==='packetDamage'?e.outcome.raw:0),0)).toBe(1401);
     expect(unit(r.state,'mel').sixCost?.storedEnergy).toBe(0);
     const mel=unit(r.state,'mel'),layer=mel.shieldLayers[0];expect(layer.expiresAtTick-r.state.tick).toBe(80);
