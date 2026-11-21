@@ -668,7 +668,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
           : (shot!.arrivalTick === task.executeAtTick && task.cancellable === false && task.targetId !== null)), 'skill shot');
     } else requireValue(task.shot === undefined, 'skill shot');
     if (task.kind.startsWith('g2')) {
-      const expected = ({g22Vex:'vex',g22Curse:'morgana',g22ViSlam:'vi',g22CamilleKick:'camille',g2BlitzShock:'blitzcrank',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed',g2PowderRelease:'powder',g2PowderMonkey:'powder',g23Flame:'sevika',g23Chomp:'sevika',g23Roll:'sevika',g23CrystalLand:'jayce',g23CrystalBlast:'jayce'} as Record<string,string>)[task.kind];
+      const expected = ({g22Vex:'vex',g22Curse:'morgana',g22ViSlam:'vi',g22CamilleKick:'camille',g2BlitzShock:'blitzcrank',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed',g2PowderRelease:'powder',g2PowderMonkey:'powder',g23Flame:'sevika',g23Chomp:'sevika',g23Roll:'sevika',g23CrystalLand:'jayce-ranged',g23CrystalBlast:'jayce-ranged'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && task.cancellable === (task.kind==='g23Flame'||task.kind==='g23Chomp'), 'G2 task owner');
       if(task.kind.startsWith('g23')) requireValue((Object.hasOwn(G23_ABILITIES, task.source.definitionId)||champion(owner)==='rumble'&&mechanic(owner,'g23Junker','rod')===1||task.kind==='g23True'&&mechanic(owner,'g23Experiment','zyra')>0) && task.source.definitionId === owner.ability.id && task.source.sourceKind === 'ability', 'G23 task source');
       // G2-4b over-time restores: one declared item effect owns every pulse.
@@ -685,7 +685,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     else if (task.kind === 'g2PowderMonkey') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && task.total === 1, 'Powder monkey cell'); }
     else if (task.kind === 'melDash') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && champion(owner) === 'mel'
       && task.source.ownerId === unit.id && task.source.sourceKind === 'ability' && task.targetId === null && task.amount === 0 && task.total === 1 && task.cancellable === false, 'Mel dash'); }
-    else if (task.kind === 'g23CrystalLand' || task.kind === 'g23CrystalBlast') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && champion(owner) === 'jayce' && task.amount === 0 && task.ordinal < task.total && task.targetId !== null, 'Jayce crystal cell'); }
+    else if (task.kind === 'g23CrystalLand' || task.kind === 'g23CrystalBlast') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && champion(owner) === 'jayce-ranged' && task.amount === 0 && task.ordinal < task.total && task.targetId !== null, 'Jayce crystal cell'); }
     else if (task.kind === 'g22Vex') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8, 'G22 zone cell'); }
     else requireValue(task.cell === undefined, 'Unexpected task zone');
     if (task.kind === 'tristanaBounce') {

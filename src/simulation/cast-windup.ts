@@ -120,12 +120,15 @@ export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TIC
  * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
 export const JINX_ROCKET_LAUNCH_TICKS = 27, JINX_ROCKET_FLIGHT_TICKS = 10;
 
-/** Jayce's ranged cast (11-21, authorization ②; aligned to the original frame by frame, which bang is which crystal still being
- * checked): his crystals land JAYCE_CRYSTAL_LAND_TICKS after the cast and stay; crystal i explodes jayceCrystalBlastTick(i)
- * after it, one after another; the main hit on the nearest enemy lands JAYCE_MAIN_HIT_TICKS after it. Past the original's
- * three crystals (3 stars) the spacing repeats the last measured gap (self-chosen, not original data). */
-export const JAYCE_CRYSTAL_LAND_TICKS = 11, JAYCE_CRYSTAL_BLASTS: readonly number[] = [26, 28, 32], JAYCE_MAIN_HIT_TICKS = 33;
-export function jayceCrystalBlastTick(i: number): number {
-  const n = JAYCE_CRYSTAL_BLASTS.length;
-  return i < n ? JAYCE_CRYSTAL_BLASTS[i]! : JAYCE_CRYSTAL_BLASTS[n - 1]! + (i - n + 1) * (JAYCE_CRYSTAL_BLASTS[n - 1]! - JAYCE_CRYSTAL_BLASTS[n - 2]!);
-}
+/** Jayce's ranged cast (11-21, authorization ②): crystal i (i = 0 is thrown at the nearest enemy, then by distance) lands
+ * jayceCrystalLandTick(i) after the cast and stays there; the main hit on the nearest enemy lands JAYCE_MAIN_HIT_TICKS after it;
+ * the crystals then explode one after another in chain order (the nearest's first, then the farthest back toward the nearest),
+ * the n-th of the chain jayceCrystalBlastTick(n) after the cast. The first three of each are aligned to the original frame by
+ * frame (2 stars throws three); the chain order rule and the spacing past three (3 stars) repeat the last measured gap and
+ * are self-chosen, not original data. */
+export const JAYCE_CRYSTAL_LANDS: readonly number[] = [11, 14, 15], JAYCE_MAIN_HIT_TICKS = 33, JAYCE_CRYSTAL_BLASTS: readonly number[] = [35, 37, 40];
+const extend = (list: readonly number[], i: number) => i < list.length ? list[i]! : list[list.length - 1]! + (i - list.length + 1) * (list[list.length - 1]! - list[list.length - 2]!);
+export function jayceCrystalLandTick(i: number): number { return extend(JAYCE_CRYSTAL_LANDS, i); }
+/** Where crystal i (of count) comes in the chain: the nearest's first, then the farthest down to the second nearest. */
+export function jayceCrystalChainPlace(i: number, count: number): number { return i === 0 ? 0 : count - i; }
+export function jayceCrystalBlastTick(n: number): number { return extend(JAYCE_CRYSTAL_BLASTS, n); }

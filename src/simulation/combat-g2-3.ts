@@ -1,7 +1,7 @@
 import { SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
 import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
-import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_CRYSTAL_LAND_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, jayceCrystalChainPlace, jayceCrystalLandTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
@@ -213,19 +213,21 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const forge=reviveG23Forge(ctx,u)??u;
       // 11-21 (authorization ②; Fable's reading where the tooltip is silent, self-chosen, not original data): a crystal is
       // thrown at each of the NumOfCrystals nearest enemies (round robin from the nearest when there are fewer), lands on its
-      // cell JAYCE_CRYSTAL_LAND_TICKS after the cast and explodes jayceCrystalBlastTick(i) after it, one after another. The
+      // cell jayceCrystalLandTick(i) after the cast and stays; they explode one after another in chain order (cast-windup.ts). The
       // nearest enemy takes the main hit (JAYCE_MAIN_HIT_TICKS) and not its own crystal's explosion; every enemy within 1 hex
       // of an exploding crystal takes PercentAttackDamage, halved (not compounded) after its first explosion of this cast.
       // Who is hit and how much are taken now, from where everyone stands; a target that dies first takes nothing.
       const targets=foes(),count=v('NumOfCrystals'),nearest=targets[0];
       if(nearest){
         const hitsSoFar=new Map<string,number>(),blast=physical('PercentAttackDamage'),hits:[S13Unit,number,number][]=[];
-        for(let i=0;i<count;i++){
+        // Crystals in chain order, so "first explosion" follows the order they go off.
+        for(const i of Array.from({length:count},(_,k)=>k).sort((a,b)=>jayceCrystalChainPlace(a,count)-jayceCrystalChainPlace(b,count))){
           const aim=targets[i%targets.length]!,cell={...aim.cell};
-          for(const [kind,at] of [['g23CrystalLand',JAYCE_CRYSTAL_LAND_TICKS],['g23CrystalBlast',jayceCrystalBlastTick(i)]] as const)
-            u.tasks.push({key:JSON.stringify([u.id,seq,kind,i]),kind,source:origin(u),executeAtTick:ctx.tick+at,targetId:aim.id,amount:0,actionSeq:seq,ordinal:i,total:count,cancellable:false,cell});
+          const at=jayceCrystalBlastTick(jayceCrystalChainPlace(i,count));
+          for(const [kind,when] of [['g23CrystalLand',jayceCrystalLandTick(i)],['g23CrystalBlast',at]] as const)
+            u.tasks.push({key:JSON.stringify([u.id,seq,kind,i]),kind,source:origin(u),executeAtTick:ctx.tick+when,targetId:aim.id,amount:0,actionSeq:seq,ordinal:i,total:count,cancellable:false,cell});
           for(const x of foes().filter(x=>hexDistance(cell,x.cell)<=1&&!(x.id===nearest.id&&aim.id===nearest.id)).sort((a,b)=>compareText(a.id,b.id))){
-            const before=hitsSoFar.get(x.id)??0;hitsSoFar.set(x.id,before+1);hits.push([x,jayceCrystalBlastTick(i),before?Math.floor(blast/2):blast]);
+            const before=hitsSoFar.get(x.id)??0;hitsSoFar.set(x.id,before+1);hits.push([x,at,before?Math.floor(blast/2):blast]);
           }
         }
         // Packet 0 is the main hit, then the explosions in order.
