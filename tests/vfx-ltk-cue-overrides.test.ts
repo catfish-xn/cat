@@ -1,7 +1,7 @@
 import { effectImportance } from '../src/rendering/three-mode/effect-budget';
 import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
-import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES, VI_HAND_TRAIL, VI_SLAM_SYSTEMS, cueOverride } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
 import { silco } from '../src/rendering/three-mode/vfx-ltk/batch3/silco';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
@@ -36,9 +36,13 @@ describe('reviewed vfx-ltk cue overrides', () => {
 
   it('Vi: the override is the repository timeline plus the exported attack hit, so the two never drift apart', () => {
     // The live vi timeline comes from the asset index (skills.vi), which replaces S13_TIMELINES; this row is what plays.
-    expect(CUE_OVERRIDES.vi).toEqual([...S13_TIMELINES.vi,
+    // 11-21: her landing group moved to the slam's display branch ('vi-slam', played when the rules' slam lands) and her
+    // hand's trail lost its fixed stop; both still come from S13_TIMELINES, so they cannot drift apart from it.
+    expect(CUE_OVERRIDES.vi).toEqual([...S13_TIMELINES.vi.filter(cue => !VI_SLAM_SYSTEMS.includes(cue.system))
+      .map(cue => cue.system === VI_HAND_TRAIL ? { ...cue, stopAfter: undefined, fadeOut: undefined } : cue),
       { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.26666666666666666, duration: 1.5 }]);
-    expect(CUE_OVERRIDES.vi.filter(cue => cue.rowSide).map(cue => [cue.system, cue.event, cue.rowSide, cue.together])).toEqual([['84b969e0', 'projectile', -1, 'row'], ['84b969e0', 'projectile', 1, 'row']]);
+    expect(CUE_EXTRA_SKILLS['vi-slam']!.map(cue => cue.system)).toEqual(S13_TIMELINES.vi.filter(cue => VI_SLAM_SYSTEMS.includes(cue.system)).map(cue => cue.system));
+    expect(CUE_EXTRA_SKILLS['vi-slam']!.filter(cue => cue.rowSide).map(cue => [cue.system, cue.event, cue.rowSide, cue.together])).toEqual([['84b969e0', 'projectile', -1, 'row'], ['84b969e0', 'projectile', 1, 'row']]);
   });
 
   it('appends reviewed additions to the exported or replaced list, each only when its system was exported', () => {
