@@ -97,6 +97,14 @@
       "currentSha256": "c366ca3681ab77ba102ca2a7f6d333a59ba162a6c53b055a50c0ae0f16d1f716",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-clip-append.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4576,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "7b2be2e316dc2f949f90dae56086f4c33b1b29dc05babe3155a4e99543560891",
+      "firstDifferentByte": 0
+    },
     "tests/assets3d-convert.test.ts": {
       "previousBytes": 13630,
       "currentBytes": 14803,
