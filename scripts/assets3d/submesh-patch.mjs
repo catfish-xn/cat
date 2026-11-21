@@ -8,6 +8,12 @@ import { readGlb, writeGlb } from './glb.mjs';
 import { inspectSkn } from './inspect-source.mjs';
 import { binField as field, binIs, fnv1a } from './bin.mjs';
 
+/**
+ * Initially hidden submeshes that no clip shows but a renderer timed form does (rendering3d/submesh-visibility.ts
+ * TIMED_FORMS), by unit id: the patch appends them like clip-shown ones, so the timed form has geometry to switch on.
+ */
+export const TIMED_FORM_SUBMESHES = Object.freeze({ swain: Object.freeze(['wings']) });
+
 const clipName = path => path.split('/').at(-1).replace(/(?:\.tft_set13)?\.anm$/i, '').toLowerCase();
 const hashOf = value => (typeof value === 'object' && value !== null ? value.hash : value) >>> 0;
 
@@ -44,10 +50,12 @@ export function submeshVisibilityEvents(graphEntries, submeshes) {
 }
 
 /**
- * Which initially hidden submeshes to append: those in the mesh that an exported clip shows. The rest are listed with
- * why they are left out (not in the mesh, shown only by clips the model does not carry, or shown by no clip).
+ * Which initially hidden submeshes to append: those in the mesh that an exported clip shows, and those `timedForm` names
+ * (shown by a renderer timed form rather than a clip). The rest are listed with why they are left out (not in the mesh,
+ * shown only by clips the model does not carry, or shown by no clip).
  */
-export function submeshPatchPlan({ hidden, submeshes, events, exportedClips }) {
+export function submeshPatchPlan({ hidden, submeshes, events, exportedClips, timedForm = [] }) {
+  const timed = new Set(timedForm.map(n => n.toLowerCase()));
   const exported = new Set(exportedClips.map(c => c.toLowerCase())), append = [], skipped = [];
   const lower = new Map(submeshes.map(name => [name.toLowerCase(), name]));
   for (const wanted of hidden) {
@@ -56,6 +64,7 @@ export function submeshPatchPlan({ hidden, submeshes, events, exportedClips }) {
     const shownIn = Object.entries(events).filter(([, list]) => list.some(e => e.show.includes(name))).map(([clip]) => clip).sort();
     const carried = shownIn.filter(clip => exported.has(clip));
     if (carried.length) append.push({ name, shownIn: carried, ...(shownIn.length > carried.length ? { alsoShownInMissing: shownIn.filter(c => !exported.has(c)) } : {}) });
+    else if (timed.has(name.toLowerCase())) append.push({ name, shownBy: 'timed-form', ...(shownIn.length ? { alsoShownInMissing: shownIn } : {}) });
     else skipped.push({ name, reason: shownIn.length ? 'shown-only-in-missing-clips' : 'never-shown', ...(shownIn.length ? { clips: shownIn } : {}) });
   }
   const order = new Map(submeshes.map((name, i) => [name, i]));
@@ -110,10 +119,10 @@ export function appendSubmeshes(glb, skn, names, textures = {}, solidMaterials =
 
 /**
  * One model's patch from its parsed sources: the exported clips' visibility events into the manifest entry, and with
- * `appendGeometry` the hidden submeshes an exported clip shows appended to the model. `texture(path)` gives a hidden
+ * `appendGeometry` the hidden submeshes an exported clip or the unit's timed form shows appended to the model. `texture(path)` gives a hidden
  * submesh's diffuse as PNG. With the switch off, `data` is `before` itself.
  */
-export async function patchModel({ before, entry, skn, docs, graphEntries, appendGeometry = false, texture, id = '' }) {
+export async function patchModel({ before, entry, skn, docs, graphEntries, appendGeometry = false, texture, id = '', timedForm = Object.hasOwn(TIMED_FORM_SUBMESHES, id) ? TIMED_FORM_SUBMESHES[id] : [] }) {
   const { createHash } = await import('node:crypto');
   const { skinBindings } = await import('./bin-bindings.mjs');
   const { validateModel } = await import('./model.mjs');
@@ -122,7 +131,7 @@ export async function patchModel({ before, entry, skn, docs, graphEntries, appen
   const { events, unresolved } = submeshVisibilityEvents(graphEntries, submeshes);
   const clips = readGlb(before).document.animations.map(a => a.name.toLowerCase());
   const carried = Object.fromEntries(Object.entries(events).filter(([clip]) => clips.includes(clip)).sort(([a], [b]) => a < b ? -1 : 1));
-  const plan = submeshPatchPlan({ hidden: binding.hidden, submeshes, events, exportedClips: clips });
+  const plan = submeshPatchPlan({ hidden: binding.hidden, submeshes, events, exportedClips: clips, timedForm });
   const textures = {}, solid = {}, appending = appendGeometry ? plan.append : [];
   for (const { name } of appending) {
     if (binding.hiddenSolidMaterials[name]) { solid[name] = binding.hiddenSolidMaterials[name]; continue; }

@@ -19,7 +19,7 @@ import { melSkills } from './champions/mel';
 import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
 import { warwickSkills } from './champions/warwick';
-import { S13_TIMELINES } from './s13-timelines';
+import { S13_TIMELINES, VI_LANDING } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
@@ -28,6 +28,10 @@ const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
  * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
  */
 export const PLAY_OUT_AT_DEADLINE = 0.5;
+/** Vi's landing group (s13-timelines.ts): played when the rules' slam lands (CUE_EXTRA_SKILLS 'vi-slam', batch2-bridge.ts). */
+export const VI_SLAM_SYSTEMS: readonly string[] = ['18e22631', 'd27b3044', '66c600e8', '84b969e0'];
+/** Vi's right hand's trail: from her cast until the slam lands, where batch2-bridge.ts stops it. */
+export const VI_HAND_TRAIL = 'c11e6814';
 /** Draven's empowered axe, thrown and (CUE_EXTRA_SKILLS draven-return) flying back. */
 export const DRAVEN_AXE = '5d31debe';
 /** Seconds his landed axe takes to fly back to his hand (自定，非原版). */
@@ -184,6 +188,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '9d35c42d', action: 'passive', event: 'link', delay: 0, duration: 0.28, bone: chest, targetBone: chest },
     { system: '065c16b8', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest },
   ],
+  // Vi: her landing group (her landing's light column, burst, hit and row shockwave) when the rules' slam lands
+  // (batch2-bridge.ts), each at its own offset from the export's landing frame (none lands before it).
+  'vi-slam': S13_TIMELINES.vi.filter(cue => VI_SLAM_SYSTEMS.includes(cue.system))
+    .map(cue => ({ ...cue, delay: Math.max(0, cue.delay - VI_LANDING) })),
   // Powder: her blast's target burst plays when its damage lands, on each enemy it hits (batch1-events.ts); its explosion
   // plays once, on the cell her monkey arrives at ('powder-arrive', placeholder-renderer.ts powder-monkey-arrived).
   'powder-blast': [
@@ -689,8 +697,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // The asset root's exported list is S13_TIMELINES.vi as of 10-27 plus its attack hit (copied unchanged from the
   // export); this replaces it so the landing play-out (s13-timelines.ts) reaches the live board without an asset rebuild.
+  // 11-21 (Fable): her landing group (VI_SLAM_SYSTEMS) plays when the rules' slam lands (CUE_EXTRA_SKILLS 'vi-slam',
+  // batch2-bridge.ts), not at the export's landing frame; her right hand's trail stops there too, so it holds no fixed stop.
   vi: [
-    ...S13_TIMELINES.vi,
+    ...S13_TIMELINES.vi.filter(cue => !VI_SLAM_SYSTEMS.includes(cue.system))
+      .map(cue => cue.system === VI_HAND_TRAIL ? { ...cue, stopAfter: undefined, fadeOut: undefined } : cue),
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.26666666666666666, duration: 1.5 },
   ],
   // #627 (11-12): these batch-2 lists are the repository tables themselves, so a cue edit (here: basic-attack hits and
