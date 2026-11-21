@@ -118,8 +118,9 @@ describe('production representation preserves runtime semantics', () => {
     // 远程普攻命中才结算、存档/回放格式 9→10 (2026-11-19, #739): d94c78f1 → cf212873 (content-digest.ts covers M8_VERSION).
     // 技能落地结算批 (2026-11-20): cf212873 → 2f642cc0 (S13_COMBAT_RULES.skillLanding).
     // 黑默丁格火箭集火 (2026-11-20): 2f642cc0 → 9ccd5f96 (S13_COMBAT_RULES.heimerFocus).
-    // 梅尔弹幕 (2026-11-21): 3476d8d4 → 16f19467 (S13_COMBAT_RULES.melBarrage; was 9ccd5f96 before Swain's drain).
-    expect(parsed.content).toBe('fnv1a32-utf16:16f19467');
+    // 斯维因吸取节奏 v2 (2026-11-20): 9ccd5f96 → eb2d4cee (S13_COMBAT_RULES.swainDrain).
+    // 梅尔施法 v2 (2026-11-21): eb2d4cee → 6ad3ea6f (S13_COMBAT_RULES.melBarrage).
+    expect(parsed.content).toBe('fnv1a32-utf16:6ad3ea6f');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

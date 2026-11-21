@@ -5,7 +5,9 @@ import { DEFAULT_BOARD, hexDistance } from '../src/simulation/board';
 import { MEL_BOLT_TICKS_PER_HEX, MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS } from '../src/simulation/cast-windup';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import { CONTENT_DIGEST } from '../src/simulation/content';
-import { readCompatibility } from '../src/persistence/compatibility';
+import { readCompatibility, routeSaveFile } from '../src/persistence/compatibility';
+import { admitArchives } from '../src/replay';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { readyMatch } from './match-helpers';
 
@@ -27,7 +29,7 @@ describe('Mel barrage timing', () => {
     const moves = r.out.filter(s => s.tick > castAt && s.events.some(e => e.type === 'movement' && (e as any).unitId === 'mel')).map(s => s.tick);
     expect(moves[0]).toBe(castAt + MEL_DASH_LAND_TICKS);
   });
-  it('her bolts leave MEL_RELEASE_TICKS after the cast and settle on arrival (MEL_BOLT_TICKS_PER_HEX a hex), ten packets each', () => {
+  it('her bolts leave MEL_RELEASE_TICKS after the cast and settle on arrival (MEL_BOLT_TICKS_PER_HEX a hex), the same packets as before', () => {
     const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-barrage') as any[]);
     expect(launched.length).toBeGreaterThan(0);
     expect(launched.every(l => l.tick === castAt + MEL_RELEASE_TICKS)).toBe(true);
@@ -52,13 +54,56 @@ describe('Mel barrage timing', () => {
     expect(landed.map(l => [l.targetId, l.hit])).toEqual([[victim.targetId, false]]);
   });
 });
+// 11-21 (Fable, from original footage): every normal cast dashes, even when she already stands by her allies; the third cast
+// (the one that releases her stored energy) does not move. Where she lands is self-chosen. docs/S13_RULES_GAP.md (梅尔弹幕).
+describe('Mel dash: every normal cast, never the third', () => {
+  function beside(castCount: number) {
+    const units: any[] = [{ id: 'mel', definitionId: 'mel', team: 'player', starLevel: 1, location: { kind: 'board', cell: { col: 3, row: 6 } } },
+      { id: 'a1', definitionId: 'garen', team: 'player', starLevel: 2, location: { kind: 'board', cell: { col: 2, row: 6 } } },
+      { id: 'a2', definitionId: 'garen', team: 'player', starLevel: 2, location: { kind: 'board', cell: { col: 4, row: 6 } } },
+      ...['amumu', 'sett'].map((definitionId, i) => ({ id: `e${i}`, definitionId, team: 'enemy', starLevel: 3, location: { kind: 'board', cell: { col: 2 + 2 * i, row: 1 } } }))];
+    const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
+    const { state } = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items: [], temporaryEquipment: [], augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'mel-dash', 7) as { state: CombatState };
+    const s = { ...state, units: state.units.map(u => u.id === 'mel' ? { ...u, mana: u.maxMana, moveCooldownTicks: 2000, runtime: { ...(u as any).runtime, castCount } } : { ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 }) } as CombatState;
+    const r = run(s, 60);
+    const cast = r.out.flatMap(o => o.events).find(e => e.type === 'cast' && (e as any).receipt.source.ownerId === 'mel') as any;
+    const moves = r.out.flatMap(o => o.events.filter(e => e.type === 'movement' && (e as any).unitId === 'mel') as any[]).filter(m => m.tick >= cast.tick && m.tick <= cast.tick + MEL_RELEASE_TICKS);
+    return { branch: cast.receipt.branch?.branch, moves, castTick: cast.tick };
+  }
+  it('a normal cast moves her one dash even beside two allies; the third cast keeps her where she is', () => {
+    const seen = new Set<string>();
+    for (const castCount of [0, 1, 2]) {
+      const { branch, moves, castTick } = beside(castCount);
+      seen.add(branch);
+      if (branch === 'third') expect(moves, `castCount ${castCount}`).toEqual([]);
+      else {
+        expect(branch).toBe('normal');
+        expect(moves.map(m => m.tick), `castCount ${castCount}`).toEqual([castTick + MEL_DASH_LAND_TICKS]);
+        expect(hexDistance(moves[0].from, moves[0].to)).toBeGreaterThan(0);
+      }
+    }
+    expect([...seen].sort()).toEqual(['normal', 'third']);
+  });
+});
+
+// The barrage timing changes battle results, so its rule identifier is part of the content digest: a save or replay written
+// under the digest just before it (Swain's drain) is turned away as another version, never replayed under the new rule.
+const BEFORE_DIGEST = 'fnv1a32-utf16:eb2d4cee';
 describe('Mel barrage: files written before it', () => {
-  it('has its own identifier; a save with an earlier digest is rejected', () => {
-    expect(S13_COMBAT_RULES.melBarrage).toBe('dash-lands-10-bolts-leave-15-fly-2-per-hex-settle-on-landing-channel-until-release');
-    const before = 'fnv1a32-utf16:3476d8d4';
-    expect(CONTENT_DIGEST).not.toBe(before);
+  it('the rule has its own identifier and the digest moved', () => {
+    expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-dash-each-normal-cast-v2');
+    expect(CONTENT_DIGEST).not.toBe(BEFORE_DIGEST);
+  });
+  it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
     const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
-      runId: 'before-mel', createdAt: '2026-11-21T00:00:00Z', match: { ...readyMatch(42), contentDigest: before }, battles: [], currentBattle: null };
-    expect(readCompatibility(file)).toMatchObject({ status: 'rejected', reason: 'digest-mismatch' });
+      runId: 'before-mel', createdAt: '2026-11-21T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE_DIGEST }, battles: [], currentBattle: null };
+    expect(readCompatibility(file)).toEqual({ status: 'rejected', currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion: M8_VERSION.rulesVersion,
+      canResume: false, canReplay: false, canExportOriginal: false, reason: 'digest-mismatch' });
+    expect(routeSaveFile(file).envelope).toBeNull();
+    const admission = admitArchives([file], routeSaveFile);
+    expect(admission.records).toEqual([]);
+    expect(admission.quarantined.map(q => q.runId)).toEqual(['before-mel']);
+    const state = JSON.parse(serializeMatch(readyMatch(42)));
+    expect(() => restoreMatch(JSON.stringify({ ...state, contentDigest: BEFORE_DIGEST }))).toThrow('content-digest');
   });
 });

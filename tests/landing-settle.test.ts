@@ -107,6 +107,18 @@ describe('landing batch: projectiles', () => {
     expect(shielded(run(self, selfCast + LUX_SELF_SHIELD_TICKS - 1).state, 'p')).toBe(false);
     expect(shielded(run(self, selfCast + LUX_SELF_SHIELD_TICKS).state, 'p')).toBe(true);
   });
+  it("Lux: an ally who dies while the shield flies gets nothing, and the shield goes to nobody else (hit false)", () => {
+    const start = battle([hero('lux', 2, 3, 7), dummy('a', 'player', 2, 5, { hp: 10, maxHp: 100000 }), dummy('b', 'player', 4, 5, { hp: 50000, maxHp: 100000 }),
+      dummy('e', 'enemy', 3, 1)], { rngState: 42 });
+    const first = ofType(run(start, 40).out, 'abilityProjectileLaunched')[0]!;
+    expect([first.skill, first.targetId]).toEqual(['lux-shield', 'a']);
+    const mid = structuredClone(run(start, first.at - start.tick).state);
+    Object.assign(mid.units.find(u => u.id === 'a')!, { hp: 0, alive: false });
+    const r = run(mid, first.arrivalTick - mid.tick + 1);
+    expect(ofType(r.out, 'abilityProjectileLanded').map(l => [l.at, l.targetId, l.hit])).toEqual([[first.arrivalTick, 'a', false]]);
+    const fromLux = (s: CombatState) => s.units.flatMap(u => ((u as S13Unit).shieldLayers ?? []).filter(l => l.source.ownerId === 'p').map(() => u.id));
+    expect(fromLux(r.state)).toEqual([]);
+  });
   it.each([1, 2, 3] as const)('Mordekaiser %s star: the claw appears and comes down MORDEKAISER_CLAW_TICKS after the cast; damage there', star => {
     const start = battle([hero('mordekaiser', star, 3, 4), dummy('e', 'enemy', 3, 3), dummy('f', 'enemy', 3, 2)], { rngState: 42 });
     const r = run(start, 60), cast = castTick(r.out), claw = MORDEKAISER_CLAW_TICKS[star], launched = ofType(r.out, 'abilityProjectileLaunched');
@@ -138,17 +150,38 @@ describe('landing batch: files written before it', () => {
   });
 });
 
+describe('landing batch: a caster who dies before the landing', () => {
+  it("Darius's spin is void if he dies before it lands: no damage, no heal, no bleed", () => {
+    const start = battle([hero('darius', 2, 3, 4, { targetId: 'e', hp: 5000 }), dummy('e', 'enemy', 3, 3)], { rngState: 42 });
+    const cast = castTick(run(start, 5).out);
+    const mid = structuredClone(run(start, cast - start.tick).state);
+    Object.assign(mid.units.find(u => u.id === 'p')!, { hp: 0, alive: false });
+    const r = run(mid, DARIUS_SPIN_TICKS + 90);
+    expect(hits(r.out)).toEqual([]);
+    expect(r.out.flatMap(s => healViews(s.events).filter(h => h.unitId === 'p'))).toEqual([]);
+    expect(r.state.units.flatMap(u => (u as S13Unit).tasks ?? []).filter(t => t.kind === 'bleed')).toEqual([]);
+  });
+});
+
 // Heimerdinger's focus (11-20, self-chosen share): docs/S13_RULES_GAP.md (黑默丁格火箭集火).
 import { HEIMER_FOCUS_SHARE_BPS } from '../src/simulation/cast-windup';
 describe("Heimerdinger's focus", () => {
   it('sends the first floor(n × HEIMER_FOCUS_SHARE_BPS) rockets of each volley to his current target; the rest are drawn', () => {
     expect(HEIMER_FOCUS_SHARE_BPS).toBe(5000);
-    const start = battle([hero('heimerdinger', 2, 3, 7, { targetId: 'e' }), dummy('e', 'enemy', 3, 1), dummy('f', 'enemy', 5, 1), dummy('g', 'enemy', 0, 0)], { rngState: 42 });
-    const r = run(start, 60), launched = ofType(r.out, 'abilityProjectileLaunched').filter(l => l.actionSeq === ofType(r.out, 'abilityProjectileLaunched')[0]!.actionSeq);
-    const n = launched[0]!.count, focused = Math.floor(n * HEIMER_FOCUS_SHARE_BPS / 10000);
-    expect(focused).toBeGreaterThan(0);
-    const target = r.out.flatMap(s => s.events).find(e => e.type === 'cast' && (e as any).receipt?.source?.ownerId === 'p') as any;
-    const current = target.receipt.targetIds[0];
-    expect(launched.filter(l => l.ordinal < focused).map(l => l.targetId)).toEqual(Array(focused).fill(current));
+    // Seeds 1–3: with every rocket drawn, each of these volleys would send one of its first rockets elsewhere, so a focus
+    // that went to nobody (or to someone else) fails here.
+    const drawn: string[] = [];
+    for (const rngState of [1, 2, 3]) {
+      const start = battle([hero('heimerdinger', 2, 3, 7, { targetId: 'e' }), dummy('e', 'enemy', 3, 1), dummy('f', 'enemy', 5, 1), dummy('g', 'enemy', 0, 0)], { rngState });
+      const r = run(start, 60), all = ofType(r.out, 'abilityProjectileLaunched'), launched = all.filter(l => l.actionSeq === all[0]!.actionSeq);
+      const n = launched[0]!.count, focused = Math.floor(n * HEIMER_FOCUS_SHARE_BPS / 10000);
+      expect(focused).toBeGreaterThan(0);
+      expect(launched.map(l => l.ordinal)).toEqual([...Array(n).keys()]);
+      // His current target is 'e', set on the unit.
+      expect(launched.filter(l => l.ordinal < focused).map(l => l.targetId), `rngState ${rngState}`).toEqual(Array(focused).fill('e'));
+      drawn.push(...launched.filter(l => l.ordinal >= focused).map(l => l.targetId));
+    }
+    // The rest are still drawn at random: they reach more than one enemy.
+    expect(new Set(drawn).size).toBeGreaterThan(1);
   });
 });
