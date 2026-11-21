@@ -103,7 +103,7 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
 }
 /** Enemies nearest the cell she dashes to (byDistance from there). */
 function fromLanding(u:S13Unit,cell:HexCell,ctx:AbilityContext):S13Unit[]{return byDistance({...u,cell} as S13Unit,enemies(u,ctx.units));}
-/** Her barrage on one target lands as ten bolts (packets 0..9), the total split as before. */
+/** Her third-cast barrage on one target lands as its packets, the total split as before. */
 export function melBolts(ctx:AbilityContext,t:S13Unit,total:number,seq:number,source:CombatOrigin):void {
   for(let i=0;i<10;i++)ctx.packets.push({source,targetId:t.id,raw:Math.floor(total/10)+(i<total%10?1:0),damageType:'magic',actionSeq:seq,ordinal:i,
     delivery:'ability-direct',critEligibility:'requires-spell-authorization',area:true,triggeringCastActionSeq:seq});
