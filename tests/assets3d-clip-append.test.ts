@@ -6,7 +6,7 @@ import { readGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Pure Node build utility.
 import { encodePng } from '../scripts/assets3d/texture.mjs';
 // @ts-expect-error Offline Node script.
-import { appendClips, TIMED_FORM_GRAPH_KEYS } from '../scripts/assets3d/clip-append.mjs';
+import { appendClips, assertBaseKept, TIMED_FORM_GRAPH_KEYS } from '../scripts/assets3d/clip-append.mjs';
 
 /** A two-submesh SKN (Body, Prop; one triangle each) on a one-joint rig, in the layout inspectSkn reads. */
 function fixtures() {
@@ -63,5 +63,24 @@ describe('clip append', () => {
       .toEqual(from.channels.map((c: { target: { node: number; path: string } }) => [donorDoc.nodes[c.target.node].name, c.target.path]));
     await expect(appendClips(out, donor, ['x_enter'])).rejects.toThrow('clip-append-already-present:x_enter');
     await expect(appendClips(base, donor, ['nope'])).rejects.toThrow('clip-append-missing-donor-clip:nope');
+  });
+  it('the base check refuses a changed JSON entry or a changed base byte, and appendClips runs it on its output', async () => {
+    const f = fixtures();
+    const base = makeModel(f.mesh, f.rig, [{ name: 'x_idle', bytes: anm() }], { Body: f.body, Prop: f.prop }).glb;
+    const donor = makeModel(f.mesh, f.rig, [{ name: 'x_enter', bytes: anm() }], { Body: f.body, Prop: f.prop }).glb;
+    const out: Buffer = await appendClips(base, donor, ['x_enter']);
+    expect(() => assertBaseKept(base, out)).not.toThrow();
+    // One prior BIN byte changed.
+    const jl = out.readUInt32LE(12), binAt = 20 + jl + 8, byte = Buffer.from(out); byte[binAt] ^= 0xff;
+    expect(() => assertBaseKept(base, byte)).toThrow('clip-append-base-bin-changed');
+    // One prior JSON entry changed (same length, so the chunk layout stays valid).
+    const text = out.subarray(20, 20 + jl).toString('utf8'), edited = text.replace('"x_idle"', '"y_idle"');
+    expect(edited).not.toBe(text);
+    const entry = Buffer.from(out); entry.write(edited, 20, 'utf8');
+    expect(() => assertBaseKept(base, entry)).toThrow('clip-append-base-changed:animations');
+    // appendClips hands its output to the check: a check that refuses makes the append fail.
+    const seen: Buffer[] = [];
+    await expect(appendClips(base, donor, ['x_enter'], { verify: (b: Buffer, o: Buffer) => { seen.push(b, o); throw new Error('refused'); } })).rejects.toThrow('refused');
+    expect(seen[0]).toBe(base); expect(seen[1]!.equals(out)).toBe(true);
   });
 });

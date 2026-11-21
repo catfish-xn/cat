@@ -44,9 +44,10 @@ function floats(glb, index) {
 
 /**
  * Appends `clips` (names of the donor's animations) to `base` (a GLB, compressed or not, whose buffer 0 is its BIN
- * chunk). Channels are retargeted by node name. Returns the new GLB; the base's JSON entries and BIN bytes are kept.
+ * chunk). Channels are retargeted by node name. Returns the new GLB; `verify` (assertBaseKept) refuses one that does not
+ * keep the base's JSON entries and BIN bytes.
  */
-export async function appendClips(base, donorGlb, clips) {
+export async function appendClips(base, donorGlb, clips, { verify = assertBaseKept } = {}) {
   const { readGlb } = await import('./glb.mjs');
   const donor = readGlb(donorGlb), b = parseGlb(base), json = structuredClone(b.json);
   if (json.buffers?.[0]?.uri !== undefined || json.buffers[0].byteLength > b.bin.length) throw new Error('clip-append-unsupported-base');
@@ -81,17 +82,25 @@ export async function appendClips(base, donorGlb, clips) {
   }
   json.buffers[0] = { ...json.buffers[0], byteLength: length };
   const out = writeGlbRaw(json, Buffer.concat(parts));
-  // The base as it was: every prior JSON entry equal, every prior BIN byte in place.
-  const check = parseGlb(out);
+  verify(base, out);
+  return out;
+}
+
+/**
+ * Throws unless `out` keeps `base` as it was: every prior JSON entry equal (buffer 0's length is the one field that may
+ * grow) and every prior byte of buffer 0 in place.
+ */
+export function assertBaseKept(base, out) {
+  const b = parseGlb(base), check = parseGlb(out);
   for (const key of Object.keys(b.json)) {
     // Buffer 0 grows by the appended views: its length is the one field allowed to change.
     const strip = list => key === 'buffers' ? list.map((x, i) => i ? x : { ...x, byteLength: 0 }) : list;
     const before = Array.isArray(b.json[key]) ? strip(b.json[key]) : b.json[key], after = Array.isArray(check.json[key]) ? strip(check.json[key]) : check.json[key];
-    if (Array.isArray(before) ? JSON.stringify(after.slice(0, before.length)) !== JSON.stringify(before) : JSON.stringify(after) !== JSON.stringify(before))
+    if (Array.isArray(before) ? !Array.isArray(after) || JSON.stringify(after.slice(0, before.length)) !== JSON.stringify(before) : JSON.stringify(after) !== JSON.stringify(before))
       throw new Error(`clip-append-base-changed:${key}`);
   }
-  if (!check.bin.subarray(0, b.json.buffers[0].byteLength).equals(b.bin.subarray(0, b.json.buffers[0].byteLength))) throw new Error('clip-append-base-bin-changed');
-  return out;
+  const length = b.json.buffers[0].byteLength;
+  if (check.bin.length < length || !check.bin.subarray(0, length).equals(b.bin.subarray(0, length))) throw new Error('clip-append-base-bin-changed');
 }
 
 /**
