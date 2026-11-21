@@ -126,12 +126,20 @@
       "currentSha256": "e91d21cd94029677c827f9e162ab58614d47f4d7f8cd1f4770ee675a48558777",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-submesh-append.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7664,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e18144505dfb2dfc94c6fcd7b96f48866a2a5ea1015a4b829afeb00015a6b360",
+      "firstDifferentByte": 0
+    },
     "tests/assets3d-submesh-patch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17166,
+      "currentBytes": 20761,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ca3d5f941bba3b77bdd1be1f79bf55490cfa0952c4f200a353afa6020200ca95",
+      "currentSha256": "12f3bb58c76ddc0c8723223edf48bc84e2c788471ec1b8dc88695f4816d919db",
       "firstDifferentByte": 0
     },
     "tests/assets3d-ui-batch.test.ts": {
