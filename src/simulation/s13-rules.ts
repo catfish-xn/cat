@@ -60,4 +60,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   violetCombo: 'violet-combo-settle-per-hit-v1',
   // Jinx's rocket v1 (11-21): it leaves and explodes later (cast-windup.ts) and settles where it explodes. Zap and chompers unchanged.
   jinxRocket: 'jinx-rocket-settle-on-explosion-v1',
+  // Vi's slam v2 (11-21): it lands VI_SLAM_TICKS after the cast, aligned to the original (v1 was a fitted wait); the row shockwave stays on the slam.
+  viSlam: 'vi-slam-aligned-to-original-v2',
 });
