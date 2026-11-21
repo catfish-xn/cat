@@ -13,7 +13,7 @@ const attack: readonly TimelineCue[] = [
   { system: '0f2af66b', action: 'attack', event: 'hit', bone: CHEST, delay: 9.5 / 30 + .3, duration: .5 },
 ];
 export const melSkills: Record<string, readonly TimelineCue[]> = {
-  // Her cast (11-21, rules 'mel-barrage'): the cast itself plays only her empty Q_cas; her dash, her bolts and their hits play
+  // Her cast (11-21, rules 'mel-barrage'): the cast itself plays only her (empty) cast effect; her dash, her bolts and their hits play
   // when the rules report them (batch2-bridge.ts): the dash when she lands (her movement), each bolt when it leaves
   // (abilityProjectileLaunched) and flies as long as the rules' flight, each hit when that bolt lands (abilityProjectileLanded).
   mel: [...attack,
