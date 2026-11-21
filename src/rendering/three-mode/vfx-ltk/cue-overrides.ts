@@ -928,6 +928,9 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // lands, for about 0.5 s (Linux probe 11-20, with a kill; without one it never draws). Held off as a known difference
   // (Fable 11-20, three columns with a kill); the rest of the system draws.
   '2f79da6f': ['onKill_GlowDecal'],
+  // Ziggs's bomb burst: one emitter drew large white wedges thrown out of the first frame of every burst on our board.
+  // Held off as a known difference (Fable 11-21); the fireball and the rest of the burst draw.
+  '04c3cba0': ['SmokeHeat'],
 };
 
 /**
