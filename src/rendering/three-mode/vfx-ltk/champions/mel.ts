@@ -22,7 +22,9 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
   'mel-dash': [{ system: '9f8fe9f1', event: 'cast-start', delay: 0, duration: .5 }],
   // Her bolts leave her left hand's locator: her skeleton has no L_Buffbone_Engine, which fell back to her feet (11-18 bone scan).
   // The flight takes the rules' own time (MEL_BOLT_TICKS_PER_HEX a cell, at least one tick), from where she stands at release.
-  'mel-bolt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT }],
+  // Each bolt's arc only gives way (Fable 11-21): with the board full it does not play, and it never ends another run's
+  // place; any newcomer may end it.
+  'mel-bolt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true }],
   'mel-bolt-hit': [{ system: '801006a8', event: 'hit', delay: 0, duration: .6 }],
   // Her third cast: its own cast effects on her (no rule event ends them: each plays to its system's own end, 11-15); its
   // beams leave and land with the rules' bolts as above, and its explosion plays on the main target when that bolt lands.
