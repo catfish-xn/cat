@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 
-// Fable 11-21: Cassiopeia's bolt spell names this system as its hit effect in her data, so it plays where the bolt hits:
-// on her primary target, every cast, at the data's hit bone, for the asset's own time. Nothing about the asset is changed.
+// Fable 11-21: Cassiopeia's bolt hit plays where the bolt hits: on her primary target, every cast, for the asset's own time.
+// Nothing about the asset is changed.
 const BOLT_HIT = '259c4cbc';
 
 describe('Cassiopeia bolt hit effect', () => {
-  it('plays once per cast on the primary target, at the bolt\'s hit bone, when the comet lands', () => {
+  it('plays once per cast on the primary target when the comet lands', () => {
     const cues = CUE_OVERRIDES.cassiopeia!;
     const hit = cues.filter(cue => cue.system === BOLT_HIT);
     expect(hit).toHaveLength(1);

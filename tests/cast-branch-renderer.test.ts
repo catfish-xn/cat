@@ -60,7 +60,7 @@ describe('rule-driven cast choice in the renderer', () => {
     const cass = CUE_OVERRIDES.cassiopeia;
     expect(kept(cass, 'single').filter(c => c.system === 'b124a9c5')).toHaveLength(1);
     expect(kept(cass, 'splash').find(c => c.system === 'b124a9c5')?.targetLimit).toBe(3);
-    // The bolt's own hit effect is not branch-bound: it plays with the comet on every cast.
+    // The bolt's hit is not branch-bound: it plays with the comet on every cast.
     expect(kept(cass).map(c => c.system)).toEqual(['9f19f946', '259c4cbc']);
   });
 
