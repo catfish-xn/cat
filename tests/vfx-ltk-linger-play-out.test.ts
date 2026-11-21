@@ -56,6 +56,18 @@ describe('projectiles whose trails linger play out when they land (LINGER_PLAY_O
     expect(listed.object.parent).toBeNull();
     runtime.dispose();
   });
+  it('the same system fired twice: both tails play out side by side, and a clear (a combat ending) removes both at once', async () => {
+    const { runtime, scene, advance } = await setup();
+    expect(runtime.play('gangplank', 'caster', ['target'])).toBe(true);
+    runtime.update(1 / 30, new Camera()); runtime.update(1 / 30, new Camera());
+    advance(0.7);
+    const tails = built.filter(f => f.object.userData.ltkSystem === LISTED);
+    expect(tails).toHaveLength(2);
+    expect(tails.every(f => f.object.parent === scene)).toBe(true);
+    runtime.clear();
+    expect(tails.every(f => f.object.parent === null)).toBe(true);
+    runtime.dispose();
+  });
   it('the set holds ids, none of them already ending by PLAY_OUT_SYSTEMS', () => {
     expect(LINGER_PLAY_OUT.size).toBeGreaterThan(0);
     for (const id of LINGER_PLAY_OUT) { expect(id).toMatch(/^[0-9a-f]{8}$/); expect(Object.hasOwn(PLAY_OUT_SYSTEMS, id)).toBe(false); }
