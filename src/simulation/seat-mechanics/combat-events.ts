@@ -44,6 +44,15 @@ export type G23CombatEventData =
   | { readonly type: 'attackLaunched'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly arrivalTick: number; readonly projectile: 'flight' | 'beam' }
   /** Display only, no rule effect: a flying shot reached targetId; hit false when the target died in flight (the shot did nothing). */
   | { readonly type: 'attackLanded'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly hit: boolean }
+  /** Display only, no rule effect: a takedown of victimId extended Swain's demon form from beforeUntilTick to untilTick (once per victim). */
+  | { readonly type: 'swainAscensionExtended'; readonly tick: number; readonly unitId: string; readonly victimId: string; readonly beforeUntilTick: number; readonly untilTick: number }
+  /**
+   * Display only, no rule effect (landing batch, 11-20): one projectile of a skill (skill names it; ordinal of count in the
+   * cast actionSeq) leaves sourceId for targetId on this tick and lands on arrivalTick, where its effect settles.
+   */
+  | { readonly type: 'abilityProjectileLaunched'; readonly tick: number; readonly sourceId: string; readonly targetId: string; readonly arrivalTick: number; readonly skill: import('../ability-projectile').AbilityProjectileSkill; readonly ordinal: number; readonly actionSeq: number; readonly count: number }
+  /** Display only, no rule effect: that projectile reached targetId; hit false when the target died in flight (nothing settles, no retarget). Comes before its damage. */
+  | { readonly type: 'abilityProjectileLanded'; readonly tick: number; readonly sourceId: string; readonly targetId: string; readonly skill: import('../ability-projectile').AbilityProjectileSkill; readonly ordinal: number; readonly actionSeq: number; readonly count: number; readonly hit: boolean }
   /**
    * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
    * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;

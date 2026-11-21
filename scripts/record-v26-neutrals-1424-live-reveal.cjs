@@ -35,21 +35,24 @@ async function main(){
  // 2026-11-18 ranged attack landing (re-pin, same deaths, killers and order): display events (attackLaunched/attackLanded) move
  // every later eventSeq; r01 dies at 130 (was 128) and, terminal branch, r02 at 131 (was 127) as ranged shots now land after
  // their attack. Table in the #739 description.
- const expectedDeaths=[{unitId:bird('r02'),tick:56,eventSeq:523},{unitId:bird('r04'),tick:56,eventSeq:524},{unitId:bird('r03'),tick:86,eventSeq:728},{unitId:bird('r01'),tick:130,eventSeq:964},{unitId:bird('r00'),tick:147,eventSeq:1068}];
+ // 2026-11-20 landing batch (re-pin, same deaths, ticks, killers and order): the new display events (abilityProjectileLaunched/
+ // abilityProjectileLanded) move every later eventSeq: 523/524/728/964/1068 -> 525/526/730/968/1072. Table in the #787 description.
+ const expectedDeaths=[{unitId:bird('r02'),tick:56,eventSeq:525},{unitId:bird('r04'),tick:56,eventSeq:526},{unitId:bird('r03'),tick:86,eventSeq:730},{unitId:bird('r01'),tick:130,eventSeq:968},{unitId:bird('r00'),tick:147,eventSeq:1072}];
  assert.deepEqual(branches.simultaneous.deaths,expectedDeaths);
  const sameTick=branches.simultaneous.deaths.slice(0,2);
  const batches=branches.simultaneous.batches;
  assert.deepEqual(batches.map(b=>b.deaths),[sameTick,expectedDeaths.slice(2,3),expectedDeaths.slice(3,4),expectedDeaths.slice(4)]);
  assert.deepEqual(batches.map(b=>b.terminal),[false,false,false,true]);
- assert.deepEqual(batches[0].reveals,[523,523,524,524,524]);
+ assert.deepEqual(batches[0].reveals,[525,525,526,526,526]); // landing batch: was 523/524
  assert.equal(branches.simultaneous.phase,'settlement');
- const expectedTerminalDeaths=[{unitId:bird('r04'),tick:40,eventSeq:463},{unitId:bird('r02'),tick:131,eventSeq:1289},{unitId:bird('r03'),tick:135,eventSeq:1323},{unitId:bird('r00'),tick:165,eventSeq:1558},{unitId:bird('r01'),tick:165,eventSeq:1559}];
+ // Landing batch: terminal branch likewise 1289/1323/1558/1559 -> 1291/1325/1560/1561 (r04's 463 unchanged).
+ const expectedTerminalDeaths=[{unitId:bird('r04'),tick:40,eventSeq:463},{unitId:bird('r02'),tick:131,eventSeq:1291},{unitId:bird('r03'),tick:135,eventSeq:1325},{unitId:bird('r00'),tick:165,eventSeq:1560},{unitId:bird('r01'),tick:165,eventSeq:1561}];
  assert.deepEqual(branches.terminal.deaths,expectedTerminalDeaths);
  const terminalBatch=branches.terminal.deaths.slice(3);
  const terminalBatches=branches.terminal.batches;
  assert.deepEqual(terminalBatches.map(b=>b.deaths),[expectedTerminalDeaths.slice(0,1),expectedTerminalDeaths.slice(1,2),expectedTerminalDeaths.slice(2,3),terminalBatch]);
  assert.deepEqual(terminalBatches.map(b=>b.terminal),[false,false,false,true]);
- assert.deepEqual(terminalBatches[3].reveals,[1558,1558,1559]);
+ assert.deepEqual(terminalBatches[3].reveals,[1560,1560,1561]); // landing batch: was 1558/1559
  assert.equal(branches.terminal.phase,'settlement');
  // Seed 54239 inventory Shojin/Gargoyle/Crownguard on bare two-star Loris: (6,7) kills only r04, (0,6) only r01.
  for(const [source,cell,deathTick,directReceipts,itemBirths,unitBirths] of [['r04',{col:6,row:7},520,2,0,1],['r01',{col:0,row:6},353,1,1,0]]){

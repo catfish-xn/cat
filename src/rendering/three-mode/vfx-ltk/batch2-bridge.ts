@@ -29,6 +29,12 @@ export function createBatch2VfxBridge(host: Host) {
   const consequences = new Map<string, readonly DisplayCombatEvent[]>();
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
+  // Mel's casts by caster, then action: true for her third cast (its own bolts, hits and explosion). Her latest two casts are
+  // kept, enough for bolts still flying from one cast when the next begins.
+  const melCasts = new Map<string, Map<number, boolean>>();
+  // Mel casters whose cast has begun and whose bolts have not left yet: their next movement is that cast's dash landing.
+  // The value: that cast is her third, which has no dash (the rules move her on her plain casts only).
+  const melDashing = new Map<string, boolean>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
@@ -132,11 +138,35 @@ export function createBatch2VfxBridge(host: Host) {
           }
         }
       }
+      // Mel (rules 'mel-barrage'): her dash lands, then her bolts leave and land, each reported by the rules; observed in
+      // catch-up too, so a later bolt still knows its cast.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'mel') {
+        const casts = melCasts.get(event.sourceId) ?? new Map<number, boolean>();
+        casts.set(event.actionSeq, event.branch?.branch === 'third');
+        for (const seq of [...casts.keys()].slice(0, -2)) casts.delete(seq);
+        melCasts.set(event.sourceId, casts); melDashing.set(event.sourceId, event.branch?.branch === 'third');
+      }
+      const melDash = event.type === 'movement' && melDashing.get(event.unitId) === false;
+      if (event.type === 'movement') melDashing.delete(event.unitId);
+      const melBolt = (event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'mel-barrage';
+      if (melBolt && event.type === 'abilityProjectileLaunched') melDashing.delete(event.sourceId);
       // A frenzy is observed in catch-up too: an attack drawn later in it is still frenzied.
       if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
         if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
       }
       if (!current) return;
+      if (melDash) play('mel', event.unitId, [], 'mel-dash');
+      if (melBolt) {
+        const third = melCasts.get(event.sourceId)?.get(event.actionSeq) === true;
+        // Each bolt flies the rules' own flight (champions/mel.ts MEL_BOLT_FLIGHT) from where she stands as it leaves.
+        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : 'mel-bolt');
+        // Its hit when it lands on a target still there (a bolt whose target died in flight lands on nothing).
+        if (event.type === 'abilityProjectileLanded' && event.hit) {
+          play('mel', event.sourceId, [event.targetId], third ? 'mel-third-hit' : 'mel-bolt-hit', 'cast', true);
+          // The third cast's explosion, on its main target (the first bolt's, the enemy nearest where she landed).
+          if (third && event.ordinal === 0) play('mel', event.sourceId, [event.targetId], 'mel-third-blast', 'cast', true);
+        }
+      }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
       // Mel's energy gain plays nothing: its stack visual drew a flat disc at her feet on our board. Held off as a known
@@ -152,7 +182,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); },
   };
   return bridge;
 }
