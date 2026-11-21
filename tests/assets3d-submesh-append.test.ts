@@ -3,7 +3,8 @@ import { Document, NodeIO } from '@gltf-transform/core';
 import { KHRTextureBasisu } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
 // @ts-expect-error -- plain ESM build script without types
-import { appendSubmeshes, meshSpaceTransform } from '../scripts/assets3d/submesh-append.mjs';
+import { appendSubmeshes, meshSpaceTransform, updatePrecache } from '../scripts/assets3d/submesh-append.mjs';
+import { createHash } from 'node:crypto';
 
 // Synthetic models: one skeleton of two joints. The grafted model stores its mesh at a third of the base's size and folds the
 // factor into its inverse bind matrices (what mesh quantisation does when the new submesh widens the bounds).
@@ -74,5 +75,13 @@ describe('assets3d submesh append', () => {
     await MeshoptDecoder.ready;
     const base = await model({ factor: 1, withWing: false }), grafted = await model({ factor: 3, withWing: true, targets: true });
     expect(() => appendSubmeshes(base, grafted)).toThrow('submesh-append-unsupported-primitive');
+  });
+  it("sets precache.json's entry for the model to the output's bytes and sha256, keeping the file's layout", () => {
+    const text = JSON.stringify({ schemaVersion: 1, files: [{ path: 'a.glb', bytes: 1, sha256: 'x' }, { path: 'm/model.glb', bytes: 2, sha256: 'y' }] }, null, 2) + '\n';
+    const bytes = new Uint8Array([1, 2, 3]), out = updatePrecache(text, 'm/model.glb', bytes);
+    expect(JSON.parse(out).files).toEqual([{ path: 'a.glb', bytes: 1, sha256: 'x' },
+      { path: 'm/model.glb', bytes: 3, sha256: createHash('sha256').update(bytes).digest('hex') }]);
+    expect(out.endsWith(']\n}\n')).toBe(true);
+    expect(() => updatePrecache(text, 'missing.glb', bytes)).toThrow('submesh-append-precache-missing');
   });
 });

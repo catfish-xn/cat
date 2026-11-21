@@ -7,7 +7,10 @@
 // into its inverse bind matrices. The appended positions are therefore moved from the grafted model's mesh space into the
 // base's (through inverse(baseIbm) * graftedIbm, which must be one and the same transform for every joint) and stored as
 // floats. Normals and the other attributes are copied as they are, so that transform may only scale uniformly and move.
-// Usage: node scripts/assets3d/submesh-append.mjs <base model.glb> <grafted model.glb> <out model.glb>
+// Usage: node scripts/assets3d/submesh-append.mjs <base model.glb> <grafted model.glb> <out model.glb> [--precache <precache.json> --path <model path>]
+// With --precache, the entry for <model path> (root-relative, as precache.json lists it) in that file is set to the output's
+// bytes and sha256, so the graft step's overlay (which records the grafted model) matches the appended model.
+import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { MeshoptDecoder } from 'meshoptimizer';
@@ -130,10 +133,23 @@ export function appendSubmeshes(baseBytes, graftedBytes) {
   return new Uint8Array(Buffer.concat([header, chunk(json.length, JSON_CHUNK), json, chunk(bin.length, BIN_CHUNK), bin]));
 }
 
+/** precache.json's text with the entry at `path` set to `bytes`' length and sha256; the file's own layout is kept. */
+export function updatePrecache(text, path, bytes) {
+  const precache = JSON.parse(text), entry = precache.files?.find(f => f.path === path);
+  if (!entry) throw new Error(`submesh-append-precache-missing:${path}`);
+  entry.bytes = bytes.byteLength; entry.sha256 = createHash('sha256').update(bytes).digest('hex');
+  return JSON.stringify(precache, null, 2) + (text.endsWith('\n') ? '\n' : '');
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  const [base, grafted, out] = process.argv.slice(2);
-  if (!base || !grafted || !out) { console.error('usage: submesh-append.mjs <base model.glb> <grafted model.glb> <out model.glb>'); process.exit(2); }
+  const args = process.argv.slice(2), flag = name => { const i = args.indexOf(`--${name}`); return i >= 0 ? args.splice(i, 2)[1] : undefined; };
+  const precache = flag('precache'), path = flag('path'), [base, grafted, out] = args;
+  if (!base || !grafted || !out || !precache !== !path) {
+    console.error('usage: submesh-append.mjs <base model.glb> <grafted model.glb> <out model.glb> [--precache <precache.json> --path <model path>]'); process.exit(2);
+  }
   await MeshoptDecoder.ready;
-  writeFileSync(out, appendSubmeshes(readFileSync(base), readFileSync(grafted)));
-  console.log('wrote', out);
+  const bytes = appendSubmeshes(readFileSync(base), readFileSync(grafted));
+  writeFileSync(out, bytes);
+  if (precache) writeFileSync(precache, updatePrecache(readFileSync(precache, 'utf8'), path, bytes));
+  console.log('wrote', out, ...(precache ? ['and', precache] : []));
 }
