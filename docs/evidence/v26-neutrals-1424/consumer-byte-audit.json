@@ -97,6 +97,14 @@
       "currentSha256": "c366ca3681ab77ba102ca2a7f6d333a59ba162a6c53b055a50c0ae0f16d1f716",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-clip-append.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6097,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "c28bfe78c32bf0d7dbc00b77e59516d90dbddedb4119a203f94ddad493282621",
+      "firstDifferentByte": 0
+    },
     "tests/assets3d-convert.test.ts": {
       "previousBytes": 13630,
       "currentBytes": 14803,
@@ -4314,9 +4322,9 @@
     "tests/vfx-ltk-attack-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9966,
+      "currentBytes": 9876,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d15b4dfd5b83ddd4df19887718734706f2b5dd8737066e4f99ee1ff727cd2263",
+      "currentSha256": "87c9707ea75cf942a8996495cfa250d65f4b7fceaf3a45fe205e7bd57931c636",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-release-map.test.ts": {
