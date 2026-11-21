@@ -716,9 +716,9 @@
     "tests/cast-branch-rotations.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7523,
+      "currentBytes": 7665,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3bda156b7a7c31e7553e5045b058575450de359f1a1d5cb5ab64cf27f331409b",
+      "currentSha256": "986257b523bdf8de44b3c714258afa0463a8e62b79c1667ab68a895c99696cc8",
       "firstDifferentByte": 0
     },
     "tests/cast-windup-batch1.test.ts": {
@@ -1630,9 +1630,9 @@
     "tests/helpers/landing.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1217,
+      "currentBytes": 1941,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7078b63bd1e8f4236894530a779218b2288ea201f2c7561def8ddf000333d953",
+      "currentSha256": "e8841879e00ae7cb2a3292ffa50bb1bd2e2c424b65309836182705af38f35d1b",
       "firstDifferentByte": 0
     },
     "tests/item-catalog-version.test.ts": {
@@ -1704,9 +1704,9 @@
     },
     "tests/m5-combat.test.ts": {
       "previousBytes": 37429,
-      "currentBytes": 40437,
+      "currentBytes": 40760,
       "previousSha256": "4656efcd5b60f141e4c6c66849b8a7428be3177eeb45e609ddc92daf6b6faa96",
-      "currentSha256": "705317d4f9892bf1220485446d0fe835a608d594e607d2205b9774a8a50b6d67",
+      "currentSha256": "8421e04f3c2976f770f64c1cc3927e887b8fdeef2ccb653f0f0a6a86b6758429",
       "firstDifferentByte": 9
     },
     "tests/m5-command-phases.test.ts": {
@@ -3148,9 +3148,9 @@
     },
     "tests/rules-combat-mana.test.ts": {
       "previousBytes": 13100,
-      "currentBytes": 14246,
+      "currentBytes": 14819,
       "previousSha256": "7c51132d359b42e5823ea7636e8e276de8d7b237465d7dab058d3b4fd1fce552",
-      "currentSha256": "c8734f7c4042ea8ae9d965ee9d8f8f58dfe81ca01349f9782ea585517c8a419b",
+      "currentSha256": "e415c226e92c803086f36204db0d5871ce8431cd7eab7ab9a1d58e960f42e9c2",
       "firstDifferentByte": 9
     },
     "tests/rules-placebo-stage.test.ts": {

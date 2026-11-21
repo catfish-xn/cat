@@ -23,9 +23,12 @@ const hero = (id: string, team: CombatUnit['team'], col: number, patch: Partial<
 const victim = (state: CombatState) => state.units.find(u => u.id === 'p')!;
 /** Ranged attack landing (window only): the attackers are ranged heroes, so the damage — and p's damage mana — comes when the
  * shots land. One step, then on (attackers held) until every shot launched in it has landed; the events are the landing step's. */
+// Ranged attack wind-up (#791): an attack started in the first step launches its shot after its wind-up, so the shots to wait
+// for are the ones launched there plus the ones that start winding up there (less any wind-up cancelled).
 function landed(first: ReturnType<typeof stepCombat>): ReturnType<typeof stepCombat> {
-  let r = first, launched = first.events.filter(e => e.type === 'attackLaunched').length, done = 0;
-  while (done < launched) { r = stepCombat({ ...r.state, units: r.state.units.map(u => u.id === 'p' ? u : { ...u, cooldownTicks: 1000 }) }); done += r.events.filter(e => e.type === 'attackLanded').length; }
+  const count = (r: ReturnType<typeof stepCombat>, type: string) => r.events.filter(e => e.type === type).length;
+  let r = first, launched = count(first, 'attackLaunched') + count(first, 'attackWindup'), done = 0;
+  while (done < launched) { r = stepCombat({ ...r.state, units: r.state.units.map(u => u.id === 'p' ? u : { ...u, cooldownTicks: 1000 }) }); done += count(r, 'attackLanded'); launched -= count(r, 'attackWindupCancelled'); }
   return r;
 }
 const hit = (damage: number, patch: Partial<CombatUnit> = {}, attackers = 1) => landed(stepCombat(battle([
@@ -53,7 +56,8 @@ describe('10-23 approved combat mana and excess crit vectors', () => {
     let state = battle([hero('p', 'player', 1, { armor: 100 }),
       hero('l', 'player', 2, { mana: 100, maxMana: 100, attackIntervalTicks: 1000, ability: resolveAbility('loris-ability', 1) }),
       hero('e', 'enemy', 0, { attackDamage: 600, cooldownTicks: 22 })]);
-    while (state.tick < 22 + rangedAttackFlightTicks(1)) state = stepCombat(state).state; // window: e's tick-22 shot lands
+    // window: e's tick-22 attack winds up (#791), launches, and its shot lands one hex later; stop on that landing.
+    for (let landedShot = false; !landedShot && state.tick < 22 + 40;) { const r = stepCombat(state); state = r.state; landedShot = r.events.some(e => e.type === 'attackLanded' && (e as any).attackerId === 'e'); }
     expect(victim(state).hp).toBe(9850);
     for (const u of state.units.filter(u => u.team === 'player')) expect(u).toMatchObject({ mana: 7, damageManaRemainderCenti: 50 });
   });
