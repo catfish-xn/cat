@@ -41,3 +41,23 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
     '9f028364': { status: 'pending', reason: 'not checked against the original yet (11-21 scan)' },
   },
 };
+
+/**
+ * Systems a champion's spell data names as a hit or missile effect (tests/fixtures/spell-referenced-systems.json) that the
+ * repository lists do not play and CUE_DROPPED_SYSTEMS does not hold: they were never in an exported cue list, so a
+ * replacement row could not drop them (11-21: one such hit effect was found by chance). Each is decided one by one: a later
+ * change plays it, or moves it to `dropped` with our reason. Same statuses and wording rule as CUE_DROPPED_SYSTEMS.
+ */
+const TRIAGE = 'named by its spell data but never cued; to be triaged (11-21 spell-data scan)';
+const triage = (...ids: string[]): Readonly<Record<string, DroppedSystem>> =>
+  Object.fromEntries(ids.map(id => [id, { status: 'pending' as const, reason: TRIAGE }]));
+export const SPELL_UNPLAYED_SYSTEMS: Readonly<Record<string, Readonly<Record<string, DroppedSystem>>>> = {
+  caitlyn: triage('247720fe', '480f2392', '92c52047', 'b5a9a996'),
+  cassiopeia: triage('259c4cbc'),
+  gangplank: triage('bb62fca2'),
+  jayce: triage('9eba4332'),
+  kogmaw: triage('b9318ef6'),
+  leblanc: triage('0ea87983'),
+  renata: triage('d7729373'),
+  swain: triage('3d2697ac'),
+};
