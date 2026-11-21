@@ -32,9 +32,6 @@ export function createBatch2VfxBridge(host: Host) {
   const energyTicks = new Map<string, number>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
-  // Jinx casters' latest cast (its rule branch and tick), and the enemies her chompers' explosion was drawn on, per tick.
-  const jinxCasts = new Map<string, { branch: string | undefined; tick: number }>();
-  const chompersDrawn = new Map<string, { tick: number; struck: Set<string> }>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
   let variant: TimelineVariant | undefined;
   // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
@@ -140,25 +137,8 @@ export function createBatch2VfxBridge(host: Host) {
       if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
         if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
       }
-      // Jinx (11-21, rules 'jinx-rocket' and her chompers' landing): her rocket and chompers play from the rules' events, observed
-      // in catch-up too; each cast of hers starts afresh (a replay that starts over brings the same ticks again).
-      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'jinx') {
-        jinxCasts.set(event.sourceId, { branch: event.branch?.branch, tick: event.tick }); chompersDrawn.delete(event.sourceId);
-      }
-      const jinxCast = event.type === 'packetDamage' ? jinxCasts.get(event.sourceId) : undefined;
-      const chompers = event.type === 'packetDamage' && jinxCast?.branch === 'chompers' && event.tick > jinxCast.tick && event.sourceKind === 'ability'
-        && event.delivery === 'ability-direct' && event.definitionId === 'jinx-ability' && host.unit(event.sourceId)?.definitionId === 'jinx';
-      let chompersNew = false;
-      if (chompers) {
-        const drawn = chompersDrawn.get(event.sourceId);
-        const held = drawn && drawn.tick === event.tick ? drawn : { tick: event.tick, struck: new Set<string>() };
-        // At most three explosions (the cue's targetLimit), one per enemy struck.
-        chompersNew = !held.struck.has(event.targetId) && held.struck.size < 3;
-        if (chompersNew) held.struck.add(event.targetId);
-        chompersDrawn.set(event.sourceId, held);
-      }
+      // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing.
       if (!current) return;
-      if (chompersNew && event.type === 'packetDamage') play('jinx', event.sourceId, [event.targetId], 'jinx-chompers-boom', 'cast', true);
       if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
         // The rocket's flash and flight as it leaves; its explosion at the board's centre where it lands.
         play('jinx', event.sourceId, [event.targetId], event.type === 'abilityProjectileLaunched' ? 'jinx-rocket-fire' : 'jinx-rocket-boom', 'cast', true);
@@ -179,7 +159,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); frenzied.clear(); jinxCasts.clear(); chompersDrawn.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); frenzied.clear(); },
   };
   return bridge;
 }

@@ -4657,9 +4657,9 @@
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6907,
+      "currentBytes": 5100,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "41b26c281234b75fdf60b829ada09ff6f5851c1f6500382c8132d23fed80b72c",
+      "currentSha256": "589b7cc37508225ec9bc9e57bc5ddf23bb1ca747fc2075895ffaad0702a484c6",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-leona-burst.test.ts": {
