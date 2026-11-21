@@ -1,5 +1,6 @@
 import { scheduleShot } from './ability-projectile';
-import { MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS } from './cast-windup';
+import { melBoltOffset, MEL_BOLTS_PER_TARGET, MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS, MEL_TARGET_STAGGER_TICKS } from './cast-windup';
+import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import type { CombatOrigin, ShieldLayer } from './combat-types';
@@ -91,7 +92,13 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
     return targets.map(t=>t.id);
   }
   const targets=fromLanding(u,landing,ctx).slice(0,3);
-  targets.forEach((t,n)=>scheduleShot(u,'mel-barrage',ctx.tick+MEL_RELEASE_TICKS,t.id,Math.floor(variable(u,'Damage')*ap(u,ctx.tick,ctx.units)/100),seq,n,targets.length));
+  // Normal cast (11-21): MEL_BOLTS_PER_TARGET bolts per target, each its own projectile that settles where it lands (one packet,
+  // the per-target total split as before); target k starts MEL_TARGET_STAGGER_TICKS × k after the release, its bolts at
+  // melBoltOffset(i) after that. A target that dies takes none of the bolts still flying or still to leave (self-chosen, not
+  // original data).
+  const per=Math.floor(variable(u,'Damage')*ap(u,ctx.tick,ctx.units)/100),count=targets.length*MEL_BOLTS_PER_TARGET;
+  targets.forEach((t,n)=>splitTotal(per,MEL_BOLTS_PER_TARGET).forEach((value,i)=>scheduleShot(u,'mel-bolt',
+    ctx.tick+MEL_RELEASE_TICKS+n*MEL_TARGET_STAGGER_TICKS+melBoltOffset(i),t.id,value,seq,n*MEL_BOLTS_PER_TARGET+i,count)));
   return targets.map(t=>t.id);
 }
 /** Enemies nearest the cell she dashes to (byDistance from there). */
