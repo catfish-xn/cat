@@ -19,6 +19,7 @@ import type { Rng } from "../utils/Rng";
 import { flickerInto, integratedInto, sampleCurve, sampleCurveInto } from "../utils/sampleCurve";
 import type { SystemSurfaces } from "./emissionSurface";
 import { emit } from "./emit";
+import { cueScale, scaleAxes } from "./systemScale";
 import { applyFields, type NoiseClock, prepareFields, type SampledFields } from "./forceFields";
 import { age01, orbitInto, sampled, sampleScalar } from "./particleRead";
 import { FRAME_SLOTS, NOT_LINGERING, type Pool, retire } from "./pool";
@@ -65,8 +66,18 @@ export interface SystemStep extends Step {
   readonly world: World;
   /** The rig has soft-stopped the system, as the engine does. */
   readonly stopped: boolean;
+  /**
+   * The system age the rig's stop falls at (its stop plus the build-up), null or omitted without one. An emitter whose
+   * first emission is due by then is owed that emission even when the first step to reach it lies past the stop.
+   */
+  readonly stopAge?: number | null;
   /** The number every birth reads its tables at in place of its own, while the reader pins one. */
   readonly pinned?: number | null;
+  /**
+   * Cue scale about the rig anchor. Omitted or 1 keeps authored lengths.
+   * It does not scale `origin` or `moved`.
+   */
+  readonly scale?: number;
 }
 
 /** The definition's `transform` as a particle takes it: a basis, and an offset after it. */
@@ -116,6 +127,8 @@ export interface EmitterState {
   age: number;
   /** The emitter has emitted at least once. */
   emitted: boolean;
+  /** The step clock has reached the emitter's `timeBeforeFirstEmission`: its first emission has had its step. */
+  opened: boolean;
   /** Number of particles the emitter spawned in this run, wrapped at 65,536 like the engine's u16. */
   spawned: number;
   /** The system time of the last spawn, which the next count runs from, and zero before any. */
@@ -162,6 +175,7 @@ export function createEmitterStates(emitters: readonly EmitterModel[], rng?: Rng
     return {
       age: 0,
       emitted: false,
+      opened: false,
       spawned: 0,
       lastSpawn: 0,
       absent: chance > 0 && rng !== undefined && chance > rng.unitFloat(),
@@ -214,13 +228,13 @@ function overrideInto(emitter: EmitterModel, out: Float32Array): Float32Array {
 function frameInto(emitter: EmitterModel, state: EmitterState, step: SystemStep): void {
   overrideInto(emitter, OVERRIDE);
   state.offset.set(emitter.translationOverride);
-  if (!emitter.localOrientation) {
-    state.frame.set(OVERRIDE);
-    return;
+  if (!emitter.localOrientation) state.frame.set(OVERRIDE);
+  else {
+    multiplyInto(step.yaw, OVERRIDE, state.frame);
+    turnInto(step.yaw, state.offset, 0);
   }
-
-  multiplyInto(step.yaw, OVERRIDE, state.frame);
-  turnInto(step.yaw, state.offset, 0);
+  /* The override is the emitter's distance from the rig anchor, so a cue scale pulls it in. */
+  scaleAxes(state.offset, 0, cueScale(step.scale));
 }
 
 /**
@@ -245,10 +259,12 @@ export function stepEmitters(
 
     const stood = sampled(emitter.emitterPosition, emitterPhase(emitter, own.age));
     for (let axis = 0; axis < 3; axis += 1) own.position[axis] = stood[axis];
+    scaleAxes(own.position, 0, cueScale(step.scale));
   }
 
+  const siblings = { emitters, states: state };
   for (let index = 0; index < emitters.length; index += 1) {
-    emit(pool, emitters[index], index, state[index], step, rng, system.dragMotion);
+    emit(pool, emitters[index], index, state[index], step, rng, system.dragMotion, siblings);
   }
   for (let index = 0; index < emitters.length; index += 1) {
     settle(pool, emitters[index], index, state[index], step);
@@ -390,6 +406,7 @@ function integrate(
   fields: readonly (SampledFields | null)[],
 ): void {
   const analytic = system.dragMotion === DRAG_MOTION.analytic;
+  const cue = cueScale(step.scale);
   for (let at = pool.count - 1; at >= 0; at -= 1) {
     const age = step.now - pool.birthTime[at];
     if (age >= pool.lifetime[at]) {
@@ -409,11 +426,14 @@ function integrate(
 
     const pushed = overLife(emitter.acceleration, linger?.acceleration, through, serial, step.now);
     for (let axis = 0; axis < 3; axis += 1) {
+      const accel = cue === 1 ? pushed[axis] : pushed[axis] * cue;
       KEPT[axis] =
-        pool.velocity[slot + axis] + (pool.birthAcceleration[slot + axis] + pushed[axis]) * dt;
+        pool.velocity[slot + axis] + (pool.birthAcceleration[slot + axis] + accel) * dt;
     }
     const carried = overLife(emitter.velocity, linger?.velocity, through, serial, step.now);
-    for (let axis = 0; axis < 3; axis += 1) MOVING[axis] = KEPT[axis] + carried[axis];
+    for (let axis = 0; axis < 3; axis += 1) {
+      MOVING[axis] = KEPT[axis] + (cue === 1 ? carried[axis] : carried[axis] * cue);
+    }
 
     const damped = overLife(emitter.drag, linger?.drag, through, serial, step.now);
     for (let axis = 0; axis < 3; axis += 1) damped[axis] += pool.birthDrag[slot + axis];
@@ -534,7 +554,10 @@ function place(
   if (orbitInto(pool, at, age, ORBIT)) turnInto(ORBIT, PLACED, 0);
   if (!step.world.hud) {
     turnInto(step.world.basis, PLACED, 0);
-    for (let axis = 0; axis < 3; axis += 1) PLACED[axis] += step.world.offset[axis];
+    const cue = cueScale(step.scale);
+    for (let axis = 0; axis < 3; axis += 1) {
+      PLACED[axis] += cue === 1 ? step.world.offset[axis] : step.world.offset[axis] * cue;
+    }
   }
 
   for (let axis = 0; axis < 3; axis += 1) {

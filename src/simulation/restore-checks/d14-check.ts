@@ -1,5 +1,4 @@
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
-import { traceBoundUnitIdentity } from '../bound-unit-identity';
 import { D14_POLICY } from '../content/d14-anomalies';
 import { canonicalContent } from '../content/index';
 import { type D14Progress, eligibleD14Target, isD14, returnLocation } from '../d14-runtime';
@@ -12,7 +11,7 @@ function check(v:unknown):asserts v{if(!v)throw new RangeError('Invalid D14 prod
 
 /** Authenticate against schedule, resource prefix, ordered transition facts and real settlement history.
  * Same trust boundary as restoreMatch's other choices; candidate fields never authorize births/stars. */
-export function validateD14(state:MatchState,context:ResourceProvenanceContext):void {
+export function validateD14(state:MatchState,context:ResourceProvenanceContext,current:import('../resource-provenance').FoldedResourceProvenance):void {
   const selected=state.scheduleReceipts.filter(r=>r.kind==='anomaly'&&r.definitionId&&isD14(r.definitionId));
   const facts=state.resourceProvenance.entries.filter(e=>e.kind==='d14-selected'||e.kind==='d14-returned');
   if(!selected.length){check(state.d14===undefined&&facts.length===0);return;}
@@ -23,10 +22,8 @@ export function validateD14(state:MatchState,context:ResourceProvenanceContext):
   check(Number.isSafeInteger(d.selectionPrefixLength)&&d.selectionPrefixLength>0);
   const prefix=foldResourceProvenance(state.resourceProvenance,{...context,prefixLength:d.selectionPrefixLength});
   const original=prefix.units.find(u=>u.id===d.originalUnit.id);check(original&&original.definitionId===d.originalUnit.definitionId&&original.starLevel===d.originalUnit.starLevel);
-  const id=traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength));
-  const saleIndex=state.resourceProvenance.entries.findIndex(e=>e.kind==='unit-sold'&&traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,e.sequence))===e.unitId);
-  const retiredId=saleIndex<0?null:traceBoundUnitIdentity(d.originalUnit.id,state.resourceProvenance.entries.slice(d.selectionPrefixLength,saleIndex));
-  check(d.unitId===(id??retiredId));
+  const id=current.anomalyBinding?.unitId??null;
+  check(d.unitId===current.lastAnomalyBinding?.unitId);
   const returned=facts.filter(e=>e.kind==='d14-returned');
   check(facts.filter(e=>e.kind==='d14-selected').length===1&&returned.length<=1);
   const phase=id===null?'retired':d.anomalyId==='ultimate-hero'?(state.roundResults.length>=d.atOrdinal+D14_POLICY.numRounds?'promoted':'waiting'):returned.length?'returned':'absent';

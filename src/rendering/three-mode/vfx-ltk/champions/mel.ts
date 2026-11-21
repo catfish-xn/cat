@@ -1,0 +1,34 @@
+import type { TimelineCue } from '../timeline';
+import { CHEST } from '../timeline';
+// Attack: no 14.24 Mel record on hand; the chest, as every S13 basic attack we have data for (inferred).
+const attack: readonly TimelineCue[] = [
+  { system: '539901e6', action: 'attack', event: 'projectile', bone: 'r_hand', targetBone: CHEST, delay: 9.5 / 30, duration: .3, travelSeconds: .3 },
+  { system: '0f2af66b', action: 'attack', event: 'hit', bone: CHEST, delay: 9.5 / 30 + .3, duration: .5 },
+];
+export const melSkills: Record<string, readonly TimelineCue[]> = {
+  mel: [...attack,
+    { system: '9f8fe9f1', event: 'cast-start', delay: 0, duration: .5 },
+    { system: 'e75b9fe8', event: 'cast-start', delay: 0, duration: .5, stopAfter: .2 },
+    // Her bolts leave her left hand's locator: her skeleton has no L_Buffbone_Engine, which fell back to her feet (11-18 bone scan).
+    { system: 'fe407ac6', event: 'projectile', targetLimit: 3, bone: 'L_Buffbone_Glb_Hand_Loc', delay: .2, duration: .3, travelSeconds: .3 },
+    { system: '801006a8', event: 'hit', targetLimit: 3, delay: .5, duration: .6 },
+  ],
+  // No rule event ends these three: each plays to its system's own end (11-15).
+  'mel-third': [...attack,
+    { system: 'e2f2798d', event: 'cast-start', delay: 0, duration: 2.3 },
+    { system: '4c885a29', event: 'cast-start', delay: 0, duration: 1.2 },
+    { system: '4f2eb343', event: 'projectile', targetLimit: 5, delay: .4, duration: .4, travelSeconds: .4 },
+    { system: 'a9cc7bf3', event: 'hit', targetLimit: 5, delay: .8, duration: 1 },
+    { system: '3857e78b', event: 'hit', primary: true, delay: 1.2, duration: 6.5 },
+  ],
+  // Her shield's visual plays its own life and ends when that ally's shield from her ability ends (cue-overrides.ts CUE_RULE_STOPS
+  // abilityShieldEndedOnHolder). The duration is a cap past the system's own end (fitted, not original data); the old 0.1 s stop
+  // came before some of its layers began.
+  'mel-shield': [{ system: '71e871c8', event: 'hit', delay: 0, duration: 4.2 }],
+  'mel-save': [
+    { system: 'a111b8d1', event: 'cast-start', location: 'board', delay: 0, duration: 1, stopAfter: .3 },
+    { system: '56881fb1', event: 'cast-start', location: 'board', delay: .3, duration: 1.7, stopAfter: .6 },
+  ],
+};
+/** The rule reports Mel's third cast as branch `third` (combat-six-cost.ts); any other cast, or none reported, is plain. */
+export const melSkill = (branch: string | undefined) => branch === 'third' ? 'mel-third' : 'mel';

@@ -130,7 +130,10 @@ describe('review J: unit and scene resource lifetimes', () => {
     }
     expect(runtime.active).toBe(0); expect(runtime.queued).toBe(0); expect(budget.live).toBe(0);
     expect(effect.parent).toBeNull(); expect(effect.children).toHaveLength(0);
-    expect(geometryDispose).toHaveBeenCalledTimes(1); expect(materialDispose).toHaveBeenCalledTimes(1);
+    // LTK draw-buffer pool (70b33ba9): a released system returns its instancing geometry to the
+    // size-keyed pool and the runtime's dispose flushes it, so on death/removal the geometry is not
+    // yet disposed (was: disposed at release). Exactly-once disposal is still checked below.
+    expect(geometryDispose).toHaveBeenCalledTimes(reason === 'scene-dispose' ? 1 : 0); expect(materialDispose).toHaveBeenCalledTimes(1);
     runtime.dispose(); runtime.dispose(); await Promise.resolve();
     expect(geometryDispose).toHaveBeenCalledTimes(1); expect(materialDispose).toHaveBeenCalledTimes(1); expect(textureDispose).toHaveBeenCalledTimes(1);
   });

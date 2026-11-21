@@ -104,7 +104,7 @@ function fixture() {
     cast: clips[3].name, hit: clips[4].name, death: clips[5].name };
   const mixer = new UnitAnimationMixer(root, clips, names);
   const state = new UnitActionState('toy-unit', { blendSeconds: 0, durations: { move: 0.3 },
-    resolvePlayback: (action, index) => mixer.resolvePlayback(action, index) });
+    resolvePlayback: action => mixer.resolvePlayback(action, 0) });
   mixer.apply(state.output);
   const advance = (seconds: number) => { mixer.update(seconds); return mixer.apply(state.update(seconds)); };
   return { root, bone, clips, names, mixer, state, advance };
@@ -238,5 +238,53 @@ describe('mixer loop reuse with generated skeletal animations', () => {
     expect(action.time).toBe(0); expect(action.clampWhenFinished).toBe(false);
     mixer.update(2); expect(action.isRunning()).toBe(true); expect(action.time).toBeCloseTo(0.4);
     mixer.dispose();
+  });
+
+  it('resolves formAnimations by context.form or setForm and falls back when a form clip is absent', () => {
+    const root = new Group();
+    const clip = (name: string, d = 1) => new AnimationClip(name, d, [new NumberKeyframeTrack('.position[x]', [0, d], [0, 1])]);
+    const idleDefault = clip('idle_default');
+    const idleFront = clip('idle_front');
+    const idleBack = clip('idle_back');
+    const moveDefault = clip('move_default');
+    const attackDefault = clip('attack_default', 1.2);
+    const attackFront = clip('attack_front', 0.8);
+    const attackBack = clip('attack_back', 1.5);
+    const clips = [idleDefault, idleFront, idleBack, moveDefault, attackDefault, attackFront, attackBack];
+    const names = { idle: 'idle_default', move: 'move_default', attack: 'attack_default' };
+    const formAnimations = {
+      front: { idle: 'idle_front', attack: 'attack_front' },
+      back: { idle: 'idle_back', attack: 'attack_back' },
+    };
+    const mixer = new UnitAnimationMixer(root, clips, names, { formAnimations });
+
+    expect(mixer.resolvePlayback('attack', 0, { form: 'back' })).toEqual({ clips: ['attack_back'], durationSeconds: 1.5 });
+    expect(mixer.resolvePlayback('attack', 0, { form: 'front' })).toEqual({ clips: ['attack_front'], durationSeconds: 0.8 });
+    expect(mixer.resolvePlayback('attack', 0, {})).toEqual({ clips: ['attack_default'], durationSeconds: 1.2 });
+
+    mixer.setForm('back');
+    expect(mixer.resolvePlayback('attack')).toEqual({ clips: ['attack_back'], durationSeconds: 1.5 });
+    expect(mixer.apply(output('idle', 1))).toBe(true);
+    expect(mixer.mixer.clipAction(idleBack).isRunning()).toBe(true);
+    expect(mixer.mixer.clipAction(idleDefault).isRunning()).toBe(false);
+
+    mixer.setForm('front');
+    expect(mixer.apply(output('idle', 1))).toBe(true);
+    expect(mixer.mixer.clipAction(idleFront).isRunning()).toBe(true);
+    mixer.dispose();
+
+    const fallbackMixer = new UnitAnimationMixer(root, [idleDefault, attackDefault], names, {
+      formAnimations: {
+        back: { idle: 'missing_back_idle', attack: 'missing_back_attack' },
+      },
+    });
+    fallbackMixer.setForm('back');
+    expect(fallbackMixer.resolvePlayback('attack', 0, { form: 'back' })).toEqual({
+      clips: ['attack_default'],
+      durationSeconds: 1.2,
+    });
+    expect(fallbackMixer.apply(output('idle', 1))).toBe(true);
+    expect(fallbackMixer.mixer.clipAction(idleDefault).isRunning()).toBe(true);
+    fallbackMixer.dispose();
   });
 });

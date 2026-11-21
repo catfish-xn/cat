@@ -48,19 +48,20 @@ describe('B9 partial status end', () => {
   });
 });
 
-import { wearing, enemy, run } from './fixtures/m8-b4-items';
+import { wearing, enemy, run, LANDING } from './fixtures/m8-b4-items';
 import { combatEventText } from '../src/rendering/combat-feedback';
 describe('N2-P2-4 status events name the contribution they changed', () => {
   it('two Last Whispers: the tick-16 refresh of i0 to 76 is reported as i0/76, never the other instance i1/61', () => {
-    const r = run(wearing(['last-whisper', 'last-whisper']), 20, [enemy('e', 1, 3, { armor: 100 })]);
+    // Ranged attack landing (pure-result re-pin): each sunder comes when its shot lands, LANDING after the attack (ticks 1 and 16).
+    const r = run(wearing(['last-whisper', 'last-whisper']), 20 + LANDING, [enemy('e', 1, 3, { armor: 100 })]);
     const sunder = r.events.filter(e => e.type === 'statusChanged' && e.group.kind === 'sunder') as Extract<CombatEvent, { type: 'statusChanged' }>[];
     const view = (e: typeof sunder[number]) => [e.tick, e.reason, e.group.contributions.map(c => [c.source.instanceId, c.appliedAtTick, c.expiresAtTick])];
     expect(sunder.map(view)).toEqual([
-      [1, 'applied', [['i0', 1, 61]]], [1, 'applied', [['i1', 1, 61]]],
-      [16, 'refreshed', [['i0', 1, 76]]], [16, 'refreshed', [['i1', 1, 76]]],
+      [1 + LANDING, 'applied', [['i0', 1 + LANDING, 61 + LANDING]]], [1 + LANDING, 'applied', [['i1', 1 + LANDING, 61 + LANDING]]],
+      [16 + LANDING, 'refreshed', [['i0', 1 + LANDING, 76 + LANDING]]], [16 + LANDING, 'refreshed', [['i1', 1 + LANDING, 76 + LANDING]]],
     ]);
     const text = combatEventText(sunder[2] as never, id => id ?? '无')!;
-    expect(text).toContain('至第 76 刻');
+    expect(text).toContain(`至第 ${76 + LANDING} 刻`);
     expect(text).toContain('刷新');
     // The event's effective summary is the authoritative post-change group; current state still holds both instances.
     expect(sunder[2].group.effectiveSourceKey).not.toBeNull();

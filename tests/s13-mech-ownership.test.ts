@@ -47,6 +47,29 @@ const acquire = (grantId: string, full: 'hold' | 'reject' = 'hold'): OwnershipOp
 const settle = (ordinal: number): OwnershipOperation => ({ kind: 'settle', roundId: getMultiplayerRoundByOrdinal(ordinal).roundId });
 
 describe('D3 resource ownership transactions (Q3/Q5)', () => {
+  it('over-encumbered grants and returns stay held when the sole bench slot is full despite board space', () => {
+    const { boundary: original, authority } = setup();
+    const boundary: OwnershipBoundary = { ...original, states: original.states.map((s, i) => i ? s : {
+      ...s, level: 9, preparation: { ...s.preparation, usableBenchSlots: 1, overflowUnitIds: [],
+        units: s.preparation.units.map((u, col) => u.team === 'player'
+          ? { ...u, location: { kind: 'board' as const, cell: { row: 4, col } } } : u) },
+    }) };
+    const state = createOwnershipState(boundary);
+    const granted = commit(state, authority, 'restricted-grant', acquire('two-units'));
+    const seat = granted.seats[0];
+    expect(seat.preparation.units.filter(u => u.location.kind === 'bench')).toHaveLength(1);
+    expect(seat.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length).toBeLessThan(seat.deploymentCap);
+    expect(granted.held).toHaveLength(1);
+    const held = granted.held[0];
+    const waiting = commit(granted, authority, 'restricted-return', { kind: 'claim', seatId: 'seat-0', holdingId: held.id, full: 'hold' });
+    expect(waiting.held).toEqual(granted.held);expect(waiting.seats).toEqual(granted.seats);
+    reject(waiting, authority, 'reject-return', 'full-seat', { kind: 'claim', seatId: 'seat-0', holdingId: held.id, full: 'reject' });
+    const bench = seat.preparation.units.find(u => u.location.kind === 'bench')!;
+    const returned = commit(waiting, authority, 'vacate-and-return', { kind: 'sell', seatId: 'seat-0', unitId: bench.id });
+    expect(returned.held).toEqual([]);
+    expect(returned.seats[0].preparation.units.find(u => held.kind === 'unit' && u.id === held.unit.id)?.location).toEqual({ kind: 'bench', slot: 0 });
+    expect(restoreOwnership(serializeOwnership(returned, boundary, authority, returned.transactions), boundary, authority, returned.transactions)).toEqual(returned);
+  });
   it.each(['merge-live', 'settle', 'claim'] as const)('persists a successful %s no-op ID without events and rejects changed retries', kind => {
     const { state: initial, authority, boundary } = setup('1-2');
     const state = kind === 'claim' ? commit(initial, authority, 'full', acquire('fill'), acquire('two-units')) : initial;

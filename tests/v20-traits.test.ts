@@ -1,4 +1,6 @@
+import { augmentDeathsFromEvents } from '../src/simulation/augment-death-samples';
 import { describe, it, expect } from 'vitest';
+import { POWDER_MONKEY_RELEASE_TICKS } from '../src/simulation/cast-windup';
 import { createMatch, buyUnit } from '../src/simulation/match';
 import type { MatchState } from '../src/simulation/match-types';
 import type { Unit } from '../src/simulation/unit-types';
@@ -71,8 +73,8 @@ describe('v20-traits approved custom rules',()=>{
   it.each(['reunion','geniuses'] as const)('%s has three independent echoes with exact integer coefficients and no shred',id=>{
     const names=[...V20_TRAITS[id].partners],c=start(army(names,[id])),r=stepCombat(idle(c,[names[0]])),ekko=unit(r.state,'ekko');
     const task=ekko.tasks.find(t=>t.kind==='v20Teamup')!,ctx=context(r.state);executeV20Teamup(ctx,ctx.units.find(u=>u.id==='ekko')!,task);
-    // Ekko one-star primary 290 at 100 AP (other opening modifiers are sampled explicitly).
-    const expected=Math.floor(Math.floor(290*ap(ekko,r.state.tick)/100)*(id==='geniuses'?33:50)/100);
+    // Ekko one-star primary 300 (14.24b) at 100 AP (other opening modifiers are sampled explicitly).
+    const expected=Math.floor(Math.floor(300*ap(ekko,r.state.tick)/100)*(id==='geniuses'?33:50)/100);
     expect(ctx.packets[0].raw).toBe(expected);expect(ctx.events).toEqual([]);
     const result=stepCombat(r.state);expect(result.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.definitionId===id)).toHaveLength(3);
     expect(unit(result.state,'ekko').runtime.castCount).toBe(0);
@@ -120,12 +122,25 @@ describe('v20-traits approved custom rules',()=>{
     expect(p.mechanics!.some(m=>m.mechanic==='family')).toBe(false);expect(unit(c,'violet').mechanics!.some(m=>m.mechanic==='family')).toBe(true);
     expect(p.mechanics!.some(m=>m.mechanic==='g23Trait'&&m.source.definitionId==='dominator')).toBe(true);
     expect(p.v20Traits?.silcoSample).toMatchObject({star,attacks:5,durationTicks:240,damage:star===1?36:55});
-    const a=stepCombat(idle(c,['powder'])),b=stepCombat({...a.state,units:a.state.units.map(u=>['powder','silco'].includes(u.id)?{...u,hp:0,alive:false}:u)});
+    // Wind-up batches 3–4: once Powder has let the monkey go (powder-monkey-sent), it explodes on reaching its landing cell (the
+    // Menaces detonation with it), even after Powder's death.
+    let a=stepCombat(idle(c,['powder']));
+    const isSent=(e:{type:string;marker?:string})=>e.type==='abilityMarker'&&e.marker==='powder-monkey-sent';
+    for(let n=0;n<POWDER_MONKEY_RELEASE_TICKS&&!a.events.some(isSent);n++)a=stepCombat(a.state);
+    const sent=a.events.find(isSent) as Extract<LedgerCombatEvent,{type:'abilityMarker'}>;
+    let dead:CombatState={...a.state,units:a.state.units.map(u=>['powder','silco'].includes(u.id)?{...u,hp:0,alive:false}:u)};
+    while(dead.tick<sent.arrivalTick-1)dead=stepCombat(dead).state;
+    const b=stepCombat(dead);
     expect(b.events.filter(e=>e.type==='unitSpawned'&&e.definitionId==='v20-silco-minion')).toHaveLength(3);
     expect(b.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='silco')).toHaveLength(0);
     expect(b.state.units.filter(u=>u.definitionId==='v20-silco-minion')).toHaveLength(3);
     const run=ticks(b.state,240);expect(run.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.definitionId==='menaces')).toHaveLength(15);
     expect(run.state.units.filter(u=>u.definitionId==='v20-silco-minion'&&u.alive)).toHaveLength(0);
+    // Regression (2026-11-21): the expiring minions' death events carry augment death samples like every other death, so the
+    // room's executed death history (Loot Explosion) no longer faults with "missing executed death samples".
+    const minionDeaths=run.events.filter(e=>e.type==='death'&&run.state.units.some(u=>u.id===e.unitId&&u.definitionId==='v20-silco-minion'));
+    expect(minionDeaths).toHaveLength(3);
+    expect(augmentDeathsFromEvents(minionDeaths).map(d=>[d.definitionId,d.ordinaryHero])).toEqual(Array(3).fill(['v20-silco-minion',false]));
     expect(stepCombat({...run.state,status:'finished',result:'playerWin'}).events).toEqual([]);
   });
   it.each([1,2,3] as const)('Menaces suppresses only Powder reunion promotion at star %i, preserving count, other heroes and death linkage',star=>{

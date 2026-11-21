@@ -10,12 +10,13 @@ import { readItemCatalog, type RuntimeItemCatalogEntry } from '../simulation/ite
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
 import type { ItemDefinition } from '../simulation/strategy-types';
 import { s13AssetUrl } from './s13-assets';
-import { itemDisplayName } from './g23-display';
+import { itemDisplayName, onG23ItemsChanged } from './g23-display';
 import { specialItemLines } from './special-item-text';
 
 type Entry = RuntimeItemCatalogEntry;
 let cached: { list: readonly Entry[]; byId: ReadonlyMap<string, Entry> } | null = null;
 onTooltipTextChanged(() => { cached = null; });
+onG23ItemsChanged(() => { cached = null; });
 /**
  * Reward-only items (微光装备, radiant, artifacts, support, mechanism) are not in the B4 catalogue; they get an entry here
  * with player text so every item surface (popover, bench tags, black market and loot cards) can describe them.

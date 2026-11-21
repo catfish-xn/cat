@@ -3,6 +3,9 @@ const assert = require('node:assert/strict');
 const { pools } = require('../../augment-reward-pools-oracle-data.cjs');
 const { RECIPES } = require('./augment-batch5-s3b-oracle.cjs');
 const MOD = 4294967296n;
+/** Pandora same-class pools (user approved 2026-11-02); literal crafting pair, everything else from the test data. */
+const PANDORA = [pools.component, ['frying-pan', 'spatula'], pools.completed, pools.emblem, pools.artifact, pools.support];
+const pandoraPool = id => PANDORA.find(pool => pool.includes(id)) ?? null;
 function draw(state, choiceId, round, item, pool) {
  let hash = 2166136261n;
  for (const char of JSON.stringify(['batch5-h13', state.multiplayer?.seatId ?? 'solo', choiceId, round, item]))
@@ -23,11 +26,10 @@ function transformPlan(before, after, command) {
   if (command?.type === 'continue' && ['artifactory', 'pandoras-items-iii'].includes(owner.definitionId)
     && owner.acquiredRound < after.round) {
    const eligible = before.items.filter(item => item.location.kind === 'inventory' &&
-    (RECIPES[item.definitionId] || owner.definitionId === 'pandoras-items-iii' && pools.component.includes(item.definitionId)))
+    (owner.definitionId === 'pandoras-items-iii' ? pandoraPool(item.definitionId) : RECIPES[item.definitionId]))
     .sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0);
    for (const item of eligible) {
-    const pool = owner.definitionId === 'artifactory' ? pools.artifact
-     : pools.component.includes(item.definitionId) ? pools.component : pools.completed;
+    const pool = owner.definitionId === 'artifactory' ? pools.artifact : pandoraPool(item.definitionId);
     transform(owner, item, [draw(before, owner.choiceId, after.round, item.id, pool)]);
    }
    entries.push({ kind: 'inventory-transform-entry', choiceId: owner.choiceId, itemIds: eligible.map(item => item.id) });

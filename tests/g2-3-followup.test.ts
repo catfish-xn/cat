@@ -76,3 +76,11 @@ it('reward atom reuse is immutable and keys the whole descriptor plus seed',()=>
  bundle.reward.Gold=9;expect(()=>g23RewardAtoms(bundle,42)).toThrow('frozen reward descriptor');
  expect(atoms[0].gold).toBe(2);
 });
+it('PvE takedowns never grant Conquest; the same facts on a PvP round do (P-CONQ-PVE-01)',()=>{
+ const base={battleId:'pve-one',round:3,result:'win' as const,conquerorTier:2,conquestTakedowns:['monster-a','monster-b'],chemBaronTier:0,alliedDeaths:0,rumbleStar:0 as const,highRollerGold:0};
+ const pve=advanceG23Economy(createG23Progress(42),{...base,roundKind:'pve' as const}).progress;
+ expect(pve.conquest.stacks).toBe(0);expect(pve.conquest.receipts).toHaveLength(0);
+ validateG23Progress(pve,42,3);
+ const pvp=advanceG23Economy(createG23Progress(42),{...base,roundKind:'pvp' as const}).progress;
+ expect(pvp.conquest.stacks).toBe(2);expect(pvp.conquest.receipts).toHaveLength(1);
+});

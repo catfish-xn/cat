@@ -164,7 +164,9 @@ it('Rapid Firecannon adds one range, then one more per killing blow by the holde
  validate(state);
 });
 it('Seeker\'s Armguard grows 15 resists/AP per assist and 20 per killing blow',()=>{
- const initial=arena('TFT_Item_Artifact_SeekersArmguard',[...KILL_FIGHT[0]],[...KILL_FIGHT[1]]);
+ // v26 targeting p0/p1 + melee pathing (28fd974a, 8106acee, 34cfbfbb): in KILL_FIGHT the ally Garen at (3,4) now kills e2 before Lux has hit it,
+ // so no assist exists (2 kills, 0 assists). The ally starts at (0,5) instead (was (3,4)): it takes e4 after Lux's damage.
+ const initial=arena('TFT_Item_Artifact_SeekersArmguard',[KILL_FIGHT[0][0],{...KILL_FIGHT[0][1],cell:{col:0,row:5}}],[...KILL_FIGHT[1]]);
  const before=readCombatStats(unit(initial,'p'),initial);
  const {state,events}=runLive(initial),{kills,assists}=takedowns(events),after=readCombatStats(unit(state,'p'),state),gain=kills*20+assists*15;
  expect(kills).toBeGreaterThan(0);expect(assists).toBeGreaterThan(0);
@@ -360,8 +362,11 @@ it('Wit\'s End adds stage magic damage to each attack and heals 35% of magic dam
 it('Lich Bane adds stage magic damage to the first attack after each cast only',()=>{
  const initial=frozen(start('TFT_Item_Artifact_LichBane'),['e']),state={...initial,units:initial.units.map(u=>u.id==='p'?{...u,mana:u.maxMana}:u)};
  const {events,state:after}=runLive(state,600),cast=casts(events);
- const attacks=packets(events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='attack').map(p=>p.tick);
- const empowered=cast.flatMap(t=>{const next=attacks.find(a=>a>t);return next!==undefined&&!cast.some(c=>c>t&&c<next)?[next]:[];});
+ // #739: Lux's basic attacks settle when the shot lands. Lich Bane empowers the first attack she launches after each cast and
+ // its damage lands with that shot; a shot already in flight at the cast is not empowered. So take the launch ticks and map
+ // each empowered launch to its landing tick (was: the first attack packet after the cast).
+ const launches=events.flatMap(e=>e.type==='attackLaunched'&&e.attackerId==='p'?[[e.tick,e.arrivalTick] as const]:[]);
+ const empowered=cast.flatMap(t=>{const next=launches.find(([a])=>a>t);return next!==undefined&&!cast.some(c=>c>t&&c<next[0])?[next[1]]:[];});
  expect(cast.length).toBeGreaterThan(1);expect(empowered.length).toBeGreaterThan(1);
  expect(packets(events).filter(fromItem('TFT_Item_Artifact_LichBane')).map(b=>[b.tick,b.unitId,b.damageType,b.raw])).toEqual(empowered.map(t=>[t,'e','magic',200]));
  validate(after);

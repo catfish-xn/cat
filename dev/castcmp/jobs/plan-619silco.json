@@ -1,0 +1,14 @@
+{
+  "name": "plan-619silco",
+  "note": "Silco c7bb8557 at cue t0+100 / mid / end-100 (133, 4533, 8933 ms; t0 = 33 ms from the 619redo gate starts, 9 s from silco.ts cast('c7bb8557', 0, 9)). Before 5c346c72; after and off 78b6adfc, the #619 after source the rest of the batch used (later commits change no Silco path).",
+  "batches": [
+    {
+      "name": "619silco",
+      "before": { "src": "5c346c72", "jobs": "dev/castcmp/jobs/619silco-before.txt" },
+      "after": { "src": "78b6adfc", "jobs": "dev/castcmp/jobs/619silco-after.txt" },
+      "keyframes": [
+        "--hero silco --system c7bb8557 --before w-silco-before --after w-silco-after --off w-silco-off --times 133,4533,8933 --note cue_t0=33ms_+100/+4500/end-100_(silco.ts_cast(c7bb8557,0,9))"
+      ]
+    }
+  ]
+}

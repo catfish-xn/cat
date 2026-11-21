@@ -6,8 +6,10 @@ import { ANVIL_IDS } from './fixtures/m5/oracle.g2.cjs';
 // One ordinary oracle-audited route, collected once as the existing replay files do.
 // No funded state, injected reward, skipped command, or enlarged test/hook timeout.
 const sold=new Set<string>(),anvilDeploys:string[]=[];let rerollAugments=0;
-// Seed 9 naturally offers Caretaker's Favor after three public 2-1 rerolls.
-const route=await run(api,{seed:9,build:'sniper',augmentRerollPriorities:{'2-1':['caretakers-favor']},onStep(before,_result,command){
+// Seed 21 naturally offers Caretaker's Favor after three public 2-1 rerolls.
+// v26 D5 pool (7953c99a): seed 21 (was 9, whose three rerolls now end on built-different); first seed in
+// 0..200 whose sniper route takes caretakers-favor after exactly three rerolls.
+const route=await run(api,{seed:21,build:'sniper',augmentRerollPriorities:{'2-1':['caretakers-favor']},onStep(before,_result,command){
   if(command?.type==='rerollAugment')rerollAugments++;
   if(command?.type==='sell')sold.add(command.id as string);
   if(command?.type==='deploy'){

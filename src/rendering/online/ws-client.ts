@@ -307,7 +307,16 @@ export class WsGameClient implements GameClient {
     this.closed(HEARTBEAT_TIMEOUT_CLOSE);
   }
   private cancelReconnect(): void { if (this.reconnectTimer !== null) { this.timers.clear(this.reconnectTimer); this.reconnectTimer = null; } }
-  private clearInflight(): void { this.inflight.clear(); this.confirmed = []; this.deferredRetries = []; }
+  private clearInflight(includeReceipts = true): void {
+    const commandIds = [...this.inflight].filter(([, entry]) => entry.type === 'command').map(([id]) => id);
+    this.inflight.clear();
+    if (includeReceipts) {
+      // A receipt awaiting its state push (or a deferred refusal) still holds a pending UI action.
+      commandIds.push(...this.confirmed.map(entry => entry.commandId), ...this.deferredRetries.map(entry => entry.commandId));
+      this.confirmed = []; this.deferredRetries = [];
+    }
+    if (commandIds.length) this.listeners?.interrupted?.(commandIds);
+  }
 
   /* ---------------- inbound ---------------- */
 
@@ -500,7 +509,8 @@ export class WsGameClient implements GameClient {
     }
     if (code === 'rate-limited') {
       // The dropped message gets no receipt; forget what is in flight so later commands carry a sane revision.
-      this.inflight.clear();
+      this.clearInflight(false);
+      this.flushRetries();
       this.lobbyError = LOBBY_ERRORS['rate-limited']!; this.emitLobby();
     }
   }

@@ -1,8 +1,30 @@
 import { createRequire } from 'node:module';
+import { createHash } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { expect, it } from 'vitest';
 const require = createRequire(import.meta.url);
 const { hash } = require('../scripts/m4-evidence.cjs');
 const { createRouteHash } = require('../scripts/m5-route-hash.cjs');
+
+it('pins the current route hash dependency in both v25 source inventories', () => {
+  const file = 'scripts/m5-route-hash.cjs';
+  const { sourceDigests } = require('../scripts/v25-online-rules-fixture-audit.cjs');
+  expect(sourceDigests()[file]).toBe(createHash('sha256').update(readFileSync(file)).digest('hex'));
+  const recorder = readFileSync('tests/fixtures/record-v25-online-rules-herald.cjs', 'utf8');
+  const sources = recorder.match(/const files = \[([\s\S]*?)\]\.sort\(\)/)![1];
+  expect(sources).toContain("'scripts/m5-route-hash.cjs'");
+  expect(sources).not.toContain("'scripts/m4-evidence.cjs'");
+});
+
+it('pins the current route hash dependency in both v26-neutrals-1424 source inventories', () => {
+  const file = 'scripts/m5-route-hash.cjs';
+  const { sourceDigests } = require('../scripts/v26-neutrals-1424-fixture-audit.cjs');
+  expect(sourceDigests()[file]).toBe(createHash('sha256').update(readFileSync(file)).digest('hex'));
+  const recorder = readFileSync('tests/fixtures/record-v26-neutrals-1424-herald.cjs', 'utf8');
+  const sources = recorder.match(/const files = \[([\s\S]*?)\]\.sort\(\)/)![1];
+  expect(sources).toContain("'scripts/m5-route-hash.cjs'");
+  expect(sources).not.toContain("'scripts/m4-evidence.cjs'");
+});
 
 it('keeps the exact canonical SHA-256 for immutable route states, shared branches and reordered keys', () => {
   const routeHash = createRouteHash();

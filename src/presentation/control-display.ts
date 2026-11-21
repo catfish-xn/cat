@@ -16,7 +16,7 @@ export const KNOCKUP_2D = { height: 16, riseSeconds: 0.16, fallSeconds: 0.2 } as
  * Forced moves (pull, grab, knockback): the rules mark these movement events with a reason. 2D draws them as a quick
  * skid along the floor instead of the 220 ms walk; the 3D layer keeps its own list (three-mode/unit-control.ts).
  */
-export const DISPLACEMENT_REASONS: ReadonlySet<string> = new Set(['mordekaiser-pull', 'sett-grab', 'sevika-knockback']);
+export const DISPLACEMENT_REASONS: ReadonlySet<string> = new Set(['mordekaiser-pull', 'sett-grab', 'sevika-knockback', 'vander-knockback']);
 export const isDisplacement = (event: DisplayCombatEvent): event is Extract<DisplayCombatEvent, { type: 'movement' }> =>
   event.type === 'movement' && DISPLACEMENT_REASONS.has((event as { reason?: string }).reason ?? '');
 /** 2D skid: milliseconds, lean (radians, against the slide) and the dust streak's fade. */

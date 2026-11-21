@@ -1,4 +1,4 @@
-import ragebladeRoute from '../scripts/v17-rageblade-route.cjs';
+import ragebladeRoute from '../scripts/v26-neutrals-1424-rageblade-route.cjs';
 import { describe, expect, it } from 'vitest';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -15,7 +15,7 @@ vi.setConfig({ testTimeout: 20_000 });
  * evidence set is produced from public commands exactly as the input gate records it
  * (one artifact per interaction, manifest hashes, native mouse operations on the command's
  * controls); every tampering below must be rejected. The validator replays the route from
- * createMatch(27), so re-hashed forgeries and placeholder ledgers fail as well. */
+ * createMatch(ragebladeRoute.SEED) (v26: 1914, was 27; see scripts/v26-neutrals-1424-rageblade-route.cjs), so re-hashed forgeries and placeholder ledgers fail as well. */
 const accepted = result => { if (!result.ok) throw new Error(result.reason); return result.state; };
 // The gate's recorded shape for one native mouse operation per control (pointer then compatibility mouse events).
 const clicks = targets => targets.flatMap((target, index) => [['pointerdown', 'mouse'], ['mousedown', null], ['pointerup', 'mouse'], ['mouseup', null], ['click', 'mouse']]

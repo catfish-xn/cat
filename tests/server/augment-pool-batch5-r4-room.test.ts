@@ -55,7 +55,9 @@ describe('B5-67 real online room commands and authenticated saves',()=>{
   const seat=()=>room.state.seats.find(s=>s.seatId===seatId)!;
   afterAll(()=>room.dispose());
   let acquired: MatchState;
-  it('starts the real eight-seat room',()=>{expect(found).toEqual({seed:8,seatId:'s2'});room.start();expect(room.state.seats).toHaveLength(8);});
+  // D5 registration (7953c99a, v26 merge 3ce71065) adds four augments to the 2-1 candidate pool, so the first
+  // seat offering Mad Chemist moved from seed 8 / s2 (v25) to seed 94 / s0; the search itself is unchanged.
+  it('starts the real eight-seat room',()=>{expect(found).toEqual({seed:94,seatId:'s0'});room.start();expect(room.state.seats).toHaveLength(8);});
   for(const roundId of ['1-3','1-4','2-1'])it(`reaches ${roundId}`,()=>{
     expect(runUntilClaiming(room,clock,s=>s.roundId===roundId&&s.phase==='preparation').roundId).toBe(roundId);
   });

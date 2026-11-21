@@ -28,7 +28,7 @@ it('academic research offers the craft and a distinct sponsor deterministically'
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
 import { combineItems, equipItem, selectChoice, sellUnit, type MatchState } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { accepted, reachRoundFielded } from './match-helpers';
+import { accepted, emptyBoard, finish, reachRoundFielded, resolveM5Choices } from './match-helpers';
 import { batch5S3bSeed, boundedFirstNodeOffer } from './augment-stage-helpers';
 import { academicGiftPlan } from '../src/simulation/augment-pool-batch5-s3b';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
@@ -71,10 +71,13 @@ it.each(['inventory','equipped'] as const)('academic research converts a real %s
  const repeated=selectChoice(s,c.choiceId,c.generation,picked);expect(repeated.ok).toBe(false);expect(repeated.state).toBe(s);
 });
 
-import { startMatchCombat, stepMatch } from '../src/simulation/match';
-import { fieldBench, finish } from './match-helpers';
+import { startMatchCombat, stepMatch, deployMatchUnit } from '../src/simulation/match';
 it('academic research removes a combat craft from the battle equipment transcript and defers its anvil until settlement',()=>{
- let s=fieldBench(chooseAcademic());const parts=s.items.filter(i=>i.location.kind==='inventory'),u=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;
+ // v26 fielded 2-1 of the whole bench crossed the 5s case limit under CI load (5164ms).
+ // One board unit still crafts during combat and defers the anvil until settlement.
+ let s=emptyBoard(chooseAcademic());
+ s=accepted(deployMatchUnit(s,s.preparation.units.find(u=>u.team==='player')!.id,{kind:'board',cell:{col:1,row:4}}));
+ const parts=s.items.filter(i=>i.location.kind==='inventory'),u=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='board')!;
  expect(parts.length).toBeGreaterThanOrEqual(2);
  s=accepted(equipItem(s,parts[0].id,u.id,0));s=accepted(startMatchCombat(s));expect(s.phase).toBe('combat');
  s=accepted(equipItem(s,parts[1].id,u.id,0));expect(s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id&&i.location.slot===0)).toBe(false);
@@ -85,7 +88,6 @@ it('academic research removes a combat craft from the battle equipment transcrip
 });
 
 import { nextRound } from '../src/simulation/match';
-import { emptyBoard, resolveM5Choices } from './match-helpers';
 import { pandoraItem, pandoraConversions, pandoraRoundEntry, isS3bConversion, validS3bConversion } from '../src/simulation/augment-pool-batch5-s3b-conversions';
 import { s3bInventoryReplay, s3bHistoricalEquipmentParent } from '../src/simulation/augment-pool-batch5-s3b-restore';
 import type { ResourceProvenanceEntry } from '../src/simulation/resource-provenance';
@@ -121,12 +123,15 @@ it('Pandora II grants two components, rerolls only inventory at the next entry, 
  reject(s,x=>{x.resourceProvenance.entries.find(isS3bConversion).receiptId='["augment-pool-batch5-s3b","wrong"]';});
  expect(nextRound(s,before.round)).toMatchObject({ok:false,state:s});
 });
-it('Pandora category pools allow no-op rolls and exclude special items and equipped components',()=>{
+it('Pandora category pools allow no-op rolls, reroll each class in place and keep Tactician/radiant items and equipped components',()=>{
  const state={seed:0,augments:[{definitionId:'pandoras-items-ii',choiceId:'test',acquiredRound:4}]};
- const ids=['sword','blue-buff','spatula','frying-pan','TFT_Item_ForceOfNature','TFT13_Item_AcademyEmblemItem','TFT4_Item_OrnnDeathsDefiance','TFT4_Item_OrnnObsidianCleaver'];
+ const ids=['sword','blue-buff','spatula','frying-pan','TFT_Item_ForceOfNature','TFT13_Item_AcademyEmblemItem','TFT4_Item_OrnnDeathsDefiance','TFT4_Item_OrnnObsidianCleaver','TFT5_Item_InfinityEdgeRadiant'];
  const items=ids.map((definitionId,i)=>({id:`item-${i+1}`,definitionId,location:{kind:'inventory' as const}}));
  const facts=pandoraConversions(state,[...items,{id:'held',definitionId:'bow',location:{kind:'unit',unitId:'u',slot:0}}],5);
- expect(facts.map(f=>f.itemId)).toEqual(['item-1','item-2']);
+ expect(facts.map(f=>f.itemId)).toEqual(['item-1','item-2','item-3','item-4','item-6','item-7','item-8']);
+ const pool=(f:{from:string})=>f.from==='spatula'||f.from==='frying-pan'?['frying-pan','spatula']:f.from.endsWith('EmblemItem')?Object.keys(ITEM_DEFINITIONS).filter(id=>/^TFT13_Item_\w+EmblemItem$/.test(id))
+  :f.from==='TFT4_Item_OrnnDeathsDefiance'?G24_FORGE_POOLS.TFT_ArmoryKeyOrnn:f.from==='TFT4_Item_OrnnObsidianCleaver'?G24_FORGE_POOLS.TFT_ArmoryKeySupport:f.from==='sword'?G24_FORGE_POOLS.TFT_ArmoryKeyComponent:G24_FORGE_POOLS.TFT_ArmoryKeyCompleted;
+ for(const f of facts)expect(pool(f),f.itemId).toContain(f.to);
  expect(pandoraConversions(state,items,4)).toEqual([]);
  let unchanged=false;for(let seed=0;seed<=100;seed++)unchanged ||= pandoraItem(seed,'same-roll','sword')==='sword';expect(unchanged).toBe(true);
  for(const from of ['sword','blue-buff'])for(let seed=0;seed<=100;seed++)expect(from==='sword'?G24_FORGE_POOLS.TFT_ArmoryKeyComponent:G24_FORGE_POOLS.TFT_ArmoryKeyCompleted).toContain(pandoraItem(seed,'roll',from));

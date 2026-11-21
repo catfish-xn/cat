@@ -58,6 +58,11 @@ export interface LobbyOptions {
    * stays readable); the next start disposes it.
    */
   readonly onEnd?: (room: Room) => void;
+  /**
+   * The abandon watchdog armed or stood down (every human seat gone / one back), from inside the room's publication:
+   * the lobby view's `busy.releaseInMs` changed, so lobby connections need a new view (deferred, as onEnd).
+   */
+  readonly onReleaseChange?: () => void;
   /** G1-P7: the rules' carousel, forwarded to every Room; omitted, rounds open without a carousel. */
   readonly carousel?: CarouselRules;
   /** Stall / abandon checks of every opened room; null or omitted: off (room-mechanics tests). */
@@ -93,6 +98,8 @@ export class Lobby {
   private stallTimer: ClockHandle | null = null;
   private abandonTimer: ClockHandle | null = null;
   private abandonedSince = 0;
+  /** Clock time the armed abandon timer frees the room; null while unarmed. */
+  private releaseAt: number | null = null;
   private lastPublishedAt = 0;
   constructor(private readonly options: LobbyOptions) {}
 
@@ -144,7 +151,8 @@ export class Lobby {
   get roomSeed(): number | null { return this.seed; }
   view(seatId: string | null): LobbyView {
     const joined = seatId !== null && this.queue.some(entry => entry.seatId === seatId);
-    return { queue: this.queue.map(entry => ({ name: entry.name, kind: entry.kind, me: entry.seatId === seatId })), capacity: ROOM_CAPACITY, joined, canStart: joined && !this.inProgress, error: null };
+    const busy = this.inProgress ? { releaseInMs: this.releaseAt === null ? null : Math.max(0, this.releaseAt - this.options.clock.now()) } : null;
+    return { queue: this.queue.map(entry => ({ name: entry.name, kind: entry.kind, me: entry.seatId === seatId })), capacity: ROOM_CAPACITY, joined, canStart: joined && !this.inProgress, error: null, busy };
   }
   dispose(): void { this.clearTimer(); this.disposeRoom(); }
   private disposeRoom(): void { this.stopWatching(); this.driver?.dispose(); this.driver = null; this.current?.dispose(); }
@@ -176,17 +184,22 @@ export class Lobby {
     const anyConnected = state.seats.some(seat => seat.kind === 'human' && seat.connected);
     if (anyConnected || watchdog.abandonMs <= 0) { this.cancelAbandon(); return; }
     if (this.abandonTimer !== null) return;
-    this.abandonedSince = now;
-    this.abandonTimer = clock.schedule(now + watchdog.abandonMs, () => {
-      this.abandonTimer = null;
+    this.abandonedSince = now; this.releaseAt = now + watchdog.abandonMs;
+    this.abandonTimer = clock.schedule(this.releaseAt, () => {
+      this.abandonTimer = null; this.releaseAt = null;
       room.abort({ kind: 'abandoned', idleMs: clock.now() - this.abandonedSince });
     });
+    this.options.onReleaseChange?.();
   }
   private stopWatching(): void {
     this.unwatch?.(); this.unwatch = null;
     if (this.stallTimer !== null) { this.options.clock.cancel(this.stallTimer); this.stallTimer = null; }
     this.cancelAbandon();
   }
-  private cancelAbandon(): void { if (this.abandonTimer !== null) { this.options.clock.cancel(this.abandonTimer); this.abandonTimer = null; } }
+  private cancelAbandon(): void {
+    if (this.abandonTimer === null) return;
+    this.options.clock.cancel(this.abandonTimer); this.abandonTimer = null; this.releaseAt = null;
+    this.options.onReleaseChange?.();
+  }
   private clearTimer(): void { if (this.timer !== null) { this.options.clock.cancel(this.timer); this.timer = null; } }
 }

@@ -7,6 +7,7 @@ import { getCatalogRoundById } from '../src/simulation/round-selectors';
 import { prepareMatchLoot } from '../src/simulation/loot-runtime';
 import { createRoundEnemies } from '../src/simulation/round-enemies';
 import { freeze } from './combat-helpers';
+import { MAX_SIDE_SURVIVORS } from '../src/simulation/survivor-bound';
 
 export function accepted(result: MultiplayerCommandResult): MatchState {
   if (!result.ok) throw new Error(result.reason);
@@ -83,13 +84,21 @@ describe('T3 atomic round receipt',()=>{
     expect(next).toMatchObject({playerHp:state.playerHp-12,level:10,xp:0});
     expect(next.roundResults.at(-1)).toMatchObject({survivingEnemyCount:10,playerDamage:12,xpRequested:2,xpAwarded:1});
     rejection(next,r,'duplicate-settlement');
-    rejection(state,{...r,opposingSurvivors:11,damage:13},'invalid-receipt');
+    // Beyond the board ceiling is still refused (was 11 = max level + 1; a crown or a counted copy makes 11 legal).
+    rejection(state,{...r,opposingSurvivors:MAX_SIDE_SURVIVORS+1,damage:2+MAX_SIDE_SURVIVORS+1},'invalid-receipt');
+  });
+  it('settles eleven opposing survivors (a crowned level-10 board): survivors are not capped by the max level',()=>{
+    const state={...opening(),level:9,xp:67};
+    const r=receipt(state,{result:'loss',damage:13,opposingSurvivors:11});
+    const next=accepted(applyRoundSettlement(freeze(state),r));
+    expect(next.roundResults.at(-1)).toMatchObject({survivingEnemyCount:11,playerDamage:13});
+    rejection(state,{...r,damage:12},'invalid-receipt');
   });
   it('rejects stale, mirror, missing, extra, invalid numeric and wrong-owner proposals unchanged',()=>{
     const state=opening(),r=receipt(state);
     rejection(state,{...r,round:3},'stale-round'); rejection(state,{...r,settlementEligible:false},'mirror-settlement');
     for(const patch of [{damage:-1},{damage:0.5},{damage:Number.MAX_SAFE_INTEGER+1},{combatTicks:1201},{seatId:'B'},
-      {growth:[{unitId:'foreign',attackDamageBps:125}]},{extra:1},{settlementEligible:null},{opposingSurvivors:11}]) rejection(state,{...r,...patch},'invalid-receipt');
+      {growth:[{unitId:'foreign',attackDamageBps:125}]},{extra:1},{settlementEligible:null},{opposingSurvivors:MAX_SIDE_SURVIVORS+1}]) rejection(state,{...r,...patch},'invalid-receipt');
     for(const key of Object.keys(r)) {const missing={...r} as Record<string,unknown>;delete missing[key];rejection(state,missing,'invalid-receipt');}
     rejection({...state,gold:Number.MAX_SAFE_INTEGER},r,'invalid-receipt');
     rejection({...state,roundResults:[]},r,'unsettled-round');

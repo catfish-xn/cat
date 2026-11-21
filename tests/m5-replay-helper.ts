@@ -4,7 +4,7 @@ import assert from './fixtures/m5/assert-equal.cjs';
 import * as api from '../src/simulation/match';
 import { restoreMatch } from '../src/simulation/serialization';
 import { run, dispatch } from '../scripts/generate-m5-route.cjs';
-import { routeOptions } from '../scripts/v25-online-rules-route.cjs';
+import { routeOptions } from '../scripts/v26-neutrals-1424-route.cjs';
 
 // A file owns one ordinary, oracle-checked route. Store only compressed chunk
 // boundaries and inputs, never restore/validation results. Each case can run on
@@ -38,8 +38,8 @@ export async function defineReplayTests(build: string) {
   let last: api.MatchState = api.createMatch(42);
   // Collection builds this route once per file, outside all test/hook timeouts.
   // run still performs its independent ledger/shop/RNG assertions on every step.
-  // Match the v25 recorder/browser route's public rerolls. The default policy
-  // selects history-only augments (cannon: scavenger; mage: trait-tracker).
+  // Match the v26 recorder/browser route's public rerolls. The default policy
+  // selects history-only augments (v26: snipers-nest at 2-1 for every build).
   // JSON checkpoints reset the pre-acquisition solo trace, changing proof origin
   // and commands even when every gameplay field is equal.
   await run(api, { build, seed: 42, ...routeOptions(build, 42), onStep(before, result, command) {

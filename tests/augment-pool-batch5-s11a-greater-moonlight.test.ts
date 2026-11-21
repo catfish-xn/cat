@@ -1,5 +1,5 @@
 import { existsSync, readFileSync } from 'node:fs';
-import { beforeAll, expect, it } from 'vitest';
+import { expect, it } from 'vitest';
 import { RESEARCH_FILE } from './augment-pool-source-expectations';
 import { AUGMENT_BATCH5_S11A } from '../src/simulation/content/augment-pool-batch5-s11a';
 import { augmentOfferAllowed } from '../src/simulation/augment-offers';
@@ -9,7 +9,7 @@ import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { familyCombatBase } from '../src/simulation/family-reunion';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { accepted, fieldBench, resolveM5Choices } from './match-helpers';
-import { fieldedRoute } from './augment-stage-helpers';
+import { FIELDED_LEGS, fieldedRoute } from './augment-stage-helpers';
 import { rerollAugment } from '../src/simulation/match';
 import { augmentPool } from './fixtures/m5/oracle.g2.cjs';
 
@@ -37,9 +37,13 @@ it('Greater Moonlight samples only fielded eligible one-cost champions and exclu
  expect(augmentOfferAllowed('moonlight',[both[0]])).toBe(false);
 });
 let combat:MatchState, promotedId:string;
-beforeAll(()=>{
- // v25 catalog: fielded 4-2 seed 6 (replacing STAGE_SEEDS 16) with the same public slot rerolls.
- let s=fieldedRoute(6,'4-2');
+// v25 catalog: fielded 4-2 seed 6 (replacing STAGE_SEEDS 16) with the same public slot rerolls.
+// v26 rules (D5 pool 7953c99a, 14.24 neutrals): seed 28 (was 6); seed 6's fielded route now loses at 4-1 (gameOver).
+// The route is played in FIELDED_LEGS cases (as in the H8 suite) so each leg stays inside the default case timeout.
+const SEED=28;
+it.each(FIELDED_LEGS)('reaches %s with real commands',leg=>{expect(fieldedRoute(SEED,leg).roundDefinitionId).toBe(leg);});
+it('selects the real 4-2 Greater Moonlight offer and promotes exactly one fielded unit',()=>{
+ let s=fieldedRoute(SEED,'4-2');
  for(let slot=0;slot<3&&!s.pendingChoice!.offers.includes('greater-moonlight');slot++){const c=s.pendingChoice!;s=accepted(rerollAugment(s,c.choiceId,c.generation,slot));}
  const c=s.pendingChoice!;expect(c.offers).toContain('greater-moonlight');
  s=resolveM5Choices(accepted(selectChoice(s,c.choiceId,c.generation,'greater-moonlight')));s=fieldBench(s);

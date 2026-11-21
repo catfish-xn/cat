@@ -1,0 +1,2 @@
+# Fable 11-12: why Silco c7bb8557's three layers do not show (tint, blend, textures per frame).
+v-capture.cjs silco w-silco-probe --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --times 133,4533,8933 --systems c7bb8557 --column after --snapshot c1333710ad8e --probe attached

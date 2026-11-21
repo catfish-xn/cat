@@ -290,13 +290,13 @@ export const ABILITY_DISPLAY_SOURCE = freezeContent({
         4.0
       ],
       "TargetDamage": [
-        290.0,
-        435.0,
+        300.0,
+        450.0,
         1200.0
       ],
       "SecondaryDamage": [
-        145.0,
-        215.0,
+        150.0,
+        225.0,
         450.0
       ],
       "SpellTime": [
@@ -715,8 +715,8 @@ export const ABILITY_DISPLAY_SOURCE = freezeContent({
         1000.0
       ],
       "InfectionDamage": [
-        14.0,
-        21.0,
+        15.0,
+        22.0,
         400.0
       ],
       "DamageTicksPerSecond": [
@@ -1142,7 +1142,7 @@ export const ABILITY_DISPLAY_SOURCE = freezeContent({
       "DR": [
         0.5,
         0.5,
-        0.6
+        0.55
       ],
       "HEROSpellBaseDamage": [
         140.0,

@@ -3,10 +3,11 @@
  * auto-deployment, the PvP roster lock and the settlement on the latest live seat. The rules themselves are
  * covered by tests/t10-*.test.ts; here only what the room orchestrates.
  */
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { describe, expect, it } from 'vitest';
 import { PlaceholderBattleResolver, type BattleResolver } from '../../src/server/room/battle-resolver';
 import { ROOM_COMMAND_GATE } from '../../src/server/room/room';
-import { seatPushEvents } from '../../src/server/room/projection';
+import { seatPushEvents, toPlayerView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { BattleInput, BattleResult, RoomPhase, RoomState, SeatState, SharedPoolState } from '../../src/server/room/types';
 import type { MatchState } from '../../src/simulation/match-types';
@@ -144,7 +145,11 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
     }
     const before = seat(room.state, 's0').match, botBefore = seat(room.state, 's4').match;
     const cap = before.level;
-    const reserves = own(before).sort((a, b) => (a.location as { slot: number }).slot - (b.location as { slot: number }).slot);
+    // Anvils are bench-only units opened by selling (ANVIL_POLICY.benchOnly, a229dd6f) and are never auto-deployed. Under the
+    // v26 14.24 neutrals/loot (568eeea4) s0 now holds an anvil at round 5, so the reserve order skips it explicitly.
+    const anvils = own(before).filter(unit => isAnvil(unit.definitionId));
+    expect(anvils.every(unit => unit.location.kind === 'bench')).toBe(true);
+    const reserves = own(before).filter(unit => !isAnvil(unit.definitionId)).sort((a, b) => (a.location as { slot: number }).slot - (b.location as { slot: number }).slot);
     expect(onBoard(before)).toHaveLength(0);
     expect(reserves.length).toBeGreaterThanOrEqual(cap);
     const revision = seat(room.state, 's0').seatRevision;
@@ -155,6 +160,7 @@ describe('T10 deadline auto-deployment (contract §15.4)', () => {
     const cells = [4, 5, 6, 7].flatMap(row => [3, 2, 4, 1, 5, 0, 6].map(col => `${col},${row}`));
     const expected = reserves.slice(0, cap).map((unit, index) => [unit.id, cells[index]]);
     expect(onBoard(after.match).map(unit => [unit.id, where(unit)]).sort()).toEqual([...expected].sort());
+    for (const anvil of anvils) expect(own(after.match).find(unit => unit.id === anvil.id)!.location).toEqual(anvil.location);
     expect(after.match.multiplayer?.combatRosterLocked).toBe(true);
     // One publication for deployment and lock; its events go out with that state push, one per moved unit, in order.
     expect(after.seatRevision).toBe(revision + 1);
@@ -244,11 +250,18 @@ describe('T10 PvE seat the rules settle when its battle starts (empty board) —
     for (const unit of own(seat(room.state, 's0').match)) expect(room.handle('s0', { type: 'sell', unitId: unit.id })).toMatchObject({ ok: true });
     expect(own(seat(room.state, 's0').match)).toHaveLength(0);
     const hpBefore = seat(room.state, 's0').hp;
+    const publicBefore = toPlayerView(room.state, 's1', clock.now()).seats[0]!;
+    expect(publicBefore).toMatchObject({ seatId: 's0', hp: 100, streak: { kind: 'win', count: 1 } });
+    const publications: RoomState[] = [];
+    const unsubscribe = room.subscribe(state => publications.push(state));
     clock.runNext(); // deadline → battle
     expect(room.state.phase).toBe('battle');
     const live = seat(room.state, 's0').match;
     expect(live.phase).toBe('settlement');
     expect(live.roundResults.at(-1)?.round).toBe(2);
+    expect(live.streak).toEqual({ kind: 'loss', count: 1 });
+    expect(live.playerHp).toBe(97);
+    expect(toPlayerView(room.state, 's1', clock.now()).seats[0]).toMatchObject({ hp: publicBefore.hp, streak: publicBefore.streak });
     let bought: string | null = null;
     if (operate === 'shopLock') {
       expect(room.handle('s0', { type: 'shopLock', locked: true, generation: live.shop.generation })).toMatchObject({ ok: true });
@@ -261,6 +274,16 @@ describe('T10 PvE seat the rules settle when its battle starts (empty board) —
     const operated = seat(room.state, 's0').match;
     expect(operated === live).toBe(operate === 'none');
     runUntil(room, clock, state => state.round === 2 && state.phase !== 'battle');
+    unsubscribe();
+    expect(room.state.phase).toBe('settlement');
+    expect(toPlayerView(room.state, 's1', clock.now()).seats[0]).toMatchObject({ hp: 97, streak: { kind: 'loss', count: 1 } });
+    // Even the frozen/start and operation publications must keep the old public ledger until the room commits.
+    for (const state of publications) {
+      const committed = state.settlements.includes('test-room:round-2');
+      for (const viewer of ['s0', 's1']) expect(toPlayerView(state, viewer, clock.now()).seats[0]).toMatchObject(committed
+        ? { hp: 97, streak: live.streak } : { hp: publicBefore.hp, streak: publicBefore.streak });
+    }
+    expect(publicBefore).toMatchObject({ hp: 100, streak: { kind: 'win', count: 1 } });
     return { room, clock, hpBefore, operated, bought, settled: seat(room.state, 's0') };
   }
 

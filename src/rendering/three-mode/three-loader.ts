@@ -11,6 +11,7 @@ import { reducedMotion } from '../../presentation/preferences';
 import { THEME, costColor, starColor } from '../../presentation/theme';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { anvilIconUrl, isAnvilUnit } from '../../presentation/anvil-display';
+import { unitAnomalies } from '../../presentation/anomaly-display';
 import { SHOP_CATALOG_BY_COST } from '../../simulation/match-rules';
 
 export interface ThreeModeHandle { dispose(): void }
@@ -99,6 +100,7 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
       // The cheapest shop tiers are what a game shows first: their models are parsed and uploaded while idle.
       module.useWarmModels?.([...SHOP_CATALOG_BY_COST[1], ...SHOP_CATALOG_BY_COST[2], ...SHOP_CATALOG_BY_COST[3]]);
       module.useStarColor?.(starColor); module.useCostColor?.(costColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
+      module.useAnomalyMark?.((native, items) => unitAnomalies(native, items).length > 0);
       module.useChampionIcon?.(id => anvilIconUrl(id) ?? s13AssetUrl('champion', id)); module.useAnvilTest?.(isAnvilUnit);
       module.useContextRestored?.(remount);
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })

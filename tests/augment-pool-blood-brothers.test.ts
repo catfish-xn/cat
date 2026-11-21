@@ -1,5 +1,6 @@
-import { expect, it } from 'vitest';
-import { createMatch, selectChoice, startMatchCombat, stepMatch, deployMatchUnit } from '../src/simulation/match';
+import { beforeAll, expect, it } from 'vitest';
+import type { MatchState } from '../src/simulation/match-types';
+import { createMatch, selectChoice, startMatchCombat, stepMatch, deployMatchUnit, nextRound, sellUnit } from '../src/simulation/match';
 import { readG23Progress } from '../src/simulation/g2-3-state';
 import { advanceG23Economy, type G23BattleFacts } from '../src/simulation/g2-3-economy';
 import { batch2BattleFacts, validateBatch2Facts, batch2RewardPlan } from '../src/simulation/augment-pool-batch2-progress';
@@ -8,12 +9,10 @@ import { createCombatWithEvents } from '../src/simulation/combat';
 import { type AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { ap, type S13Unit } from '../src/simulation/combat-s13-state';
 import { batch2Cast, batch2Kill } from '../src/simulation/augment-pool-batch2-combat';
-import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
-import { generateChoices } from '../src/simulation/choices';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
-import { accepted } from './match-helpers';
+import { accepted, emptyBoard, fieldBench, resolveM5Choices } from './match-helpers';
 import { BattleHistory } from '../src/replay/history';
-import { recordCommand, recordedEmptyRoute } from './fixtures/recorded-empty-route';
+import { recordCommand } from './fixtures/recorded-empty-route';
 
 // Independent transcription of augments-14.24.json record [301] TFT13_TeamupAugment_BloodBrothers.
 const HP_PER_CAST=30,AP_PER_DEATH=6;
@@ -84,20 +83,35 @@ it('strict facts reject a lone, negative or fractional Blood Brothers counter',(
  for(const x of [[{definitionId:ID,count:1}],[{definitionId:'blood-brothers-deaths',count:1}],[{definitionId:ID,count:-1},{definitionId:'blood-brothers-deaths',count:0}],[{definitionId:ID,count:1},{definitionId:'blood-brothers-deaths',count:0.5}]])
   expect(()=>validateBatch2Facts(x)).toThrow();
 });
-function acquire(){
-  // Seed 178 is the first 2-1 Blood Brothers offer (pinned to avoid a per-test timeout; the loop asserts it still offers).
- for(let seed=178;seed<10000;seed++){ // starts at the first offering seed; the predicate is still checked
-  const s=createMatch(seed),filter={node:'2-1',fieldedTraits:[],blocked:[]};
-  if(!generateChoices(augmentCandidates(resolveAugmentTier(s,'round:2-1:augment'),[],[],null,filter),s.choiceRngState).offers.includes(ID))continue;
-  const history=new BattleHistory('blood-brothers-regression');
-  const before=recordedEmptyRoute(seed,'2-1',history),c=before.pendingChoice!;return {state:accepted(selectChoice(before,c.choiceId,c.generation,ID)),history};
+/** v26 D5 stage bans (7953c99a, merge 3ce71065; docs/D5_REGISTERED_AUGMENTS.md) offer Blood Brothers only at 3-2, a
+ * trait-tailored node that needs a fielded Dominator/Family/Watcher unit, so the v25 empty-board 2-1 route (seed 178)
+ * can no longer offer it. The route still concedes every earlier round with a public empty board (instant, cheap to
+ * replay) and fields the bench only at 3-1, whose board decides the 3-2 traits. Seed 231 is the first such seed from 0
+ * offering it without a reroll and without an earlier history-owner augment. Legs run in beforeAll hooks. */
+const BB_LEGS=['2-1','2-5','3-1','3-2'] as const;
+const bbRoute={state:undefined as MatchState|undefined,history:new BattleHistory('blood-brothers-regression')};
+function bbLeg(leg:typeof BB_LEGS[number]):void {
+ let state=bbRoute.state??createMatch(231);const history=bbRoute.history;
+ while(state.roundDefinitionId!==leg){
+  state=resolveM5Choices(state);
+  if(state.phase==='preparation'){state=state.roundDefinitionId==='3-1'?fieldBench(state):emptyBoard(state);state=accepted(recordCommand(history,state,startMatchCombat(state)));while(state.phase==='combat')state=recordCommand(history,state,stepMatch(state)).state;}
+  state=accepted(nextRound(resolveM5Choices(state),state.round));
  }
- throw Error('missing seed');
+ bbRoute.state=state;
+}
+for(const leg of BB_LEGS)beforeAll(()=>{bbLeg(leg);});
+function acquire(){
+ const state=bbRoute.state!,history=bbRoute.history;expect(state.roundDefinitionId).toBe('3-2');
+ const c=state.pendingChoice!;expect(c.kind).toBe('augment');expect(c.offers).toContain(ID);
+ return {state:accepted(selectChoice(state,c.choiceId,c.generation,ID)),history};
 }
 it('Match grants 2-star Vander, Silco and Shojin, settles authoritative facts once, restores, and rejects tampered facts',()=>{
  const live=acquire(),history=live.history;let s=live.state;
  const vander=s.preparation.units.find(u=>u.definitionId==='vander'&&u.starLevel===2),silco=s.preparation.units.find(u=>u.definitionId==='silco');
  expect(vander).toBeDefined();expect(silco).toBeDefined();expect(s.items.some(i=>i.definitionId==='shojin')).toBe(true);
+ // The v26 3-2 route arrives with a full fielded board: sell the other fielded champions (public command) so the
+ // granted pair is the whole team, as on the v25 empty-board route.
+ for(const u of s.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&u.id!==vander!.id&&u.id!==silco!.id))s=accepted(sellUnit(s,u.id));
  for(const [i,u] of [vander!,silco!].entries())if(u.location.kind!=='board')s=accepted(deployMatchUnit(s,u.id,{kind:'board',cell:{col:i*3,row:7}}));
  const battles=readG23Progress(s)!.economyReceipts.length;
  s=accepted(recordCommand(history,s,startMatchCombat(s)));

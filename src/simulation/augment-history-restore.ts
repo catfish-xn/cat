@@ -1,5 +1,6 @@
+import { validateOverEncumbered } from './over-encumbered';
 import { validateBatch5R6Transforms } from './restore-checks/batch5-r6-check';
-import type { MatchState } from './match-types';
+import type { MatchEvent, MatchState } from './match-types';
 import { preflightH13Fact } from './augment-pool-batch5-h13-history';
 import type { AugmentDeath, AugmentTakedownActor, AugmentHistoryFact, HistorySeat } from './augment-history-types';
 import { AUGMENT_HISTORY_VERSION, AUGMENT_HISTORY_LIMITS as LIMIT } from './augment-history-types';
@@ -10,7 +11,78 @@ import { historyCheck, needsAugmentHistory, historySeatId, validateAugmentAuthor
 import * as commands from './match';
 import { validateMatchStructure } from './serialization-structure';
 import { freezeContent } from './content/freeze';
+import { grantMechanicUnit } from './seat-mechanics/grants';
 const same = (a: unknown, b: unknown) => canonicalContent(a) === canonicalContent(b);
+
+/** Combat events from the match-proof replay already required to admit the save.
+ * Battle admission compares them to the record. The map lives only for that call. */
+export interface AugmentCombatTranscript {
+  readonly id: string;
+  readonly context: MatchState;
+  readonly initial: NonNullable<MatchState['combat']>;
+  readonly events: MatchEvent[];
+  settled: MatchState;
+  terminal: NonNullable<MatchState['combat']>;
+  /** stepMatch 以外的 CONTINUED_COMBAT 命令（equipItem 等）已并入本 transcript。 */
+  inCombatCommands: boolean;
+}
+interface TranscriptCapture {
+  readonly map: Map<string, AugmentCombatTranscript>;
+  open: AugmentCombatTranscript | null;
+  recording: boolean;
+  depth: number;
+}
+let capture: TranscriptCapture | null = null;
+// Concurrent admissions share one capture; round ids overwrite transcripts and
+// only force cold replay, they cannot weaken hash checks.
+let augmentReplaySteps = 0;
+const CONTINUED_COMBAT = new Set(['stepMatch', 'useConsumable', 'combineItems', 'equipItem']);
+/** Command steps actually executed by augment-history replay. A prefix hit stays at the previous value. */
+export function augmentHistoryReplaySteps(): number { return augmentReplaySteps; }
+/** Opens a capture around one archive admission. Nested admissions share it. */
+export function openCombatTranscriptCapture(): () => void {
+  const parent = capture;
+  if (!parent) capture = { map: new Map(), open: null, recording: false, depth: 0 };
+  let closed = false;
+  return () => {
+    if (closed) return;
+    closed = true;
+    if (!parent) capture = null;
+  };
+}
+/** Records transcripts only while `fn` runs. The map stays until the capture closes. */
+export function recordCombatTranscripts<T>(fn: () => T): T {
+  if (!capture) return fn();
+  const previous = capture.recording;
+  capture.recording = true;
+  try { return fn(); }
+  finally { capture.recording = previous; sealCombatTranscript(); }
+}
+export function augmentCombatTranscript(combatId: string): AugmentCombatTranscript | undefined {
+  return capture?.map.get(combatId);
+}
+function sealCombatTranscript(): void {
+  if (!capture?.open) return;
+  capture.map.set(capture.open.id, capture.open);
+  capture.open = null;
+}
+function noteCombatTranscript(before: MatchState, name: string, after: MatchState, events: readonly MatchEvent[] | undefined): void {
+  if (!capture) return;
+  const produced: MatchEvent[] = [];
+  for (const event of events ?? []) if (event.domain === 'combat') produced.push(event);
+  const open = capture.open;
+  if (open && before.phase === 'combat' && before.combat?.combatId === open.id && CONTINUED_COMBAT.has(name)) {
+    if (name !== 'stepMatch') open.inCombatCommands = true;
+    for (const event of produced) open.events.push(event);
+    open.settled = after;
+    if (after.combat?.combatId === open.id) open.terminal = after.combat;
+    return;
+  }
+  sealCombatTranscript();
+  if (name === 'startMatchCombat' && after.combat?.combatId) {
+    capture.open = { id: after.combat.combatId, context: before, initial: after.combat, events: produced, settled: after, terminal: after.combat, inCombatCommands: false };
+  }
+}
 
 interface ReplayEvidence {
   readonly origin: string;
@@ -21,12 +93,37 @@ interface ReplayEvidence {
   readonly bytes: number;
   // ASCII characters of every short node text. One byte each.
   readonly frozenBytes: number;
+  // Admission order across anchors and fork slots. Byte eviction drops the smallest.
+  branchSeq: number;
 }
 // Restore-only evidence, never candidate admission or live command results.
 // Exact origin/argument encodings bind each prefix; a compressed step run may
 // grow, but a changed argument, branch or shortened run cannot reuse that suffix.
 const replays: ReplayEvidence[] = [];
 const MAX_REPLAYS = 8, MAX_REPLAY_BYTES = 8 * 1024 * 1024;
+// A late-game solo save (one deaths fact per combat tick) alone exceeds the
+// shared budget above. Without a slot, every restore/serialize of such a save
+// replayed the whole match again. Keep only the most recent over-budget prefix,
+// outside the shared budget; it is bounded by the validated history payload
+// limit, and the same exact-prefix and full-state comparisons apply to it.
+let oversizedReplay: ReplayEvidence | undefined;
+// The two most recent displaced checkpoints of a route. A sibling branch (the
+// parked anvil, the pre-combat carry) resumes from one of them after the latest
+// save takes the single oversized slot. Bounded so a tick stream cannot fill it.
+const forkReplays: ReplayEvidence[] = [];
+const MAX_FORKS = 2;
+// Displaced oversized checkpoints, outside the shared 8MB budget. Fork slots keep
+// the newest linear extensions; anchors keep earlier siblings (the 4-5 cannon
+// branch). The two lists share one 64MB meter, charged the same way as the shared
+// budget: sum of graph bytes, plus each origin's frozen text once. A checkpoint
+// that is already over the meter is not retained. Past the meter, the oldest
+// resident is dropped. Dropping one only changes whether a later restore replays;
+// a hit still needs this command prefix, a fact prefix, and final canonical equality.
+const branchAnchors: ReplayEvidence[] = [];
+const MAX_ANCHORS = 8;
+export const DISPLACED_BRANCH_BYTE_CAP = 64 * 1024 * 1024;
+let nextBranchSeq = 1;
+const MAX_OVERSIZED_REPLAY_BYTES = 2 * LIMIT.bytes;
 function containsNegativeZero(values: readonly unknown[]): boolean {
   const stack = [...values];
   while (stack.length) {
@@ -38,7 +135,7 @@ function containsNegativeZero(values: readonly unknown[]): boolean {
 }
 function replayPrefix(origin: string, commands: ReplayEvidence['commands'], facts: readonly AugmentHistoryFact[]): ReplayEvidence | undefined {
   let best: ReplayEvidence | undefined, bestSteps = -1;
-  for (const entry of replays) {
+  for (const entry of [...replays, ...forkReplays, ...branchAnchors, ...(oversizedReplay ? [oversizedReplay] : [])]) {
     if (entry.origin !== origin || entry.commands.length > commands.length) continue;
     let steps = 0;
     const matches = entry.commands.every((c, i) => {
@@ -50,10 +147,16 @@ function replayPrefix(origin: string, commands: ReplayEvidence['commands'], fact
     if (!matches) continue;
     const priorFacts = entry.state.augmentHistory?.facts ?? [];
     // A candidate may only extend the independently generated fact prefix. At
-    // an identical command boundary all facts must match, including absence.
-    // A miss always reconstructs from an earlier prefix or the validated origin.
+    // an identical command boundary a same-length fact list was already replayed
+    // into this cache entry, so a different list cannot be produced by replaying
+    // those commands and is rejected here instead of repeating the combat.
+    // A different fact count still replays: a command can record an extra fact
+    // on a later call. A shorter command prefix still reconstructs.
     const exact = entry.commands.length === commands.length && entry.commands.at(-1)?.count === commands.at(-1)?.count;
-    if ((exact && priorFacts.length !== facts.length) || !same(priorFacts, facts.slice(0, priorFacts.length))) continue;
+    if ((exact && priorFacts.length !== facts.length) || !same(priorFacts, facts.slice(0, priorFacts.length))) {
+      if (exact && priorFacts.length === facts.length) historyCheck(false, 'replayed facts/state mismatch');
+      continue;
+    }
     if (steps > bestSteps) { best = entry; bestSteps = steps; }
   }
   return best;
@@ -125,22 +228,236 @@ function chargedReplayBytes(entries: readonly Pick<ReplayEvidence, 'origin' | 'b
   for (const value of frozen.values()) graph += value;
   return graph;
 }
+function commandsExtend(prefix: ReplayEvidence['commands'], full: ReplayEvidence['commands']): boolean {
+  if (prefix.length === 0 || prefix.length > full.length) return false;
+  return prefix.every((command, index) => {
+    const next = full[index];
+    return next !== undefined && command.name === next.name && command.args === next.args
+      && (index === prefix.length - 1 && command.name === 'stepMatch' ? command.count <= next.count : command.count === next.count);
+  });
+}
+/** Same command list, with only the trailing repeated stepMatch count increased. */
+function stepCountExtended(prev: ReplayEvidence['commands'], next: ReplayEvidence['commands']): boolean {
+  if (prev.length !== next.length || prev.length === 0) return false;
+  for (let i = 0; i < prev.length; i++) {
+    const before = prev[i], after = next[i];
+    if (before.name !== after.name || before.args !== after.args) return false;
+    if (i === prev.length - 1) {
+      if (before.name !== 'stepMatch' || before.count >= after.count) return false;
+    } else if (before.count !== after.count) return false;
+  }
+  return true;
+}
+function commandSteps(commands: ReplayEvidence['commands']): number {
+  let steps = 0;
+  for (const command of commands) steps += command.count;
+  return steps;
+}
+function touchBranch(entry: ReplayEvidence): void {
+  entry.branchSeq = nextBranchSeq++;
+}
+// One resident graph is one charge, even when an anchor slot and a fork slot
+// both point at it. Distinct checkpoints add.
+function uniqueBranchResidents(): ReplayEvidence[] {
+  const seen = new Set<ReplayEvidence>();
+  const residents: ReplayEvidence[] = [];
+  for (const entry of branchAnchors) if (!seen.has(entry)) { seen.add(entry); residents.push(entry); }
+  for (const entry of forkReplays) if (!seen.has(entry)) { seen.add(entry); residents.push(entry); }
+  return residents;
+}
+function dropBranchResident(entry: ReplayEvidence): void {
+  const anchorAt = branchAnchors.indexOf(entry);
+  if (anchorAt >= 0) branchAnchors.splice(anchorAt, 1);
+  const forkAt = forkReplays.indexOf(entry);
+  if (forkAt >= 0) forkReplays.splice(forkAt, 1);
+}
+function branchEntryWithinCap(entry: Pick<ReplayEvidence, 'origin' | 'bytes' | 'frozenBytes'>): boolean {
+  return chargedReplayBytes([entry]) <= DISPLACED_BRANCH_BYTE_CAP;
+}
+function evictOldestBranches(): void {
+  let guard = uniqueBranchResidents().length;
+  while (guard-- > 0) {
+    const residents = uniqueBranchResidents();
+    if (chargedReplayBytes(residents) <= DISPLACED_BRANCH_BYTE_CAP) return;
+    let oldest = residents[0];
+    if (!oldest) return;
+    for (const entry of residents) if (entry.branchSeq < oldest.branchSeq) oldest = entry;
+    const before = residents.length;
+    dropBranchResident(oldest);
+    if (uniqueBranchResidents().length >= before) return;
+  }
+}
+/** The oversized slot holds one long checkpoint. Replacing it used to drop the
+ * only copy of the previous checkpoint, so a sibling branch or an earlier save
+ * resumed from a much older shared prefix and replayed the whole stage.
+ * Keep that displaced prefix in the shared budget when it still fits. Per-tick
+ * growth stays in the one oversized slot. Each other route keeps its longest
+ * proof, so a 4-7 checkpoint cannot push out the only Loris prefix.
+ * Saving the checkpoint that already occupies the slot is not a displacement:
+ * an equal-length command list is that same proof, or more ticks of its trailing
+ * stepMatch. Copying it into the shared budget charges frozen text once per
+ * origin, so the duplicate fits by dropping the shorter board prefix a sibling
+ * deploy still needs. */
+function retainDisplacedPrefix(origin: string, commands: ReplayEvidence['commands']): void {
+  const displaced = oversizedReplay;
+  if (!displaced || displaced.origin !== origin || displaced.commands.length >= commands.length
+    || !commandsExtend(displaced.commands, commands) || stepCountExtended(displaced.commands, commands)) return;
+  if (replays.some(entry => entry.origin === origin && same(entry.commands, displaced.commands))) return;
+  const entries = [...replays];
+  const fits = (list: readonly ReplayEvidence[]) => list.length + 1 <= MAX_REPLAYS && chargedReplayBytes([...list, displaced]) <= MAX_REPLAY_BYTES;
+  const dropShortest = (choose: (entry: ReplayEvidence) => boolean): boolean => {
+    let index = -1, best = Infinity;
+    for (let i = 0; i < entries.length; i++) {
+      if (!choose(entries[i])) continue;
+      const steps = commandSteps(entries[i].commands);
+      if (steps < best) { best = steps; index = i; }
+    }
+    if (index < 0) return false;
+    entries.splice(index, 1);
+    return true;
+  };
+  // Shorter prefixes of this same line are redundant once the displaced checkpoint
+  // is kept. Never drop the longest one: a sibling branch still resumes from it.
+  while (!fits(entries)) {
+    const same = entries.filter(entry => entry.origin === origin && commandsExtend(entry.commands, displaced.commands));
+    const longestSame = same.reduce((max, entry) => Math.max(max, commandSteps(entry.commands)), -1);
+    if (dropShortest(entry => entry.origin === origin && commandsExtend(entry.commands, displaced.commands) && commandSteps(entry.commands) < longestSame)) continue;
+    // Another route keeps its longest proof (the 4-7 / Loris case). Extra older
+    // proofs of that route can make room for this checkpoint.
+    if (!dropShortest(entry => {
+      if (entry.origin === origin) return false;
+      let longest = -1, peers = 0;
+      for (const other of entries) if (other.origin === entry.origin) { peers++; longest = Math.max(longest, commandSteps(other.commands)); }
+      return peers > 1 && commandSteps(entry.commands) < longest;
+    })) break;
+  }
+  if (!fits(entries)) return;
+  replays.splice(0, replays.length, ...entries, displaced);
+}
+function rememberAnchor(previous: ReplayEvidence): void {
+  if (!branchEntryWithinCap(previous)) return;
+  const held = branchAnchors.findIndex(entry => entry.origin === previous.origin && same(entry.commands, previous.commands));
+  if (held >= 0) {
+    const [kept] = branchAnchors.splice(held, 1);
+    touchBranch(kept);
+    branchAnchors.push(kept);
+    return;
+  }
+  touchBranch(previous);
+  branchAnchors.push(previous);
+  while (branchAnchors.length > MAX_ANCHORS) branchAnchors.shift();
+}
+function rememberFork(stored: ReplayEvidence): void {
+  const previous = oversizedReplay;
+  if (!previous || previous.origin !== stored.origin || same(previous.commands, stored.commands)) return;
+  if (!commandsExtend(previous.commands, stored.commands) || stepCountExtended(previous.commands, stored.commands)) return;
+  // The newest extensions stay in the fork slots below. This list keeps the
+  // branch that was just displaced, including when later saves walk down only
+  // one side of it. A checkpoint over the branch meter is left out of both lists.
+  if (!branchEntryWithinCap(previous)) return;
+  rememberAnchor(previous);
+  const mine = forkReplays.filter(entry => entry.origin === stored.origin && commandsExtend(entry.commands, stored.commands) && !same(entry.commands, previous.commands));
+  mine.push(previous);
+  while (mine.length > MAX_FORKS) mine.shift();
+  const others = forkReplays.filter(entry => entry.origin !== stored.origin);
+  forkReplays.splice(0, forkReplays.length, ...others, ...mine);
+  while (forkReplays.length > MAX_FORKS * 2) forkReplays.shift();
+  evictOldestBranches();
+}
+function parkOversized(stored: ReplayEvidence): void {
+  rememberFork(stored);
+  retainDisplacedPrefix(stored.origin, stored.commands);
+  oversizedReplay = stored;
+}
+let displacedBranchPlaceholder: MatchState | undefined;
+function branchPlaceholder(): MatchState {
+  return displacedBranchPlaceholder ??= freezeContent({ augmentHistory: { facts: [] } } as unknown as MatchState);
+}
+/** Charged bytes and admission order of anchor and fork residents. */
+export function displacedBranchRetention(): {
+  readonly bytes: number;
+  readonly entries: readonly { readonly origin: string; readonly steps: number; readonly bytes: number; readonly frozenBytes: number }[];
+} {
+  const residents = uniqueBranchResidents().sort((left, right) => left.branchSeq - right.branchSeq);
+  return {
+    bytes: chargedReplayBytes(residents),
+    entries: residents.map(entry => ({ origin: entry.origin, steps: commandSteps(entry.commands), bytes: entry.bytes, frozenBytes: entry.frozenBytes })),
+  };
+}
+/** Records one already-billed displaced checkpoint and applies the branch meter.
+ * A checkpoint whose own charge exceeds the meter is refused. */
+export function admitDisplacedBranch(slot: 'anchor' | 'fork', checkpoint: {
+  readonly origin: string;
+  readonly commands: ReplayEvidence['commands'];
+  readonly bytes: number;
+  readonly frozenBytes: number;
+}): boolean {
+  const entry: ReplayEvidence = { ...checkpoint, state: branchPlaceholder(), branchSeq: 0 };
+  if (!branchEntryWithinCap(entry)) return false;
+  if (slot === 'anchor') rememberAnchor(entry);
+  else {
+    touchBranch(entry);
+    forkReplays.push(entry);
+    while (forkReplays.length > MAX_FORKS * 2) forkReplays.shift();
+  }
+  evictOldestBranches();
+  return uniqueBranchResidents().includes(entry);
+}
+/** Drops displaced residents whose origin begins with `originPrefix`. */
+export function releaseDisplacedBranches(originPrefix: string): void {
+  for (const entry of uniqueBranchResidents()) if (entry.origin.startsWith(originPrefix)) dropBranchResident(entry);
+}
 function rememberReplay(origin: string, commands: ReplayEvidence['commands'], state: MatchState, stateText: string): void {
   // stateText proxies the retained graph. The trace roster sits outside it.
   // Both are UTF-16. Short node texts are charged separately, once per origin.
   const frozenBytes = frozenTextUnits(stateText);
   const bytes = 2 * (origin.length + canonicalContent(commands).length + stateText.length + traceRosterChars(state));
-  if (bytes + frozenBytes > MAX_REPLAY_BYTES) return;
-  const previous = replays.findIndex(e => e.origin === origin && same(e.commands, commands));
-  if (previous >= 0) replays.splice(previous, 1);
+  if (bytes + frozenBytes > MAX_REPLAY_BYTES) {
+    if (bytes + frozenBytes <= MAX_OVERSIZED_REPLAY_BYTES) parkOversized({origin,commands,state:freezeContent(state),bytes,frozenBytes,branchSeq:0});
+    return;
+  }
+  const stored = { origin, commands, state: freezeContent(state), bytes, frozenBytes, branchSeq: 0 };
   const candidate = { origin, bytes, frozenBytes };
+  const exact = replays.findIndex(entry => entry.origin === origin && same(entry.commands, commands));
+  if (exact >= 0) {
+    const without = replays.filter((_, index) => index !== exact);
+    replays.splice(exact, 1);
+    if (chargedReplayBytes([...without, candidate]) > MAX_REPLAY_BYTES) parkOversized(stored);
+    else replays.push(stored);
+    return;
+  }
+  // Per-tick saves share one slot. Replacing the previous tick keeps the next
+  // step O(1) without stacking every tick until another route is evicted.
+  const stepped = replays.findIndex(entry => entry.origin === origin && stepCountExtended(entry.commands, commands));
+  if (stepped >= 0) {
+    const without = replays.filter((_, index) => index !== stepped);
+    if (chargedReplayBytes([...without, candidate]) <= MAX_REPLAY_BYTES) {
+      replays.splice(stepped, 1);
+      replays.push(stored);
+    } else parkOversized(stored);
+    return;
+  }
+  if (replays.length < MAX_REPLAYS && chargedReplayBytes([...replays, candidate]) <= MAX_REPLAY_BYTES) {
+    replays.push(stored);
+    return;
+  }
+  // A 4-7 prefix is ~4.4MB and a tick-126 checkpoint ~5.4MB. Pushing the checkpoint
+  // used to shift the other route's ~2.1MB prefix, so its next serialize replayed
+  // ~10k commands (~11s) and missed the 20s case. Keep every shorter proof in the
+  // shared budget. The checkpoint stays resumable in the single oversized slot,
+  // including for a divergent branch that still needs the shared prefix.
+  if (replays.some(entry => entry.origin === origin && commandsExtend(entry.commands, commands))) {
+    parkOversized(stored);
+    return;
+  }
   while (replays.length >= MAX_REPLAYS || chargedReplayBytes([...replays, candidate]) > MAX_REPLAY_BYTES) replays.shift();
   // No private expected state or trace payload can be mutated through a later
   // restored command's proof. Pure commands can resume these frozen prefixes.
-  replays.push({origin,commands,state:freezeContent(state),bytes,frozenBytes});
+  replays.push(stored);
 }
 
 export function preflightAugmentHistory(s: MatchState): void {
+  validateOverEncumbered(s);
   validateBatch5R6Transforms(s);
   const h = s.augmentHistory;
   if (h === undefined) { historyCheck(!needsAugmentHistory(s), 'missing augment-history-v1; history-dependent augment saves cannot be authenticated'); return; }
@@ -222,29 +539,49 @@ export function validateAugmentHistory(s: MatchState, authority?: AugmentHistory
   const encoded = proof.commands.map(c => ({name:c.name,args:canonicalContent(c.args),count:c.count}));
   // Canonical JSON collapses -0 to 0, so such proofs must use cold replay.
   const cacheable = !containsNegativeZero([proof.origin, ...proof.commands.map(c => c.args)]);
-  const prefix = cacheable ? replayPrefix(origin, encoded, h.facts) : undefined;
+  const active = capture;
+  const recordThis = active !== null && active.recording && active.depth === 0;
+  // A recording admission needs every combat's events. Reusing a prefix would
+  // skip those commands and leave the archive to simulate them again. A second
+  // pass in the same capture already has the transcripts, so it may resume.
+  const transcriptsReady = recordThis && active.map.size > 0;
+  const prefix = cacheable && (!recordThis || transcriptsReady) ? replayPrefix(origin, encoded, h.facts) : undefined;
   // A hit skips validateMatchStructure(proof.origin) and resumes commands from
   // frozen evidence. This is correct only while all SOLO_COMMANDS are pure
   // functions that never mutate their inputs in place.
   let replay = prefix?.state ?? initializeAugmentTrace(validateMatchStructure(proof.origin));
+  if (active) active.depth++;
+  try {
   for (const [index,c] of proof.commands.entries()) {
     const skipped = prefix?.commands[index]?.count ?? 0;
     if (skipped === c.count) continue;
+    // Archive admission compares battle records to this proof and does not
+    // validate each battle context again. Those contexts are shorter command
+    // prefixes, and a longer cached proof cannot resume them. Keep the state
+    // already produced at each combat start so playback does not replay the match.
+    // Per-combat prefix snapshots during transcript capture allocate large frozen
+    // graphs; their GC showed up in firstSeek measurements after import. The
+    // final rememberReplay below retains the full proof for later resumes.
     // A command may retain a location/target object. Private evidence must not
     // retain or freeze any object owned by the candidate save.
     const args = structuredClone(c.args).map((a: unknown) => a === null ? undefined : a);
     for (let i = skipped; i < c.count; i++) {
-      const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
-      const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState };
+      augmentReplaySteps++;
+      const fn = (c.name === 'advanceAugmentPreparationTime' ? advanceAugmentPreparationTime : c.name === 'grantMechanicUnit' ? grantMechanicUnit : (commands as unknown as Record<string, (...a: unknown[]) => unknown>)[c.name]) as (...args: unknown[]) => unknown;
+      const before = replay;
+      const result = fn(replay, ...args) as { ok?: boolean; state?: MatchState; events?: readonly MatchEvent[] };
       historyCheck(result && result.ok !== false, `replay command ${c.name}`);
       const next = result.state ?? result as unknown as MatchState;
       historyCheck(next !== replay, 'replay no-op'); replay = next;
+      if (recordThis) noteCombatTranscript(before, c.name, next, result.events);
     }
   }
+  if (recordThis) sealCombatTranscript();
+  } finally { if (active) active.depth--; }
   const replayText = canonicalContent(replay);
   historyCheck(replayText === canonicalContent(s), 'replayed facts/state mismatch');
-  if (cacheable) rememberReplay(origin, encoded, replay, replayText);
+  if (cacheable && !recordThis) rememberReplay(origin, encoded, replay, replayText);
   carryRestoredAugmentTrace(replay,s);
 }
-export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime']);
+export const SOLO_COMMANDS = new Set(['deployMatchUnit','buyUnit','openAnvil','sellUnit','setShopLock','rerollShop','buyXp','startMatchCombat','stepMatch','nextRound','useConsumable','combineItems','equipItem','selectAnomalyTarget','rerollAugment','rerollAnomaly','forfeitPendingChoice','forfeitTerminalOrbs','claimOrb','claimOrDiscardLoot','selectChoice','chooseG23Junker','chooseG23BlackMarket','claimG23Reward','advanceAugmentPreparationTime','grantMechanicUnit']);
 

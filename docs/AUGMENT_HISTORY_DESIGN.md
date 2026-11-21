@@ -86,6 +86,39 @@ B5-61 羁绊追踪者在同一个 `augment-history-v1` 内新增事实 `{kind:'t
 
 这里采用与现有账本一致的规则一致性证明，不是签名。不能识别将整份输入改写为另一条完整合法轨迹的文件作者；也不声称认证旧普通快照格式从未保存过的事实。
 
+### 2026-10-30：Support Mining seed 86 与两项回放限制调查
+
+基线 `bc818fd8`。将 `tests/augment-batch3-verify-public.test.ts` 的 Support Mining 公共种子临时改回 86，原有 `B3-V2 ... retired save continues exactly like uninterrupted play` 确实失败；以下是首处分叉，而非笼统的“续跑不一致”：
+
+| 边界 | 不存档链与存档恢复链 |
+| --- | --- |
+| 3-1／自然轮11，假人累计死亡7次，退役并发支持装 | object／JSON／serializeMatch 文本恢复均完整相等；继续到3-2也完整相等 |
+| 3-2／自然轮12，待选强化，尚无 augmentHistory | 两边仍完整相等；combat 与 combatInputBasis 均为 null；该节点的存档不含先前 WeakMap 命令链 |
+| 再保存上述3-2节点，恢复后自动选 dhampyr | 首次新建历史：`facts[0].previousBattle` 从运行链的 `{status:'recorded',round:11,roundId:'3-1',battleId:'round-11',roster:…}` 变为 `{status:'unavailable'}`；`proof.origin` 从第1轮变为已认证的第12轮待选快照，`proof.commands` 从整条运行链变为以本次 selectChoice 开始的后缀 |
+| 3-2取得后开战、结算，以及之后再次恢复／继续 | 除上述证明起点、命令前缀和上一战可用性外，所有字段与事件相等；取得后的每份状态自身经三入口恢复完整相等，恢复后的下一条完整命令也完整相等 |
+
+结论：**不是假人退役或 dhampyr 已保存状态恢复损坏的生产 bug**。完整 Match 的确出现差异，但发生在无历史持有者的快照恢复之后、首次新建历史之时，严格符合上文已有的 `previousBattle` 和 solo origin 设计。假人移除 provenance、支持装收据、金币、HP、RNG、战斗输入及结果均未分叉；dhampyr 不读取 previousBattle，其单人 player-damage.actualDamage 保持 null，不产生玩家治疗。不能凭当前棋盘补造已经未保存的上一战阵容，也不能靠进程缓存让 JSON 文件在另一进程恢复时获得不存在的历史。
+
+因此不修改生产规则或存档格式，公共综合测试继续用140，保留原来的全状态相等断言；另加 seed86 专项测试明确认证每一处差异，不删除／放宽原断言。若将来要求**尚无历史持有者的存档也保留整条命令链及上一战证据**，那是对本节持久化设计的扩展，需要明确格式与兼容政策，不能作为此次退役修复暗中加入。
+
+两条旧“冠冕历史”注释也不准确：报错来自通用 `missingCrownHistory()`，两条实际路线都没有 `facts.crowns`。
+
+- `blazing-soul-i` seed11：2-1自动选 `cluttered-mind`，后续 PvP 的备战席经验（包括零经验）须由战斗回放认证；3-2取得 Blazing Soul I 时已需要完整 battles。
+- `latent-forge` seed8：3-2自动选 `pilfer`，该轮结算后到3-3已有7次取得后的 PvP，尚未达到 Latent Forge 第8次奖励；Pilfer 的历史战斗认证先行要求完整 battles。
+- 新增两条实际路线测试：无 battles 时 object、JSON、serializeMatch 均以 missing historical evidence 拒绝；提供空集合仍拒绝历史缺战；提供通过真实公共命令记录的完整 battles 后，三入口恢复均完整相等。未伪造计数或回放。
+
+联机不经过离线 `serializeMatch/restoreMatch → withHistory → needsCrownHistory` 门槛。房间以 `previousAugmentBattles` 保存上一战，手选／超时／机器人选取前经 `prepareAugmentAcquisition` 注入上下文；恢复走 `restoreSharedOrbSnapshot`／`restoreCarouselSeat` 的权威池和独立 authority。故无历史单人快照重设 solo origin 的路径不会在联机重连发生，另两项的离线“必须另传 battles”限制也不阻塞联机规则运行。这里不声称服务器已有整局重启存档格式。
+
+本次验证（所有 Vitest 均加 `--maxWorkers=2 --configLoader runner`；runner 避免只读 node_modules/.vite-temp 写入）：
+
+- `tests/augment-batch3-verify-public.test.ts`：80项通过（原77项＋新增3项）；原 seed86 全状态续跑断言曾复现失败，最终保留140和原断言。
+- `tests/augment-pool-batch5-s8a-room.test.ts`：4项通过；真实 Pilfer 联机战斗、共享奖励及在线恢复不需离线 battles 参数。
+- `tests/augment-pool-batch4-b4xp.test.ts -t 'online settlement uses'`：选中1项通过，覆盖4种席位经验强化的联机结算及幂等；其余未选中。
+- `tests/augment-pool-batch5-h8-health-room.test.ts`：2项通过、14项失败。首个失败是现有 seed10 唯一 dhampyr 持有者 s3 在第12轮 hp=88、actualDamage=0，没有产生本用例要求的治疗，healedMatch 未赋值导致后13项连锁失败；不是超时，也不是缺历史异常。本次不修改该既有夹具或掩盖失败，不能将其报告为治疗链联机验收通过。
+- `npm run typecheck`、`git diff --check` 通过。
+
+没有修改 src/server 或生产代码，没有重录 epoch／golden、修改版本／摘要、增加 skip、提高超时／阈值或提交 Git。
+
 ### 联机
 
 单席文件无法自行证明其它七席的历史。恢复使用 **独立的服务器权威对象**，不接受候选 JSON 自带的“authority”/摘要。`Room.augmentHistoryAuthority(seatId)` 从当前服务器席位捕获独立副本；`captureAugmentHistoryAuthority` 是服务器持久化集成内部入口。返回的是 WeakMap 品牌句柄，冻结或 JSON 反序列化一个同形对象不构成授权。

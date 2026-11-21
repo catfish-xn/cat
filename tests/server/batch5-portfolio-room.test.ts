@@ -12,8 +12,11 @@ import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from '../fixtures/m5/orac
 const SOURCE='augment-pool-batch5-h4';
 const env={CATALOG,COST,ROUNDS,xp,entryXp,benchXp};
 describe.each([
-  {id:'diversified-portfolio',seed:78,seatId:'s2',acquire:4,build:9,initial:1},
-  {id:'diversified-portfolio-plus',seed:6,seatId:'s3',acquire:12,build:12,initial:4},
+  // v26 D5 (7953c99a) pool: seed 78's s2 no longer gets Diversified Portfolio at 2-1; seed 31 is the first room seed from 0
+  // offering it (to s0, a human seat, after one public slot reroll). Was {seed:78,seatId:'s2'}.
+  {id:'diversified-portfolio',seed:31,seatId:'s0',acquire:4,build:9,initial:1},
+  // v26 D5 (7953c99a) pool: seed 6's s3 no longer gets it at 3-2; seed 1 is the first room seed from 0 offering it (s0, unrerolled).
+  {id:'diversified-portfolio-plus',seed:1,seatId:'s0',acquire:12,build:12,initial:4},
 ])('$id through a real eight-seat room',({id,seed,seatId,acquire,build,initial})=>{
   const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed});
   const seat=()=>room.state.seats.find(s=>s.seatId===seatId)!;

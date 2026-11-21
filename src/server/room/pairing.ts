@@ -27,6 +27,13 @@ export const DEFAULT_PAIRING_POLICY: PairingPolicy = { avoidRecentRounds: 2 };
 export type PairingHistory = Readonly<Record<string, readonly string[]>>;
 /** Entries kept per seat; far above any avoidance span the policy may use. */
 export const PAIRING_HISTORY_LIMIT = 8;
+/**
+ * Per seat, who it fought in each past PvP round, oldest first: for the stage tracker's "曾经获胜：X" hover. Unlike
+ * `PairingHistory` it keeps the round number and is not trimmed (at most one entry per PvP round). A mirror battle is
+ * recorded under its source with `mirror`.
+ */
+export interface OpponentRound { readonly round: number; readonly seatId: string; readonly mirror?: true }
+export type OpponentLog = Readonly<Record<string, readonly OpponentRound[]>>;
 /** Possible opponents of every alive seat this round, by seat id (see `planCandidates`). */
 export type CandidateMap = Readonly<Record<string, readonly string[]>>;
 
@@ -146,6 +153,17 @@ export function recordPairings(history: PairingHistory, pairings: readonly Pairi
   for (const pairing of pairings) {
     const opponent = pairing.opponent.kind === 'seat' ? pairing.opponent.seatId : pairing.opponent.sourceSeatId;
     next[pairing.seatId] = [...(history[pairing.seatId] ?? []), opponent].slice(-PAIRING_HISTORY_LIMIT);
+  }
+  return next;
+}
+
+/** Appends this round's opponent of every paired seat to the log (see `OpponentLog`). */
+export function recordOpponents(log: OpponentLog, round: number, pairings: readonly Pairing[]): OpponentLog {
+  if (pairings.length === 0) return log;
+  const next: Record<string, readonly OpponentRound[]> = { ...log };
+  for (const pairing of pairings) {
+    const entry: OpponentRound = pairing.opponent.kind === 'seat' ? { round, seatId: pairing.opponent.seatId } : { round, seatId: pairing.opponent.sourceSeatId, mirror: true };
+    next[pairing.seatId] = [...(log[pairing.seatId] ?? []).filter(old => old.round !== round), entry];
   }
   return next;
 }

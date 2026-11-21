@@ -21,12 +21,52 @@ import { S13_P3_SOURCE } from '../simulation/content/s13-p3-source';
 import { D11_FILL_SOURCE } from '../simulation/content/d11-fill-source';
 import { fillAbilityTemplate } from './ability-text';
 import { ITEM_DEFINITIONS } from '../simulation/content/g2-3-item-registry';
-import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_LOOT, G23_RADIANT_ITEMS, G23_TRAITS, G24_SUPPORT_ITEMS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
+import { portableAnomalyId } from '../simulation/content/augment-pool-batch5-r2';
+import { G23_ANOMALIES, G23_CHAMPIONS, S13_EXTRA_ANOMALIES, G23_ICONS, G23_TRAITS, g23IconPath, type G23IconKind, type G23Name } from './s13-g23-manifest';
+import { createLazyChunk } from './lazy-chunk';
+
+/**
+ * Item names and icons are their own chunk (s13-g23-items.ts, 2D bundle split 11-19): prefetched when the first screen is
+ * idle, awaited before an item round shows (loadG23Items; strategy-panel.ts renderChoice). A display that still reads them
+ * before they arrive gets the content name and no icon, and redraws when they do (onG23ItemsChanged).
+ */
+interface G23ItemIndex {
+  readonly icons: ReadonlySet<string>; readonly radiantByBase: ReadonlyMap<string, G23Name & { readonly base: string }>;
+  readonly lootApiNames: ReadonlySet<string>; readonly names: ReadonlyMap<string, G23Name>;
+}
+let itemIndex: G23ItemIndex | undefined;
+const itemListeners = new Set<() => void>();
+const itemsChunk = createLazyChunk(() => import('./s13-g23-items'), '物品名表');
+itemsChunk.onReady(tables => {
+  itemIndex = {
+    icons: new Set(Object.entries(tables.G23_ITEM_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`))),
+    radiantByBase: new Map(tables.G23_RADIANT_ITEMS.map(row => [row.base, row])),
+    lootApiNames: new Set(tables.G23_LOOT.map(row => row.apiName)),
+    names: new Map<string, G23Name>([...tables.G23_RADIANT_ITEMS, ...tables.G23_LOOT, ...tables.G24_SUPPORT_ITEMS].map(row => [row.apiName, row])),
+  };
+  for (const listener of [...itemListeners]) listener();
+});
+/** The item tables, starting their load when they are not here yet. */
+const items = (): G23ItemIndex | undefined => { if (!itemIndex) void itemsChunk.load(); return itemIndex; };
+/** Resolves once the item names and icons are here (retried until they are; never rejects). */
+export const loadG23Items = (): Promise<void> => itemsChunk.load().then(() => undefined);
+export const g23ItemsReady = (): boolean => itemIndex !== undefined;
+/** Starts loading the item tables when the page is idle (called once the first screen is up). */
+export const prefetchG23Items = (): void => itemsChunk.prefetch();
+export function onG23ItemsChanged(listener: () => void): () => void {
+  itemListeners.add(listener); return () => { itemListeners.delete(listener); };
+}
+/** zh_CN name of a loot row by apiName, once the item tables are here. */
+export const g23LootName = (apiName: string): string | undefined => {
+  const index = items();
+  return index?.lootApiNames.has(apiName) ? index.names.get(apiName)?.zh ?? undefined : undefined;
+};
 
 const BASE = (import.meta as unknown as { env?: { BASE_URL?: string } }).env?.BASE_URL ?? '/';
 const iconIndex = new Set(Object.entries(G23_ICONS).flatMap(([kind, apiNames]) => apiNames.map(apiName => `${kind}:${apiName}`)));
+const ITEM_ICON_KINDS: ReadonlySet<G23IconKind> = new Set(['items', 'loot', 'artifact-items', 'support']);
 const assetUrl = (kind: G23IconKind, apiName: string | undefined): string | null =>
-  apiName && iconIndex.has(`${kind}:${apiName}`) ? `${BASE}${g23IconPath(kind, apiName)}` : null;
+  apiName && (ITEM_ICON_KINDS.has(kind) ? items()?.icons : iconIndex)?.has(`${kind}:${apiName}`) ? `${BASE}${g23IconPath(kind, apiName)}` : null;
 
 /** Candidate content ids from RECONCILIATION.md (`候选ID`). Swain's id is already `swain` in content. */
 export const G23_HERO_IDS: Readonly<Record<string, string>> = Object.freeze({
@@ -79,9 +119,6 @@ const TRAIT_BY_EN = new Map(G23_TRAITS.map(row => [row.en, row]));
 const ALL_ANOMALIES = [...G23_ANOMALIES, ...S13_EXTRA_ANOMALIES];
 const ANOMALY_BY_ID = bridge(ALL_ANOMALIES, row => [...apiForms(row.apiName), ...nameForms(row.en)]);
 const ANOMALY_BY_ZH = new Map(ALL_ANOMALIES.map(row => [row.zh, row]));
-const RADIANT_BY_BASE = new Map(G23_RADIANT_ITEMS.map(row => [row.base, row]));
-const LOOT_API_NAMES = new Set(G23_LOOT.map(row => row.apiName));
-const ITEM_NAMES = new Map<string, G23Name>([...G23_RADIANT_ITEMS, ...G23_LOOT, ...G24_SUPPORT_ITEMS].map(row => [row.apiName, row]));
 
 /** Summons the rules create with their own ids (v20 危险人物's 畸变体 reuses Silco's monstrosity portrait). */
 const G23_SUMMON_IDS: Readonly<Record<string, string>> = Object.freeze({ 'v20-silco-minion': 'TFT13_Silco_Monstrosity' });
@@ -164,7 +201,9 @@ export function anomalyIconHtml(size: number, className = 'anomaly-icon'): strin
  */
 export function itemDisplayName(id: string): string {
   const definition = Object.hasOwn(ITEM_DEFINITIONS, id) ? ITEM_DEFINITIONS[id] : undefined;
-  return (definition?.apiName ? ITEM_NAMES.get(definition.apiName)?.zh : undefined) ?? definition?.name ?? id;
+  const anomaly = definition && portableAnomalyId(id);
+  if (anomaly) return `便携异常点：${anomalyDisplayName(anomaly)}`;
+  return (definition?.apiName ? items()?.names.get(definition.apiName)?.zh : undefined) ?? definition?.name ?? id;
 }
 /**
  * Radiant (光明) version of a completed item, for content that marks an item instance as radiant instead of giving it
@@ -172,13 +211,13 @@ export function itemDisplayName(id: string): string {
  */
 export function radiantItem(baseIdOrApiName: string): { readonly apiName: string; readonly name: string; readonly iconUrl: string | null } | null {
   const base = Object.hasOwn(ITEM_DEFINITIONS, baseIdOrApiName) ? ITEM_DEFINITIONS[baseIdOrApiName].apiName : baseIdOrApiName;
-  const row = base ? RADIANT_BY_BASE.get(base) : undefined;
+  const row = base ? items()?.radiantByBase.get(base) : undefined;
   return row ? { apiName: row.apiName, name: row.zh ?? row.en, iconUrl: assetUrl('items', row.apiName) } : null;
 }
 /** Name and icon of a Conqueror chest reward, Chem-Baron item (black market, shimmer) or Junker King upgrade by client apiName. */
 export function lootEntry(apiName: string): { readonly name: string; readonly iconUrl: string | null } | null {
-  const row = ITEM_NAMES.get(apiName);
-  if (!row || !LOOT_API_NAMES.has(apiName)) return null;
+  const index = items(), row = index?.names.get(apiName);
+  if (!row || !index!.lootApiNames.has(apiName)) return null;
   // Thief's Gloves is already bundled as a regular item icon (thiefs-gloves), so callers use that one.
   return { name: row.zh ?? row.en, iconUrl: assetUrl('loot', apiName) };
 }
@@ -189,6 +228,9 @@ export const lootGoldIconUrl = (): string | null => assetUrl('loot', 'TFT_Assist
 export function g23IconUrl(kind: 'champion' | 'trait' | 'item', id: string): string | null {
   if (kind === 'champion') return assetUrl('champions', g23ChampionApiName(id));
   if (kind === 'trait') return assetUrl('traits', g23TraitApiName(id));
+  // 14.24 TFT13_AnotherAnomaly_Item uses the same GoopItem art as the chosen anomaly.
+  // Resolve the instance variant here so DOM, Phaser and the 3D overhead share it.
+  if (Object.hasOwn(ITEM_DEFINITIONS, id) && portableAnomalyId(id)) return anomalyIconUrl();
   const apiName = Object.hasOwn(ITEM_DEFINITIONS, id) ? ITEM_DEFINITIONS[id].apiName : undefined;
   return assetUrl('items', apiName) ?? assetUrl('loot', apiName) ?? assetUrl('artifact-items', apiName) ?? assetUrl('support', apiName);
 }

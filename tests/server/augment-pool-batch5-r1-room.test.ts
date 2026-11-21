@@ -96,9 +96,12 @@ class RankedEliminationResolver implements BattleResolver {
   }
 }
 
+// v26 D5 (7953c99a) pool and route drift: with the shared carousel, seeds 1 (tomb-raider-1) and 0 (tomb-raider-2) no longer
+// reach a 4-2 room offer whose controlled eliminations open the Tomb Raider choice. Seeds 3 and 4 are the first seeds from 0
+// on which the whole carousel suite holds (searched over 0..5 with this file's unchanged cases).
 describe.each([{ id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, carousel: false },
-  { id: 'tomb-raider-1', seed: 1, opportunities: 3, grants: 2, carousel: true },
-  { id: 'tomb-raider-2', seed: 0, opportunities: 4, grants: 3, carousel: true }])('$id actual Room publication, choice and authority (carousel: $carousel)', ({ id, seed, opportunities, grants, carousel }) => {
+  { id: 'tomb-raider-1', seed: 3, opportunities: 3, grants: 2, carousel: true },
+  { id: 'tomb-raider-2', seed: 4, opportunities: 4, grants: 3, carousel: true }])('$id actual Room publication, choice and authority (carousel: $carousel)', ({ id, seed, opportunities, grants, carousel }) => {
   const clock = new ManualClock(), resolver = new RankedEliminationResolver();
   const room = new Room(Array.from({ length: 8 }, (_, index) => ({ seatId: `s${index}`, name: `玩家${index}`, kind: 'human' as const })),
     { ...ROOM_TIMING_DEFAULTS, ...TIMINGS, seed, roomId: `tomb-room-${id}`, clock, resolver, pvpMode: 'placeholder',

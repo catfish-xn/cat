@@ -21,12 +21,17 @@ vi.setConfig({ testTimeout: 20_000 });
 // Its public route still earns a lone Akali sharing an orb and four components. A real
 // 1G Irelia sale, 2G refresh and 2G Vander purchase preserve nine reserves and the original 12G premise.
 // Reveal/final ticks61/122 are exact checkpoints of this natural combat (v24's final tick was86).
+// v26 re-pin (route drift above): reveal/final ticks 91/152 (were 61/122).
 let prepared=fillBench(await publicPrefix('3-7',3155,'cannon',['bulky-buddies-i']),['akali']);
 const reserve=bench(prepared).find(u=>u.definitionId==='irelia'&&u.starLevel===1)!;
 expect(getUnitSellPrice(reserve)).toBe(1);
 prepared=accepted(api.sellUnit(prepared,reserve.id));
 prepared=accepted(api.rerollShop(prepared));
-const replacement=prepared.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId==='vander');
+// v26 (D5 pool 7953c99a; 14.24 neutrals/targeting route drift): seed 3155 now naturally takes Noxian Guillotine + Lone Hero
+// (was Pandora's Items II + Blistering Strikes) and reaches 3-7 with 12G after fillBench (the sale/refresh/purchase leave 9G).
+// The refreshed shop no longer holds Vander (leona, nunu, smeech, leona, rell); buy the first 2G Leona instead, a new
+// one-star copy that merges with nothing, so the nine-reserve, lone-Akali premise is unchanged.
+const replacement=prepared.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId==='leona');
 expect(replacement).toBeGreaterThanOrEqual(0);
 prepared=accepted(api.buyUnit(prepared,replacement,prepared.shop.generation));
 const live=battle(prepared),waiting=live.ended;
@@ -54,15 +59,15 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
  });
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
   expect(openingEncounter(prepared.seed)).toBe('none');
-  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['pandoras-items-ii','blistering-strikes']);
-  expect(prepared.gold).toBe(12);expect(bench(prepared)).toHaveLength(9);
+  expect(prepared.augments.map(a=>a.definitionId)).toEqual(['noxian-guillotine','lone-hero']);
+  expect(prepared.gold).toBe(9);expect(bench(prepared)).toHaveLength(9);
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(prepared.seed,17).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
   expect(plan(prepared).encounterPlan.drops.filter(d=>d.payload.kind==='item')).toHaveLength(4);
   expect(plan(prepared).encounterPlan.drops.filter(d=>d.payload.kind==='unit')).toHaveLength(1);
   expect(prepared.preparation.units.some(u=>u.team==='player'&&u.definitionId==='akali')).toBe(false);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'akali',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(61);expect(waiting.combat!.tick).toBe(122);
+  expect(live.revealed!.combat!.tick).toBe(91);expect(waiting.combat!.tick).toBe(152);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);
@@ -111,7 +116,10 @@ describe('B8 live lethal PvE with randomized orbs',()=>{
  // Seed 2253's terminal 4-7 after the xp/batch-3 merge: its new augments (blinding-speed) let a lone Loris at (0,7)
 // clear all six razorbeaks, so the two-carrier case keeps Leona there instead (was Loris): it kills the same
 // r01 rod and r02 reforger/gold carriers the pre-merge Loris did, then dies at 3 HP.
-it.each([{name:'two killed carriers',keep:'leona',col:0,row:7,deaths:2,earned:true},{name:'only orb carrier killed',keep:'urgot',col:0,row:4,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,row:7,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
+// v26 14.24 neutrals (568eeea4: five stronger razorbeaks) and targeting P0/P1: a lone Leona or Urgot no longer kills any
+// razorbeak from any player cell. Loris at (0,4) kills the r01 rod and r02 reforger/gold carriers (2 deaths), and Loris at
+// (0,7) kills only the rod carrier (1 death); both still die at 3 HP. (Were Leona (0,7) and Urgot (0,4).)
+it.each([{name:'two killed carriers',keep:'loris',col:0,row:4,deaths:2,earned:true},{name:'only orb carrier killed',keep:'loris',col:0,row:7,deaths:1,earned:true},{name:'no carrier killed',keep:null,col:1,row:7,deaths:0,earned:false}])('$name: strict terminal restore cannot resurrect unearned loot',async scenario=>{
   const preparation=await terminalPreparation(scenario.keep,scenario.col,scenario.row),l=battle(preparation),s=l.ended;
   expect(preparation.playerHp).toBe(3);expect(preparation.roundResults.reduce((n,r)=>n+r.hpLost,0)).toBe(97);
   expect(s.phase).toBe('gameOver');expect(s.outcome).toBe('defeat');expect(s.playerHp).toBe(0);

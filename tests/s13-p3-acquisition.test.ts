@@ -30,7 +30,10 @@ function publicAnomalyPrefix(seed = 42) {
   anomalyPrefixes.set(seed, prefixPromise);
   return prefixPromise;
 }
-const publicPrefix = await publicAnomalyPrefix();
+// Re-pinned from seed 42: v26 D5 offers/stage bans (7953c99a) moved seed 42's sniper route onto snipers-nest and
+// rebel-resurgence (AUGMENT_HISTORY_OWNERS), so every strict restore replayed the whole game (~25 s). Seed 48's route
+// (pumping-up-ii, item-collector-i, sentinel-crest) holds no history owner.
+const publicPrefix = await publicAnomalyPrefix(48);
 // Seed 40 reaches dragonsoul/nothing-wasted within 100 paid rerolls without
 // seed 44's unrelated Scoreboard Scrapper command-history replay.
 const nothingWastedPrefix = await publicAnomalyPrefix(40);

@@ -1,18 +1,21 @@
-import { expect, it } from 'vitest';
+import { beforeAll, expect, it } from 'vitest';
 import { makeRoom, runUntil, SEATS, TIMINGS } from './helpers';
 import { AUGMENT_PREPARATION_MS, Room, ROOM_TIMING_DEFAULTS } from '../../src/server/room/room';
 import { ManualClock } from '../../src/server/room/clock';
+import type { BattleResolver } from '../../src/server/room/battle-resolver';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { AUGMENT_TIERS } from '../../src/simulation/content/augment-policy';
 import { deriveAugmentTier } from '../../src/simulation/augment-offers';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { toSeatPrivateView } from '../../src/server/room/projection';
 import { validateClientCommand } from '../../src/server/net/messages';
+import { battleCacheResolver, type BattleResultCache } from './battle-result-cache';
 
-it('eight room seats share tiers across all three nodes and forward free rerolls through the gate', () => {
+const tierBattles: BattleResultCache = new Map();
+function shareTiers(resolver: BattleResolver): void {
   // Empty bot boards keep this rule/protocol test at tick zero; no human deadline auto-deployment.
   const clock = new ManualClock();
-  const room = new Room(SEATS.map(seat => ({...seat,kind:'bot'})), {roomId:'tier-test',seed:42,clock,resolver:new TwoSidedBattleResolver(),...TIMINGS});
+  const room = new Room(SEATS.map(seat => ({...seat,kind:'bot'})), {roomId:'tier-test',seed:42,clock,resolver,...TIMINGS});
   room.start();
   for (const seat of room.state.seats) {
     const unit = seat.match.preparation.units.find(u => u.team === 'player')!;
@@ -50,6 +53,10 @@ it('eight room seats share tiers across all three nodes and forward free rerolls
     }
   }
   room.dispose();
+}
+beforeAll(() => { shareTiers(battleCacheResolver(tierBattles, 'record')); });
+it('eight room seats share tiers across all three nodes and forward free rerolls through the gate', () => {
+  shareTiers(battleCacheResolver(tierBattles, 'read'));
 });
 
 it('reroll wire validation refuses unknown fields, a missing card index, negative and non-integer generations', () => {

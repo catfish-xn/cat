@@ -10,6 +10,8 @@
  * Every G2 content batch reports its measured ratio; if G2-3/G2-4 pass 1.50, split the bundle instead of raising again.
  * 2026-10-19 (3D 支线): the separately loaded 3D chunk (three.js, built into assets/3d/ and fetched only with ?render=3d)
  * is reported on its own as js3dGzipBytes and is not part of the 2D ratio; the 2D 1.50 and interaction 1.20 budgets are unchanged.
+ * 2026-11-19 (2D bundle split): on-demand UI chunks (assets/ui/) are reported as jsUiGzipBytes; a build whose index.html
+ * preloads one fails, as for assets/3d/ and assets/solo/.
  * Both interaction dist folders are served from the
  * root by the same static server; samples alternate base/current to share machine noise.
  * Usage: node scripts/m7-budget.cjs --base=<base dist> --current=<current dist> [--js-base=<JS base dist>] [--samples=9]
@@ -39,6 +41,10 @@ const preloads3d = dir => fs.existsSync(path.join(dir, 'index.html')) && /<(?:li
 // Solo save/restore/replay is loaded before scene construction only in offline mode.
 const jsSoloGzip = dir => (fs.existsSync(path.join(dir, 'assets', 'solo')) ? jsGzip(dir, path.join('assets', 'solo')) : 0);
 const preloadsSolo = dir => fs.existsSync(path.join(dir, 'index.html')) && /<(?:link|script)\b[^>]*\b(?:href|src)=["'][^"']*assets\/solo\//i.test(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'));
+// On-demand UI chunks (assets/ui/: text tables, panels such as stats and carousel, 2D bundle split 11-19) are left out of the
+// 2D ratio only while index.html never preloads them.
+const jsUiGzip = dir => (fs.existsSync(path.join(dir, 'assets', 'ui')) ? jsGzip(dir, path.join('assets', 'ui')) : 0);
+const preloadsUi = dir => fs.existsSync(path.join(dir, 'index.html')) && /<(?:link|script)\b[^>]*\b(?:href|src)=["'][^"']*assets\/ui\//i.test(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'));
 function serve(dir) {
   const server = http.createServer((req, res) => {
     const file = path.join(dir, decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, '') || 'index.html');
@@ -69,6 +75,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
     baselineDirectories: { js: jsBaseDir, interactive: baseDir },
     jsGzipBytes: size, jsRatio: size.current / size.base, jsBudget: 1.50,
     jsSoloGzipBytes: jsSoloGzip(currentDir), jsSoloPreloadedByIndex: preloadsSolo(currentDir),
+    jsUiGzipBytes: jsUiGzip(currentDir), jsUiPreloadedByIndex: preloadsUi(currentDir),
     js3dGzipBytes: js3dGzip(currentDir), js3dPreloadedByIndex: preloads3d(currentDir),
     interactiveMs: { base: times.base, current: times.current, baseMedian: median(times.base), currentMedian: median(times.current) },
     interactiveRatio: median(times.current) / median(times.base), interactiveBudget: 1.20,
@@ -77,7 +84,7 @@ const median = values => [...values].sort((a, b) => a - b)[Math.floor(values.len
   // JS gzip budget is deterministic and always enforced. Both budgets are unchanged.
   const interactivePassed = result.interactiveRatio <= result.interactiveBudget;
   result.wallClock = { enforced: wallClockEnforced, gates: recordWallClock('m7-budget', [{ name: 'firstInteractiveRatio', metric: 'median ratio', actual: result.interactiveRatio, limit: result.interactiveBudget, comparison: '<=', passed: interactivePassed }]) };
-  result.passed = result.jsRatio <= result.jsBudget && !result.js3dPreloadedByIndex && !result.jsSoloPreloadedByIndex && (interactivePassed || !wallClockEnforced);
+  result.passed = result.jsRatio <= result.jsBudget && !result.js3dPreloadedByIndex && !result.jsSoloPreloadedByIndex && !result.jsUiPreloadedByIndex && (interactivePassed || !wallClockEnforced);
   fs.mkdirSync(out, { recursive: true }); fs.writeFileSync(path.join(out, 'report.json'), JSON.stringify(result, null, 2));
   console.log(JSON.stringify(result, null, 2));
   if (!result.passed) process.exitCode = 1;

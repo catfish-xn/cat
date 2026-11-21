@@ -263,6 +263,20 @@ node scripts/assets3d/build-all.mjs --units all --cost 3,4,5 --out assets3d-loca
 - 缓存下载不会自动生成 `source/extracted/` 和 `source/extraction.json`；下载后须执行下述第 3 步（c）解包器。批量构建直接使用它生成/合并的原始资源及 SHA-256 提取记录，无须改接口。缺少这些输入会逐单位报告失败，不能据此声称已完成真实 60 英雄构建。
 - `assets3d-local/unit-map.local.json` 仅有名字、路径及绑定规则，无素材。资源名、模型/骨架路径和动作文件目录均从已有 fetch-plan 的实际 `entries.path` 推导；特殊代号沿用已有对应关系。60/60 单位资源映射成功，missing 列表为空。特殊资源名以本地映射为准；不根据领域单位 ID 猜测文件名。
 - 其余 58 单位的材质与运行时动作绑定尚无确认依据，配置保持空，不凭文件名猜测材质或把任意 spell 绑定成 cast。原始动作目录已列出，batch 模式尝试按原名转换全部列出的 ANM；未确认的动作按 idle/move/attack/cast/hit/death 六项报告缺失。严格模型转换仍拒绝 `missing-material-texture:<材质>`，需要后续源材料信息补齐绑定；仅下载缓存不会消除这类失败。
+### 非单位角色目录（`--characters`）
+
+召唤物、宠物这类不是可上场单位、但在原版里有独立角色目录的模型，用 `--characters <目录名,…>`（逗号分隔，小写目录名）来转：
+
+```sh
+node scripts/assets3d/build-all.mjs --characters <目录名> --source assets3d-local/trial/local --out assets3d-local/out/characters
+```
+
+- 每个目录按单位的方式构建，产物放在 `characters/<目录名>/`，模型 id 就是目录名，报告写在 `build-report.json` 的 `characters` 下。
+- 如果本地 unit-map 里有 `$characters.<目录名>` 条目，就按条目构建；没有条目时，按约定路径找文件：`assets/characters/<目录名>/skins/base/<目录名>.tft_set13.skn` 和同名 `.skl`，动作按 `$animationRules` 从动画图里挑。
+- 只给 `--characters` 时不构建任何单位；要同时构建单位，就一起写上 `--units`。不带 `--characters` 时，行为和原来完全一样。
+- 目录名不能和单位 id 相同。这类角色没有独立的参考 GLB，跳过参考对照；结构检查照常做。
+- 源文件先用全量抽取（`extract-from-chunks.mjs --units all`）取出来，取源这一步不需要额外参数。
+
 - Jinx/Vi 保留第 2 步确认的贴图和动作绑定。普通 `build.mjs` 的双单位入口保留独立参考对照和离线 fetch-plan 行为；batch 模式不为每个单位重复生成 fetch-plan，没有独立参考 GLB 时明确报告 unavailable，结构检查仍执行。有参考时照常比较。缺少源 JSON 的单位明确报告粒子不可用，不伪造效果或动作语义。
 
 验证命令（不用完整游戏回归）：
@@ -369,6 +383,13 @@ initialSubmeshToHide 对应 primitive 不输出，隐藏部件贴图不构成构
 unit-map.local.json 包含保留键 `$animationRules`，其余键是 60 个领域单位。animationClips(documents) 从 mClipDataMap 读取 clip key hash、类 hash、mFlags 和 mAnimationResourceData.mAnimationFilePath。selectAnimations(clips, rules, explicit) 返回 mapped/files/decisions；显式单位覆盖优先，随后按公共图别名、文件名 token 优先级匹配。同优先级若有多个不同文件则省略，不把序列或 selector 当作 AtomicClipData。原 jinx/vi 五段选择保留；新增 Draven 的显式 cast 覆盖及 animationNotes 依据，不在代码中分支判断英雄。
 
 批量和单体导出相同的选定动作集，manifest 与 GLB 一致。汇总报告 animations.missing/actionDecisions 解释缺项；每单位还保留 graphClips、bindings、step2Mapping、normalRepair、omittedUnboundTracks、bindPoseLocatorHashes。cast/hit 缺项不冒充其他动作，也不构成结构转换失败。粒子沿用现有转换实现，本轮不改粒子语义。
+`animationClips` 同时读取 `AtomicClipData` 的 `StartFrame` / `EndFrame`，`build.mjs` 按对应 ANM 的 `fps`（缺省 30）换算成秒区间写入 `models[id].clipRanges`，运行时由 `ModelCache` 调用 `trimClip` 在模型加载后裁切片段。
+已部署的资产根可用 `node scripts/assets3d/stage-clip-ranges.mjs --assets <已部署 assets3d 根> --extracted <解包根> --out <新 manifest 路径>` 直接从解包动画图与 ANM 计算并补齐 `clipRanges`（不重建 GLB、不改动原 manifest），同时向标准输出打印裁切区间报告。
+unit map 条目可配置 `formAnimations`（`front` / `back` 下按 `idle` / `move` / `attack` 指定片段名），`build.mjs` 会将对应原子片段一并导出至 GLB 并写入 `models[id].formAnimations`，运行时 `UnitAnimationMixer` 按形态切换动作片段且缺片段时退回默认 `animations`。
+已部署的资产根可用 `node scripts/assets3d/stage-form-animations.mjs --assets <已部署根> --model <id> --donor <未压缩 glb> --form-animations '<json>' --out-dir <目录>` 补齐缺失的形态动作片段并重新压缩输出 `<out-dir>/models/<id>/model.glb` 与 `<out-dir>/manifest.json`（不写回原目录）。
+已部署的资产根还可用 `node scripts/assets3d/stage-anim-sequences.mjs --assets <已部署根> --extracted <解包根> --metadata-root <元数据根> --out-dir <目录>` 按解包出来的动画图（`Atomic` / `Sequencer` / `Parallel`）自动生成 `castSequence`、多段普攻 `attackSequence`、并行层 `layers` 与同源多段裁切别名 `clipSegments`，并将缺失的 `.anm` 动作片段转换追加至 `<out-dir>/models/<id>/model.glb`。已有 `castVariants.hero` 的英雄按 `<施法>Hero` 技能数据里指向的片段重解析（与默认施法相同则删去 hero 变体；数据里没写片段、带帧区间或与 `clipRanges` 冲突则保留现状，可用 `--exclude <id>:hero` 跳过）。
+
+技能数据里没写片段（由技能脚本选片段）的施法，动画图里看不出顺序；核对过视频的英雄写在脚本的 `SCRIPT_CAST_GRAPH_KEYS`（按图键列出，按 Sequencer 播，图里的帧区间照常生效）。目前只有伊泽瑞尔：`Spell3_In` → `Spell3_Out`（原地抬手发射；另一组片段是位移动作，不属于该技能，故不播）。
 
 真实数据兼容包括 uncompressed ANM v4、零权重 JOINTS 清零和零法线修复。源 ANM 额外骨轨道只在不属于当前 rig 时省略；hash 碰撞只允许无权重叶定位骨保留 bind pose，涉及变形骨或有子节点则失败。详细单位和限制见验收记录。
 

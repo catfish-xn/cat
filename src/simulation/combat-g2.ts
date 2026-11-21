@@ -8,6 +8,7 @@ import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
 import { hexDistance } from './board';
+import { MALZAHAR_3STAR_GATE_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -17,6 +18,12 @@ import { burn, modifier, stat, status } from './content/item-programs';
 
 export const EMPTY_EXPANSION: ExpansionState = { damageDealt: 0, damageTaken: 0, crystals: 0, crystalDamage: 0,
   attacksRemaining: 0, buffUntilTick: 0, lastRetaliationTick: 0, chainUntilTick: 0, chainTargets: [], chainCastSeq: 0, chainKills: 0 };
+/**
+ * User-approved 2026-11-15 (timing only; Fable after the original frames: the shield first, the shock a moment later):
+ * Blitzcrank's shock lands 5 ticks (0.25 s) after the cast; the shield stays on the cast. Fitted (not original data) by
+ * lining our recording up with the original frame by frame. See docs/S13_RULES_GAP.md (布里茨).
+ */
+export const BLITZ_SHOCK_TICKS = 5;
 export function expansion(unit: S13Unit): ExpansionState { return unit.expansion ??= structuredClone(EMPTY_EXPANSION); }
 function hit(ctx: AbilityContext, unit: S13Unit, target: S13Unit, raw: number, seq: number, ordinal: number,
   type: S13Packet['damageType'] = 'magic', area = false, source = origin(unit), derived = false): void {
@@ -86,11 +93,11 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       } break;
     }
     case 'blitzcrank': {
+      // The shield lands now; the shock on the enemies nearest now lands BLITZ_SHOCK_TICKS later (g2BlitzShock, executeG2Task).
       grantShield(unit, origin(unit), mag('Shield'), ctx.tick + ticks('ShieldDuration'), ctx.tick, ctx.events);
-      for (const t of byDistance(unit, enemies(unit, ctx.units)).slice(0, v('NumEnemies'))) {
-        strike(t, mag('BaseDamage'));
-        effect(ctx, unit, t, stat(modifier('damageAmp', -Math.round(v('DamageReduction') * 10000), 'bps'), ticks('ShieldDuration')), seq);
-      } break;
+      const targets = byDistance(unit, enemies(unit, ctx.units)).slice(0, v('NumEnemies'));
+      targets.forEach((t, n) => { task(unit, 'g2BlitzShock', ctx.tick + BLITZ_SHOCK_TICKS, t.id, mag('BaseDamage'), seq, n, targets.length); ids.push(t.id); });
+      break;
     }
     case 'ekko': {
       const targets = [target, ...byDistance(target, enemies(unit, ctx.units).filter(u => u.id !== target.id)).slice(0, v('NumBonusEnemies'))];
@@ -102,17 +109,15 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       } break;
     }
     case 'powder': {
-      if(teamup(unit,'menaces')){
-        const center=enemies(unit,ctx.units).map(t=>({t,count:enemies(unit,ctx.units).filter(u=>hexDistance(t.cell,u.cell)<=2).length})).sort((a,b)=>b.count-a.count||(a.t.id<b.t.id?-1:1))[0]?.t??target;
-        unit.tasks.push({key:JSON.stringify(['v20-powder',unit.id,seq]),kind:'v20Powder',source:origin(unit),executeAtTick:ctx.tick+1,targetId:target.id,cell:{...center.cell},amount:mag('Damage'),actionSeq:seq,ordinal:ticks('IgniteDuration'),total:Math.round(v('FalloffPercent')*10000),cancellable:false,attachedDot:true});
-        ids.push(target.id);break;
-      }
+      // Wind-up batches 3–4: the landing cell (the centre of the most enemies within 2 hexes), the walk's hexes (total - 2),
+      // the amount and whether Menaces is active (ordinal 1) are taken now; she lets the monkey go POWDER_MONKEY_RELEASE_TICKS
+      // later (g2PowderRelease: her death before then stops it), and it explodes POWDER_MONKEY_WALK_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX per hex after
+      // that (fitted, not original data). Who stands within 2 hexes of the cell is read on arrival.
       const center = enemies(unit, ctx.units).map(t => ({ t, count: enemies(unit, ctx.units).filter(u => hexDistance(t.cell, u.cell) <= 2).length }))
         .sort((a, b) => b.count - a.count || (a.t.id < b.t.id ? -1 : 1))[0]?.t ?? target;
-      for (const t of areaEnemies(unit, ctx.units).filter(t => hexDistance(center.cell, t.cell) <= 2)) {
-        strike(t, Math.floor(mag('Damage') * Math.max(0, 10000 - Math.round(v('FalloffPercent') * 10000) * hexDistance(center.cell, t.cell)) / 10000), 'magic', true);
-        ignite(ctx, unit, t, ticks('IgniteDuration'), seq);
-      }
+      unit.tasks.push({ key: JSON.stringify(['g2-powder-release', unit.id, seq]), kind: 'g2PowderRelease', source: origin(unit), executeAtTick: ctx.tick + POWDER_MONKEY_RELEASE_TICKS,
+        targetId: target.id, cell: { ...center.cell }, amount: mag('Damage'), actionSeq: seq, ordinal: teamup(unit, 'menaces') ? 1 : 0, total: 2 + hexDistance(unit.cell, center.cell), cancellable: false });
+      ids.push(target.id);
       break;
     }
     case 'violet':
@@ -122,9 +127,15 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
       const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
-      for (const t of targets) { strike(t, mag('Damage'), 'magic', true); effect(ctx, unit, t, status('shred', 2000, ticks('ShredDuration'), { activation: 'immediate' }), seq); }
+      // Wind-up batch 4: at 3 stars the gate lands MALZAHAR_3STAR_GATE_TICKS after the cast (g2Landing: damage and shred, targets
+      // taken now); 1 and 2 stars land on the cast. The infection lands 20 ticks after the gate either way.
+      const wait = unit.starLevel === 3 ? MALZAHAR_3STAR_GATE_TICKS : 0;
+      for (const [n, t] of targets.entries()) {
+        if (wait) { task(unit, 'g2Landing', ctx.tick + wait, t.id, mag('Damage'), seq, n, targets.length); ids.push(t.id); }
+        else { strike(t, mag('Damage'), 'magic', true); effect(ctx, unit, t, status('shred', 2000, ticks('ShredDuration'), { activation: 'immediate' }), seq); }
+      }
       // Five total stacks: round-robin gives floor(5/N), then +1 in hit order.
-      for (let n = 0; n < 5; n++) task(unit, 'g2Infection', ctx.tick + 20, targets[n % targets.length].id, mag('InfectionDamage'), seq, n, 5);
+      for (let n = 0; n < 5; n++) task(unit, 'g2Infection', ctx.tick + wait + 20, targets[n % targets.length].id, mag('InfectionDamage'), seq, n, 5);
       break;
     }
   }
@@ -144,7 +155,10 @@ export function planG2Attack(ctx: AbilityContext, unit: S13Unit, initial: S13Uni
     pierced.forEach((t, n) => {
       const raw = Number(BigInt(amount(unit, ctx.tick, { ad: v('PercentAttackDamage'), ap: v('APDamage') })) * BigInt(10000 - Math.round(v('DamageReduction') * 10000)) ** BigInt(n) / 10000n ** BigInt(n));
       ctx.packets.push({ source: { ...origin(unit), sourceKind: 'attack' }, targetId: t.id, raw, damageType: 'physical', actionSeq: seq, ordinal: n, delivery: 'basic-attack', critEligibility: 'basic', area: true, triggeringCastActionSeq: null });
-    }); state.attacksRemaining--; return true;
+    }); state.attacksRemaining--;
+    // Display only: the last empowered attack is spent.
+    if (state.attacksRemaining === 0) ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'twitch-volley', targetIds: [] });
+    return true;
   }
   if (name === 'zeri' && unit.runtime.attackCount % v('NumOfAttacks') === 0) {
     const raw = amount(unit, ctx.tick, { ad: v('PercentAttackDamage'), ap: v('APDamage') });
@@ -182,12 +196,59 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
       hit(ctx, unit, victim, t.amount, t.actionSeq, 1000 + t.ordinal, 'magic', false, t.source, true);
       task(unit, t.kind, ctx.tick + 20, victim.id, t.amount, t.actionSeq, t.ordinal, t.total, t.source);
     }
+  } else if (t.kind === 'g2PowderRelease') {
+    // Powder lets the monkey go: it walks t.total - 2 hexes to its cell (the arrival task, kept through her death from now on).
+    const arrival = ctx.tick + POWDER_MONKEY_WALK_BASE_TICKS + POWDER_MONKEY_TICKS_PER_HEX * (t.total - 2), cell = { ...t.cell! };
+    ctx.events.push({ type: 'abilityMarker', tick: ctx.tick, unitId: unit.id, marker: 'powder-monkey-sent', cell: { ...cell }, arrivalTick: arrival });
+    if (t.ordinal === 1) unit.tasks.push({ key: JSON.stringify(['v20-powder', unit.id, t.actionSeq]), kind: 'v20Powder', source: t.source, executeAtTick: arrival, targetId: t.targetId,
+      cell, amount: t.amount, actionSeq: t.actionSeq, ordinal: Math.round(variable(unit, 'IgniteDuration') * 20), total: Math.round(variable(unit, 'FalloffPercent') * 10000), cancellable: false, attachedDot: true });
+    else unit.tasks.push({ key: JSON.stringify(['g2-powder-monkey', unit.id, t.actionSeq]), kind: 'g2PowderMonkey', source: t.source, executeAtTick: arrival, targetId: t.targetId,
+      cell, amount: t.amount, actionSeq: t.actionSeq, ordinal: 0, total: 1, cancellable: false });
+  } else if (t.kind === 'g2PowderMonkey') {
+    // Powder's monkey arrives at its landing cell: everyone within 2 hexes of it now takes the amount taken on the cast, less
+    // FalloffPercent per hex, and burns; whoever was the target, alive or not.
+    ctx.events.push({ type: 'abilityMarker', tick: ctx.tick, unitId: unit.id, marker: 'powder-monkey-arrived', cell: { ...t.cell! }, arrivalTick: ctx.tick });
+    const falloff = Math.round(variable(unit, 'FalloffPercent') * 10000), burnTicks = Math.round(variable(unit, 'IgniteDuration') * 20);
+    for (const [n, victim] of areaEnemies(unit, ctx.units).filter(v => hexDistance(t.cell!, v.cell) <= 2).entries()) {
+      hit(ctx, unit, victim, Math.floor(t.amount * Math.max(0, 10000 - falloff * hexDistance(t.cell!, victim.cell)) / 10000), t.actionSeq, n, 'magic', true, t.source);
+      ignite(ctx, unit, victim, burnTicks, t.actionSeq);
+    }
+  } else if (t.kind === 'g2Landing') {
+    // A skill's landing CAST_WINDUP_TICKS after its cast (cast-windup.ts). Runs while the caster is alive, and after its
+    // death once released (releasedLanding: Renata's missiles from RENATA_MISSILE_FLIGHT_TICKS before landing); a control on
+    // the caster after the cast does not stop it. A target that died meanwhile takes nothing and no other one is picked.
+    const name = champion(unit);
+    if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
+    if (!target) return;
+    if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
+      ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,
+        delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: false, triggeringCastActionSeq: t.actionSeq, bounce: true });
+    else if (name === 'malzahar') { // the 3-star gate: damage (packet n) and shred, on a target taken on the cast
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', true, t.source);
+      effect(ctx, unit, target, status('shred', 2000, Math.round(variable(unit, 'ShredDuration') * 20), { activation: 'immediate' }), t.actionSeq);
+    }
+    else if (name === 'renata') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', t.ordinal > 0, t.source); // her missiles: target, then the blast's neighbours
+    else if (name === 'zyra') {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
+      if (t.ordinal === 0) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration', 1) * 20), ctx.tick, ctx.events);
+    }
+  } else if (t.kind === 'g2BlitzShock') {
+    // Runs only while Blitzcrank is alive; a control on him after the cast does not stop it. A target that died in the
+    // meantime takes nothing and no other target is picked; one that moved away is still hit.
+    if (target) {
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', false, t.source);
+      effect(ctx, unit, target, stat(modifier('damageAmp', -Math.round(variable(unit, 'DamageReduction') * 10000), 'bps'), Math.round(variable(unit, 'ShieldDuration') * 20)), t.actionSeq);
+    }
   } else if (target) hit(ctx, unit, target, t.amount, t.actionSeq, 1000 + t.ordinal, champion(unit) === 'leblanc' ? 'true' : 'magic', false, t.source, true);
 }
 export function advanceG2Passives(ctx: AbilityContext, nextSeq: () => number): void {
   // Snapshot damage totals only when a skill/trait consumes them.
   if (ctx.units.some(u => ['singed', 'blitzcrank', 'leblanc'].includes(champion(u)) || mechanic(u, 'automata', 'crystals') || mechanic(u, 'firelight', 'periodTicks')))
     for (const unit of ctx.units) expansion(unit);
+  // Display only: a LeBlanc chain runs out this tick (the redirect reads chainUntilTick > tick, so it is already over).
+  for (const unit of ctx.units) if (champion(unit) === 'leblanc' && unit.expansion && unit.expansion.chainUntilTick === ctx.tick)
+    ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'leblanc-chain', targetIds: [...unit.expansion.chainTargets] });
   for (const unit of ctx.units.filter(u => u.alive && u.hp > 0)) {
     if (champion(unit) === 'amumu' && ctx.tick % 20 === 0)
       for (const target of areaEnemies(unit, ctx.units).filter(u => hexDistance(unit.cell, u.cell) <= 1)) hit(ctx, unit, target, amount(unit, ctx.tick, { ap: variable(unit, 'Damage') }), nextSeq(), 0, 'magic', true, origin(unit), true);
@@ -245,6 +306,7 @@ export function recordG2Damage(ctx: AbilityContext, owner: S13Unit | undefined, 
 }
 
 export function executeV20Powder(ctx:AbilityContext,u:S13Unit,t:CombatTask):void {
+  ctx.events.push({type:'abilityMarker',tick:ctx.tick,unitId:u.id,marker:'powder-monkey-arrived',cell:{...t.cell!},arrivalTick:ctx.tick});
   for(const victim of areaEnemies(u,ctx.units).filter(v=>hexDistance(t.cell!,v.cell)<=2)){
     hit(ctx,u,victim,Math.floor(t.amount*Math.max(0,10000-t.total*hexDistance(t.cell!,victim.cell))/10000),t.actionSeq,10000,'magic',true,t.source);
     ignite(ctx,u,victim,t.ordinal,t.actionSeq);

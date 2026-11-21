@@ -9,7 +9,7 @@ vi.setConfig({ testTimeout: 20_000 });
 // All numeric answers handwritten from OPENING §§2, 3.1, 3.2, 5 before running implementation.
 // provisional: round ID literals follow B6-Q1 pending user approval.
 const input = (overrides: Partial<OpeningEconomyInput> = {}): OpeningEconomyInput => ({
-  roundId:'1-2', result:'playerWin', gold:0, level:1, xp:0, streak:{kind:null,count:0}, ...overrides,
+  roundId:'1-2', result:'playerWin', gold:0, level:1, xp:0, streak:{kind:null,count:0}, enemySurvivors:2, ...overrides,
 });
 
 describe('B6 isolated opening economy', () => {
@@ -62,7 +62,7 @@ describe('B6 isolated opening economy', () => {
         expect(plan.incomeBreakdown).toEqual({base,win:0,interest:0,streak:bonus});
         expect(plan.goldAfter).toBe(50 + base + bonus);
         expect(plan.naturalXp).toBe(naturalXp);
-        expect(plan.playerDamage).toBe(result === 'playerWin' ? 0 : 3);
+        expect(plan.playerDamage).toBe(result === 'playerWin' ? 0 : 2);
         expect(plan.streakAfter).toEqual({kind,count});
         expect(plan.streakAfter).not.toBe(streak);
         expect(value).toEqual(before);
@@ -115,7 +115,7 @@ describe('B6 isolated opening economy', () => {
   });
 
   it.each([
-    {roundId:'1-1'}, {roundId:'1-5'}, {result:null}, {gold:-1}, {gold:0.5}, {gold:NaN}, {gold:Infinity},
+    {enemySurvivors:-1}, {enemySurvivors:0.5}, {enemySurvivors:NaN}, {enemySurvivors:Infinity}, {roundId:'1-1'}, {roundId:'1-5'}, {result:null}, {gold:-1}, {gold:0.5}, {gold:NaN}, {gold:Infinity},
     {gold:Number.MAX_SAFE_INTEGER}, {level:0}, {level:11}, {xp:-1}, {xp:2}, {level:10,xp:1},
     {streak:{kind:null,count:1}}, {streak:{kind:'win',count:0}}, {streak:{kind:'loss',count:-1}},
     {roundId:'2-1',result:null}, {roundId:'2-4',result:'draw'},

@@ -129,7 +129,7 @@ export function onWire(page, { sent, received } = {}) {
 export function trackCommands(page) {
   const sent = new Map(), receipts = new Map();
   onWire(page, {
-    sent: m => { if (m.type === 'command') sent.set(m.commandId, m.command); },
+    sent: m => { if (m.type === 'command') sent.set(m.commandId, m.command); else if (m.type === 'walk') sent.set(m.commandId, m); },
     received: m => { if (m.type === 'receipt' && sent.has(m.commandId)) receipts.set(m.commandId, m.ok ? m.result.kind : `refused:${m.reason}`); },
   });
   /** The first receipt of a command of `type` sent after the ids in `before`; null after `timeout`. */

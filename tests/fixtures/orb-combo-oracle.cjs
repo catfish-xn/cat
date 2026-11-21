@@ -40,7 +40,8 @@ function atom(spec,rng){if(/^g\d+$/.test(spec))return {kind:'gold',quantity:Numb
 function box(seed,orbId,id){const rng=stream(hash(['orb-box-v17',seed,orbId]));
  if(id==='component')return [{kind:'item',definitionId:COMPONENTS[rng.draw(8)],quantity:1}];
  return choose(BOXES[id],rng.draw(100)).slice(1).map(s=>atom(s,rng));}
-const ROUNDS=[['1-2','minions-a-v1',['m01','m02']],['1-3','minions-b-v1',['m01','m02','r01']],['1-4','minions-c-v1',['m01','m02','r01','r02']],['2-7','krugs-v1',['k01','k02','k03']],['3-7','wolves-v1',['w00','w01','w02','w03','w04']],['4-7','razorbeaks-v1',['r00','r01','r02','r03','r04','r05']],['5-7','elder-dragon-v1',['d01']],['6-7','rift-herald-v1',['h01']]];
+// 2026-10-29 approved literal transcription: 4-7 = one large + four small birds; 6-7 = one elder dragon (d01). No content imports.
+const ROUNDS=[['1-2','minions-a-v1',['m01','m02']],['1-3','minions-b-v1',['m01','m02','r01']],['1-4','minions-c-v1',['m01','m02','r01','r02']],['2-7','krugs-v1',['k01','k02','k03']],['3-7','wolves-v1',['w00','w01','w02','w03','w04']],['4-7','razorbeaks-v1',['r00','r01','r02','r03','r04']],['5-7','elder-dragon-v1',['d01']],['6-7','elder-dragon-v1',['d01']]];
 function lootPlan(seed,ordinal=38,roomSeed=seed){const p=plan(roomSeed),rng=stream((seed^0xdeadbeef)>>>0),rounds=[],rolls=[];
  for(const [roundId,encounterId,carriers] of ROUNDS){const stage=Number(roundId[0]),ord=stage===1?Number(roundId[2])-1:stage*7-4;if(ord>ordinal)break;
   const drops=[],orbs=[];

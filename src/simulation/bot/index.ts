@@ -1,14 +1,14 @@
 import { isAnvil } from '../content/anvils';
 import type { ClientCommand } from '../../server/protocol';
 import type { MatchState } from '../match-types';
-import { buyUnit, getDeploymentCap, needsAnomalyRecruitment } from '../match';
+import { buyUnit, getDeploymentCap, needsAnomalyRecruitment, readAnomalyTargetIds } from '../match';
 import { MATCH_RULES } from '../match-rules';
 import { getShopOdds } from '../progression';
 import { ITEM_DEFINITIONS } from '../content/g2-3-item-registry';
 import { UNIT_DEFINITIONS } from '../units';
 import { nextRandom, validateSeed } from '../rng';
 import { BOT_MAX_STEPS, type BotContext, type BotDecision } from './types';
-import { byId, cheapest, formationAction, strongest, strength } from './formation';
+import { byId, cheapest, formationAction, populationRoster, strongest, strength } from './formation';
 import { legal } from './preflight';
 import { isMechanicChoice } from '../seat-mechanics/choices';
 import { unclaimedOrbPlans } from '../orb-claim';
@@ -54,7 +54,7 @@ export function decideBotAction(state: MatchState, context: BotContext, rng: num
     if(!choice) return done;
     const identity={choiceId:choice.choiceId,generation:choice.generation};
     const actions:ClientCommand[]=choice.kind==='anomaly' && choice.step==='target'
-      ? [...roster].sort(byId).map(u=>({type:'anomalyTarget',...identity,unitId:u.id}))
+      ? [...readAnomalyTargetIds(state)].sort().map(unitId=>({type:'anomalyTarget',...identity,unitId}))
       // G2-3 forge/blackMarket/armory: the same free default the timeout would pick.
       : isMechanicChoice(choice) ? [{type:'choose',...identity,definitionId:choice.payload.timeoutOption}]
       : choice.offers.map(definitionId=>({type:'choose',...identity,definitionId}));
@@ -80,14 +80,14 @@ export function decideBotAction(state: MatchState, context: BotContext, rng: num
   }
   const recruit=needsAnomalyRecruitment(state);
   const reserve=spendDown || recruit ? 0 : Math.min(50,Math.floor(state.gold/10)*10);
-  const cap=getDeploymentCap(state), weakest=roster.slice(0,cap).at(-1);
+  const fielded=populationRoster(roster), cap=getDeploymentCap(state), weakest=fielded.slice(0,cap).at(-1);
   const offers=state.shop.slots.flatMap((slot,index)=>{
     if(slot.status!=='available') return [];
     const cost=UNIT_DEFINITIONS[slot.definitionId].cost;
     if(state.gold-cost<reserve) return [];
     const owned=roster.filter(u=>u.definitionId===slot.definitionId);
     if(owned.some(u=>u.starLevel===3)) return [];
-    if(roster.length>=cap && !owned.length && weakest && 100+cost*10<=strength(weakest)) return [];
+    if(fielded.length>=cap && !owned.length && weakest && 100+cost*10<=strength(weakest)) return [];
     const singles=owned.filter(u=>u.starLevel===1).length;
     return [{slot:index,definitionId:slot.definitionId,cost,score:(singles>=2?10000:owned.length?1000:0)+cost*10}];
   }).sort((a,b)=>b.score-a.score || a.slot-b.slot);

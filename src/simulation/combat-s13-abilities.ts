@@ -1,4 +1,5 @@
 import { castMadChemist, isMadChemist } from './augment-pool-batch5-r4';
+import { CAST_WINDUP_TICKS } from './cast-windup';
 import { batch2Rocket } from './augment-pool-batch2-combat';
 import { executeV20Teamup } from './combat-v20-traits';
 import { sixCostCast, sixCostAttack } from './combat-six-cost';
@@ -8,7 +9,10 @@ import { targetingEnvironment } from './m8/s13-targeting';
 import { integer, safeNumber } from './m8/stats';
 import { splitTotal } from './m8/periodic';
 import { asSource, flatAmount } from './m8/s13-definitions';
-import { executeShieldEnd } from './m8/s13-mechanisms';
+import { executeMechanismEffect, executeShieldEnd } from './m8/s13-mechanisms';
+import { landDragonsoul } from './s13-p3-combat';
+import { knockAway } from './combat-displacement';
+import { GLOVES_OFF } from './content/gloves-off';
 import { hexDistance, type Board, type HexCell } from './board';
 import type { CombatOrigin, CombatTask, CombatEvent } from './combat-types';
 import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enemies, areaEnemies, grantShield, lowestAlly, mechanic, neighborsOf,
@@ -16,11 +20,15 @@ import { ad, amount, ap, applyStatus, byDistance, champion, compareOrigins, enem
 import type { CritEligibility, DamageDelivery, DamageInput, Amount, HealRequest } from './m8/contracts';
 export interface PeriodicReference { taskKey: string; effectIndex: number; holderId: string }
 export interface PacketStatusEffect { source: import('./m8/contracts').Source; effect: Extract<import('./m8/contracts').Effect, { kind: 'apply-status' }>; ordinal: number }
-export interface S13Packet { sevikaChomp?: boolean; devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
+export interface S13Packet { locked?: import('./combat-s13').AttackerSide; sevikaChomp?: boolean; devour?:boolean; beforeDamage?: PacketStatusEffect[]; afterDamageControl?: PacketStatusEffect[]; parentPacketId?: string; rootActionSeq?: number; periodic?: PeriodicReference; onPositiveHpDamageHeal?: Amount; source: CombatOrigin; targetId: string; raw: number; damageType: 'physical' | 'magic' | 'true'; actionSeq: number;
   ordinal: number; critical?: boolean; critMultiplierBps?: number; bounce?: boolean; delivery: DamageDelivery; critEligibility: CritEligibility;
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
+  /** Step-local copies of CombatState.departedUnits: removed units still named as an effect's source (effectSourceUnit). */
+  departedUnits?: S13Unit[];
+  /** The step's full roster while banished units are out of `units` (effectSourceUnit). */
+  roster?: readonly S13Unit[];
   movementReservations?: Set<string>;
   ambessaRetreats?: { unitId: string; targetCell: HexCell }[];
   anomalySeed?: number;
@@ -29,9 +37,13 @@ export interface AbilityContext {
   nextTriggerEventSeq?: number;
   virtualHp?: ReadonlyMap<string, number>;
   castReceipts?: import('./m8/contracts').CastReceipt[];
+  /** Set by an ability's own branch choice while its cast resolves; copied onto that cast's receipt as output only. */
+  castBranch?: string;
   manaRequests?: import('./m8/contracts').ManaRequest[];
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
+  /** Set while a ranged hero's attack (actionSeq seq) is planned: its on-hit statuses wait for the shot to land. */
+  attackLanding?: { readonly seq: number; readonly attackerId: string; readonly effects: { readonly targetId: string; readonly effect: import('./combat-types').AttackLandingEffect }[] };
   tick: number; combatId?: string; board: Board; units: S13Unit[]; events: CombatEvent[]; packets: S13Packet[]; heals: S13Heal[];
   draw: () => number;
 }
@@ -101,11 +113,15 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       unit.runtime.nextAttackMagic = mag('Damage'); break;
     }
     case 'zyra': {
-      hit(target, mag('TargetDamage'));
-      applyStatus(target, source, 'stun', 0, duration('StunDuration', 1), tick, events);
-      for (const enemy of byDistance(unit, enemies(unit, units).filter(u => u.id !== target.id)).slice(0, v('NumSmallerVines', 2))) hit(enemy, mag('AOEDamage')); break;
+      // The vines land CAST_WINDUP_TICKS later (g2Landing; ordinal 0 is the target, stunned); targets and amounts are taken now.
+      const vines = [target, ...byDistance(unit, enemies(unit, units).filter(u => u.id !== target.id)).slice(0, v('NumSmallerVines', 2))];
+      vines.forEach((enemy, n) => { addTask(unit, 'g2Landing', tick + CAST_WINDUP_TICKS.zyra, enemy.id, mag(n === 0 ? 'TargetDamage' : 'AOEDamage'), seq, n, vines.length); targets.push(enemy.id); });
+      break;
     }
-    case 'tristana': hit(target, physical('PercentAttackDamage', 'APDamage'), 'physical', true); break;
+    case 'tristana':
+      // The shell lands CAST_WINDUP_TICKS later (g2Landing, wind-up batch 2); its target and amount are taken now.
+      addTask(unit, 'g2Landing', tick + CAST_WINDUP_TICKS.tristana, target.id, physical('PercentAttackDamage', 'APDamage'), seq, 0, 1);
+      targets.push(target.id); break;
     case 'urgot': {
       for (const enemy of areaEnemies(unit, units).filter(u => hexDistance(target.cell, u.cell) <= 1)) {
         hit(enemy, physical(enemy.id === target.id ? 'PrimaryDamage' : 'SecondaryDamage', 'APDamage'), 'physical');
@@ -129,9 +145,10 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       replaceEndTask(unit, 'leonaEnd', tick + ticks, mag('Damage'), seq); break;
     }
     case 'vander': {
-      const ticks = duration('TauntDuration', 2.5), hero = heroLive(unit);
+      const hero = heroLive(unit), ticks = hero ? GLOVES_OFF.castTicks : duration('TauntDuration', 2.5);
       applyStatus(unit, source, 'channel', 0, ticks, tick, events, true, '', seq);
-      // All Out (P): no resists; DamageBps × PercentAttackDamage, and the empowered attack splashes SplashBps to adjacent enemies.
+      // 卯足全力 (content/gloves-off.ts): a 0.5 s cast with no resists instead of the 2.5 s brace; DamageBps × PercentAttackDamage,
+      // and the empowered attack knocks the target back and splashes SplashBps to every enemy it hits.
       if (!hero) applyStatus(unit, source, 'resistanceFlat', mag('Resists'), ticks, tick, events, true);
       unit.runtime.nextAttackPhysical = amount(unit, tick, { ad: v('PercentAttackDamage') * (hero?.damageBps ?? 10000) / 10000 + v('BonusDamageADRatio') * mechanic(unit, 'lowCostAllies', 'count') });
       if (hero) unit.batch2 = { ...unit.batch2, primeSplash: true };
@@ -202,7 +219,24 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
   }
   return targets;
 }
+/** A ranged hero's shot lands (ranged attack landing): if its target still lives its packets (crits rolled on the attack) join this
+ * tick's queue and its on-hit statuses apply; a target that died in flight takes nothing and no other one is picked. */
+function landAttack(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
+  // A target that died while the shot flew (voided on its death, even if revived since) takes nothing.
+  const target = task.landing!.voided ? undefined : ctx.units.find(u => u.id === task.targetId && u.alive && u.hp > 0);
+  ctx.events.push({ type: 'attackLanded', tick: ctx.tick, attackerId: unit.id, targetId: task.targetId!, hit: !!target });
+  if (!target) return;
+  for (const packet of task.landing!.packets) {
+    if (packet.source.ownerId !== unit.id) throw new RangeError('attack landing packet owner');
+    if (landDragonsoul(unit, packet)) ctx.packets.push(structuredClone(packet));
+  }
+  for (const e of task.landing!.effects) {
+    const holder = ctx.units.find(u => u.id === e.holderId);
+    if (holder) executeMechanismEffect(ctx, holder, e.source, target, e.effect, task.actionSeq, e.ordinal);
+  }
+}
 export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
+  if(task.kind==='attackLanding'){landAttack(ctx,unit,task);return;}
   if(task.kind==='v20Powder'){executeV20Powder(ctx,unit,task);return;}
   if(task.kind==='v20Teamup'){executeV20Teamup(ctx,unit,task);return;}
   if (task.kind.startsWith('g2')) { executeG2Task(ctx, unit, task); return; }
@@ -263,7 +297,10 @@ export function planS13Attack(ctx: AbilityContext, unit: S13Unit, target: S13Uni
   }
   const prime = heroLive(unit);
   if (prime?.splashBps && unit.batch2?.primeSplash && unit.runtime.nextAttackPhysical > 0) {
-    for (const [index, enemy] of enemies(unit, ctx.units).filter(x => x.id !== target.id && hexDistance(x.cell, target.cell) <= 1).sort((a, b) => a.id < b.id ? -1 : 1).entries())
+    // The punch sends the target flying (stunned for the flight) and it hits every other enemy next to a cell it passes.
+    const passed = knockAway(ctx, unit, target, GLOVES_OFF.knockbackHexes, 'vander-knockback');
+    applyStatus(target, origin(unit), 'stun', 0, GLOVES_OFF.stunTicks, ctx.tick, ctx.events);
+    for (const [index, enemy] of enemies(unit, ctx.units).filter(x => x.id !== target.id && passed.some(cell => hexDistance(x.cell, cell) <= 1)).sort((a, b) => a.id < b.id ? -1 : 1).entries())
       ctx.packets.push({ source: origin(unit), targetId: enemy.id, raw: Math.floor(base * prime.splashBps / 10000), damageType: 'physical', actionSeq: seq, ordinal: 300 + index, delivery: 'attack-extra', critEligibility: 'never', area: true, triggeringCastActionSeq: null });
     unit.batch2 = { ...unit.batch2, primeSplash: false };
   }

@@ -1,0 +1,12 @@
+{
+  "name": "plan-619probe",
+  "note": "Two probe-only recordings (no sheets): Jayce before (5c346c72) with --probe attached; Silco after (78b6adfc, the source of its after/off columns) with --probe attached at the three cue times.",
+  "batches": [
+    {
+      "name": "619probe",
+      "before": { "src": "5c346c72", "jobs": "dev/castcmp/jobs/619probe-before.txt" },
+      "after": { "src": "78b6adfc", "jobs": "dev/castcmp/jobs/619probe-after.txt" },
+      "keyframes": []
+    }
+  ]
+}

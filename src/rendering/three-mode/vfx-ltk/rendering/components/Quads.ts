@@ -16,7 +16,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
   spinOf,
@@ -31,10 +33,10 @@ import {
   QUAD_LAYOUT,
   QUAD_STRIDE,
   type QuadBuffers,
-  quadBuffers,
   QUADS_PER_EMITTER,
   rowsWritten,
 } from "../utils/buffers";
+import { borrowQuadBuffers, releaseQuadBuffers } from "../utils/drawBufferPool";
 import { colorLookupInto } from "../utils/colorLookup";
 import { drawsAsQuad, facesTheCamera } from "../utils/drawKind";
 import { bucketRange, bucketsOf, renderStamp } from "../utils/emitterBuckets";
@@ -42,6 +44,7 @@ import { quadMaterial, quadOrientation } from "../utils/materials";
 import { sourcesScrollInto } from "../utils/palette";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { layerOf, uvDraw, uvTransformInto } from "../utils/uvTransform";
+import { clipUnderPlay, clipsUnderPlay } from '../utils/playSurface';
 
 /** Scratch the appearance pass writes into, reused across every particle of a frame. */
 const DRAWN = { scale: new Float32Array(3), color: new Float32Array(4) };
@@ -109,22 +112,26 @@ export function createQuads({
   room = QUADS_PER_EMITTER,
 }: QuadsProps) {
   const { memo, cleanup, eachFrame, finish } = drawLifetime();
-  const buffers = memo(() => quadBuffers(room), [room]);
+  const buffers = memo(() => borrowQuadBuffers(room), [room]);
   const orientation = memo(() => quadOrientation(emitter), [emitter]);
   const material = memo(
-    () =>
-      quadMaterial(
+    () => {
+      const material = quadMaterial(
         emitter.blendMode,
         samplers.base,
         { bias: emitter.depthBias, pushPull: emitter.depthPushPull },
         orientation,
         layersOf(emitter, samplers, DRAWS),
         fragmentTests(emitter),
-      ),
+      );
+      // 11-15: only a camera-facing quad is drawn whole below the board; any other quad is clipped there unless its depth
+      // test is off (playSurface.ts).
+      return orientation.billboard || !clipsUnderPlay(emitter) ? material : clipUnderPlay(material);
+    },
     [emitter, samplers, orientation],
   );
 
-  cleanup(() => () => buffers.geometry.dispose(), [buffers]);
+  cleanup(() => () => releaseQuadBuffers(buffers, room), [buffers, room]);
 
   const pair = makePair(material);
 
@@ -145,6 +152,7 @@ export function createQuads({
     [room],
   );
   const depth = memo(() => new Float32Array(room), [room]);
+  const frames: FrameSlot[] = [];
 
   eachFrame((state) => {
     if (!drawn) {
@@ -154,7 +162,10 @@ export function createQuads({
     }
 
     const stamp = renderStamp(state.gl);
-    const frames = sources.map((source) => frameOf(source, emitter));
+    for (let from = 0; from < sources.length; from += 1) {
+      const slot = frames[from] ?? (frames[from] = frameOf(sources[from], emitter) as FrameSlot);
+      frameInto(sources[from], emitter, slot);
+    }
     const scroll = material.uniforms.paletteScroll.value as number[];
     sourcesScrollInto(emitter, sources, scroll);
 

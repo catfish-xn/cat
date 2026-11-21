@@ -7,7 +7,7 @@ import { knockAway } from '../src/simulation/combat-displacement';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { DEFAULT_BOARD, hexDistance } from '../src/simulation/board';
 import { battle, unit, freeze } from './combat-helpers';
-import { AMBESSA_SLAM_STUN_TICKS, VI_ROW_KNOCKUP_TICKS } from '../src/simulation/combat-g2-2';
+import { AMBESSA_SLAM_STUN_TICKS, VI_ROW_KNOCKUP_TICKS, VI_SLAM_TICKS } from '../src/simulation/combat-g2-2';
 
 const hero = (id: string, name: string, team: 'player'|'enemy', col: number, row = 3, patch: Partial<CombatUnit> = {}) => unit(id, team, col, row, {
   definitionId: name, ability: resolveAbility(name + '-ability', 1), hp: 100000, maxHp: 100000, mana: 0, maxMana: 100,
@@ -19,15 +19,18 @@ const activeStun = (u: CombatUnit, tick: number) => effectiveStatuses(u.mechanis
 describe('v23 independent review: control timing and action gates', () => {
   it.each([['vi', 'target', 30, false], ['vi', 'row', VI_ROW_KNOCKUP_TICKS, true], ['violet', 'target', 5, true], ['sett', 'target', 30, false]] as const)(
     '%s → %s lasts exactly %i ticks (knockup=%s)', (name, targetId, duration, knockup) => {
-      const r = stepCombat(freeze(battle([hero('p', name, 'player', 1, 3, { mana: 100 }), hero('target', 'garen', 'enemy', 2), hero('row', 'garen', 'enemy', 3)])));
-      const t = r.state.units.find(u => u.id === targetId)!;
-      const contribution = t.mechanismState!.statuses.find(g => g.kind === 'stun')!.contributions[0];
-      expect(contribution.appliedAtTick).toBe(2);
-      expect(contribution.expiresAtTick).toBe(2 + duration);
+      // Vi's stuns land at her slam, VI_SLAM_TICKS after the cast (user 2026-11-11); her target is held (a knock-up) before it.
+      const offset = name === 'vi' ? VI_SLAM_TICKS : 0;
+      let state = freeze(battle([hero('p', name, 'player', 1, 3, { mana: 100 }), hero('target', 'garen', 'enemy', 2), hero('row', 'garen', 'enemy', 3)]));
+      for (let n = 0; n <= offset; n++) state = stepCombat(state).state;
+      const t = state.units.find(u => u.id === targetId)!;
+      const contribution = t.mechanismState!.statuses.filter(g => g.kind === 'stun').flatMap(g => g.contributions).find(c => c.appliedAtTick === 2 + offset)!;
+      expect(contribution.appliedAtTick).toBe(2 + offset);
+      expect(contribution.expiresAtTick).toBe(2 + offset + duration);
       expect(contribution.application.knockup === true).toBe(knockup);
-      expect(activeStun(t, 1)).toHaveLength(0);
-      for (let tick = 2; tick < 2 + duration; tick++) expect(activeStun(t, tick)).toHaveLength(1);
-      expect(activeStun(t, 2 + duration)).toHaveLength(0);
+      if (!(name === 'vi' && targetId === 'target')) expect(activeStun(t, 1 + offset)).toHaveLength(0);
+      for (let tick = 2 + offset; tick < 2 + offset + duration; tick++) expect(activeStun(t, tick)).toHaveLength(1);
+      expect(activeStun(t, 2 + offset + duration)).toHaveLength(0);
     },
   );
 

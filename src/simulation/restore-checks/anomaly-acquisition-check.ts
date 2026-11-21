@@ -1,6 +1,5 @@
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { dualWieldingItems, receiptId, SOURCE } from '../anomaly-acquisition';
-import { traceBoundUnitIdentity } from '../bound-unit-identity';
 import type { MatchState } from '../match-types';
 import type { ResourceProvenanceContext } from '../resource-provenance';
 import { getCatalogRoundByOrdinal } from '../round-selectors';
@@ -16,8 +15,7 @@ export function validateAnomalyAcquisition(state:MatchState,context:ResourceProv
   if(first<1||!selected.unitId)fail();
   const before=foldResourceProvenance(state.resourceProvenance,{...context,prefixLength:first},parsedJsonInput);
   const target=before.units.find(u=>u.id===selected.unitId);if(!target)fail();
-  const finalUnit=traceBoundUnitIdentity(selected.unitId!,state.resourceProvenance.entries.slice(first));
-  if(finalUnit===null?state.anomalyBinding!==null:state.anomalyBinding?.unitId!==finalUnit||state.anomalyBinding.definitionId!=='dual-wielding'||state.anomalyBinding.choiceId!==selected.eventId)fail();
+  if(state.anomalySelection?.choiceId!==selected.eventId||state.anomalySelection.championDefinitionId!==target!.definitionId)fail();
   const items=dualWieldingItems(state.seed,selected.eventId,target!.definitionId);
   for(const [i,id] of ids.entries()){
    const r=state.seatMechanics?.receipts.find(r=>r.receiptId===id);

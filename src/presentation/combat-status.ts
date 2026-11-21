@@ -187,6 +187,8 @@ export function eventUnitId(event: LedgerCombatEvent): string | null {
     case 'attack': return event.attackerId;
     case 'effectTriggered': return event.targetId;
     case 'combatFinished': return null;
+    case 'carryChanged': return event.holderId;
+    case 'attackLaunched': case 'attackLanded': return event.attackerId;
     default: return event.unitId;
   }
 }
@@ -208,11 +210,16 @@ export function eventSource(event: LedgerCombatEvent): CombatOrigin | null {
 export function eventStatusName(event: Extract<LedgerCombatEvent, { type: 'statusChanged' }>): string {
   return STATUS_KIND_NAMES[event.group.kind];
 }
-/** Harmful status kinds worth a short float on the board when applied. */
+/**
+ * The short word a harmful status kind reads as when applied (击飞 for a knock-up stun). The board no longer floats it: combat
+ * floats show only damage and heals (#780). The frozen feedback fixture (tests/fixtures/stage5-feedback-before.ts) still reads it.
+ */
 export function appliedStatusFloat(event: SceneCombatEvent): string | null {
   if (event.type !== 'statusChanged' || (event.reason !== 'applied' && event.reason !== 'refreshed')) return null;
   // Local ledger events carry the whole group; the §14.2 wire event only its kind.
   const kind = 'group' in event ? event.group.kind : event.kind;
+  // A local ledger event tells a knock-up stun apart (StatusApplication.knockup); the wire event carries only the kind.
+  if (kind === 'stun' && 'group' in event && event.group.contributions.some(c => c.application.knockup)) return '击飞';
   return ['burn', 'wound', 'sunder', 'shred', 'stun', 'untargetable', 'damage-prevention'].includes(kind) ? STATUS_KIND_NAMES[kind] : null;
 }
 

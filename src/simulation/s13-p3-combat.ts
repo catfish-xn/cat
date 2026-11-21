@@ -63,12 +63,21 @@ export function p3Attack(ctx: AbilityContext, u: S13Unit, target: S13Unit, seq: 
   if (knockout) u.s13P3 = { ...state(u), charged: false };
   const dragon = p3Mechanic(u, 'dragonsoul');
   if (dragon && !state(u).dragonTargets.includes(target.id)) {
-    u.s13P3 = { ...state(u), dragonTargets: [...state(u).dragonTargets, target.id] };
+    // A ranged hero's shot registers its target when it lands (landDragonsoul); a melee hit registers now.
+    if (ctx.attackLanding?.seq !== seq) u.s13P3 = { ...state(u), dragonTargets: [...state(u).dragonTargets, target.id] };
     ctx.packets.push({ source: dragon.source, targetId: target.id, actionSeq: seq, ordinal: 8000,
       raw: Math.floor(target.maxHp * Math.round(p3Values('dragonsoul').PercentHPDamage * 10000) / 10000), damageType: 'true',
       delivery: 'attack-extra', critEligibility: 'never', critical: false, area: false, triggeringCastActionSeq: null });
   }
   return knockout;
+}
+/** A landing shot's Dragonsoul packet: registers its target now; a target registered meanwhile (another shot landed first) takes none. */
+export function landDragonsoul(u: S13Unit, packet: S13Packet): boolean {
+  const dragon = p3Mechanic(u, 'dragonsoul');
+  if (!dragon || packet.ordinal !== 8000 || packet.delivery !== 'attack-extra' || packet.source.definitionId !== dragon.source.definitionId) return true;
+  if (state(u).dragonTargets.includes(packet.targetId)) return false;
+  u.s13P3 = { ...state(u), dragonTargets: [...state(u).dragonTargets, packet.targetId] };
+  return true;
 }
 /** Shared critical authorization/true conversion boundary. No second resistance, shield or HP settlement. */
 export function p3Roll(ctx: AbilityContext, u: S13Unit, packet: S13Packet, charged: boolean, shared?: boolean): boolean {

@@ -6,7 +6,8 @@ import { augmentCandidates, augmentOfferAllowed } from '../src/simulation/augmen
 import { twoMuchValueRerolls } from '../src/simulation/augment-pool-batch5-h1-rerolls';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
-import { rerollShop, selectChoice, startMatchCombat, stepMatch, nextRound, type MatchState } from '../src/simulation/match';
+import { rerollShop, selectChoice, sellUnit, startMatchCombat, stepMatch, nextRound, type MatchState } from '../src/simulation/match';
+import { isSellableUnit } from '../src/simulation/seat-mechanics/forms';
 import { serializeMatch, restoreMatch } from '../src/simulation/serialization';
 import { accepted, fieldBench, reachRound, resolveM5Choices } from './match-helpers';
 import { firstNodeSeed } from './augment-stage-helpers';
@@ -30,7 +31,19 @@ it('selects through the real command and grants exactly two random 2-cost heroes
 });
 it('credits the next natural round from the actual previous combat roster',()=>{
  state=fieldBench(state);
- const expected=Math.floor(new Set(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&UNIT_DEFINITIONS[u.definitionId].cost===2).map(u=>u.definitionId)).size/2);
+ // firstNodeSeed('two-much-value', 101) is seed 1: gifts are Renata and Nocturne.
+ // v26 melee outcomes leave this route at level 3 with opening Irelia and Gangplank
+ // still deployed ahead of those gifts, so the cap fields only Renata. Sell the
+ // non-gift units until both distinct 2-cost gifts are the fielded roster.
+ const giftIds=new Set(state.seatMechanics!.receipts.flatMap(r=>r.kind==='unit'&&r.receiptId.includes('two-much-value')&&r.unitId?[r.unitId]:[]));
+ const distinct=()=>new Set(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board'&&UNIT_DEFINITIONS[u.definitionId].cost===2).map(u=>u.definitionId)).size;
+ for(let guard=0;distinct()<2&&guard<8;guard++){
+  const extra=state.preparation.units.find(u=>u.team==='player'&&isSellableUnit(u.definitionId)&&!giftIds.has(u.id));
+  if(!extra)break;
+  state=accepted(sellUnit(state,extra.id));
+  state=fieldBench(state);
+ }
+ const expected=Math.floor(distinct()/2);
  expect(expected).toBeGreaterThan(0);
  state=accepted(startMatchCombat(state));while(state.phase==='combat')state=stepMatch(state).state;
  state=resolveM5Choices(state);state=resolveM5Choices(accepted(nextRound(state,state.round)));

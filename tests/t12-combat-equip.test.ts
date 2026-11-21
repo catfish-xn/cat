@@ -122,8 +122,9 @@ describe('T12 in-place recipes and atomic failures', () => {
     rejected({...base,items:[stock('item-1','sword'),held('item-2','deathblade')]}, s=>equipItem(s,'item-1','unit-1',0),'item-slot-occupied');
     rejected({...base,items:[stock('item-1','deathblade'),stock('item-2','sword')]}, s=>combineItems(s,'item-1','item-2'),'invalid-recipe');
     rejected({...base,items:[stock('item-1','deathblade'),held('item-2','sword')]}, s=>equipItem(s,'item-1','unit-1',0),'invalid-recipe');
-    rejected({...base,nextItemSerial:4,items:[stock('item-1','gloves'),held('item-2','gloves'),held('item-3','sword','unit-1',1)]},
-      s=>equipItem(s,'item-1','unit-1',0),'exclusive-slots');
+    // 14.24: Thief's Gloves crafted on a unit that wears other items pop back; the worn item stays (equip-craft-returns).
+    expect(accepted(equipItem({...base,nextItemSerial:4,items:[stock('item-1','gloves'),held('item-2','gloves'),held('item-3','sword','unit-1',1)]},
+      'item-1','unit-1',0)).items).toEqual([held('item-3','sword','unit-1',1),stock('item-4','thiefs-gloves')]);
     rejected({...base,nextItemSerial:4,items:[stock('item-1','tear'),held('item-2','tear'),held('item-3','blue-buff','unit-1',1)]},
       s=>equipItem(s,'item-1','unit-1',0),'unique-conflict');
     const tg = accepted(equipItem({...base,items:[stock('item-1','thiefs-gloves'),stock('item-2','sword')]},'item-1','unit-1',0));
@@ -138,8 +139,10 @@ for (const roundId of ['3-5', '3-7']) for (const pair of [['sword', 'rod'], ['gl
   beforeAll(() => { atRound(publicInventory(pair).state, roundId); });
 }
 beforeAll(() => { atRound(publicInventory(['sword', 'sword']).state, '3-6'); });
-// Seed 11 acquires the same four gloves without an unrelated historical-replay card.
-beforeAll(() => { publicInventory(['thiefs-gloves', 'gloves', 'gloves'], false, 11); });
+// Seed 19 acquires the same four gloves without an unrelated historical-replay card.
+// v26 D5 pool (7953c99a): seed 19 (was 11); seed 11's route now picks cluttered-mind at 2-1,
+// a history-proof augment, so the plain restore() save would need its full battle history.
+beforeAll(() => { publicInventory(['thiefs-gloves', 'gloves', 'gloves'], false, 19); });
 function atRound(input: MatchState, roundId: string): MatchState {
   const key = JSON.stringify([input, roundId]);
   let state = roundFixtures.get(key) ?? input;
@@ -303,7 +306,9 @@ describe('T12 public saves across equipment phases', () => {
     });
   }
   it('augment choice and supply choice retain offers while equipment saves resume', () => {
-    let state = createMatch(42);
+    // v26 D5 pool (7953c99a): seed 43 (was 42). Seed 42's 2-1 offers[0] is now snipers-nest, a history-proof
+    // augment; selecting it on a battle-less restore records previousBattle 'unavailable' (by design), not the live roster.
+    let state = createMatch(43);
     for (const component of [null, 'sword', 'rod']) {
       for (const [i,unit] of state.preparation.units.filter(u => u.team === 'player').slice(0,state.level).entries())
         state = accepted(deployMatchUnit(state,unit.id,{kind:'board',cell:{col:[1,3,5,0,6,2,4][i],row:7}}));
@@ -469,7 +474,7 @@ describe('T12 supply choice input', () => {
   });
 });
 it('T12 an existing frozen glove roll and a new parent roll remain independent',()=>{
-  const acquired=publicInventory(['thiefs-gloves','gloves','gloves'], false, 11);
+  const acquired=publicInventory(['thiefs-gloves','gloves','gloves'], false, 19);
   let state=accepted(deployMatchUnit(acquired.state,'unit-1',board(3)));
   state=accepted(equipItem(state,acquired.itemIds[0],'unit-1',0));
   const start=accepted(startMatchCombat(state)),roll=start.equipmentState.rolls.at(-1);

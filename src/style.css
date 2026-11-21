@@ -43,6 +43,15 @@ summary { min-height: 44px; padding: 12px 0; cursor: pointer; font-size: 14px; }
 .choice-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 20px 0; }
 .choice-cards button { min-height: 150px; font-size: 16px; line-height: 1.65; }
 .choice-cards .augment-icon { display: block; margin: 0 auto 6px; border-radius: 8px; }
+.choice-dialog[data-choice-source="anomaly"] { width: min(680px, 100%); }
+.choice-dialog[data-choice-source="anomaly"] .choice-cards { grid-template-columns: minmax(0, 1fr); }
+.anomaly-offer { padding: 18px; border: 1px solid #b49cde; border-radius: 10px; background: #201e36; overflow-wrap: anywhere; }
+.anomaly-offer-label { color: #c6b5e6; font-size: 13px; }
+.anomaly-offer h3 { margin: 6px 0 12px; font-size: 23px; color: #f0e5ff; }
+.anomaly-offer p { white-space: pre-line; margin: 8px 0 0; }
+.anomaly-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.anomaly-actions button { flex: 1; }
+.anomaly-actions .anomaly-evolve { font-size: 18px; font-weight: 700; border-color: #d8bd80; background: #665027; }
 .owned-augments .augment-chip { display: inline-flex; align-items: center; gap: 4px; margin: 0 6px 4px 0; padding: 1px 7px 1px 2px; border-radius: 999px; background: #0b151f; cursor: help; }
 .owned-augments .augment-icon { border-radius: 4px; }
 .choice-targets { display: flex; flex-wrap: wrap; gap: 10px; }
@@ -203,6 +212,11 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
   color: #0b151f; background: var(--card-cost); }
 .shop-card.unaffordable .shop-emblem, .shop-card.unaffordable .shop-name { opacity: .55; }
 .shop-odds { color: var(--c-text-muted); }
+.shop-dock + .shop-planner-open { position: absolute; right: max(8px, calc(100% - var(--online-shop-left, 0px) - var(--online-shop-w, 100%))); bottom: calc(var(--online-dock-h) + 8px); z-index: 3; }
+.shop-dock[inert] + .shop-planner-open, body[data-online-spectating] .shop-planner-open { display: none; }
+/* 2D has no 3D shop geometry: keep the entry in its own countdown grid cell, above the board/bench. */
+body[data-online]:not(:has(> .render3d-layer)) .shop-dock + .shop-planner-open { right: 8px; top: 8px; bottom: auto; min-height: 28px; padding: 3px 8px; font-size: 12px; }
+body[data-online]:not(:has(> .render3d-layer)) .online-countdown { padding-right: 88px; }
 @media (max-width: 420px) { .shop-trait { display: none; } .shop-card { min-height: 78px; } .hud-chip { padding: 4px 5px; } }
 /* A card whose purchase stars up one of my heroes (TFT shop glow); the stars name the resulting level. */
 .shop-card.upgrade, .shop-dock .shop-card.upgrade[data-cost] { border-color: #ffd36a; animation: shop-upgrade-glow 1.6s ease-in-out infinite alternate;
@@ -268,6 +282,7 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 .item-codex { margin-top: 12px; padding: 0 9px 9px; background: var(--c-surface-alt); border-radius: 8px; }
 .item-codex .codex-note { color: var(--c-text-muted); }
 .choice-extras { display: flex; gap: 6px; justify-content: center; margin-top: 8px; }
+.choice-extras [data-debug="choice-collapse"], .choice-reopen { min-width: 44px; min-height: 44px; }
 /* Mechanic popups (forge, armory): item mark, name, smaller effect text; the timeout pick is tagged online. */
 .choice-cards button.generic-offer { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 4px; min-height: 0; padding: 12px 10px; line-height: 1.4; }
 .generic-offer .item-mark { border-radius: 8px; }
@@ -278,6 +293,7 @@ body[data-m6-mode="replay"] #replay-root { border:1px solid #68ddd0; }
 /* Reopen pill sits on the board just under the online countdown bar (top of the board offline), clear of the shop dock. */
 .choice-reopen { position: absolute; left: 50%; top: calc(var(--online-countdown-h, 0px) + var(--online-gap, 0px) + 8px); transform: translateX(-50%); z-index: 90; width: max-content; max-width: calc(100% - 16px); white-space: nowrap; padding: 8px 16px; border-color: #ffd782; background: #24404d; box-shadow: 0 6px 24px #000a; }
 .choice-reopen.page-top { position: fixed; top: 12px; }
+.choice-collapse, .choice-reopen { min-width: 44px; min-height: 44px; }
 body[data-m6-mode="startup"] .choice-reopen, body[data-m6-mode="import"] .choice-reopen, body[data-m6-mode="replay"] .choice-reopen,
 body[data-online-mode="online-ended"] .choice-reopen, body[data-online-spectating] .choice-reopen { display: none !important; }
 .codex-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; }
@@ -350,6 +366,7 @@ body[data-online-mode="online-lobby"] #board-frame, body[data-online-mode="onlin
 .queue-entry.me { outline: 1px solid #68ddd0; }
 .queue-kind { color: var(--c-text-muted, #9aaeb9); font-size: 12px; }
 .lobby-error { margin: 0; color: #f08080; font-weight: bold; }
+.lobby-busy { margin: 0; color: #ffd782; }
 .lobby-start { width: 100%; font-size: 16px; }
 .lobby-connection { margin: 0; color: #e6bc76; font-size: 13px; }
 .online-sidebar { min-width: 0; color: #e2eef1; position: sticky; top: 12px; display: grid; gap: 10px; align-content: start; }
@@ -638,22 +655,21 @@ body[data-online-mode="online-ended"] #strategy-root .encounter-preview { displa
 .carousel-wait { font-variant-numeric: tabular-nums; color: #e6bc76; }
 body[data-online-carousel="carousel"] .shop-dock { opacity: .55; }
 .carousel-taker.auto { background: #3a3346; color: #cbbcf5; }
-/* ?render=3d: the 3D layer draws the carousel; the panel shrinks to one strip at the top (title, my line, countdown, the
-   way to my board), as TFT keeps only its stage bar. The release order folds into a list that opens on hover or focus. */
-.carousel-panel[data-ring-3d] { width: max-content; max-width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; padding: 4px 6px 4px 14px;
-  border-radius: 999px; background: rgba(14, 24, 33, .82); box-shadow: 0 6px 18px rgba(0, 0, 0, .35); }
+/* ?render=3d: the 3D layer draws the carousel. As in S13 only the stage bar (round icons, countdown) stays on top: the panel
+   keeps just the way to my board (Space); title, my line, its own timer and the release order are not shown. */
+.carousel-panel[data-ring-3d] { width: max-content; max-width: calc(100% - 16px); display: flex; align-items: center; gap: 10px; padding: 0;
+  border-radius: 0; background: none; box-shadow: none; border: 0; }
+.carousel-panel[data-ring-3d] :is(.carousel-title, .carousel-status, .carousel-ring, .carousel-order) { display: none !important; }
+.carousel-panel[data-ring-3d]::after { display: none !important; }
+.carousel-shop-tab { display: none; }
+body[data-online-carousel="carousel"]:has(> .render3d-layer):has(.carousel-panel[data-ring-3d]:not([hidden])) .carousel-shop-tab {
+  display: block; position: absolute; z-index: 31; left: 50%; bottom: 10px; width: 132px; height: 44px; transform: translateX(-50%);
+  border: 2px solid #8a7341; background: #0e2a33 linear-gradient(#123640, #0a1d24); cursor: not-allowed; opacity: .9; }
+body[data-online-carousel="carousel"]:has(> .render3d-layer):has(.carousel-panel[data-ring-3d]:not([hidden])) .carousel-shop-tab::before {
+  content: ''; position: absolute; inset: 0; margin: auto; width: 30px; height: 25px; background: #7fb6c9;
+  clip-path: polygon(25% 0, 75% 0, 100% 100%, 0 100%); }
 .carousel-panel[data-ring-3d] :is(.carousel-head, .carousel-body) { display: contents; }
-.carousel-panel[data-ring-3d] .carousel-title { order: 0; font-size: 14px; white-space: nowrap; }
-.carousel-panel[data-ring-3d] .carousel-status { order: 1; flex: 0 1 auto; min-width: 0; max-width: 34ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.carousel-panel[data-ring-3d] .carousel-ring { order: 2; --size: 34px; width: 34px; height: 34px; flex: none; background: none; animation: none; }
-.carousel-panel[data-ring-3d] .carousel-ring .carousel-slot, .carousel-panel[data-ring-3d] .carousel-timer-unit { display: none; }
-.carousel-panel[data-ring-3d] .carousel-centre { width: 34px; height: 34px; }
-.carousel-panel[data-ring-3d] .carousel-timer { font-size: 18px; font-variant-numeric: tabular-nums; }
-.carousel-panel[data-ring-3d]::after { content: '放行顺序 ▾'; order: 3; font-size: 12px; color: #7e95a4; white-space: nowrap; cursor: default; }
 .carousel-panel[data-ring-3d] .carousel-switch { order: 4; margin-left: 0; }
-.carousel-panel[data-ring-3d] .carousel-order { position: absolute; top: calc(100% - 2px); right: 0; width: 260px; max-height: 260px; padding: 6px; border-radius: 8px;
-  background: rgba(14, 24, 33, .94); box-shadow: 0 10px 24px rgba(0, 0, 0, .45); display: none; }
-.carousel-panel[data-ring-3d]:is(:hover, :focus-within) .carousel-order { display: grid; }
 /* TFT hides the shop on the carousel (nothing can be bought there): in 3D it slides away while the carousel side is shown. */
 body[data-online-carousel="carousel"]:has(> .render3d-layer) .shop-dock,
 /* TFT: on another player's board my shop is closed (it comes back with my board). */
@@ -661,6 +677,8 @@ body:has(.opponent-board[data-scout-3d]:not([hidden])) .shop-dock,
 /* TFT: once eliminated the shop is gone; the board, traits, player list and minimap stay for watching. */
 body[data-online-spectating]:has(> .render3d-layer) .shop-dock { transform: translateY(calc(100% + 16px)); opacity: 0; pointer-events: none; }
 .shop-dock { transition: transform .25s ease, opacity .25s ease; }
+/* The interest/income tag is my own economy: it goes with my shop while another player's board is on show in 3D. */
+body:has(.opponent-board[data-scout-3d]:not([hidden])) .online-countdown .economy-hint { display: none; }
 .carousel-seat.auto { font-style: italic; }
 /* P7-1 holding slot (临时位): a narrow extra slot in the margin right of the bench; a kept unit does not fight. */
 .carousel-holding { position: absolute; z-index: 30; right: 2px; bottom: calc(var(--online-dock-h, 0px) + var(--online-gap, 8px) + 10px); width: 80px; display: grid; gap: 4px;
@@ -937,6 +955,10 @@ body[data-sell-drag] .hover-card { visibility: hidden; }
 /* 3D 单独加载模式（?render=3d）：盖在棋盘上的画面层，只有工具条接收点击。 */
 .render3d-layer { position: absolute; inset: 0; z-index: 5; background: #101923; pointer-events: none; overflow: hidden; }
 .render3d-canvas { display: block; width: 100%; height: 100%; pointer-events: auto; touch-action: none; }
+/* The game is not a page of text: a stray double-click or drag over the HUD selected it, and with a selection up the
+   browser took right-clicks and drags (its menu, a text drag) until a reload. Text fields stay selectable. */
+#app, .render3d-layer { -webkit-user-select: none; user-select: none; }
+:is(#app, .render3d-layer) :is(input, textarea, [contenteditable="true"]) { -webkit-user-select: text; user-select: text; }
 .render3d-bar { position: absolute; top: 6px; left: 6px; right: 6px; display: flex; gap: 8px; align-items: center; justify-content: space-between; pointer-events: auto;
   font-size: 12px; color: #d8e2ea; }
 .render3d-bar span { background: rgba(10, 16, 24, .72); padding: 3px 8px; border-radius: 4px; }
@@ -977,7 +999,7 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
   box-shadow: 0 0 0 1px var(--card-cost), 0 6px 16px color-mix(in srgb, var(--card-cost) 50%, transparent); }
 .shop-dock .shop-card .shop-emblem { inset: 0 0 22px; }
 /* TFT's shop art is a landscape splash with the champion on the right. Only the square HUD icons exist, so the icon sits
-   on the card's right ~4/5 (cover-cropped to the face) and fades into a cost-tinted ground on the left, under the traits. */
+   on most of the card's right side (cover-cropped to the face) and fades into a cost-tinted ground on the left, under the traits. */
 .shop-dock .shop-card[data-cost] .shop-emblem { background: radial-gradient(120% 140% at 85% 30%, color-mix(in srgb, var(--card-cost) 38%, #0b151f), #050b12 70%); }
 .shop-dock .shop-card .shop-emblem > :is(img, svg, .hero-fallback) { position: absolute; top: 0; right: 0; width: 80%; height: 100%; object-position: 50% 32%;
   -webkit-mask-image: linear-gradient(90deg, transparent, #000 38%); mask-image: linear-gradient(90deg, transparent, #000 38%); }
@@ -1025,6 +1047,27 @@ body[data-online] { --lol-gold: #c8aa6e; --lol-gold-light: #f0e6d2; --lol-gold-d
 .online-seat.me .seat-avatar { box-shadow: 0 0 0 2px #c8aa6e, 0 0 8px #c8aa6e88; }
 .online-seat.opponent .seat-avatar { box-shadow: 0 0 0 2px #f08080, 0 0 8px #f0808088; }
 .online-seat.candidate .seat-avatar { box-shadow: 0 0 0 2px #f0808088; }
+.seat-portrait { position: relative; display: grid; place-items: center; justify-self: center; width: max-content; isolation: isolate; }
+.seat-portrait > .seat-avatar { position: relative; z-index: 1; }
+/* No extracted streak atlas: draw behind the clipped portrait, with no layout or input footprint. */
+.seat-streak-fire { position: absolute; inset: -30% -8% -10%; pointer-events: none; z-index: 0;
+  background: radial-gradient(ellipse at 50% 66%, #ffb12b99, #ff631b66 40%, transparent 70%); }
+.seat-streak-fire.level-2 { inset: -38% -12% -14%;
+  background: radial-gradient(ellipse at 50% 64%, #ffd04dcc, #ff631b99 38%, transparent 72%); }
+.seat-streak-fire::before, .seat-streak-fire::after { content: ''; position: absolute; inset: 0; transform-origin: 50% 90%;
+  background: linear-gradient(0deg, #ff4d10 8%, #ff9a16 50%, #ffe195 90%); filter: drop-shadow(0 0 3px #ff6d16);
+  clip-path: polygon(9% 80%, 3% 45%, 21% 57%, 16% 20%, 36% 43%, 47% 0, 59% 38%, 79% 14%, 76% 53%, 96% 36%, 91% 82%, 72% 100%, 27% 100%);
+  animation: seat-flame .65s ease-in-out infinite alternate; }
+.seat-streak-fire.level-2::before { filter: drop-shadow(0 0 7px #ff9a20); }
+.seat-streak-fire::after { inset: 14% 16% 0; opacity: .75; animation-delay: -.4s; animation-direction: alternate-reverse; }
+.seat-streak-fire.level-2::after { opacity: .92; animation-duration: .55s; }
+@keyframes seat-flame { from { transform: scale(.96, .86) skewX(-4deg); opacity: .8; } to { transform: scale(1.04, 1.08) skewX(4deg); opacity: 1; } }
+@keyframes seat-flame-strong { from { transform: scale(1, .92) skewX(-5deg); opacity: .88; } to { transform: scale(1.12, 1.16) skewX(5deg); opacity: 1; } }
+.seat-streak-fire.level-2::before, .seat-streak-fire.level-2::after { animation-name: seat-flame-strong; }
+@media (prefers-reduced-motion: reduce) {
+  .seat-streak-fire::before, .seat-streak-fire::after,
+  .seat-streak-fire.level-2::before, .seat-streak-fire.level-2::after { animation: none; }
+}
 .online-seat .seat-main { display: grid; gap: 5px; min-width: 0; }
 .online-seat .seat-head { gap: 4px; font-size: 13px; }
 .online-seat.me .seat-name { color: #f0e6d2; font-weight: 700; }
@@ -1100,6 +1143,18 @@ body[data-online] .shop-dock :is([data-debug="mobile:sell"], [data-debug="shop-l
 body[data-online] .shop-dock [data-debug="mobile:buy-xp"] { grid-area: xp; }
 body[data-online] .shop-dock [data-debug="mobile:reroll"] { grid-area: reroll; }
 body[data-online] .shop-dock :is([data-debug="mobile:buy-xp"], [data-debug="mobile:reroll"]) { min-height: 0; font-size: 13px; }
+/* Free rerolls (TFT): the price reads 0, a static pale cyan rim surrounds the button and a small white count sits
+   inside it, above-left of the refresh arrow. The rim is a pseudo-element so the 3D original-art skin (which clears
+   box-shadow) keeps it; in 3D the art's gold arrow is tinted cyan-white through a backdrop filter. */
+[data-debug="mobile:reroll"][data-free-rerolls] { position: relative; }
+[data-debug="mobile:reroll"][data-free-rerolls]::after { content: ""; position: absolute; inset: -1px; border-radius: inherit; pointer-events: none;
+  box-shadow: 0 0 0 2px #bfeef2, 0 0 6px #8fdde866; }
+.reroll-free-count { position: absolute; top: 4px; right: 8px; min-width: 18px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: #0b151fb3; color: #f4f4f0; font-size: 12px; font-weight: 700; line-height: 16px; text-align: center; font-variant-numeric: tabular-nums; }
+body:has(.render3d-layer) .reroll-free-count { right: 36px; top: 6px; }
+body:has(.render3d-layer) [data-debug="mobile:reroll"][data-free-rerolls]::before { content: ""; position: absolute; right: 4px; top: 50%; width: 38px; height: 38px;
+  transform: translateY(-50%); border-radius: 50%; pointer-events: none; backdrop-filter: hue-rotate(150deg) saturate(.55) brightness(1.25);
+  -webkit-mask-image: radial-gradient(circle, #000 55%, transparent 72%); mask-image: radial-gradient(circle, #000 55%, transparent 72%); }
 body[data-online] .shop-dock .touch-shop { grid-area: cards; min-height: 0; }
 body[data-online] .shop-dock .shop-odds { grid-area: top; justify-self: start; align-self: center; margin: 0 !important; font-size: 11px !important; white-space: nowrap;
   min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
@@ -1174,30 +1229,39 @@ body[data-online]:has(.render3d-layer) .shop-dock .shop-choice-bar { max-width: 
 .shop-dock .shop-choice-bar > :not(.market-meta, .choice-timeout) { flex: none; }
 /* R1 3D layout (TFT today): the board takes the window. Three columns 232 / board / 232 (184 below 1500px) with no width cap;
    #board-root (the 3D camera's box) fills the middle between the round capsule and the shop instead of the 2D 480:520
-   canvas. Left: owned augment icons over the trait strip; the strategy panel starts folded and opens as a drawer over the trait strip, clear of the
+   canvas. Left: the trait strip; the strategy panel starts folded and opens as a drawer over the trait strip, clear of the
    board. Right: a slim player list (portrait, HP, thin bar; level on hover) and the foldable battle chart. Translucent all round. */
 .augment-strip { display: none; }
-/* The reference HUD has a left rail beside the board. Keep the owned icons in that rail's
-   normal flow above traits: three augments + an anomaly fit its 196px width (188px total).
-   44px targets are independent of the 32px artwork, including mouse/keyboard desktops. */
-body[data-online] .augment-strip:not(:empty) { display: flex; flex-wrap: wrap; gap: 4px; width: fit-content; max-width: 100%; margin: 0 0 8px; pointer-events: none; }
-.augment-strip .augment-chip { position: relative; display: inline-flex; flex: 0 0 44px; align-items: center; justify-content: center;
-  box-sizing: border-box; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 6px;
-  background: #0b151fb3; font-size: 0; box-shadow: inset 0 0 0 1px #c8aa6e66; cursor: help; pointer-events: auto; }
-.augment-strip .augment-chip:focus-visible { outline: 2px solid #68ddd0; outline-offset: -2px; }
-.augment-strip .augment-icon { display: block; width: 32px !important; height: 32px !important; border-radius: 4px; }
-.augment-badge { display: inline-grid; place-items: center; flex: none; border-radius: 4px; background: radial-gradient(circle at 50% 30%, #6a4f22, #2b2112); color: #ffe3a1; font-weight: 700; line-height: 1; box-shadow: inset 0 0 0 1px #c8aa6e; }
-.augment-strip .augment-badge { display: grid; font-size: 14px !important; }
-@media (max-width: 700px) and (orientation: portrait) {
-  /* At 390px the right-hand player controls start beside this rail: two 44px columns
-     keep even a fourth (anomaly) icon clear of those controls. Traits follow in normal flow. */
-  body[data-online]:has(> .render3d-layer) .augment-strip { max-width: 92px; }
+/* Owned augments at the board's upper-left corner (S13 layout, docs/V26_AUGMENT_ICONS_LAYOUT.md).
+   left/top are viewport pixels from src/presentation/augment-hud.ts; the row hangs on <body>, outside the left column.
+   44px hit targets around 32px artwork; the 3D skin swaps in the original gold frame. */
+body[data-online] .augment-strip:not(:empty)[data-placed] {
+  position: fixed; z-index: 8; display: grid; grid-template-columns: repeat(var(--augment-columns, 3), 44px); gap: 4px; margin: 0;
+  pointer-events: none;
 }
+.augment-strip .augment-chip { position: relative; display: inline-flex; align-items: center; justify-content: center;
+  box-sizing: border-box; width: 44px; min-width: 44px; height: 44px; min-height: 44px; padding: 0; border-radius: 3px;
+  background: #0b151fd9; font-size: 0; box-shadow: inset 0 0 0 1px #c8aa6e99, 0 1px 3px #000a; cursor: pointer; pointer-events: auto; }
+.augment-strip .augment-chip:focus-visible { outline: 2px solid #68ddd0; outline-offset: -2px; }
+.augment-strip .augment-chip .augment-icon { display: block; width: 32px !important; height: 32px !important; border-radius: 2px; }
+.augment-strip .augment-badge { display: grid; font-size: 14px !important; }
+/* Second level, as in the client: hovering the row opens a titled list (icon + name); each row carries its description card. */
+.augment-strip .augment-list { display: none; position: absolute; top: 100%; left: 0; z-index: 1; flex-direction: column; gap: 4px;
+  min-width: 220px; max-width: min(300px, calc(100vw - 24px)); padding: 6px; margin-top: 0; border: 1px solid #785a28; border-radius: 4px;
+  background: #0b151ff2; box-shadow: 0 6px 18px #000c; pointer-events: auto; }
+.augment-strip .augment-list::before { content: ""; position: absolute; left: 0; right: 0; bottom: 100%; height: 6px; }
+body[data-online] .augment-strip[data-placed]:is(:hover, :focus-within, [data-open]) .augment-list { display: flex; }
+.augment-strip .augment-list-title { padding: 2px 4px 4px; color: #c8aa6e; font-size: 13px; font-weight: 600; text-align: center; border-bottom: 1px solid #785a2866; }
+.augment-strip .augment-row { display: flex; align-items: center; gap: 8px; min-height: 44px; padding: 4px 8px 4px 4px; border: 1px solid #1f3442; border-radius: 3px;
+  background: #101e29; color: #e6edf1; font-size: 13px; line-height: 1.3; cursor: help; }
+.augment-strip .augment-row:is(:hover, :focus-visible) { border-color: #c8aa6e; outline: none; }
+.augment-strip .augment-row .augment-icon { flex: none; width: 32px !important; height: 32px !important; border-radius: 2px; }
+.augment-badge { display: inline-grid; place-items: center; flex: none; border-radius: 4px; background: radial-gradient(circle at 50% 30%, #6a4f22, #2b2112); color: #ffe3a1; font-weight: 700; line-height: 1; box-shadow: inset 0 0 0 1px #c8aa6e; }
 .summary-head[role="button"] { cursor: pointer; }
 .summary-head[role="button"]::after { content: "▾"; font-size: 11px; color: #9aaeb9; }
 .battle-summary[data-folded] .summary-head::after { content: "▸"; }
 .battle-summary[data-folded] > :not(.summary-head) { display: none; }
-/* The dock's height follows the card width so the five shop cards stay landscape (~1.42:1, TFT's shape): card width is
+/* The dock's height follows the card width so the five shop cards stay landscape (TFT's shape): card width is
    (shop width − 250px of side columns, gaps and padding) / 5, plus 41px for the top row, gaps and padding; 140px keeps D/F ≥ 44px. */
 body[data-online]:has(> .render3d-layer) { --online-countdown-h: 44px; --online-dock-h: clamp(140px, min(19.5dvh, (var(--online-shop-w) - 250px) / 7.1 + 41px), 220px);
   --online-shop-left: max(11.6vw - 8px, 0px); --online-shop-w: min(67vw, 100vw - 236px);
@@ -1216,11 +1280,11 @@ body[data-online]:has(> .render3d-layer):not([data-online-left="collapsed"]) #st
   max-height: calc(100dvh - 76px - var(--online-dock-h)); overflow-y: auto; padding: 10px; border: 1px solid #1d2f3d; border-radius: 8px; background: #0b151fe6; box-shadow: 0 6px 24px #000a; }
 body[data-online]:has(> .render3d-layer) #online-sidebar { position: fixed; right: 4px; top: 4px; width: 232px; padding: 4px 10px 4px 4px; max-height: calc(100dvh - 32px - var(--online-dock-h)); }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-topbar { padding: 4px 8px; background: none; }
-/* Players: name, HP in a small box and a round portrait, right-aligned with no row panel; my own seat first and larger. */
+/* Players: name, HP in a small box and a round portrait; HP order includes my larger seat. */
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seats { gap: 6px; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat { grid-template-columns: minmax(0, 1fr) auto 44px; grid-template-areas: "main hp avatar"; column-gap: 6px;
   padding: 0; border: 0; border-radius: 24px 0 0 24px; background: none; box-shadow: none; text-shadow: 0 1px 2px #000; }
-body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { order: -1; grid-template-columns: minmax(0, 1fr) auto 64px; margin-bottom: 6px; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me { grid-template-columns: minmax(0, 1fr) auto 64px; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat:hover { background: linear-gradient(270deg, #1c2e3bcc, #0b151f00); }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.viewing { background: linear-gradient(270deg, #68ddd044, #0b151f00); }
 body[data-online]:has(> .render3d-layer) #online-sidebar .seat-main { grid-area: main; gap: 0; }
@@ -1229,7 +1293,8 @@ body[data-online]:has(> .render3d-layer) #online-sidebar .seat-name { flex: 0 1 
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-name { display: none; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .seat-kind { padding: 0; background: none; font-size: 10px; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .seat-bar { display: none; }
-body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { grid-area: avatar; width: 44px; height: 44px; box-shadow: 0 0 0 2px #7d8f9c; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-portrait { grid-area: avatar; }
+body[data-online]:has(> .render3d-layer) #online-sidebar .seat-avatar { width: 44px; height: 44px; box-shadow: 0 0 0 2px #7d8f9c; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.me .seat-avatar { width: 64px; height: 64px; box-shadow: 0 0 0 3px #e6bc4a, 0 0 12px #e6bc4a88; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-seat.opponent .seat-avatar { box-shadow: 0 0 0 2px #f08080, 0 0 8px #f0808088; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .seat-foot { grid-area: hp; display: grid; justify-items: end; min-width: 0; }
@@ -1251,8 +1316,8 @@ body[data-online]:has(> .render3d-layer) .trait-row { text-shadow: 0 1px 2px #00
 }
 /* TFT: gold sits centred over the shop cards. */
 body[data-online]:has(> .render3d-layer) .shop-dock .hud-gold { justify-self: center; }
-/* Proportions of the TFT screen (user's reference shot): traits from ~20% down the left edge, players from ~13% down the right,
-   the shop ~67% wide starting ~12% in (bottom right stays free for the scouting minimap), streak beside the gold. */
+/* Proportions of the TFT screen (user's reference shot): traits down the left edge, players down the right, the shop across
+   most of the bottom (bottom right stays free for the scouting minimap), streak beside the gold. */
 body[data-online]:has(> .render3d-layer) .left-panel-toggle { position: fixed; z-index: 3; left: 8px; top: 8px; width: auto; min-height: 26px; padding: 2px 10px; }
 body[data-online]:has(> .render3d-layer) :is(#stats-root, #legal-notice) { display: none; }
 body[data-online]:has(> .render3d-layer) #panels-root { top: 20dvh; max-height: calc(80dvh - 24px - var(--online-dock-h)); }
@@ -1296,6 +1361,10 @@ body[data-online]:has(> .render3d-layer) .online-countdown::after { content: "";
 body[data-online]:has(> .render3d-layer) .online-countdown[data-phase="combat"]::after { background-image: linear-gradient(90deg, #f08080, #f08080); }
 .render3d-fps { position: absolute; z-index: 2; top: 2px; right: 8px; font: 11px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; color: #c3d2da; text-shadow: 0 1px 2px #000; pointer-events: none; }
 .render3d-fps:empty { display: none; }
+.render3d-quality-toggle { justify-self: end; min-width: 0; min-height: 26px; padding: 2px 8px; font-size: 11px; border-radius: 999px; background: #203440; border-color: #34505f; color: #9aaeb9; pointer-events: auto; }
+body[data-online]:has(> .render3d-layer) .online-topbar :is(.sound-toggle, .render3d-quality-toggle) { white-space: nowrap; flex-shrink: 0; }
+.render3d-bar .render3d-quality-toggle { min-height: 44px; white-space: nowrap; }
+.render3d-layer > .render3d-quality-toggle { position: absolute; z-index: 2; top: 20px; right: 8px; min-height: 44px; }
 body[data-online] > .render3d-layer .render3d-fps { position: fixed; z-index: 3; }
 body[data-online]:has(> .render3d-layer) #online-sidebar .online-topbar { margin-top: 14px; }
 body[data-online]:has(> .render3d-layer) .trait-rows { counter-reset: trait-more; }
@@ -1412,7 +1481,7 @@ body[data-online]:has(> .render3d-layer) > .render3d-layer[data-state="assets"] 
 .minimap-hp { position: absolute; right: 3px; bottom: 1px; font-size: 10px; line-height: 13px; color: #8fe08a; }
 .choice-cards .augment-name { font-weight: 700; }
 /* 3D augment cards: the extra notes sit under a rule in a smaller face; the lettered badge (inline 56px) fills the 112px icon slot. */
-body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: 12px; padding-top: 8px; border-top: 1px solid #ffffff1f;
+body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra { display: block; margin-top: auto; width: 100%; padding-top: 8px; border-top: 1px solid #ffffff1f;
   font-size: 12px; line-height: 1.5; color: #93a8b4; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-extra-line { display: block; white-space: normal; }
 body[data-online]:has(> .render3d-layer) .choice-dialog[data-choice-source="augment"] .augment-badge { width: 112px !important; height: 112px !important; font-size: 56px !important; }
@@ -1546,7 +1615,7 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   body[data-online] .online-seats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   body[data-online]:not(:has(> .render3d-layer)) .online-seat { grid-template-columns: 36px minmax(0, 1fr) auto; column-gap: 6px; padding: 5px 8px 5px 5px; }
   body[data-online]:not(:has(> .render3d-layer)) .online-seat .seat-avatar { width: 36px; height: 36px; }
-  body[data-online] :is(.sound-toggle, .left-panel-toggle, .summary-tab, .summary-head[role="button"]) { min-height: 44px; }
+  body[data-online] :is(.sound-toggle, .render3d-quality-toggle, .left-panel-toggle, .summary-tab, .summary-head[role="button"]) { min-height: 44px; }
   body[data-online] .online-countdown { flex-wrap: wrap; justify-content: center; row-gap: 2px; max-width: 100%; min-height: 48px; padding: 2px 10px; }
   body[data-online] #feedback-root { bottom: auto; height: min(max(var(--online-board-h), 360px), calc(100cqw * 520 / 480)); }
   body[data-online] .shop-dock { height: auto; grid-template-columns: repeat(4, minmax(0, 1fr)); grid-template-rows: 24px 24px 96px 44px;
@@ -1571,7 +1640,7 @@ body[data-online]:has(> .render3d-layer) .fullscreen-toggle { right: auto; left:
   body[data-online] :is(.augment-chip, .carousel-item) { display: inline-flex; align-items: center; justify-content: center; }
 }
 
-/* Online 3D encounter: a reserved 80px band above the left rails. Fixed positioning avoids
+/* Online 3D encounter chip (only without a stage-tracker slot). Fixed positioning avoids
    the board frame's clipping/stacking context; progress stays in the tooltip and detail card. */
 body[data-online]:has(> .render3d-layer) .opening-chip {
   position: fixed; left: 64px; right: auto; top: max(52px, calc(20dvh - 80px));
@@ -1585,7 +1654,29 @@ body[data-online]:has(> .render3d-layer) .opening-chip-label,
 body[data-online]:has(> .render3d-layer) .opening-chip-name { grid-column: 2; overflow-wrap: anywhere; }
 body[data-online]:has(> .render3d-layer) .opening-chip-name { font-size: 14px; }
 body[data-online]:has(> .render3d-layer) .opening-chip-progress { display: none; }
-body[data-online]:has(> .render3d-layer) :is(#panels-root, .item-dock) { top: max(144px, 20dvh); }
+/* 14.24 tftstage: left block (encounter slot + stage number) | the stage's rounds | right block (phase icon + timer).
+   Finished rounds take their result's colour (stageicons victory teal / defeat red), the current one gold, upcoming grey. */
+.online-countdown .countdown-encounter { display: flex; align-items: center; justify-content: center; min-width: 28px; }
+.online-countdown .countdown-encounter:empty { display: none; }
+.online-countdown .countdown-phase { margin-right: -8px; display: grid; place-items: center; width: 16px; height: 16px; color: #e6d6a8; }
+.online-countdown .countdown-phase svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.online-countdown .countdown-phase[data-phase="combat"] { color: #f08080; }
+.stage-round[data-state="upcoming"] { color: #7c8a90; }
+.stage-round.done[data-outcome] { opacity: 1; }
+.stage-round.done[data-outcome="win"] { color: #3fb6b0; border-color: #2c6f6c; }
+.stage-round.done[data-outcome="loss"] { color: #c0394a; border-color: #6e2a33; }
+.stage-round.done[data-outcome="draw"] { color: #7c8a90; }
+.stage-round.current { color: #ffd25a; }
+/* The opening encounter's entry, moved from the board corner into the stage tracker's left slot. */
+.opening-chip.stage-encounter, body[data-online]:has(> .render3d-layer) .opening-chip.stage-encounter {
+  position: relative; inset: auto; top: auto; left: auto; right: auto; z-index: auto; display: grid; place-items: center;
+  width: 28px; max-width: 28px; min-width: 28px; height: 28px; min-height: 28px; padding: 0; margin: -8px; box-sizing: content-box;
+  border: 8px solid transparent; background: transparent; background-clip: padding-box; border-radius: 50%; color: #ffd782; }
+.opening-chip.stage-encounter:is(:hover, :focus-visible) { background-color: #ffd78226; }
+.opening-chip.stage-encounter .opening-chip-icon, body[data-online]:has(> .render3d-layer) .opening-chip.stage-encounter .opening-chip-icon {
+  display: block; grid-row: auto; font-size: 20px; line-height: 1; }
+.opening-chip.stage-encounter :is(.opening-chip-label, .opening-chip-name, .opening-chip-progress) { display: none !important; }
+.opening-chip.stage-encounter[hidden] { display: none; }
 .opening-tooltip { position: fixed; z-index: 130; width: max-content; max-width: min(360px, calc(100vw - 16px));
   box-sizing: border-box; padding: 12px; border: 1px solid #e8c36a; border-radius: 8px;
   background: #161d26; color: #f6e7bd; font-size: 14px; line-height: 1.5; white-space: pre-line; pointer-events: none; }

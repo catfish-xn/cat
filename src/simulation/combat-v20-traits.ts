@@ -1,3 +1,5 @@
+import { tracksCabalTakedowns, sampleCabalTakedowns } from './augment-pool-batch5-h9-cabal';
+import { sampleAugmentDeath } from './augment-death-samples';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { CombatTask, CombatOrigin, CombatUnit } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
@@ -80,7 +82,7 @@ export function quickDashV20(ctx:AbilityContext,u:S13Unit):void {
   const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat()
     .filter(c=>hexDistance(c,target.cell)===1&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(c,t.cell)===0))
     .sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
-  if(u.targetId!==target.id)ctx.events.push({type:'targetChanged',tick:ctx.tick,unitId:u.id,before:u.targetId,after:target.id});u.targetId=target.id;
+  if(u.targetId!==target.id){ctx.events.push({type:'targetChanged',tick:ctx.tick,unitId:u.id,before:u.targetId,after:target.id});delete u.targetEngaged;delete u.meleeApproach;}u.targetId=target.id;
   if(cells[0]&&hexDistance(cells[0],u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
 }
 /** Menaces monsters use the existing Silco attack-agent convention: no health/body collision or jar hit. */
@@ -109,6 +111,11 @@ export function advanceV20Minions(ctx:AbilityContext):void {
       if(t)derived(ctx,u,t,m.damage,m.rootActionSeq,40000+(5-m.remaining),{ownerId:u.id,sourceKind:'trait',definitionId:'menaces',instanceId:u.id,effectIndex:0});
       u.v20Traits={minion:{...m,remaining:m.remaining-1,nextAttackTick:m.nextAttackTick+m.periodTicks}};
     }
-    if(ctx.tick>=m.untilTick){u.alive=false;u.hp=0;ctx.events.push({type:'death',tick:ctx.tick,unitId:u.id});}
+    // An expiring Menaces minion's death carries an augment death sample like every other death: the settlement's executed
+    // death history (recordRoomBattleDeaths, Loot Explosion) requires one per death event and faulted the room without it.
+    // Like combat-s13's deaths: no killer (it expires) and, when Cabal tracks takedowns, an empty takedown list, so the death
+    // history readers that require those fields (Golden Find's killer, Cabal's takedowns) see a complete row.
+    if(ctx.tick>=m.untilTick){u.alive=false;u.hp=0;ctx.events.push(sampleAugmentDeath({type:'death',tick:ctx.tick,unitId:u.id},u,null,
+      tracksCabalTakedowns(ctx.units)?sampleCabalTakedowns(ctx.units,u.id,[]):undefined));}
   }
 }

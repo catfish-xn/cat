@@ -48,6 +48,14 @@ function claimsFixture(fullBench = false, early = false, seed = 4) {
   state = { ...revealMatchLoot(state, combat).state, phase: 'settlement', combat };
   return { pool, state: state as MatchState, natural: natural.find(o => o.tier === 'prismatic')!, extra: extra[0], ordinary: natural.find(o => o.tier !== 'prismatic')! };
 }
+/**
+ * A save written before battle claims opened at once (v26 integration up to 2db1fc85) can still hold a battle queue of
+ * loot orbs, which the settlement drains in FIFO order. This isolated vector is not a restorable save (its PvE entry is
+ * synthetic), so the queue is written directly; tests/loot-orb-claim.test.ts shows restore accepts such a queue.
+ */
+function legacyQueue<T extends { pool: unknown; state: MatchState }>(current: T, orbIds: readonly string[]): T {
+  return { ...current, state: { ...current.state, m8: { ...current.state.m8, loot: { ...current.state.m8.loot, queuedOrbClaims: [...orbIds] } } } };
+}
 it('real claims bonus both natural and augment-created prismatic orbs independently, and an ordinary orb gets zero', () => {
   let { pool, state, natural, extra, ordinary } = claimsFixture();
   expect(natural).toBeDefined(); expect(ordinary).toBeDefined(); expect(extra).toBeDefined();
@@ -108,16 +116,139 @@ it('a partially opened full-bench orb withholds the bonus until its anvil is act
   expect(repeat.ok).toBe(false); expect(repeat.state).toBe(state); expect(repeat.pool).toBe(pool);
   conserved(pool, [state]);
 });
-it.each([false, true])('validates queued prismatic claims and rewards at a real PvE settlement (two orbs: %s)', multiple => {
+it.each([false, true])('prismatic claims during a real PvE battle open at once and pay bonus gold then; gifts follow at the settlement (two orbs: %s)', multiple => {
   const fixture = claimsFixture();
   const ready = { ...fixture.state, phase: 'preparation' as const, combat: null };
   let current = accept(runSharedMatchCommand(fixture.pool, ready, { type: 'startCombat' }));
   expect(current.state.phase).toBe('combat');
   const orbs = multiple ? [fixture.natural, fixture.extra] : [fixture.natural];
+  const start = current.state, claims: { before: MatchState; after: MatchState; command: any; events: any[] }[] = [];
   for (const orb of orbs) {
-    const queued = accept(runSharedMatchCommand(current.pool, current.state, { type: 'claimOrb', round: current.state.round, orbId: orb.orbId }));
-    expect(queued.events).toEqual([]); current = queued;
+    // TFT: each claim opens its orb at once, in claim order; nothing is queued.
+    const command = { type: 'claimOrb' as const, round: current.state.round, orbId: orb.orbId };
+    const opened = accept(runSharedMatchCommand(current.pool, current.state, command));
+    expect(opened.state.phase).toBe('combat');
+    expect(opened.events.some(e => e.type === 'lootGranted')).toBe(true);
+    independent.validatePipelineClaim(current.state, opened.state, command, opened.events);
+    claims.push({ before: current.state, after: opened.state, command, events: opened.events as any[] });
+    current = opened;
   }
+  expect(current.state.m8.loot.queuedOrbClaims ?? []).toEqual([]);
+  expect(current.state.augmentHistory!.facts.slice(start.augmentHistory!.facts.length).filter(f => f.kind === 'orb-opened').map(f => f.orbId))
+    .toEqual(orbs.map(orb => orb.orbId));
+  let before = current.state, steps = 0;
+  while (current.state.phase === 'combat' && steps++ < 1201) {
+    before = current.state;
+    current = accept(runSharedMatchCommand(current.pool, before, { type: 'step' }));
+  }
+  expect(current.state.phase).not.toBe('combat');
+  expect(current.state.augmentHistory!.facts.slice(before.augmentHistory!.facts.length).filter(f => f.kind === 'orb-opened')).toEqual([]);
+  const bonuses = independent.pipelineBonuses(current.state);
+  expect(bonuses).toHaveLength(orbs.length);
+  const g5 = (from: MatchState, to: MatchState) => to.seatMechanics!.receipts.slice(from.seatMechanics!.receipts.length).filter(r => r.source === 'augment-pool-batch5-g5')
+    .map(r => ({ receiptId: r.receiptId, kind: r.kind, amount: r.kind === 'gold' ? r.amount : null }));
+  // Each opening's bonus gold is paid at its touch, in claim order; the settlement pays no second copy.
+  expect(claims.flatMap(c => g5(c.before, c.after)))
+    .toEqual(bonuses.filter((bonus: any) => bonus.gold).map((bonus: any) => ({ receiptId: bonus.receiptId, kind: 'gold', amount: bonus.gold })));
+  for (const c of claims) expect(() => validateRewards(c.before, c.after, c.command, c.events, {
+    ...m5Oracle, lootReceipts: c.after.m8.loot.receipts.slice(c.before.m8.loot.receipts.length),
+  })).not.toThrow();
+  expect(g5(before, current.state)).toEqual([]);
+  const priorReceipts = new Set(before.seatMechanics!.receipts.map(r => r.receiptId));
+  const gifts = rewardPlan(current.state, { ...m5Oracle, pools }).gifts.filter(g => !priorReceipts.has(g.receiptId));
+  const giftKey = (gift: any) => ({ receiptId: gift.receiptId, kind: gift.kind, definitionId: gift.definitionId, starLevel: gift.starLevel ?? 1 });
+  expect(current.state.seatMechanics!.receipts.slice(before.seatMechanics!.receipts.length).filter(r => r.source === 'augment-pool-batch1').map(giftKey))
+    .toEqual(gifts.map(giftKey));
+  independent.validatePipelineClaim(before, current.state, { type: 'step' }, current.events);
+  validateRewards(before, current.state, { type: 'step' }, current.events, {
+    ...m5Oracle, lootReceipts: current.state.m8.loot.receipts.slice(before.m8.loot.receipts.length),
+  });
+  if (multiple) {
+    // The orb's consumable was mine at the touch; the fixed PvE remover follows at the settlement with the next ID.
+    const after = current.state;
+    const loot = after.m8.loot.receipts.slice(start.m8.loot.receipts.length).find(r => r.payload.kind === 'consumable')!;
+    expect(loot.grantedConsumableIds).toEqual([`consumable-${start.nextConsumableSerial}`]);
+    expect(before.consumables.map(c => c.consumableId)).toContain(`consumable-${start.nextConsumableSerial}`);
+    const mechanic = after.seatMechanics!.receipts.slice(before.seatMechanics!.receipts.length).find(r => r.source === 'pve-remover') as any;
+    expect(mechanic).toMatchObject({ definitionId: 'magnetic-remover', consumableId: `consumable-${start.nextConsumableSerial + 1}` });
+    const events = current.events as any[], first = loot.grantedConsumableIds![0], second = mechanic.consumableId;
+
+    // The claim that opened the consumable orb: its tool takes the next ID, checked independently.
+    const opening = claims.find(c => c.after.m8.loot.receipts.some(r => r.dropId === loot.dropId) && !c.before.m8.loot.receipts.some(r => r.dropId === loot.dropId))!;
+    const claimCheck = (state: any, ev: any[]) => validateRewards(opening.before, state, opening.command, ev, {
+      ...m5Oracle, lootReceipts: state.m8.loot.receipts.slice(opening.before.m8.loot.receipts.length),
+    });
+    expect(() => claimCheck(opening.after, opening.events)).not.toThrow();
+    const skipped = structuredClone(opening.after) as any, skippedEvents = structuredClone(opening.events);
+    const skippedId = `consumable-${opening.before.nextConsumableSerial + 1}`;
+    skipped.m8.loot.receipts.find((r: any) => r.dropId === loot.dropId).grantedConsumableIds = [skippedId];
+    skipped.consumables.find((c: any) => c.consumableId === first).consumableId = skippedId;
+    skippedEvents.find(e => e.type === 'lootGranted' && e.receipt.dropId === loot.dropId).receipt.grantedConsumableIds = [skippedId];
+    expect(() => claimCheck(skipped, skippedEvents)).toThrow(/independent consumable grant ID/);
+
+    // The settlement's fixed PvE remover: definition, count, survival and its ID after the orb's.
+    const check = (state: any, ev: any[]) => validateRewards(before, state, { type: 'step' }, ev, {
+      ...m5Oracle, lootReceipts: state.m8.loot.receipts.slice(before.m8.loot.receipts.length),
+    });
+    expect(() => check(after, events)).not.toThrow();
+    const reused = structuredClone(after) as any, reusedEvents = structuredClone(events);
+    reused.seatMechanics.receipts.find((r: any) => r.receiptId === mechanic.receiptId).consumableId = first;
+    reusedEvents.find(e => e.type === 'mechanicGranted' && e.receipt.receiptId === mechanic.receiptId).receipt.consumableId = first;
+    reused.consumables = reused.consumables.map((c: any) => c.consumableId === second ? { ...c, consumableId: first } : c);
+    expect(() => check(reused, reusedEvents)).toThrow(/independent consumable grant ID/);
+
+    const wrongTool = structuredClone(after) as any, wrongToolEvents = structuredClone(events);
+    wrongTool.seatMechanics.receipts.find((r: any) => r.receiptId === mechanic.receiptId).definitionId = 'reforger';
+    wrongToolEvents.find(e => e.type === 'mechanicGranted' && e.receipt.receiptId === mechanic.receiptId).receipt.definitionId = 'reforger';
+    wrongTool.consumables.find((c: any) => c.consumableId === second).definitionId = 'reforger';
+    expect(() => check(wrongTool, wrongToolEvents)).toThrow(/independent fixed PvE remover definition/);
+
+    const missing = structuredClone(after) as any, missingEvents = structuredClone(events);
+    missing.seatMechanics.receipts = missing.seatMechanics.receipts.filter((r: any) => r.receiptId !== mechanic.receiptId);
+    missing.consumables = missing.consumables.filter((c: any) => c.consumableId !== second);
+    missing.nextConsumableSerial--;
+    missingEvents.splice(missingEvents.findIndex(e => e.type === 'mechanicGranted' && e.receipt.receiptId === mechanic.receiptId), 1);
+    expect(() => check(missing, missingEvents)).toThrow(/independent fixed PvE remover count/);
+    expect(() => check({ ...missing, playerHp:0 }, missingEvents)).toThrow(/independent PvE surviving status/);
+  }
+  conserved(current.pool, [current.state]);
+});
+it('an orb opened before a lethal PvE battle ends stays paid once with its single pipeline bonus', () => {
+  const fixture = claimsFixture(false, false, 16), ready = { ...fixture.state, playerHp:1, phase:'preparation' as const, combat:null };
+  expect(fixture.extra.entries.some(e => e.payload.kind === 'consumable')).toBe(true);
+  let current = accept(runSharedMatchCommand(fixture.pool, ready, { type:'startCombat' }));
+  expect(current.state.phase).toBe('combat');
+  const start = current.state;
+  current = accept(runSharedMatchCommand(current.pool, current.state, { type:'claimOrb', round:current.state.round, orbId:fixture.extra.orbId }));
+  if (current.state.phase !== 'combat') throw new Error('the claim must keep the battle running');
+  const paid = current.state.m8.loot.receipts.slice(start.m8.loot.receipts.length);
+  expect(paid).toContainEqual(expect.objectContaining({ resolution:'held', payload:expect.objectContaining({ kind:'consumable' }) }));
+  expect(current.state.consumables.length).toBeGreaterThan(start.consumables.length);
+  // Isolate a lethal next battle by starting the already-running ally at 1 HP.
+  current = { ...current, state:{ ...current.state, combat:{ ...current.state.combat,
+    units:current.state.combat.units.map(u => u.team === 'player' ? { ...u, hp:1 } : u) } } };
+  let before = current.state, steps = 0;
+  while (current.state.phase === 'combat' && steps++ < 1201) {
+    before = current.state;
+    current = accept(runSharedMatchCommand(current.pool, before, { type:'step' }));
+  }
+  expect(current.state.playerHp).toBe(0);
+  const receipts = current.state.m8.loot.receipts.slice(before.m8.loot.receipts.length);
+  expect(receipts.filter(r => paid.some(p => p.dropId === r.dropId))).toEqual([]);
+  // The prismatic orb really opened, so its pipeline bonus is owed exactly once (its gold paid at the touch).
+  const bonuses = independent.pipelineBonuses(current.state);
+  expect(bonuses).toHaveLength(1);
+  expect((current.state.seatMechanics?.receipts ?? []).filter(r => r.source === 'augment-pool-batch5-g5').map(r => r.kind === 'gold' ? r.amount : null))
+    .toEqual(bonuses.filter((bonus: any) => bonus.gold).map((bonus: any) => bonus.gold));
+  expect(() => validateRewards(before, current.state, { type:'step' }, current.events, { ...m5Oracle, lootReceipts:receipts })).not.toThrow();
+});
+it.each([false, true])('a legacy battle queue: validates queued prismatic claims and rewards at a real PvE settlement (two orbs: %s)', multiple => {
+  const fixture = claimsFixture();
+  const ready = { ...fixture.state, phase: 'preparation' as const, combat: null };
+  let current = accept(runSharedMatchCommand(fixture.pool, ready, { type: 'startCombat' }));
+  expect(current.state.phase).toBe('combat');
+  const orbs = multiple ? [fixture.natural, fixture.extra] : [fixture.natural];
+  current = legacyQueue(current, orbs.map(orb => orb.orbId));
   expect(current.state.m8.loot.queuedOrbClaims).toEqual(orbs.map(orb => orb.orbId));
   let before = current.state, steps = 0;
   while (current.state.phase === 'combat' && steps++ < 1201) {
@@ -141,6 +272,11 @@ it.each([false, true])('validates queued prismatic claims and rewards at a real 
   if (multiple) {
     const reversed = { ...before, m8: { ...before.m8, loot: { ...before.m8.loot, queuedOrbClaims: [...before.m8.loot.queuedOrbClaims!].reverse() } } };
     expect(() => independent.validatePipelineClaim(reversed, current.state, { type: 'step' }, current.events)).toThrow(/FIFO order/);
+    const noQueue = { ...before, m8: { ...before.m8, loot: { ...before.m8.loot, queuedOrbClaims: [] } } };
+    expect(() => independent.validatePipelineClaim(noQueue, current.state, { type: 'step' }, current.events)).toThrow();
+    expect(() => independent.validatePipelineClaim(before, current.state, { type: 'step' }, current.events.filter(e => e.type !== 'roundSettled'))).toThrow();
+    const queueRemains = { ...current.state, m8: { ...current.state.m8, loot: { ...current.state.m8.loot, queuedOrbClaims: [orbs[0].orbId] } } };
+    expect(() => independent.validatePipelineClaim(before, queueRemains, { type: 'step' }, current.events)).toThrow(/drains the claim queue/);
   }
   validateRewards(before, current.state, { type: 'step' }, current.events, {
     ...m5Oracle, lootReceipts: current.state.m8.loot.receipts.slice(before.m8.loot.receipts.length),
@@ -199,12 +335,12 @@ it.each([false, true])('validates queued prismatic claims and rewards at a real 
   }
   conserved(current.pool, [current.state]);
 });
-it('does not invent a consumable or bonus when an eliminated seat forfeits a queued orb', () => {
+it('a legacy battle queue: does not invent a consumable or bonus when an eliminated seat forfeits a queued orb', () => {
   const fixture = claimsFixture(false, false, 16), ready = { ...fixture.state, playerHp:1, phase:'preparation' as const, combat:null };
   expect(fixture.extra.entries.some(e => e.payload.kind === 'consumable')).toBe(true);
   let current = accept(runSharedMatchCommand(fixture.pool, ready, { type:'startCombat' }));
   expect(current.state.phase).toBe('combat');
-  current = accept(runSharedMatchCommand(current.pool, current.state, { type:'claimOrb', round:current.state.round, orbId:fixture.extra.orbId }));
+  current = legacyQueue(current, [fixture.extra.orbId]);
   if (current.state.phase !== 'combat') throw new Error('queued claim must remain in combat');
   // Isolate a lethal next battle by starting the already-running ally at 1 HP.
   current = { ...current, state:{ ...current.state, combat:{ ...current.state.combat,

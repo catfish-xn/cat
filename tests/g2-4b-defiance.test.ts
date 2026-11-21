@@ -6,6 +6,8 @@ import {reachRound,accepted} from './match-helpers';
 import {grantMechanicItem} from '../src/simulation/seat-mechanics';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
 import {advanceDeferredItemDamage} from '../src/simulation/g2-4b-item-kernel';
+import {AUGMENT_HISTORY_OWNERS} from '../src/simulation/augment-history-owners';
+import {needsAugmentHistory} from '../src/simulation/augment-history';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -40,7 +42,10 @@ it('fully shielded and prevented packets do not create debt; debt cannot revive 
 it('public Match persists real debts, reproduces continuation and rejects forged debt timing/identity',()=>{
   // v22: every stage-1 PvE fight is now opening crabs, which never damage the holder,
   // so take the first real fight (2-1) where the holder actually receives packets.
-  const granted=grantMechanicItem(reachRound('2-1',true,42),{receiptId:'defiance',source:'test',definitionId:'TFT4_Item_OrnnDeathsDefiance'});
+  // v26 D5 (7953c99a) moved seed 42's 2-1 offers so the first eligible pick is snipers-nest, a history-proof augment whose
+  // restore replays public commands and cannot replay this direct mechanic grant. Keep seed 42 and only skip history-proof picks.
+  const granted=grantMechanicItem(reachRound('2-1',true,42,[],Object.keys(AUGMENT_HISTORY_OWNERS)),{receiptId:'defiance',source:'test',definitionId:'TFT4_Item_OrnnDeathsDefiance'});
+  expect(granted.ok&&needsAugmentHistory(granted.state)).toBe(false);
   if(!granted.ok)throw Error(granted.reason);
   const owner=granted.state.preparation.units.find(u=>u.team==='player')!;
   const fielded=accepted(deployMatchUnit(granted.state,owner.id,{kind:'board',cell:{col:3,row:4}}));

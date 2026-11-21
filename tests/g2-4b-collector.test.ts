@@ -13,7 +13,9 @@ vi.setConfig({ testTimeout: 20_000 });
 it('executes through real combat, settles only successful independent rolls, and restores exact gold authority',()=>{
  let executions=0,awards=0;
  // After the v23 integration merge seed 7 offers no quiet 2-1 card even with the three free rerolls (nor does 8); 9 is the next.
- for(const seed of [42,1,9,19]){
+ // v26 D5 (7953c99a, new augments + stage bans) changes seed 1's 2-1 offers to guardbreaker-spirit/long-distance-pals/brb
+ // with no quiet card after the rerolls; seed 4 (the next seed that reaches the pre-overtime checkpoint) replaces it (was [42,1,9,19]).
+ for(const seed of [42,4,9,19]){
   // v23 batch 3: seed 7's first card became replay-validated Wealthy Rehab; pick a quiet card so the item gold validator is the one that rejects.
   let entered=quietAugmentRound(seed);
   for(let n=0;n<9;n++){const unit=grantMechanicUnit(entered,{receiptId:`singed-${n}`,source:'test',definitionId:'singed'});if(!unit.ok)throw Error(unit.reason);entered=unit.state;}

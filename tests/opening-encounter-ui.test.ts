@@ -125,6 +125,21 @@ describe('PR8 opening-encounter HUD', () => {
     chip.listeners.focus(); hud.update({ encounter: null, matchKey: 'online', round: 2 });
     expect(hud.tooltip.hidden).toBe(true);
   });
+  it('online with a stage-tracker slot: the chip lives in that slot, not on the board frame, and still opens the card', () => {
+    stubDom();
+    const view = viewFor('trainer-golems');
+    const frame = new Node(), slot = new Node();
+    const hud = new OpeningEncounterHud(frame as unknown as HTMLElement, true, slot as unknown as HTMLElement);
+    expect(slot.children).toContain(hud.chip as unknown as Node);
+    expect(frame.children).not.toContain(hud.chip as unknown as Node);
+    hud.update({ encounter: view, matchKey: 'slot', round: 1 });
+    expect(hud.chip.dataset.state).toBe('current');
+    hud.update({ encounter: view, matchKey: 'slot', round: 3 });
+    expect(hud.chip.dataset.state).toBe('victory');
+    const chip = hud.chip as unknown as Node;
+    chip.listeners.mouseenter(); expect(hud.tooltip.textContent).toContain(view.descriptionZh);
+    chip.listeners.click(); expect(hud.debug().card).toContain(view.descriptionZh);
+  });
   it('shows the intro once per match (not again on a later view or a reconnect), the banner in the opening round, the chip always', () => {
     stubDom();
     const view = viewFor('trainer-golems');

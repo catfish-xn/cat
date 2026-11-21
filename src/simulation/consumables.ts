@@ -1,3 +1,4 @@
+import { isOverflowUnit, usableBenchSlots } from './bench-capacity';
 
 import { isAnvil } from './content/anvils';
 import { ITEM_DEFINITIONS as ORDINARY_ITEMS } from './content/items';
@@ -46,6 +47,7 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   const definition=CONSUMABLE_DEFINITIONS[tool.definitionId];
   if(!definition)throw new RangeError('Invalid consumable definition');
   if(!target||target.kind!=='unit')return {ok:false,reason:'invalid-consumable-target'};
+  if(isOverflowUnit(state.preparation,target.unitId))return {ok:false,reason:'invalid-consumable-target'};
   const unit=state.preparation.units.find(u=>u.id===target.unitId);
   if(unit&&(unit.definitionId==='carry-golem'||unit.definitionId==='trainer-golem'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.definitionId==='tower-dummy'||unit.definitionId==='augment-golem'||isAnvil(unit.definitionId)))return {ok:false,reason:'invalid-consumable-target'};
   if(!unit)return {ok:false,reason:'unknown-unit'};
@@ -54,7 +56,7 @@ export function previewUseConsumable(state:Readonly<MatchState>,consumableId:str
   if(definition.effect==='duplicate-unit'){
     if(isCombatRosterLocked(state))return {ok:false,reason:'wrong-phase'};
     if(!SHOP_CATALOG.includes(unit.definitionId)||(definition.maxCost!==null&&UNIT_DEFINITIONS[unit.definitionId].cost>definition.maxCost)||!hasTargetTrait(definition,unit.definitionId))return {ok:false,reason:'invalid-consumable-target'};
-    if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>=state.preparation.benchSize)return {ok:false,reason:'bench-full'};
+    if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>=usableBenchSlots(state.preparation))return {ok:false,reason:'bench-full'};
     if(!planUnitAcquisition(state,unit.definitionId,{kind:'mechanic',receiptId:consumableCopyReceiptId(consumableId)},state.resourceProvenance.entries.length).ok)return {ok:false,reason:'bench-full'};
     return {ok:true,effect:definition.effect,affectedItemIds:[],destination:'inventory',affectsCurrentBattle:false};
   }

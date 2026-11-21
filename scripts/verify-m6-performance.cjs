@@ -95,15 +95,18 @@ const {routeOptions:v25RouteOptions}=require('./v25-online-rules-route.cjs');
   report.measurements=await page.evaluate(()=>{
    const fixtures=globalThis.__M6_PERF_FIXTURES;delete globalThis.__M6_PERF_FIXTURES;
    return (async fixtures=>{
-   const mark=(stage,details={})=>console.log('__M6_PERF_DIAGNOSTIC__'+JSON.stringify({stage,browserPerformanceMs:performance.now(),...details}));
+   const mark=(stage,details={})=>console.log('__M6_PERF_DIAGNOSTIC__'+JSON.stringify({stage,browserPerformanceMs:performance.now(),heap:typeof performance!=='undefined'&&performance.memory?{usedJSHeapSize:performance.memory.usedJSHeapSize,totalJSHeapSize:performance.memory.totalJSHeapSize}:null,...details}));
    mark('measurements-entered');
    const {SaveRepository}=await import('/src/persistence/repository.ts'),{SaveCoordinator}=await import('/src/persistence/coordinator.ts'),{validateFile,exportFile}=await import('/src/persistence/format.ts');
    const {BattleHistory,PlaybackSession,validateBattleCollection}=await import('/src/replay/index.ts');
    const {MatchSession}=await import('/src/rendering/match-session.ts');const {aggregateStats,appendStats,emptyStats}=await import('/src/stats/aggregate.ts');
+   const {coldBattleReplayCount,transcriptBattleReuseCount}=await import('/src/simulation/battle-record-validation.ts');
+   const {augmentHistoryReplaySteps}=await import('/src/simulation/augment-history-restore.ts');
    const limits=await import('/src/m6/limits.ts');const {complete,current,record,fullLoad}=fixtures;
    mark('imports-complete',{completedBattles:complete.battles.length,currentCompletedBattles:current.battles.length,currentCombatId:current.currentBattle?.combatId,recordCombatId:record.combatId});
    const skipped=[];
    const samples={capture:[],write:[],fullCapture:[],activation:[],completeImport:[],firstSeek:[],cachedSeek:[],statsBatch:[]};const gates=[];
+   const captureDiagnostics=[];
    const measure=(name,fn)=>{const start=performance.now(),result=fn();samples[name].push(performance.now()-start);return result;};
    const measured=async(name,fn)=>{const start=performance.now(),result=await fn();samples[name].push(performance.now()-start);return result;};
    const dbName=`m6-performance-${crypto.randomUUID()}`,repository=new SaveRepository(dbName);let coordinator;
@@ -122,10 +125,11 @@ const {routeOptions:v25RouteOptions}=require('./v25-online-rules-route.cjs');
     // B9 (issue #23): the original complete-catalog validated import pipeline runs again.
     // All payloads are independently validated by the actual imported public format path.
     let token=await measured('completeImport',async()=>{
+     mark('complete-import-start',{heap:typeof performance!=='undefined'&&performance.memory?performance.memory.usedJSHeapSize:null});
      const candidate=await validateFile(exportFile(complete),validateBattleCollection);
      const prepared=new MatchSession(candidate.match,candidate.battles.at(-1)?.events??[]),history=new BattleHistory(candidate.runId,candidate.battles,candidate.currentBattle);
      if(history.completedRecords.length!==fixtures.expectedBattleCount)throw Error('full import lost history');
-     const result=await measured('activation',()=>repository.activate(null,candidate));prepared.dispose();return result;
+     const result=await measured('activation',()=>repository.activate(null,candidate));prepared.dispose();mark('complete-import-end');return result;
     });
     await validateFile(exportFile(current),validateBattleCollection);
     token=await measured('activation',()=>repository.activate(token,current));
@@ -134,7 +138,8 @@ const {routeOptions:v25RouteOptions}=require('./v25-online-rules-route.cjs');
     // One untimed capture/write first, so the timed loop does not absorb the cleanup of the complete import.
     // 24 timed captures: with 12 the p95 index was the maximum, so one pause decided the gate. Writes stay at 12.
     coordinator.enqueue(capture());await coordinator.flush();recordWrites=true;
-    for(let i=0;i<24;i++){measure('capture',()=>coordinator.enqueue(capture()));await coordinator.flush();}
+    for(let i=0;i<24;i++){measure('capture',()=>coordinator.enqueue(capture()));await coordinator.flush();
+     if(i>=13&&i<=17)captureDiagnostics.push({index:i,cold:coldBattleReplayCount(),transcript:transcriptBattleReuseCount(),augmentSteps:augmentHistoryReplaySteps(),ms:samples.capture.at(-1)});}
     const disk=await repository.readCurrent();if(disk.envelope.battles.length!==current.battles.length||disk.envelope.currentBattle.nextEventSeq!==current.currentBattle.nextEventSeq)throw Error('incremental roundtrip changed history/cursor');
     measureFullCapture(); // Original ordering before the remaining two complete-import samples.
     // Three complete-import samples; token is the latest successful coordinator revision.
@@ -177,12 +182,13 @@ const {routeOptions:v25RouteOptions}=require('./v25-online-rules-route.cjs');
     for(const[name,metric,ceiling]of [['capture','p95',budget.incrementalCaptureP95],['write','p95',budget.incrementalWriteP95],['fullCapture','p95',budget.fullCaptureP95],['activation','max',budget.activationWriteP95],['completeImport','max',budget.completeImport],['firstSeek','max',budget.firstSeek],['cachedSeek','max',budget.cachedSeek],['statsBatch','max',budget.stats40TickBatch]]){gates.push({name,metric,actual:summary[name][metric],ceiling,passed:summary[name][metric]<=ceiling});}
     // Keep one small real record for subsequent warmed module lifecycle measurement.
     window.__M6_PERF_LIFECYCLE_RECORD=complete.battles[0];
-    return{summary,gates,skipped,fullLoadRoundTrip,limits:budget,completeBattleCount:complete.battles.length,incrementalBattleCount:current.battles.length,completedHistoryWrittenOnIncrementalSave:null,deferredMetrics:[],method:'Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 1 untimed warm-up capture/write, 24 capture, 12 write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats.'};
+    return{summary,gates,skipped,fullLoadRoundTrip,captureDiagnostics,limits:budget,completeBattleCount:complete.battles.length,incrementalBattleCount:current.battles.length,completedHistoryWrittenOnIncrementalSave:null,deferredMetrics:[],method:'Original F4 pipeline on the original selected payloads at the catalog capacity (B9): complete import x3, current activation, 1 untimed warm-up capture/write, 24 capture, 12 write, 12 fullCapture, full-load roundtrip, 12 activations, firstSeek x3, cachedSeek x12, 40-tick stats.'};
    }finally{mark('measurements-cleanup-start');coordinator?.dispose();repository.close();await new Promise(resolve=>{const r=indexedDB.deleteDatabase(dbName);r.onsuccess=r.onerror=r.onblocked=resolve;});mark('measurements-cleanup-complete');}
   })(fixtures);
   });
   diagnosticPhase('measurements-returned');
   console.log('M6 capture samples (ms): '+JSON.stringify(report.measurements.summary.capture.samples.map(v=>Math.round(v*10)/10)));
+  if(report.measurements.captureDiagnostics?.length)console.log('M6 capture diagnostics (samples 14-18): '+JSON.stringify(report.measurements.captureDiagnostics));
   assert.deepEqual(report.measurements.skipped,[],'no deferred performance measurement after B9');
   assert.equal(report.measurements.fullLoadRoundTrip?.verified,true,'full-load import/activation roundtrip ran');
   // Wall-clock budget: enforced unless CI_WALLCLOCK_GATES=report (PR gate), see scripts/wallclock-gate.cjs.

@@ -1,3 +1,4 @@
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import {
   createMatch, snapshotForBattle, restorePlayerBattleSnapshot, compileBattle, restoreBattleInput,
@@ -23,6 +24,8 @@ const input = (a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, seed = 42) => c
 const run = (a: PlayerBattleSnapshot, b: PlayerBattleSnapshot, seed = 42) => resolveTwoSidedBattle(input(a,b,seed),1200);
 const local = (value: BattleInput, seatId: string, originalId: string, kind = 'unit') => value.mapping.find(m=>m.seatId === seatId && m.originalId === originalId && m.kind === kind)!.combatId;
 
+// The two Maddies stand one hex apart; each shot flies rangedAttackFlightTicks(1) (fitted, not original data).
+const MADDIE_FLIGHT = rangedAttackFlightTicks(1);
 describe('T2 true two-sided combat', () => {
   it('hand oracle: 3-star Maddie defeats 1-star Maddie in six simultaneous basic attacks', () => {
     // Frozen content: HP 500, AD 50, armor 15, 0.7 attacks/s; v22 3-star = 324% HP, 225% AD (112).
@@ -32,7 +35,8 @@ describe('T2 true two-sided combat', () => {
     const a = snap([hero('maddie','unit-1',3)],'A'), b = snap([hero('maddie')],'B');
     const result = run(a,b);
     expect(result.winnerSeatId).toBe('A');
-    expect(result.terminal.tick).toBe(146);
+    // Ranged attack landing (pure-result re-pin): the sixth attack (tick 146) kills when its shot lands, its flight later.
+    expect(result.terminal.tick).toBe(146 + MADDIE_FLIGHT);
     expect(result.a.survivors).toEqual([{unitId:'unit-1',definitionId:'maddie',starLevel:3,hp:1294}]);
     expect(result.b.survivors).toEqual([]);
     expect(result.terminal.rngDraws).toBe(12);

@@ -1,0 +1,7 @@
+# #619 re-record (11-12): Leona, Kog'Maw, Nocturne (batch1 casts dropped as replayed events), Jinx (phase 1 cues), Silco (warm residue).
+# Needs tools at or after 0cd44bf0: the recorded cast starts a fresh combat (real always; Silco on dummies with --fresh 1).
+v-capture.cjs jinx w-jinx-before --real 1 --star 3 --target garen --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 10fede7e --column before --snapshot c1333710ad8e
+v-capture.cjs kogmaw w-kogmaw-before --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 9f805f6e --column before --snapshot c1333710ad8e
+v-capture.cjs leona w-leona-before --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 8d9a4ccc --column before --snapshot c1333710ad8e
+v-capture.cjs nocturne w-nocturne-before --real 1 --star 3 --target amumu --nfoes 1 --foestar 3 --dist 3 --settle 3000 --systems 97366927 --column before --snapshot c1333710ad8e
+v-capture.cjs silco w-silco-before --star 3 --one 1 --dist 2 --settle 3000 --fresh 1 --systems c7bb8557 --column before --snapshot c1333710ad8e

@@ -84,7 +84,7 @@ describe('v15 room: orb claims through the gate', () => {
     expect(room.state).toBe(published);
   }, 20_000);
 
-  it('during my battle a claim is only queued (no resource moves) and the rules settle it with the round', () => {
+  it('during my battle a claim opens the orb at once (TFT) and the settlement pays nothing of it again', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver());
     disposers.push(() => room.dispose());
     room.start();
@@ -93,29 +93,33 @@ describe('v15 room: orb claims through the gate', () => {
     const orb = unclaimed(before.match).find(o => !o.queued)!;
     const round = room.state.round;
     expect(room.handle('s0', { type: 'claimOrb', round: before.match.round, orbId: orb.orbId })).toMatchObject({ ok: true });
-    const queued = seat(room.state, 's0').match;
-    expect(unclaimed(queued).find(o => o.orbId === orb.orbId)?.queued).toBe(true);
-    expect(toSeatPrivateView(queued).unclaimedOrbs?.find(o => o.orbId === orb.orbId)?.queued).toBe(true);
-    expect(queued.gold).toBe(before.match.gold);
-    expect(queued.preparation.units).toEqual(before.match.preparation.units);
-    expect(receipts(queued)).toEqual(receipts(before.match));
-    // Public: still only count and tiers; the queue is private.
+    const opened = seat(room.state, 's0').match;
+    expect(opened.phase).toBe('combat');
+    expect(unclaimed(opened).map(o => o.orbId)).not.toContain(orb.orbId);
+    expect(opened.m8.loot.queuedOrbClaims ?? []).toEqual([]);
+    const mine = (state: typeof opened) => receipts(state).filter(r => JSON.parse(r.dropId)[0] === orb.orbId);
+    expect(mine(opened)).toHaveLength(orb.entries.length);
+    // Whatever it held is mine now: a unit on the bench (never on the fighting board), an item, gold.
+    const grantedUnits = mine(opened).flatMap(r => r.grantedUnitIds);
+    for (const id of grantedUnits) expect(opened.preparation.units.find(u => u.id === id)?.location.kind).toBe('bench');
+    expect(opened.preparation.units.filter(u => u.location.kind === 'board').map(u => u.id))
+      .toEqual(before.match.preparation.units.filter(u => u.location.kind === 'board').map(u => u.id));
+    // Public: still only count and tiers.
     expect(JSON.stringify(toPlayerView(room.state, 's1', clock.now()))).not.toContain(orb.orbId);
     // Repeating the claim is refused and publishes nothing.
     const published = room.state;
-    expect(room.handle('s0', { type: 'claimOrb', round: queued.round, orbId: orb.orbId })).toMatchObject({ ok: false, reason: 'already-claimed' });
+    expect(room.handle('s0', { type: 'claimOrb', round: opened.round, orbId: orb.orbId })).toMatchObject({ ok: false });
     expect(room.state).toBe(published);
-    // The settlement of this round (on the latest live seat) pays the queued orb out.
     runUntil(room, clock, state => state.round === round && state.phase !== 'battle');
     expect(room.state.fault).toBeNull();
     const settled = seat(room.state, 's0').match;
     expect(unclaimed(settled).map(o => o.orbId)).not.toContain(orb.orbId);
-    expect(receipts(settled).length).toBeGreaterThan(receipts(queued).length);
+    expect(mine(settled)).toEqual(mine(opened));
   }, 20_000);
 });
 
 describe('v15 room: a claim while the round is frozen', () => {
-  it('is held without touching the frozen inputs and queued by the rules at battle entry', () => {
+  it('is held without touching the frozen inputs and opened by the rules at battle entry', () => {
     const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { sliceTicks: 10 });
     disposers.push(() => room.dispose());
     room.start();
@@ -135,10 +139,10 @@ describe('v15 room: a claim while the round is frozen', () => {
     while (room.state.phase === 'frozen') expect(clock.fireNext()).toBe(true);
     expect(room.state.fault).toBeNull();
     const entered = seat(room.state, 's0').match;
-    if (room.state.phase === 'battle') {
-      expect(unclaimed(entered).find(o => o.orbId === orb.orbId)?.queued).toBe(true);
-      expect(receipts(entered)).toEqual(receipts(before.match));
-    } else expect(unclaimed(entered).map(o => o.orbId)).not.toContain(orb.orbId);
+    // Handed to the rules at battle entry, where it opens at once (TFT); nothing of it is left queued.
+    expect(unclaimed(entered).map(o => o.orbId)).not.toContain(orb.orbId);
+    expect(entered.m8.loot.queuedOrbClaims ?? []).toEqual([]);
+    expect(receipts(entered).length).toBeGreaterThan(receipts(before.match).length);
   }, 20_000);
 });
 

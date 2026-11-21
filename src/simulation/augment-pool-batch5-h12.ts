@@ -1,3 +1,4 @@
+import { reconcileMatchAnomaly } from './anomaly-ownership';
 import type { MatchState, MatchEvent } from './match-types';
 import type { Unit } from './unit-types';
 import { requireAugmentFacts } from './augment-history';
@@ -12,12 +13,13 @@ import { isAnvil } from './content/anvils';
  * Caller checks phase, ownership and sellability; rewards drain only after the whole batch. */
 export function sellPreparedUnit(state:MatchState,unit:Unit,capacity=false):{state:MatchState;events:MatchEvent[]} {
  const returned=returnUnitItems(state.items,unit.id),removesBinding=state.anomalyBinding?.unitId===unit.id;
- return {state:{...state,items:returned.items,anomalyBinding:removesBinding?null:state.anomalyBinding,
+ const events:MatchEvent[]=[...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId:unit.id}]:[])];
+ const next:MatchState={...state,items:returned.items,anomalyBinding:removesBinding?null:state.anomalyBinding,
   persistentGrowth:state.persistentGrowth.filter(g=>g.unitId!==unit.id),gold:state.gold+getUnitSellPrice(unit),
   resourceProvenance:appendResourceProvenance(state.resourceProvenance,state.roundDefinitionId,
    {kind:'unit-sold',unitId:unit.id,context:capacity?'settlement-capacity':'preparation',goldGranted:getUnitSellPrice(unit)}),
-  preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unit.id)}},
-  events:[...returned.events,...(removesBinding?[{type:'anomalyRemoved' as const,unitId:unit.id}]:[])]};
+  preparation:{...state.preparation,units:state.preparation.units.filter(u=>u.id!==unit.id)}};
+ return {state:reconcileMatchAnomaly(next,events),events};
 }
 /** Only the selection transaction calls this, before any reward is granted. The acquired roster is authenticated. */
 export function applyHeadStart(state:MatchState):{state:MatchState;events:MatchEvent[]} {

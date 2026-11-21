@@ -22,6 +22,8 @@ export interface ChoiceDefinition { readonly id: string; readonly name: string; 
 export interface ItemInstance { readonly id: string; readonly definitionId: string; readonly location: { readonly kind: 'inventory' } | { readonly kind: 'unit'; readonly unitId: string; readonly slot: number } }
 export interface OwnedAugment { readonly definitionId: string; readonly choiceId: string; readonly acquiredRound: number }
 export interface AnomalyBinding { readonly definitionId: string; readonly unitId: string; readonly choiceId: string; readonly boundRound: number }
+/** Seat entitlement. It survives sale/removal and never points at a potentially absent unit. */
+export interface AnomalySelection { readonly definitionId: string; readonly championDefinitionId: string; readonly choiceId: string; readonly boundRound: number }
 export interface PendingChoice {
   readonly kind: 'augment' | 'anomaly' | 'component' | import('./seat-mechanics/types').MechanicChoiceKind; readonly step: 'target' | 'offer'; readonly choiceId: string;
   readonly returnPhase?: 'preparation' | 'settlement';
@@ -46,7 +48,7 @@ export interface TraitSnapshot { readonly memberUnitIds?: readonly string[]; rea
 export interface StrategyUnitSnapshot {
   readonly augmentEquipment?: import('./combat-types').CombatUnit['equipment'];
   readonly r3Mirror?: import('./augment-pool-batch5-r3-mirrors').HallMirrorOrigin;
-  readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4;readonly unboostedStarLevel:1|2|3|4}; readonly effectiveStarLevel?:1|2|3|4; readonly openingItemBankGold?:number; readonly itemSummon?: import('./g2-4b-summons').ItemSummonOrigin; /** A placed Hextech Forge: its Jayce's saved preparation cell (projectG23Summons `forgeCells`). */ readonly summonCell?: import('./board').HexCell; readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[]; readonly unitId: string; readonly stats: ResolvedUnitStats; readonly ability: ResolvedAbility; readonly sources: readonly SourcedEffect[]; readonly triggers: readonly ResolvedTrigger[]; readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number; readonly abilityPower?: number; readonly mechanics?: import('./combat-types').CombatMechanics }
+  readonly familyReunion?:{readonly originalStarLevel:1|2|3;readonly combatStarLevel:1|2|3|4;readonly unboostedStarLevel:1|2|3|4}; readonly effectiveStarLevel?:1|2|3|4; readonly openingItemBankGold?:number; readonly itemSummon?: import('./g2-4b-summons').ItemSummonOrigin; /** Saved owner-local preparation cell of Sion or a Hextech Forge. */ readonly summonCell?: import('./board').HexCell; readonly itemPrograms?: readonly import('./m8/item-program').BoundItemProgram[]; readonly unitId: string; readonly stats: ResolvedUnitStats; readonly ability: ResolvedAbility; readonly sources: readonly SourcedEffect[]; readonly triggers: readonly ResolvedTrigger[]; readonly attackDamageBase?: number; readonly attackDamagePercentBps?: number; readonly abilityPower?: number; readonly mechanics?: import('./combat-types').CombatMechanics }
 export interface StrategySnapshot {
   readonly r3Original?: readonly import('./augment-pool-batch5-r3-mirrors').R3OriginalArmy[];
   readonly traits: readonly TraitSnapshot[]; readonly units: readonly StrategyUnitSnapshot[];
@@ -61,6 +63,7 @@ export type StrategyEvent =
  | { readonly type: 'itemsReturned'; readonly itemIds: readonly string[]; readonly unitId: string }
  | { readonly type: 'anomalyTransferred'; readonly fromId: string; readonly toId: string }
  | { readonly type: 'anomalyRemoved'; readonly unitId: string }
+ | ({ readonly type: 'anomalyRestored' } & AnomalyBinding)
  | { readonly type: 'rewardGranted'; readonly receipt: ScheduleReceipt }
  | { readonly type: 'choiceOpened'; readonly choice: PendingChoice }
  | { readonly type: 'choiceSelected'; readonly choiceId: string; readonly definitionId: string; readonly unitId: string | null }

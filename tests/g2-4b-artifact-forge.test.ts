@@ -12,7 +12,12 @@ import {openG23Choice,claimG23Atom} from '../src/simulation/g2-3-runtime';
 import { previewUseConsumable } from '../src/simulation/consumables';
 import { validateConsumableState } from '../src/simulation/restore-checks/consumable-state-check';
 import {REFORGE_POOLS} from '../src/simulation/content/consumables';
-import {publicConsumables} from './fixtures/r3r4-public';
+import {finish} from './fixtures/r3r4-public';
+import {buyUnit,combineItems,deployMatchUnit,rerollShop,type MatchCommandResult} from '../src/simulation/match';
+import {isAnvil} from '../src/simulation/content/anvils';
+import {isSellableUnit} from '../src/simulation/seat-mechanics/forms';
+import {augmentNeedsHistory} from '../src/simulation/augment-history-owners';
+import {needsCrownHistory} from '../src/simulation/crown-history';
 import {digestContent} from '../src/simulation/content';
 import {RULES_GAP_MANIFEST} from '../src/simulation/content/rules-manifest';
 
@@ -120,8 +125,42 @@ it.each([10,14])('tier %i survives pending/manual/timeout restore and rejects du
  expect(()=>restoreDomain({...manual,seatMechanics:{...manual.seatMechanics!,receipts:[...manual.seatMechanics!.receipts.filter(r=>r.receiptId!==goldId),forgedGold]}})).toThrow();
 },30000);
 
+/** publicConsumables(162) (seed 27566, tests/fixtures/r3r4-public.ts), except that augment choices skip replay-history
+ * cards. v26 D5 registration (7953c99a, merge 3ce71065) makes that shared route's offers[0] at 2-1 Spoils of War III
+ * (the v25 route restored without battles), whose kill ordinal needs full battle replay once round 10 is settled, so the
+ * ordinary-reforge save below could not be serialized without battles. Same commands otherwise. */
+function historyFreeConsumables():MatchState {
+  const free=(id:string)=>!augmentNeedsHistory(id)&&!id.startsWith('spoils-of-war-')&&!['blood-brothers','salvage-bin','a-change-of-fate','pilfer'].includes(id);
+  let state=createMatch(27566);
+  while(state.round<=10){
+    while(state.phase==='choice'){
+      const c=state.pendingChoice!;state=accepted(selectChoice(state,c.choiceId,c.generation,c.offers.find(id=>id==='bulky-buddies-i')??(c.kind==='augment'?c.offers.find(free)!:c.offers[0])));
+    }
+    if(state.phase==='preparation'){
+      if(state.round===10)while(state.gold>=2){
+        const slot:number=state.shop.slots.findIndex(o=>o.status==='available'&&['irelia','maddie','lux','darius','zyra'].includes(o.definitionId!));
+        const result:MatchCommandResult=slot<0?rerollShop(state):buyUnit(state,slot,state.shop.generation);if(!result.ok)break;state=result.state;
+      }
+      for(const u of state.preparation.units.filter(u=>u.team==='player')){
+        if(u.location.kind==='board'||isAnvil(u.definitionId))continue;
+        const held=state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board');if(held.length>=state.level)break;
+        const col=[3,2,4,1,5,0,6].find(col=>!held.some(u=>u.location.kind==='board'&&u.location.cell.col===col&&u.location.cell.row===7))!;
+        state=accepted(deployMatchUnit(state,u.id,{kind:'board',cell:{col,row:7}}));
+      }
+      state=finish(state);
+    }
+    if(state.round===10)break;
+    if(state.phase==='settlement')state=accepted(nextRound(state,state.round));
+  }
+  const gloves=state.items.filter(i=>i.definitionId==='gloves'&&i.location.kind==='inventory');
+  if(gloves.length>=2)state=accepted(combineItems(state,gloves[0].id,gloves[1].id));
+  while(state.m8.loot.direct.some(d=>d.status==='pending-capacity')){const reserve=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&isSellableUnit(u.definitionId)&&!isAnvil(u.definitionId))!;state=accepted(sellUnit(state,reserve.id));}
+  return state;
+}
+
 it('completed reforger refuses artifacts in inventory or equipped without consuming tool/RNG; ordinary reforge still restores',()=>{
- let state=accepted(nextRound(publicConsumables(162),10));
+ let state=accepted(nextRound(historyFreeConsumables(),10));
+ expect(needsCrownHistory(state)).toBe(false);
  const tool=state.consumables.find(c=>c.definitionId==='reforger')!;
  const definitionId=artifactIds[0];state=accepted(grantMechanicItem(state,{receiptId:'fixture:artifact',source:'fixture',definitionId}));
  const item=state.items.find(i=>i.definitionId===definitionId)!,unit=state.preparation.units.find(u=>u.team==='player')!;

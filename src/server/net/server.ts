@@ -17,6 +17,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { monitorEventLoopDelay } from 'node:perf_hooks';
 import { WebSocketServer, type WebSocket, type RawData } from 'ws';
 import { textLogger, type Logger } from '../log';
+import { createMatchLogObserver } from '../room/match-log';
 import { RoundPerf } from './round-perf';
 import { PlaceholderBattleResolver, startBattleJob, type BattleJob, type BattleResolver, type ReplayCapture } from '../room/battle-resolver';
 import { TwoSidedBattleResolver } from '../room/two-sided-resolver';
@@ -295,6 +296,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     ...(sliceMs === null ? {} : { sliceMs }), seed: options.seed,
     resolver: withReplayWarmup(resolver, () => attendedSeats()), roomId: options.roomId, timings: options.timings,
     queueTimeoutMs: options.queueTimeoutMs ?? null, onStart: opened => attachRoom(opened), onEnd: ended => onRoomEnd(ended), watchdog: options.watchdog ?? null,
+    // The lobby's countdown to the abandoned room's release starts or stops: lobby connections get the new view.
+    onReleaseChange: () => queue.push(() => broadcastLobby()),
     ...(options.carousel ? { carousel: options.carousel } : {}),
     // Bot steps and takeovers fire on the clock; each one becomes a task of the single write queue (§13.3 item 2).
     bots: { ...options.bots, enqueue: task => queue.push(task) },
@@ -496,6 +499,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       const phaseKey = `${state.round}:${state.phase}`;
       if (phaseKey !== lastPhase) { lastPhase = phaseKey; log('info', 'room.phase', { roomId: state.roomId, round: state.round, roundName: state.roundName, phase: state.phase }); }
     };
+    const logMatch = createMatchLogObserver(log);
     let streamPushQueued = false;
     const queueStreamPush = () => {
       if (streamPushQueued) return;
@@ -504,7 +508,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     };
     const unsubscribeState = opened.subscribe(state => {
       // Final push and the current room task finish before reporting the round.
-      logPhase(state); scheduleSpotCheck(opened, state);
+      logPhase(state); logMatch(state); scheduleSpotCheck(opened, state);
       if (opened.hasCombatStreams) queueStreamPush();
       else queue.push(() => timed('push', () => pushAll(state)));
       if (state.phase === 'ended') queue.push(() => perf.flush());
@@ -585,7 +589,8 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
     const fault = state.fault;
     log(fault ? 'warn' : 'info', 'room.ended', { roomId: state.roomId, round: state.round, roundName: state.roundName, result: fault ? 'fault' : 'ranking',
       fault: fault?.kind, detail: fault ? toPlayerFault(fault).detail : undefined });
-    if (!fault) return;
+    // The lobby's "对局正在进行" line goes away with the match.
+    if (!fault) { queue.push(() => broadcastLobby()); return; }
     queue.push(() => {
       if (room !== ended) return;
       pushAll(ended.state);
@@ -729,7 +734,7 @@ export function createGameServer(options: GameServerOptions): Promise<GameServer
       if (!seat) return fail(commandId, 'unknown-seat');
       if (message.round !== state.round) return fail(commandId, 'stale-round', `room is at round ${state.round}`);
       if (message.seatRevision !== seat.seatRevision) return fail(commandId, 'seat-revision-mismatch', `seat is at revision ${seat.seatRevision}`);
-      const result = current.handle(session.seatId, message.command);
+      const result = current.handlePlayer(session.seatId, message.command);
       if (!result.ok) return fail(commandId, result.reason);
       // §18.8 03: a tool use answers with its own receipt kind and only the whitelisted operation events.
       return message.command.type === 'useConsumable'

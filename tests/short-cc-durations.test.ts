@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { stepCombat, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
-import { AMBESSA_SLAM_STUN_TICKS, VI_ROW_KNOCKUP_TICKS } from '../src/simulation/combat-g2-2';
+import { AMBESSA_SLAM_STUN_TICKS, VI_ROW_KNOCKUP_TICKS, VI_SLAM_TICKS } from '../src/simulation/combat-g2-2';
 import { battle, unit, freeze } from './combat-helpers';
 
 const caster = (definitionId: string, abilityId: string, col: number, row: number, patch: Partial<CombatUnit> = {}) =>
@@ -27,7 +27,9 @@ describe('short crowd-control durations (user 10-24)', () => {
   });
   it('Vi row shockwave knocks the other enemies in the target row up for exactly 10 ticks', () => {
     expect(VI_ROW_KNOCKUP_TICKS).toBe(10);
-    const state = cast([caster('vi', 'vi-ability', 3, 6), dummy('t', 3, 3), dummy('row', 5, 3), dummy('off', 5, 2)]);
+    // The row shockwave lands at Vi's slam, VI_SLAM_TICKS after the cast (user 2026-11-11).
+    let state = cast([caster('vi', 'vi-ability', 3, 6), dummy('t', 3, 3), dummy('row', 5, 3), dummy('off', 5, 2)]);
+    for (let n = 0; n < VI_SLAM_TICKS; n++) state = stepCombat(state).state;
     const knock = stunOf(state, 'row');
     expect(knock.expiresAtTick! - knock.startsAtTick!).toBe(10);
     expect((state.units.find(u => u.id === 'off')!.statuses ?? []).some(s => s.kind === 'stun')).toBe(false);

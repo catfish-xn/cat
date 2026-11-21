@@ -5,7 +5,7 @@
  * in the branch of the result (a draw settles as a loss), whenever gold and streak did not change in between.
  */
 import { describe, expect, it } from 'vitest';
-import { toSeatPrivateView } from '../../src/server/room/projection';
+import { toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import type { RoomState } from '../../src/server/room/types';
 import { createMatch, previewRoundEconomy, type RoundEconomyPreview } from '../../src/server-entry';
@@ -25,19 +25,40 @@ describe('G5 economyPreview in the private seat view', () => {
   });
 
   it('equals the settled incomeBreakdown item by item over a match into overtime (1-x opening, 2-1, overtime, 10-gold steps)', () => {
-    // Public seed 0 reaches overtime-3 with the combined v25 pool.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 0 });
+    // v26 D5 pool (7953c99a, first bad at its integration merge 3ce71065): seed 4 now ends at 6-6 without overtime;
+    // public seed 35 reaches overtime (was seed 4, picked for the 2026-10-29 PvE damage rule).
+    const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 35 });
     /** Per seat: its preview as last projected before its next round record, with the streak it was computed on. */
     const last = new Map<string, { preview: RoundEconomyPreview | null; streak: MatchState['streak']; round: number }>();
     const settled = new Map<string, number>();
     const compared: { roundId: string; gold: number; branch: 'ifWin' | 'ifLoss' }[] = [];
     const mismatches: string[] = [];
+    const publicMismatches: string[] = [], publicCoverage = new Set<string>();
     const observe = (state: RoomState) => {
+      // V26: every publication, including eliminated spectators and final ranking, reads the same committed streak as HP.
+      const viewer = state.seats.find(seat => !seat.alive) ?? state.seats[0]!;
+      const view = toPlayerView(state, viewer.seatId, clock.now());
+      for (const entry of [...view.seats, ...(view.ranking ?? [])]) {
+        const seat = state.seats.find(seat => seat.seatId === entry.seatId)!;
+        if (JSON.stringify(entry.streak) !== JSON.stringify(seat.streak) || entry.hp !== seat.hp) {
+          publicMismatches.push(`${state.roundId}:${state.phase}:${entry.seatId}`);
+        }
+        // A rules record can precede the room commit (empty-board PvE or live catch-up). Only a committed one
+        // is allowed to replace the public streak ledger; keep checking its value against the rules' result.
+        const result = seat.match.roundResults.at(-1);
+        if (result && state.settlements.includes(`${state.roomId}:round-${result.round}`)) expect(entry.streak).toEqual(result.streakAfter);
+        if (!seat.alive) publicCoverage.add('eliminated');
+      }
+      if (!viewer.alive) publicCoverage.add('spectator');
+      if (view.ranking) publicCoverage.add('ranking');
       for (const seat of state.seats) {
         const match = seat.match, records = match.roundResults.length;
         if (records > (settled.get(seat.seatId) ?? 0)) {
           settled.set(seat.seatId, records);
           const result = match.roundResults.at(-1)!, before = last.get(seat.seatId);
+          publicCoverage.add(result.roundKind); publicCoverage.add(result.result);
+          if (result.streakBefore.kind === result.streakAfter.kind && result.streakAfter.count > result.streakBefore.count) publicCoverage.add(`${result.streakAfter.kind}-continued`);
+          if (result.streakBefore.kind !== null && result.streakBefore.kind !== result.streakAfter.kind) publicCoverage.add('interrupted');
           if (before && before.round === result.round) {
             if (result.result === 'supply') expect(before.preview).toBeNull();
             else if (before.preview && before.preview.gold === result.goldBefore && before.streak.kind === result.streakBefore.kind && before.streak.count === result.streakBefore.count) {
@@ -62,6 +83,8 @@ describe('G5 economyPreview in the private seat view', () => {
     unsubscribe();
     expect(room.state.phase).toBe('ended');
     expect(mismatches).toEqual([]);
+    expect(publicMismatches).toEqual([]);
+    for (const covered of ['pve', 'pvp', 'supply', 'playerWin', 'enemyWin', 'draw', 'win-continued', 'loss-continued', 'interrupted', 'eliminated', 'spectator', 'ranking']) expect(publicCoverage.has(covered), `public streak coverage: ${covered}`).toBe(true);
     const ids = new Set(compared.map(entry => entry.roundId));
     for (const id of ['1-2', '2-1']) expect(ids.has(id), id).toBe(true);
     expect([...ids].some(id => id.startsWith('overtime-'))).toBe(true);

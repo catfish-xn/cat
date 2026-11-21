@@ -9,8 +9,17 @@ import { needsAugmentHistory } from '../src/simulation/augment-history';
 import { needsCrownHistory } from '../src/simulation/crown-history';
 import { b1OfferCacheKey } from './fixtures/b1-offer-cache-key';
 
-/** H12's public fielded 4-2 route, with a validated checkpoint at 4-1. */
-export const H12_MAX_CAP_SEED = 16;
+/** H12's public fielded 4-2 route, with a validated checkpoint at 4-1.
+ * Seed 16's opening is prismatic-party and it picks im-the-carry-now. That golem cannot be
+ * benched or sold, so the empty-board concession throws invalid-location. Seed 1 reaches 4-2
+ * as gold, and Max Cap is prismatic and node-banned off 2-1/3-2, so it is not a candidate.
+ * Seed 4 is prismatic with no golem, but the fielded route arrives at 13 HP and an empty
+ * stage-4 loss is 14, so the concession ends the match and nextRound is wrong-phase.
+ * Seed 8 (opening wind-up-monkey) is prismatic on the same worth-the-wait-ii /
+ * clockwork-accelerator priorities: level 5, 167 gold, 16 HP (4-1 has 154 gold and 14 XP),
+ * six benchable units and no golem. The same empty loss leaves 2 HP. 5→8 is 90 XP
+ * (23 purchases, 92 gold). */
+export const H12_MAX_CAP_SEED = 8;
 
 /** 14.24 stage tags (augment-stage-bans.ts): the augment rounds a card can be offered at. */
 export function offeredAt(id: string, node: '2-1' | '3-2' | '4-2'): boolean {
@@ -49,7 +58,8 @@ export function firstNodeSeed(id: string, limit = 10000, from = 0, fielded = fal
 export const TRIFECTA_NAMI_REVIEW_SEED = 257 as const;
 
 export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'; readonly seed: number; readonly fielded?: true; readonly rerolls?: number | readonly number[]; readonly rerollSlots?: readonly number[] }>> = {
-  'all-that-shimmers-plus':{node:'3-2',seed:3},
+  // v26 D5 (7953c99a) pool: seed 3 (old value) now offers mentorship-ii/big-grab-bag/two-much-value; 4 is the first seed with it unrerolled.
+  'all-that-shimmers-plus':{node:'3-2',seed:4},
   'roll-the-dice':{node:'3-2',seed:7,rerolls:[0]},
   'diversified-portfolio-plus':{node:'3-2',seed:6},
   'contested':{node:'3-2',seed:12},
@@ -65,11 +75,14 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'trait-tracker':{node:'3-2',seed:20,rerolls:[0,1]},
   'sponging':{node:'3-2',seed:16,rerolls:[0,1,2]},
   'artifactory':{node:'3-2',seed:13,rerolls:[0,1,2]},
-  'salvage-bin-plus':{node:'3-2',seed:3,rerolls:[0,1,2]},
+  // D5 310-card pool: seed 3 after rerolls 0/1/2 offered clockwork-accelerator, contested, bad-luck-protection.
+  // First seed in 0..120 whose reachRound('3-2') offer contains salvage-bin-plus within those slot rerolls is 27, after rerolling slot 0.
+  'salvage-bin-plus':{node:'3-2',seed:27,rerolls:[0]},
   'a-golden-find':{node:'4-2',seed:11,fielded:true,rerolls:[0,1,2]},
   'backup':{node:'3-2',seed:1},
   'bad-luck-protection':{node:'3-2',seed:15,rerolls:[0]},
-  'belt-overflow':{node:'3-2',seed:29},
+  // v26 (PvE loot carryover c684c3ec / D5 3ce71065): seed 29 now offers pandoras-items-iii at 3-2; 47 is the first history-free reachRound seed offering it (v25: 29).
+  'belt-overflow':{node:'3-2',seed:47},
   'big-grab-bag':{node:'3-2',seed:12,rerolls:[0]},
   'blazing-soul-i':{node:'3-2',seed:4},
   'blazing-soul-ii':{node:'3-2',seed:0,rerolls:[0]},
@@ -79,7 +92,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'bulky-buddies-ii':{node:'3-2',seed:52,rerolls:[0,1]},
   'bulky-buddies-iii':{node:'3-2',seed:21},
   'calculated-enhancement':{node:'3-2',seed:5},
-  "call-to-chaos":{node:'4-2',seed:576,fielded:true},
+  // v26: PvE loss damage (54557be5) and the 14.24 neutrals end seed 576's fielded route at 4-1; 115 is the first seed whose
+  // 4-2 outcome is XP and whose unscripted and scripted fielded routes both reach 4-2 history-free (v25: 576).
+  "call-to-chaos":{node:'4-2',seed:115,fielded:true},
   'climb-the-ladder-i':{node:'3-2',seed:76},
   'climb-the-ladder-ii':{node:'3-2',seed:15,rerolls:[0,1]},
   'coronation':{node:'3-2',seed:5,rerolls:2},
@@ -91,7 +106,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'epoch-plus':{node:'3-2',seed:11},
   'eye-for-an-eye-plus':{node:'3-2',seed:17,rerolls:[0]},
   'find-your-center':{node:'3-2',seed:1,rerolls:[0]},
-  'geniuses':{node:'4-2',seed:16,fielded:true,rerolls:3},
+  // v26 D5 (7953c99a) pool: fielded seed 16 (old value) ends with sword-overflow/...; 20 is the first fielded seed from 0
+  // offering Geniuses after the same three slot rerolls.
+  'geniuses':{node:'4-2',seed:20,fielded:true,rerolls:3},
   'golemify':{node:'3-2',seed:18,rerolls:[0]},
   'item-collector-i':{node:'3-2',seed:40},
   'item-collector-ii':{node:'3-2',seed:4},
@@ -106,7 +123,9 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'noble-sacrifice':{node:'3-2',seed:31,rerolls:[0,1,2]},
   'one-buff-two-buff':{node:'3-2',seed:16,rerolls:[0,1]},
   'one-two-five':{node:'4-2',seed:59,fielded:true},
-  'pair-of-fours':{node:'4-2',seed:63,fielded:true},
+  // v26: D5 (3ce71065) makes seed 63's fielded route take loot-explosion/titanic-titan (history owners), so every save
+  // replays the whole game (~5 s serialize); 178 offers it at 4-2 on both the fielded and the cold PvE-only route history-free (v25: 63).
+  'pair-of-fours':{node:'4-2',seed:178,fielded:true},
   'phreaky-friday-plus':{node:'3-2',seed:44,rerolls:[0,1]},
   'piercing-lotus-i':{node:'3-2',seed:15},
   'piercing-lotus-ii':{node:'3-2',seed:0,rerolls:[0,1,2]},
@@ -117,12 +136,14 @@ export const STAGE_SEEDS: Readonly<Record<string, { readonly node: '3-2' | '4-2'
   'savage-revenge':{node:'3-2',seed:62,fielded:true,rerolls:[0,1]},
   'sisters':{node:'4-2',seed:3,fielded:true},
   'support-mining-plus':{node:'3-2',seed:1},
-  'sword-overflow':{node:'3-2',seed:16,rerolls:3},
+  // v26: carried PvE loot fills seed 16's bench, so reachRound's empty board fails (invalid-location); first history-free seed is 21 (v25: 16).
+  'sword-overflow':{node:'3-2',seed:21,rerolls:3},
   'teaming-up-i':{node:'3-2',seed:6,rerolls:[0,1,2]},
   'teaming-up-ii':{node:'4-2',seed:60,fielded:true,rerolls:[0,1,2]},
   'the-golden-egg':{node:'4-2',seed:27,fielded:true,rerolls:[0]},
   'trifecta-i':{node:'3-2',seed:39},
-  'trifecta-ii':{node:'3-2',seed:57,rerolls:3},
+  // v26: seed 57 no longer offers it within three rerolls; first history-free seed is 165 after one reroll (v25: 57, rerolls 3).
+  'trifecta-ii':{node:'3-2',seed:165,rerolls:1},
   'unlikely-duo':{node:'4-2',seed:1,fielded:true,rerolls:[0]},
   'wand-overflow':{node:'3-2',seed:0},
   'wealthy-rehab-i':{node:'3-2',seed:6},
@@ -209,5 +230,7 @@ export const batch5S3bSeed=(id:string):number=>firstNodeSeed(id,10000);
 /** Fixed real-room routes for history augments; no seed scan in regression tests. */
 export const HISTORY_AUGMENT_ROOM_ROUTES = {
   'a-golden-find': { seed: 3, seatId: 's0', node: '4-2' },
-  'forbidden-magic': { seed: 3, seatId: 's1', node: '3-2' },
+  // v26 D5 pool (7953c99a): seed 3 s1 now auto-takes the history augment scoreboard-scrapper at 2-1, so its
+  // history (and restore replay) starts before Cabal; s2 auto-takes clear-mind (no history). Was seatId 's1'.
+  'forbidden-magic': { seed: 3, seatId: 's2', node: '3-2' },
 } as const;

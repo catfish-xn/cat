@@ -1,152 +1,111 @@
 import { describe, expect, it } from 'vitest';
+import { readFile } from 'node:fs/promises';
+import { resolve } from 'node:path';
 import { Vector3 } from 'three';
 // @ts-expect-error Offline Node module.
-import { boardGroundSpan, alignBoardGroundZ, alignBoardGroundXZ } from '../scripts/assets3d/boards-alignment.mjs';
-// @ts-expect-error Offline Node module.
 import { boardAlignment } from '../scripts/assets3d/boards-build.mjs';
+// @ts-expect-error Offline Node module.
+import { alignmentScaleFromWalkable } from '../scripts/assets3d/boards-ground-measure.mjs';
+// @ts-expect-error Offline Node module.
+import { BOARD_PICKS } from '../scripts/assets3d/boards-plan.mjs';
 import { arenaTransform } from '../src/rendering/three-mode/board-arena';
 import { hexCenter } from '../src/rendering3d/picking';
 
-// Entirely synthetic: transformed ground, four walls, and unrelated scenery.
-function geometry() {
-  const matrix = [2, 0, 0, 0, 0, 1, 0, 0, 0, 0, 3, 0, 17, 4, 8, 1];
-  const mesh = (material: string, points: number[][]) => ({
-    vertices: points.map(p => ({ p })), indices: points.map((_, i) => i), matrix,
-    ranges: [{ material, start: 0, count: points.length }],
-  });
-  return { meshes: [
-    mesh('synthetic/BattleField_A_MAT', [
-      [-20, 0, -30], [20, 0, -30], [20, 0, 30], [-20, 0, -30], [20, 0, 30], [-20, 0, 30],
-    ]),
-    mesh('synthetic/Bench_A_MAT', [-24, 26].flatMap(z => [
-      [-20, -5, z], [20, -5, z], [20, 5, z], [-20, -5, z], [20, 5, z], [-20, 5, z],
-    ])),
-    mesh('synthetic/scenery', [[-1000, 0, -1000], [1000, 0, -1000], [0, 0, 1000]]),
-    // Slanted side walls: their bounds are not the centre-ray intersections.
-    mesh('synthetic/Bench_A_MAT', [-16, 18].flatMap(x => [
-      [x - 2.5, -5, -25], [x + 2.5, -5, 25], [x + 2.5, 5, 25],
-      [x - 2.5, -5, -25], [x + 2.5, 5, 25], [x - 2.5, 5, -25],
-    ])),
-  ] };
-}
+/** Synthetic locators: x/z steps differ and x step ≠ z step × √3/1.5. */
+const first: [number, number, number] = [0, 4, 0];
+const center: [number, number, number] = [13, 4, 17.5];
+const target = { radius: 6, origin: { x: 80, y: -20 } };
 
-const center = [17, 4, 8];
-const legacy = () => boardAlignment([4, 4, -7], center, { radius: 6, origin: { x: 80, y: -20 } });
-
-describe('board ground row alignment (synthetic only)', () => {
-  it('measures transformed ground/wall triangles rather than decorative bounds', () => {
-    const span = boardGroundSpan(geometry(), center);
-    expect(span.floor).toEqual([-82, 98]);
-    expect(span.min).toBeCloseTo(-64);
-    expect(span.max).toBeCloseTo(86);
-    const side = boardGroundSpan(geometry(), center, 'x');
-    expect(side.floor).toEqual([-23, 57]);
-    expect(side.min).toBeCloseTo(-15);
-    expect(side.max).toBeCloseTo(53);
+describe('board locator alignment (synthetic only)', () => {
+  it('derives independent x/z scale from BoardLocator and BoardCenterLocator', () => {
+    const a = boardAlignment(first, center, target);
+    const stepX = (center[0] - first[0]) / 3.25;
+    const stepZ = (center[2] - first[2]) / 3.5;
+    expect(stepX).toBeCloseTo(4);
+    expect(stepZ).toBeCloseTo(5);
+    expect(stepX).not.toBeCloseTo(stepZ * (Math.sqrt(3) / 1.5));
+    expect(a.status).toBe('locator-aligned');
+    expect(a.scale[0]).toBeCloseTo((Math.sqrt(3) * target.radius) / stepX);
+    expect(a.scale[1]).toBe(a.scale[0]);
+    expect(a.scale[2]).toBeCloseTo(-(1.5 * target.radius) / stepZ);
+    expect(a.sourceSteps).toEqual([stepX, stepZ]);
+    expect(a).not.toHaveProperty('sourceGround');
+    expect(a).not.toHaveProperty('sourceGroundX');
   });
 
   it.each([
     { hexRadius: 6, origin: { x: 80, y: -20 } },
     { hexRadius: 15, origin: { x: -100, y: 110 } },
-  ])('fits all 56 centres and the full staggered envelope to four walls on %o', frame => {
-    const g = geometry(), old = legacy();
-    const spans = { x: boardGroundSpan(g, center, 'x'), z: boardGroundSpan(g, center) };
-    const a = alignBoardGroundXZ(old, spans), t = arenaTransform(a, frame);
-    // Independent fixture facts: X walls [-15,53], Z walls [-64,86].
-    // 7.5 widths across X; 12.5 radii across Z. Wall midpoints differ from locator.
-    const width = 68 / 7.5, sourceRadius = 12;
-    expect(a.sourceSteps).toEqual([width, 18]);
-    expect(a.sourceLocator).toEqual(old.sourceFirstCell);
-    expect(a.scale[1]).toBe(old.scale[1]);
-    expect(a.offset[1]).toBe(old.offset[1]);
+  ])('maps all 56 source cell centres through arenaTransform onto hexCenter on %o', frame => {
+    const a = boardAlignment(first, center, target);
+    const [stepX, stepZ] = a.sourceSteps;
+    const t = arenaTransform(a, frame);
     for (let row = 0; row < 8; row++) for (let col = 0; col < 7; col++) {
-      const x = -15 + width / 2 + width * (col + (row % 2) / 2);
-      const p = new Vector3(-x, 4, -52 + row * 18).multiply(t.scale).add(t.position);
+      const sourceX = first[0] + stepX * (col + (row % 2) / 2);
+      const sourceZ = first[2] + stepZ * row;
+      const p = new Vector3(-sourceX, first[1], sourceZ).multiply(t.scale).add(t.position);
       const cell = hexCenter({ col: 6 - col, row: 7 - row },
         { rows: 8, columns: 7, radius: frame.hexRadius, origin: frame.origin });
       expect(p.x).toBeCloseTo(cell.x);
       expect(p.z).toBeCloseTo(cell.z);
       expect(p.y).toBeCloseTo(0);
     }
-    const runtimeWidth = Math.sqrt(3) * frame.hexRadius;
-    const leftWall = t.position.x - spans.x.max * t.scale.x;
-    const rightWall = t.position.x - spans.x.min * t.scale.x;
-    expect(frame.origin.x - leftWall).toBeCloseTo(runtimeWidth / 2);
-    expect(rightWall - (frame.origin.x + runtimeWidth * 6.5)).toBeCloseTo(runtimeWidth / 2);
-    expect(rightWall - leftWall).toBeCloseTo(runtimeWidth * 7.5);
-    expect(t.position.z + spans.z.min * t.scale.z - (frame.origin.y + 10.5 * frame.hexRadius)).toBeCloseTo(frame.hexRadius);
-    expect(frame.origin.y - (t.position.z + spans.z.max * t.scale.z)).toBeCloseTo(frame.hexRadius);
-    expect(a.sourceFirstCell[0] - spans.x.min).toBeCloseTo(width / 2);
-    expect(a.sourceFirstCell[2] - spans.z.min).toBeCloseTo(sourceRadius);
-    expect(a.deformation.scaleRatios.x).toBeCloseTo(a.scale[0] / old.scale[0]);
-    expect(a.deformation.scaleRatios.z).toBeCloseTo(a.scale[2] / old.scale[2]);
-    expect(a.deformation.xOverZ).toBeCloseTo(a.scale[0] / Math.abs(a.scale[2]));
-    expect(a.sourceGroundX.policy).toContain('not recovered native cell centres');
   });
 
-  it.each([
-    { hexRadius: 6, origin: { x: 80, y: -20 } },
-    { hexRadius: 15, origin: { x: -100, y: 110 } },
-  ])('places all rows and leaves exactly one hex radius inside both walls on %o', frame => {
-    const span = boardGroundSpan(geometry(), center), old = legacy();
-    const alignment = alignBoardGroundZ(old, span);
-    const t = arenaTransform(alignment, frame);
-    const sourceRadius = 12; // 150-unit wall span / 12.5 radii
-    expect(alignment.sourceSteps[1]).toBeCloseTo(18);
-    expect(alignment.scale.slice(0, 2)).toEqual(old.scale.slice(0, 2));
-    expect(alignment.offset.slice(0, 2)).toEqual(old.offset.slice(0, 2));
-    // These source centres are independently specified by the synthetic fixture.
-    for (let row = 0; row < 8; row++) for (let col = 0; col < 7; col++) {
-      const sourceX = old.sourceFirstCell[0] + old.sourceSteps[0] * (col + (row % 2) / 2);
-      const p = new Vector3(-sourceX, 4, -52 + row * 18).multiply(t.scale).add(t.position);
-      const cell = hexCenter({ col: 6 - col, row: 7 - row },
-        { rows: 8, columns: 7, radius: frame.hexRadius, origin: frame.origin });
-      expect(p.x).toBeCloseTo(cell.x);
-      expect(p.z).toBeCloseTo(cell.z);
-      expect(p.y).toBeCloseTo(0);
-    }
-    const nearWall = t.position.z + span.min * t.scale.z;
-    const farWall = t.position.z + span.max * t.scale.z;
-    const lastRow = frame.origin.y + 7 * 1.5 * frame.hexRadius;
-    expect(nearWall - lastRow).toBeCloseTo(frame.hexRadius);
-    expect(frame.origin.y - farWall).toBeCloseTo(frame.hexRadius);
-    // Old locator interpolation passes its own cell-mapping test but misses this boundary.
-    const previous = arenaTransform(old, frame);
-    expect(previous.position.z + span.min * previous.scale.z - lastRow).toBeGreaterThan(frame.hexRadius);
-    expect(alignment.sourceFirstCell[2] - span.min).toBeCloseTo(sourceRadius);
-    expect(alignment.sourceGround.policy).toContain('not recovered native cell centres');
+  it('rejects invalid locator geometry', () => {
+    expect(() => boardAlignment([0, 0, 0], [0, 0, 0], target)).toThrow('invalid-board-locators');
+    expect(() => boardAlignment([5, 0, 0], [3, 0, 0], target)).toThrow('invalid-board-locators');
+    expect(() => boardAlignment([0, 0, 0], [0, 0, -1], target)).toThrow('invalid-board-locators');
   });
 
-  it('ignores unused vertices and out-of-range wall faces', () => {
-    const g = geometry();
-    g.meshes[0].vertices.push({ p: [0, 0, -100000] });
-    g.meshes[1].vertices.push(...Array.from({ length: 3 }, () => ({ p: [0, 0, -100000] })));
-    expect(boardGroundSpan(g, center).min).toBeCloseTo(-64);
-    g.meshes[3].vertices.push({ p: [-100000, 0, 0] });
-    expect(boardGroundSpan(g, center, 'x').min).toBeCloseTo(-15);
+  it('applies optional per-board alignmentScale uniformly to locator-aligned axes', () => {
+    const base = boardAlignment(first, center, target);
+    const scaled = boardAlignment(first, center, target, { alignmentScale: 1.25, alignmentEvidence: { method: 'synthetic' } });
+    expect(scaled.alignmentScale).toBe(1.25);
+    expect(scaled.scale[0]).toBeCloseTo(base.scale[0] * 1.25);
+    expect(scaled.scale[2]).toBeCloseTo(base.scale[2] * 1.25);
+    expect(scaled.sourceSteps).toEqual(base.sourceSteps);
+    expect(scaled.status).toBe('locator-aligned');
   });
 
-  it('requires both side walls and a ground section; front/back walls do not substitute', () => {
-    const g = geometry(), spans = { x: boardGroundSpan(g, center, 'x'), z: boardGroundSpan(g, center) };
-    expect(() => boardGroundSpan({ meshes: g.meshes.slice(1) }, center, 'x')).toThrow('missing-board-ground-x-section');
-    expect(() => boardGroundSpan({ meshes: g.meshes.slice(0, 3) }, center, 'x')).toThrow('missing-board-ground-x-walls');
-    g.meshes[3].ranges[0].count = 6; // Only one side remains.
-    expect(() => boardGroundSpan(g, center, 'x')).toThrow('missing-board-ground-x-walls');
-    expect(() => boardGroundSpan(g, [17, 4, 10000], 'x')).toThrow('missing-board-ground-x-section');
-    // A mislabeled decorative rock must not replace missing wall evidence.
-    g.meshes[3].ranges[0].material = 'synthetic/Rocks_A_MAT';
-    expect(() => boardGroundSpan(g, center, 'x')).toThrow('missing-board-ground-x-walls');
-    for (const x of [undefined, { min: 5, max: 5 }, { min: 6, max: 5 }, { min: NaN, max: 5 }])
-      expect(() => alignBoardGroundXZ(legacy(), { ...spans, x })).toThrow('invalid-board-ground-x-span');
-    expect(() => alignBoardGroundXZ(legacy(), spans, 1)).toThrow('invalid-board-ground-x-span');
+  it('defaults alignmentScale manifest field to literal default when omitted', () => {
+    const a = boardAlignment(first, center, target);
+    expect(a.alignmentScale).toBe('default');
   });
 
-  it('rejects unavailable source evidence instead of silently using an arena bbox', () => {
-    const g = geometry();
-    expect(() => boardGroundSpan({ meshes: g.meshes.slice(1) }, center)).toThrow('missing-board-ground-section');
-    expect(() => boardGroundSpan({ meshes: [g.meshes[0]] }, center)).toThrow('missing-board-ground-walls');
-    expect(() => boardGroundSpan(g, [10000, 4, 8])).toThrow('missing-board-ground-section');
-    for (const span of [{ min: 5, max: 5 }, { min: 6, max: 5 }, { min: NaN, max: 5 }])
-      expect(() => alignBoardGroundZ(legacy(), span)).toThrow('invalid-board-ground-span');
+  it('rejects non-positive alignmentScale', () => {
+    expect(() => boardAlignment(first, center, target, { alignmentScale: 0 })).toThrow('invalid-board-alignment-scale');
+  });
+
+  it('alignmentScaleFromWalkable sets f so implied cells times f matches target', () => {
+    const implied = 9.07;
+    const targetCells = 7.2;
+    const f = alignmentScaleFromWalkable({ impliedWalkableCellsAtLocatorScale: implied }, targetCells);
+    expect(f).toBeCloseTo(targetCells / implied);
+    expect(Math.abs(implied * f - targetCells)).toBeLessThan(0.05);
+  });
+
+  it('board-default uses screenshot stone-rail implied width for alignmentScale', () => {
+    const pick = BOARD_PICKS.find((p: { key: string }) => p.key === 'board-default');
+    const implied = 8.48;
+    const targetCells = 7.2;
+    expect(pick?.alignmentEvidence?.kind).toBe('screenshot');
+    expect(pick?.alignmentEvidence?.impliedWalkableCellsAtLocatorScale).toBe(implied);
+    expect(pick?.alignmentScale).toBeCloseTo(targetCells / implied);
+    expect(Math.abs(implied * pick!.alignmentScale! - targetCells)).toBeLessThan(0.05);
+    expect(pick?.alignmentEvidence?.rayInnerWallCells).toBeCloseTo(9.07, 2);
+  });
+
+  it('does not reintroduce ground-span fitting in boards-build', async () => {
+    const source = await readFile(resolve('scripts/assets3d/boards-build.mjs'), 'utf8');
+    expect(source).not.toMatch(/alignBoardGround/);
+    expect(source).not.toMatch(/boardGroundSpan/);
+    expect(source).not.toMatch(/boards-alignment\.mjs/);
+    expect(source).not.toMatch(/legacy estimate/i);
+    expect(source).not.toMatch(/measured ground evidence/);
+    const summary = await readFile(resolve('scripts/assets3d/boards-summary.mjs'), 'utf8');
+    expect(summary).toMatch(/deformation:scene\.alignment\.deformation\?\?null/);
+    expect(summary).not.toMatch(/full hex envelopes/);
+    expect(summary).not.toMatch(/ground\/wall sections/);
   });
 });

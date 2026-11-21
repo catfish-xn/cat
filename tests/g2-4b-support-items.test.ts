@@ -166,7 +166,11 @@ describe('G2-4b in-combat programs', () => {
     };
     const vladimir = caster('vladimir');
     expect(vladimir.events.filter(e => e.type === 'packetDamage').map(e => e.type === 'packetDamage' && e.outcome.context.damageType)).toEqual(['magic']);
-    expect([statusesOf(vladimir.state, 'e1', 'shred').length, statusesOf(vladimir.state, 'e1', 'sunder').length]).toEqual([1, 1]);
+    // e1/e2/e3 tie for Vladimir's single-target cast; targeting P1 (8106acee, merged c64a756a) breaks the tie with
+    // combat RNG, so the magic packet now lands on e2 (v25: e1). Only the actual victim is shredded and sundered.
+    expect(vladimir.events.filter(e => e.type === 'packetDamage').map(e => e.type === 'packetDamage' && e.outcome.context.targetId)).toEqual(['e2']);
+    expect(['e1', 'e2', 'e3', 'e4'].map(id => [statusesOf(vladimir.state, id, 'shred').length, statusesOf(vladimir.state, id, 'sunder').length]))
+      .toEqual([[0, 0], [1, 1], [0, 0], [0, 0]]);
     const zyra = caster('zyra').state;
     expect(['e1', 'e2', 'e3', 'e4'].map(id => statusesOf(zyra, id, 'sunder').length)).toEqual([1, 1, 1, 0]);
   });

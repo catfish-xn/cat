@@ -1,13 +1,18 @@
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
+import { hexDistance } from '../src/simulation/board';
 import { describe,it,expect } from 'vitest';
-import { wearing,enemy,run,packets,heals } from './fixtures/m8-b4-items';
+import { wearing,enemy,run,packets,heals,LANDING } from './fixtures/m8-b4-items';
 import { stepCombat } from '../src/simulation/combat';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { readCombatStats } from '../src/simulation/combat-s13';
 import { vi } from 'vitest';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
+// #693 (2026-11-16): the wearer is Zyra; her vines (and their crit roll) land CAST_WINDUP_TICKS.zyra after her cast.
+const LAND=1+CAST_WINDUP_TICKS.zyra,skill=(events:Parameters<typeof packets>[0])=>packets(events).filter(e=>e.source.sourceKind==='ability');
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 describe('B4 tear recipes: hand vectors and real effects',()=>{
- it('blue:completed1000 mana cast refunds10;kill buffs5% for160ticks',()=>{const r=run(wearing('blue-buff',{mana:1000}),1,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(r.p.mana).toBe(10);expect(r.p.mechanismState?.statuses.flatMap(g=>g.contributions).some(c=>c.application.modifier?.stat==='damageAmp'&&c.expiresAtTick===161)).toBe(true);expect(packets(r.events)[0].hpDamage).toBe(100);});
+ it('blue:completed1000 mana cast refunds10;kill buffs5% for160ticks',()=>{const cast=run(wearing('blue-buff',{mana:1000}),1,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(cast.p.mana).toBe(10);const r=run(wearing('blue-buff',{mana:1000}),LAND,[enemy('e',1,3,{hp:100}),enemy('e2',2,3)]);expect(r.p.mechanismState?.statuses.flatMap(g=>g.contributions).some(c=>c.application.modifier?.stat==='damageAmp'&&c.expiresAtTick===161+CAST_WINDUP_TICKS.zyra)).toBe(true);expect(skill(r.events)[0].hpDamage).toBe(100);});
  it('vow:positive hit at40% grants250 shield+20 permanent resists,armor20+20=40',()=>{const r=run(wearing('protectors-vow',{hp:400,cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(r.p.shield).toBe(250);expect(readCombatStats(r.p,r.state)).toMatchObject({armor:40,magicResist:20});});
  it('helm front:armor40 mitigates100→71;gain1 incoming+floor(1+71×.03)=3 mana on top15',()=>{const r=run(wearing('adaptive-helm',{cooldownTicks:1000}),1,[enemy('e',1,3,{cooldownTicks:0,attackDamage:100})]);expect(packets(r.events,'e')[0].hpDamage).toBe(71);expect(r.p.mana).toBe(19);expect(readCombatStats(r.p,r.state).magicResist).toBe(60);});
  it('helm back:AP100+10+15=125;tick60 adds10 mana,original branch survives movement',()=>{const r=run(wearing('adaptive-helm',{cell:{col:1,row:6},startingCell:{col:1,row:6},cooldownTicks:1000,attackRange:1,moveCooldownTicks:0}),60,[enemy('e',1,1)]);expect(r.events.some(e=>e.type==='movement'&&e.unitId==='p'&&e.to.row<=5)).toBe(true);expect(r.p.cell.row).toBeLessThanOrEqual(5);expect(readCombatStats(r.p,r.state)).toMatchObject({abilityPower:125,magicResist:20,armor:0});expect(r.p.mana).toBe(25);});
@@ -29,16 +34,28 @@ describe('B4 tear recipes: hand vectors and real effects',()=>{
   expect(damage).toEqual([100,90,90,100]);
  });
  it('blue kill500Bps makes115→120 damage;second kill refreshes expiry,159/160 boundary remains half-open',()=>{
-  const first=run(wearing('blue-buff',{baseCritChanceBps:0,targetId:'a'}),1,[enemy('a',1,3,{hp:100}),enemy('b',2,3),enemy('z',3,3)]);
+  // Ranged attack landing (pure-result re-pin, Fable 11-18): the wearer stays ranged, so each kill — and so each expiry and its
+  // half-open boundary — moves later by exactly that shot's flight (rangedAttackFlightTicks of its distance); both sides of
+  // the boundary are still asserted. Before landing: kill on tick 1 → 161; second kill on tick 2 → 162; hits at 161 / 162.
+  const fa=rangedAttackFlightTicks(1),fb=rangedAttackFlightTicks(2),fz=rangedAttackFlightTicks(hexDistance({col:1,row:4},{col:3,row:3}));
+  const first=run(wearing('blue-buff',{baseCritChanceBps:0,targetId:'a'}),1+fa,[enemy('a',1,3,{hp:100}),enemy('b',2,3),enemy('z',3,3)]);
   const buff=first.p.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.application.modifier?.stat==='damageAmp')!;
-  expect(buff.application.modifier!.value).toEqual({kind:'constant',amount:500});expect(buff.expiresAtTick).toBe(161);
-  const attack=(state:typeof first.state,targetId:string,hp?:number)=>stepCombat({...state,units:state.units.map(u=>u.id==='p'?{...u,cooldownTicks:0,targetId}:u.id===targetId&&hp!==undefined?{...u,hp}:u)});
-  const second=attack(first.state,'b',120);expect(packets(second.events)[0].hpDamage).toBe(120);
-  const refreshed=second.state.units.find(u=>u.id==='p')!.mechanismState!.statuses.flatMap(g=>g.contributions).filter(c=>c.application.modifier?.stat==='damageAmp');expect(refreshed).toHaveLength(1);expect(refreshed[0].expiresAtTick).toBe(162);expect(refreshed[0].application.modifier!.value).toEqual({kind:'constant',amount:500});
-  let state=second.state;while(state.tick<160)state=stepCombat({...state,units:state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)}).state;
-  const beforeExpiry=attack(state,'z');expect(beforeExpiry.state.tick).toBe(161);expect(packets(beforeExpiry.events)[0].hpDamage).toBe(120);
-  const expiry=attack(beforeExpiry.state,'z');expect(expiry.state.tick).toBe(162);expect(packets(expiry.events)[0].hpDamage).toBe(115);
+  expect(buff.application.modifier!.value).toEqual({kind:'constant',amount:500});expect(buff.expiresAtTick).toBe(161+fa);
+  // One attack on targetId, then on until its shot lands: [landing step, its events].
+  const attack=(state:typeof first.state,targetId:string,hp?:number)=>{let r=stepCombat({...state,units:state.units.map(u=>u.id==='p'?{...u,cooldownTicks:0,targetId}:u.id===targetId&&hp!==undefined?{...u,hp}:u)});
+    while(!r.events.some(e=>e.type==='attackLanded'&&e.attackerId==='p'))r=stepCombat({...r.state,units:r.state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)});return r;};
+  const second=attack(first.state,'b',120);expect(packets(second.events)[0].hpDamage).toBe(120);expect(second.state.tick).toBe(first.state.tick+1+fb);
+  const refreshed=second.state.units.find(u=>u.id==='p')!.mechanismState!.statuses.flatMap(g=>g.contributions).filter(c=>c.application.modifier?.stat==='damageAmp');expect(refreshed).toHaveLength(1);expect(refreshed[0].expiresAtTick).toBe(second.state.tick+160);expect(refreshed[0].application.modifier!.value).toEqual({kind:'constant',amount:500});
+  const expiry=refreshed[0].expiresAtTick!;
+  // The attacker's side (this buff) is taken on the attack tick: a shot launched on expiry-1 keeps +500 bps wherever it lands,
+  // one launched on expiry does not (the half-open boundary, now on the launch tick).
+  let state=second.state;while(state.tick<expiry-2)state=stepCombat({...state,units:state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)}).state;
+  const fire=(st:typeof state)=>stepCombat({...st,units:st.units.map(u=>u.id==='p'?{...u,cooldownTicks:0,targetId:'z'}:u)});
+  const launchBefore=fire(state);expect(launchBefore.state.tick).toBe(expiry-1);
+  const launchAt=fire(launchBefore.state);expect(launchAt.state.tick).toBe(expiry);
+  let r=launchAt;const landed:number[]=[];for(let n=0;n<fz+1;n++){r=stepCombat({...r.state,units:r.state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)});landed.push(...packets(r.events).map(e=>e.hpDamage));}
+  expect(landed).toEqual([120,115]);
  });
  it('redemption:1150−650=500 missing;500×15%=75 at100;t100 damage stays100 before next-tick10% reduction',()=>{const r=run(wearing('redemption',{hp:650,cooldownTicks:1000}),100,[enemy('e',1,3,{cooldownTicks:100,attackDamage:100})]);expect(heals(r.events).filter(e=>e.unitId==='p')[0].actual).toBe(75);expect(packets(r.events,'e')[0].hpDamage).toBe(100);});
- it('justice:above50% AD130/AP130/vamp12%→15 heal;below AD115/vamp24%→27;equal50% none doubled',()=>{for(const [hp,ad,heal] of [[600,130,15],[490,115,27],[500,115,13]]){const r=run(wearing('hand-of-justice',{hp,baseCritChanceBps:0}));expect(packets(r.events)[0].raw).toBe(ad);expect(heals(r.events)[0].actual).toBe(heal);expect(readCombatStats(r.p,r.state).abilityPower).toBe(hp+heal>500?130:115);}});
+ it('justice:above50% AD130/AP130/vamp12%→15 heal;below AD115/vamp24%→27;equal50% none doubled',()=>{for(const [hp,ad,heal] of [[600,130,15],[490,115,27],[500,115,13]]){const r=run(wearing('hand-of-justice',{hp,baseCritChanceBps:0}),1+LANDING);expect(packets(r.events)[0].raw).toBe(ad);expect(heals(r.events)[0].actual).toBe(heal);expect(readCombatStats(r.p,r.state).abilityPower).toBe(hp+heal>500?130:115);}});
 });

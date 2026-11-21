@@ -21,6 +21,7 @@ import {validateMultiplayerOrbLedger} from '../src/simulation/orb-restore';
 const accepted=<T extends {ok:boolean;state:MatchState}>(r:T):MatchState=>{if(!r.ok)throw Error(JSON.stringify(r));return r.state;};
 import {fullBench,syntheticSharedRound,accept,conserved} from './tp-helpers';
 import {runSharedMatchCommand,sellSharedUnit,restoreSharedOrbSnapshot} from '../src/simulation/shared-pool';
+import {captureAugmentHistoryAuthority} from '../src/simulation/augment-history';
 const units=(s:MatchState)=>s.preparation.units.filter(u=>isAnvil(u.definitionId));
 function late(seed:number,node:string,base=createMatch(seed)){
  const r=getCatalogRoundById(node),loot=prepareMatchLoot(seed,r.ordinal),enemies=createRoundEnemies(r.ordinal);
@@ -67,7 +68,12 @@ describe('anvil reward paths',()=>{
   const victim=state.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench')!;
   const sale=accept(sellSharedUnit(pool,state,victim.id));pool=sale.pool;state=sale.state;
   const second=accept(runSharedMatchCommand(pool,state,{type:'claimOrb',round:state.round,orbId:forge.orbId}));pool=second.pool;state=second.state;
-  expect(units(state)).toHaveLength(1);expect(state.pendingChoice).toBeNull();conserved(pool,[state]);expect(restoreSharedOrbSnapshot(pool,state)).toEqual(state);
+  expect(units(state)).toHaveLength(1);expect(state.pendingChoice).toBeNull();conserved(pool,[state]);
+  // v26 anomaly rules (0369ee6b, merged 5f28fdbb): from 4-6 onward a shared restore must present an
+  // independent server checkpoint (v25 restored 4-7/5-7 without one). Restore with the captured authority,
+  // and pin that the authority-free form is now rejected.
+  expect(restoreSharedOrbSnapshot(pool,state,captureAugmentHistoryAuthority(state))).toEqual(state);
+  expect(()=>restoreSharedOrbSnapshot(pool,state)).toThrow('missing independent server authority');
   expect(runSharedMatchCommand(pool,state,{type:'claimOrb',round:state.round,orbId:forge.orbId})).toMatchObject({ok:false,reason:'already-claimed'});
  });
  it.each(['portable-forge','radiant-relics'])('%s still opens immediately with its original offers',definitionId=>{
@@ -93,11 +99,20 @@ it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening a
  const {decideBotAction}=await import('../src/simulation/bot');
  const {context,execute}=await import('./t7-helpers');
  const {serializeMatch,restoreMatch}=await import('../src/simulation/serialization');
+ // v26 D5 registration (7953c99a, merged 3ce71065) shifts seed 42's offers so offers[0] now takes snipers-nest /
+ // rebel-crest / pilfer; Pilfer's post-acquisition rounds require full battle replay to serialize, and
+ // history-owner cards replay the whole game on restore. The route therefore takes the first augment offer that
+ // needs neither (v25: offers[0]); every other command is unchanged.
+ const {augmentNeedsHistory}=await import('../src/simulation/augment-history-owners');
+ const replayBound=new Set(['pilfer','a-change-of-fate','blood-brothers','salvage-bin']);
+ const pick=(c:NonNullable<MatchState['pendingChoice']>)=>c.kind!=='augment'?c.offers[0]
+   :c.offers.find(id=>!augmentNeedsHistory(id)&&!replayBound.has(id)&&!id.startsWith('spoils-of-war-'))??c.offers[0];
  const seed=42;let before=createMatch(seed);
  while(before.roundDefinitionId!==node){
+   while(before.phase==='choice'&&before.pendingChoice!.kind==='augment'){const c=before.pendingChoice!;before=accepted(selectChoice(before,c.choiceId,c.generation,pick(c)));}
    for(let n=0;n<64;n++){const d=decideBotAction(before,context(before,n),0);if(d.action==='done')break;before=accepted(execute(before,d.action));}
    if(before.phase==='preparation')before=battle(before).ended;
-   while(before.phase==='choice'){const c=before.pendingChoice!;before=accepted(selectChoice(before,c.choiceId,c.generation,c.offers[0]));}
+   while(before.phase==='choice'){const c=before.pendingChoice!;before=accepted(selectChoice(before,c.choiceId,c.generation,pick(c)));}
    if(before.phase==='gameOver')throw Error(`route ended at ${before.roundDefinitionId}`);
    while(before.m8.loot.direct.some(d=>d.status==='pending-capacity')){
      const u:import('../src/simulation/unit-types').Unit|undefined=before.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId));if(!u)throw Error('capacity reserve');before=accepted(api.sellUnit(before,u.id));
@@ -107,17 +122,19 @@ it.each(['4-7','5-7'])('public %s combat: save/replay before and after opening a
  for(let n=0;n<64;n++){const d=decideBotAction(before,context(before,n),0);if(d.action==='done')break;before=accepted(execute(before,d.action));}
  let s:MatchState=battle(before).ended;
  expect(restoreMatch(serializeMatch(s))).toEqual(s);
- while(s.phase==='choice'){const c:NonNullable<MatchState['pendingChoice']>=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,c.offers[0]));}
+ while(s.phase==='choice'){const c:NonNullable<MatchState['pendingChoice']>=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,pick(c)));}
  while(s.m8.loot.direct.some(d=>d.status==='pending-capacity')){const u:import('../src/simulation/unit-types').Unit=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;s=accepted(api.sellUnit(s,u.id));}
  if(!units(s).length){
    const orb=readLootView(s).unclaimedOrbs!.find(o=>o.entries.some(p=>p.kind==='forge'))!;expect(orb).toBeDefined();
    s=accepted(api.nextRound(s,s.round));expect(restoreMatch(serializeMatch(s))).toEqual(s);
+   // v26 route (after the D5 re-pick above) carries a Junker King armory choice into 5-1; resolve it publicly first.
+   while(s.phase==='choice'){const c:NonNullable<MatchState['pendingChoice']>=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,pick(c)));}
    const u:import('../src/simulation/unit-types').Unit=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench'&&!isAnvil(u.definitionId))!;s=accepted(api.sellUnit(s,u.id));
    const claim=api.claimOrb(s,orb.orbId,s.round);if(!claim.ok)throw Error(claim.reason);s=claim.state;
  }
  expect(units(s).length).toBeGreaterThan(0);expect(restoreMatch(serializeMatch(s))).toEqual(s);
  s=accepted(openAnvil(s,units(s)[0].id));expect(restoreMatch(serializeMatch(s))).toEqual(s);
- const c:NonNullable<MatchState['pendingChoice']>=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,c.offers[0]));expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ const c:NonNullable<MatchState['pendingChoice']>=s.pendingChoice!;s=accepted(selectChoice(s,c.choiceId,c.generation,pick(c)));expect(restoreMatch(serializeMatch(s))).toEqual(s);
 },60000);
 
 it.each(['5-7','6-7'])('crab-rave %s grants two anvil units with the original batch B offers',async node=>{

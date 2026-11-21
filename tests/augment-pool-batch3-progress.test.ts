@@ -132,7 +132,11 @@ it('Spoils historical authentication cannot be bypassed by deleting the kill cou
 // Frozen pre-fb3prog settlement bytes under current content; see fixture provenance.
 // Keep this independent baseline rather than synthesizing it with the new settlement code.
 it.each([1,2])('pre-Spoils baseline bytes restore and continue round %i with full history',targetRound=>{
- const baseline=readFileSync(new URL('./fixtures/compat/pre-spoils-v25-seed42.json',import.meta.url),'utf8');
+ // v26: pre-spoils-v25-seed42.json stays untouched (it is the v25 settlement baseline). The same pre-Spoils
+ // settlement module (808d16ae) exported under the v26 neutrals-1424 content gives pre-spoils-v26-seed42.json; its
+ // only differences from v25 are identity fields, the new null anomalySelection (R5) and the 1-2 minion combat
+ // outcome changed by the 14.24 neutral restore (568eeea4) and targeting/pathing (8106acee, 34cfbfbb). See README.
+ const baseline=readFileSync(new URL('./fixtures/compat/pre-spoils-v26-seed42.json',import.meta.url),'utf8');
  const history=new BattleHistory('spoils-compatibility');
  let s=fieldBench(resolveM5Choices(createMatch(42)));
  s=accepted(recordCommand(history,s,startMatchCombat(s)));

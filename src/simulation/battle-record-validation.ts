@@ -10,6 +10,7 @@ import { validateMatchStructure } from './serialization-structure';
 import { readG23Progress } from './g2-3-state';
 import { needsCrownHistory, missingCrownHistory } from './crown-history';
 import { canonicalContent, digestContent, withSynchronousRestoreEncoding } from './content';
+import { augmentCombatTranscript } from './augment-history-restore';
 import { validateHistoricalEquipment } from './b8-restore';
 import { equalOrderedJson, isImmutableJson } from './immutable-json';
 
@@ -128,6 +129,100 @@ export function checkRecordCompatibility(record: BattleRecord): void {
 }
 /** Full deterministic validation; never reads an active session. */
 const verifiedRecords = new WeakMap<BattleRecord, VerifiedReplay>();
+// v26 combat (14.24 neutrals, targeting, pathing) made a second full-catalog replay miss the
+// existing 60s import wait. Admission of a detached copy may reuse one verified proof only when
+// every field the validator reads matches, including shape. runId is the one retitled admission
+// field; it is rechecked as a non-empty string and is not part of the combat proof.
+// Mutable external evidence (validateMatchHistory / restoreMatch) is never reused: the caller
+// can edit the same objects after a success, and the next call must simulate again.
+const CONTENT_REPLAY_LIMIT = 48;
+const contentReplays = new Map<string, { readonly record: BattleRecord; readonly verified: VerifiedReplay }>();
+const pendingContentReplays = new WeakMap<BattleRecord, VerifiedReplay>();
+let contentReplayAdmission = 0;
+/** While a parsed save is being admitted, defer content-replay retention until the record is owned. */
+export function openContentReplayAdmission(): () => void {
+  contentReplayAdmission++;
+  return () => { contentReplayAdmission--; };
+}
+/** Forget every reusable admitted-copy proof. The cache is process-wide, so a test that counts
+ * cold battle replays calls this first; otherwise another file in the same worker may have
+ * already validated an identical battle and the count would depend on file placement. */
+export function clearContentReplays(): void { contentReplays.clear(); }
+/** Certify one admitted archive into the content replay cache without cloning its record graph. */
+export function sealContentReplayAdmission(record: BattleRecord): void {
+  const verified = pendingContentReplays.get(record);
+  if (!verified) return;
+  pendingContentReplays.delete(record);
+  storeContentReplay(record, verified, false);
+}
+let coldBattleReplays = 0;
+let transcriptBattleReuses = 0;
+let mutableExternalEvidence = 0;
+/** Combat reconstructions actually simulated. A matching unowned copy does not increment this. */
+export function coldBattleReplayCount(): number { return coldBattleReplays; }
+/** Battles admitted from this import's match-proof replay. The final hash check still ran. */
+export function transcriptBattleReuseCount(): number { return transcriptBattleReuses; }
+function contentReplayKey(record: BattleRecord): string {
+  const names = record && typeof record === 'object' ? Object.keys(record).filter(key => key !== 'runId').sort() : [];
+  return `${names.join(',')}\n${record.eventHash}\n${record.stateHash}\n${record.combatId}\n${record.endTick}\n${record.result ?? ''}\n${record.roundId}\n${record.nextEventSeq}`;
+}
+/** Plain enumerable data fields the validator reads, excluding the retitled runId. Accessors,
+ * symbols and non-enumerable properties stay on the full path. */
+function validatedFieldValues(record: object): Map<string, unknown> | null {
+  if (Object.getPrototypeOf(record) !== Object.prototype || Object.getOwnPropertySymbols(record).length) return null;
+  const names = Object.getOwnPropertyNames(record);
+  if (names.length !== Object.keys(record).length) return null;
+  const fields = new Map<string, unknown>();
+  for (const key of names) {
+    if (key === 'runId') continue;
+    const descriptor = Object.getOwnPropertyDescriptor(record, key);
+    if (!descriptor || !descriptor.enumerable || !('value' in descriptor)) return null;
+    fields.set(key, descriptor.value);
+  }
+  return fields;
+}
+function reusableContent(a: unknown, b: unknown): boolean {
+  const plain = equalPlainContent(a, b);
+  if (plain !== undefined) return plain;
+  try { return canonicalContent(a) === canonicalContent(b); }
+  catch { return false; }
+}
+function sameBattleContent(record: BattleRecord, stored: BattleRecord): boolean {
+  if (record === null || typeof record !== 'object' || stored === null || typeof stored !== 'object') return false;
+  if (typeof record.runId !== 'string' || record.runId.length === 0) return false;
+  const left = validatedFieldValues(record), right = validatedFieldValues(stored);
+  if (!left || !right || left.size !== right.size) return false;
+  for (const [key, value] of left) if (!right.has(key) || !reusableContent(value, right.get(key))) return false;
+  return true;
+}
+function takeContentReplay(record: BattleRecord): VerifiedReplay | null {
+  const hit = contentReplays.get(contentReplayKey(record));
+  if (!hit || !sameBattleContent(record, hit.record)) return null;
+  // A hit still routes the version and walks checkShape. Those reads are not skipped;
+  // simulation is reused only after they accept this record.
+  validatorFor(record);
+  checkShape(record);
+  // Detach the proof so a caller cannot rewrite the cached graph.
+  return structuredClone(hit.verified);
+}
+function rememberContentReplay(record: BattleRecord, verified: VerifiedReplay): void {
+  if (!validatedFieldValues(record)) return;
+  if (contentReplayAdmission > 0 && !isOwnedBattleRecord(record)) {
+    pendingContentReplays.set(record, verified);
+    return;
+  }
+  storeContentReplay(record, verified, true);
+}
+function storeContentReplay(record: BattleRecord, verified: VerifiedReplay, cloneRecord: boolean): void {
+  const key = contentReplayKey(record);
+  if (contentReplays.has(key) && !sameBattleContent(record, contentReplays.get(key)!.record)) return;
+  if (contentReplays.size >= CONTENT_REPLAY_LIMIT && !contentReplays.has(key)) {
+    const oldest = contentReplays.keys().next().value;
+    if (oldest !== undefined) contentReplays.delete(oldest);
+  }
+  const storedRecord = cloneRecord ? structuredClone(record) : record;
+  contentReplays.set(key, { record: storedRecord, verified: structuredClone(verified) });
+}
 export function validateBattleRecord(record: BattleRecord, battles?: readonly BattleRecord[]): VerifiedReplay {
   const verified = replayBattleRecord(record);
   if (battles !== undefined) validateMatchHistory(record.context, battles);
@@ -145,7 +240,33 @@ export function replayBattleRecord(record: BattleRecord): VerifiedReplay {
 function replaySnapshot(record: BattleRecord, checkpoints?: CombatState[]): VerifiedReplay {
   const cached = verifiedRecords.get(record);
   if (cached) return cached;
+  // Checkpoint playback must walk the ticks. A content hit has no trajectory to fill.
+  // Recorder-owned records keep the identity cache above. Mutable external evidence
+  // (a restore/history walk) is simulated on every call, even when the bytes still match.
+  const reuseContent = !checkpoints && mutableExternalEvidence === 0 && !isOwnedBattleRecord(record);
+  if (reuseContent) {
+    const reused = takeContentReplay(record);
+    if (reused) return reused;
+  }
+  // The match-proof replay already executed these commands. Reuse that combat
+  // when every field the tick walk would check still matches, including hashes.
+  // Playback checkpoints and in-combat equipment commands keep the tick walk:
+  // a transcript has no trajectory and does not re-execute those commands.
+  const transcript = augmentCombatTranscript(record.combatId);
+  // Transcript merge includes equip/useConsumable/combineItems effects; only
+  // stepMatch-only combats may skip the tick walk when equipmentCommands is empty.
+  if (!checkpoints && mutableExternalEvidence === 0 && !record.equipmentCommands?.length && transcript && !transcript.inCombatCommands) {
+    validatorFor(record);
+    checkShape(record);
+    const fromTranscript = transcriptReplay(record);
+    if (fromTranscript) {
+      transcriptBattleReuses++;
+      return fromTranscript;
+    }
+  }
+  coldBattleReplays++;
   const verified = validatorFor(record)(record, checkpoints);
+  if (!checkpoints && !isOwnedBattleRecord(record)) rememberContentReplay(record, verified);
   // Only recorder-owned, detached immutable records qualify, after full replay.
   // Reconstruction already owns this detached graph. Freeze it directly;
   // replayBattleRecord copies it at the public boundary, never inside the walk.
@@ -172,6 +293,23 @@ export function validateBattlePlayback(record: BattleRecord, battles?: readonly 
     if (checkpoints.length) checkpoints.push(verified.terminal);
     return deepFreeze({ terminal: verified.terminal, checkpoints });
   });
+}
+function transcriptReplay(record: BattleRecord): VerifiedReplay | undefined {
+  // The transcript is this admission's match-proof replay, not a previous success.
+  // A mismatch falls through to the full tick walk so the existing errors stay.
+  const transcript = augmentCombatTranscript(record.combatId);
+  if (!transcript || transcript.inCombatCommands) return undefined;
+  try {
+    const context = record.context;
+    if (!equalContent(transcript.context, context) || !equalContent(transcript.initial, record.initial)) return undefined;
+    if (!equalContent(transcript.events, record.events)) return undefined;
+    if (!equalContent(record.version, recordVersion(context)) || record.roundId !== context.m8.round.roundId) return undefined;
+    if (context.phase !== 'preparation' || record.combatId !== `round-${context.round}`) return undefined;
+    const terminal = transcript.terminal;
+    if (terminal.result !== record.result || terminal.tick !== record.endTick || terminal.nextEventSeq !== record.nextEventSeq) return undefined;
+    if (digestContent(terminal) !== record.stateHash || digestContent(record.events) !== record.eventHash) return undefined;
+    return { terminal, settledMatch: transcript.settled };
+  } catch { return undefined; }
 }
 function validateM8Record(record: BattleRecord, checkpoints?: CombatState[]): VerifiedReplay {
   checkShape(record);
@@ -273,5 +411,10 @@ export function* matchHistoryChecks(match: MatchState, battles: readonly BattleR
 /** Used by strict Match restoration. No history is inferred from the candidate's
  * own receipts and no externally supplied "verified" flag is accepted. */
 export function validateMatchHistory(match: MatchState, battles: readonly BattleRecord[]): void {
-  for (const _ of matchHistoryChecks(match, battles)) { /* drain */ }
+  // These records stay caller-owned and mutable. Reusing a previous proof would hide an
+  // in-place edit made after an earlier success (crown external evidence).
+  mutableExternalEvidence++;
+  try {
+    for (const _ of matchHistoryChecks(match, battles)) { /* drain */ }
+  } finally { mutableExternalEvidence--; }
 }

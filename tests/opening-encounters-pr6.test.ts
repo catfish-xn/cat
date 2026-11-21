@@ -143,7 +143,9 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
     expect(receipts(commitOpeningEncounterHealth(observed(41,0)))).toEqual([]);
   });
   it('single-player settlement really records the threshold and Continue does not duplicate it',()=>{
-    const base={...createMatch(melSeed),playerHp:43};
+    // Empty 1-2 is two pve-minion-melee-a (minions-a-v1). Both survive, stage base is 0, so damage is 2.
+    // 42 − 2 = 40 crosses the Mel threshold. The old 43 assumed damage 3.
+    const base={...createMatch(melSeed),playerHp:42};
     const empty={...base,preparation:{...base.preparation,units:base.preparation.units.filter(u=>u.team==='enemy')}};
     const result=startMatchCombat(empty),settled=accepted(result);
     expect(settled.playerHp).toBe(40);expect(receipts(settled)).toHaveLength(1);
@@ -185,7 +187,9 @@ describe('PR6 Mel threshold observation (reward enabled by batch A)',()=>{
       if(!result.ok)throw Error(result.reason);pool=result.pool;states.push(result.state);
     }
     const globalBefore=JSON.stringify(pool.openingEncounter);
-    const crossed=states.map((s,i)=>accepted(startMatchCombat({...s,playerHp:i===7?44:43,
+    // Same empty 1-2: every seat loses 2 (two surviving melee minions, base 0).
+    // 42 → 40 records a receipt; 43 → 41 stays above the threshold.
+    const crossed=states.map((s,i)=>accepted(startMatchCombat({...s,playerHp:i===7?43:42,
       preparation:{...s.preparation,units:s.preparation.units.map(u=>u.team==='player'?
         {...u,location:{kind:'bench' as const,slot:0}}:u)}})));
     expect(crossed.map(s=>receipts(s).length)).toEqual([1,1,1,1,1,1,1,0]);

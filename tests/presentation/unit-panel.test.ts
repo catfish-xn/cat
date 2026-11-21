@@ -16,7 +16,10 @@ beforeAll(async () => {
     export {registerRootUiAssets} from './src/presentation/s13-assets';
     export {loadTooltipText} from './src/presentation/tooltip-text-loader';
     export {UNIT_DEFINITIONS} from './src/simulation/units';`, resolveDir: process.cwd() },
-    bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' } });
+    bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' },
+    // bb1990d5 (v26 augment icons layout) made augment-text-data import ./augment-hud.css; an in-memory bundle has no CSS
+    // output path, so drop stylesheets exactly as tests/presentation/hover-dom.test.ts does. The page still loads src/style.css.
+    loader: { '.css': 'empty' } });
   bundle = result.outputFiles[0].text;
 });
 beforeAll(async () => {
@@ -44,13 +47,17 @@ it('shows projected scene unit/item cards and the shared orb body in Chromium, w
     const orb = show({ kind: 'orb', id: 'mine' }, null, { orbId: 'mine', tier: 'gold', source: 'pve', roundId: '1-2', queued: false,
       entries: [{ kind: 'gold', quantity: 7 }, { kind: 'unit', definitionId: 'lux', starLevel: 2, quantity: 1 }] });
     const orbText = orb.textContent!, visible = orb.checkVisibility(), entriesVisible = orb.querySelector('ul')!.checkVisibility();
+    // Family orbs still queue during a battle; a PvE orb opens at the touch (TFT).
+    const familyText = show({ kind: 'orb', id: 'family' }, null, { orbId: 'family', tier: 'blue', source: 'family', roundId: '1-2', queued: false,
+      entries: [{ kind: 'gold', quantity: 3 }] }).textContent!;
     const publicText = show({ kind: 'public-orbs', count: 2, tiers: ['gold', 'blue'] }).textContent!;
     show(null);
-    return { unitText, beside, item, orbText, visible, entriesVisible, publicText, hidden: document.getElementById('unit-card')!.hidden };
+    return { unitText, beside, item, orbText, familyText, visible, entriesVisible, publicText, hidden: document.getElementById('unit-card')!.hidden };
   });
   expect(result.unitText).toContain('拉克丝'); expect(result.unitText).toContain('★★'); expect(result.unitText).toContain('暴风大剑');
   expect(result.beside).toBe(true); expect(result.item).toContain('暴风大剑'); expect(result.item).toContain('攻击');
-  expect(result.orbText).toContain('7 金币'); expect(result.orbText).toContain('拉克丝★★'); expect(result.orbText).toContain('战后结算');
+  expect(result.orbText).toContain('7 金币'); expect(result.orbText).toContain('拉克丝★★'); expect(result.orbText).toContain('点击领取'); expect(result.orbText).not.toContain('战后结算');
+  expect(result.familyText).toContain('战后结算');
   expect(result.orbText).toContain('自动出售'); expect(result.visible).toBe(true); expect(result.entriesVisible).toBe(true);
   expect(result.publicText).toContain('2 个'); expect(result.publicText).not.toContain('拉克丝'); expect(result.publicText).not.toContain('7 金币');
   expect(result.hidden).toBe(true);
@@ -196,4 +203,19 @@ it('refreshes independent Titan counters in the pinned panel and hover body, the
   expect(result.before).toContain('1/25'); expect(result.before).toContain('3/25');
   expect(result.after).toContain('7/25'); expect(result.after).toContain('25/25');
   expect(result.hover).toContain(result.after); expect(result.same).toBe(true); expect(result.cleared).toBe(true);
+});
+
+it('keeps the ability text in a card that opens from the ability icon', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect, body = api.buildUnitPanel({ id: 'lux', definitionId: 'lux', starLevel: 2, team: 'player' });
+    document.body.append(body);
+    const button = body.querySelector('.inspect-ability') as HTMLButtonElement, card = body.querySelector('.inspect-ability-card') as HTMLElement;
+    const closed = card.checkVisibility(), size = button.getBoundingClientRect();
+    button.focus(); const open = card.checkVisibility() && button.getAttribute('aria-expanded') === 'true';
+    button.blur(); const reclosed = !card.checkVisibility();
+    const role = card.querySelector('[data-debug="unit-card:role"]') !== null, stats = body.querySelectorAll('.inspect-stat').length;
+    body.remove(); return { closed, open, reclosed, role, stats, target: size.width >= 44 && size.height >= 44, label: button.getAttribute('aria-label') };
+  });
+  expect(result).toMatchObject({ closed: false, open: true, reclosed: true, role: true, stats: 8, target: true });
+  expect(result.label).toContain('技能');
 });

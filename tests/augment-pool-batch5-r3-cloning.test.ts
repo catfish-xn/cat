@@ -12,7 +12,9 @@ import { r3Opening, rewardPlan } from './fixtures/m5/augment-rewards-oracle.cjs'
 import { accepted, reachRound } from './match-helpers';
 
 export function acquireCloning(): MatchState {
-  let s = reachRound('2-1', false, 12);
+  // v26 D5 (7953c99a) moved the 2-1 draws: old seed 12 no longer shows cloning-facility after rerolling slots 0 and 1.
+  // Re-searched 0..299 with the same two public rerolls: seed 49 is the first.
+  let s = reachRound('2-1', false, 49);
   const c = s.pendingChoice!;
   s = accepted(rerollAugment(s, c.choiceId, c.generation, 0));
   s = accepted(rerollAugment(s, c.choiceId, s.pendingChoice!.generation, 1));

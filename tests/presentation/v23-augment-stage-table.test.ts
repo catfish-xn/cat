@@ -72,7 +72,7 @@ describe('14.24 client augment tier table consumed by the UI', () => {
     for (const id of nodes) {
       const round = ROUND_CATALOG.find(r => r.roundId === id)!;
       expect(stageTrackRounds(round.ordinal).find(r => r.roundId === id))
-        .toEqual({ roundId: id, icon: 'augment', title: `${id} 强化 · 玩家对战`, state: 'current' });
+        .toEqual({ roundId: id, icon: 'augment', title: `${id}\n对阵：未知\n外加：选择一个【强化符文】。`, state: 'current', outcome: null });
     }
   });
 });
@@ -88,19 +88,19 @@ describe('per-round stage tracker agrees with the full rules catalog', () => {
         : round.kind === 'supply' ? 'carousel' : round.kind;
       expect(shown[index]).toMatchObject({ roundId: round.roundId, icon,
         state: round.ordinal < current.ordinal ? 'done' : round.ordinal === current.ordinal ? 'current' : 'next' });
-      expect(shown[index].title.startsWith(`${round.displayName} `)).toBe(true);
+      expect(shown[index].title.startsWith(`${round.displayName}\n`)).toBe(true);
     }
   });
   it('marks only the three approved augment nodes and 4-6 anomaly, including future and completed rows', () => {
     const all = ROUND_CATALOG.flatMap(r => stageTrackRounds(r.ordinal).filter(s => s.state === 'current'));
     expect(all.filter(r => r.icon === 'augment').map(r => r.roundId)).toEqual(nodes);
     expect(all.filter(r => r.icon === 'anomaly')).toEqual([
-      { roundId: '4-6', icon: 'anomaly', title: '4-6 玩家对战 · 异常', state: 'current' },
+      { roundId: '4-6', icon: 'anomaly', title: '4-6\n对抗：未知\n外加：异常突变', state: 'current', outcome: null },
     ]);
     for (const ordinal of [0, -1, NaN, Infinity, 1.5]) expect(stageTrackRounds(ordinal)).toEqual([]);
     expect(stageTrackRounds(39)).toEqual([
-      { roundId: 'overtime-1', icon: 'pvp', title: '加时 1 玩家对战', state: 'current' },
-      { roundId: 'overtime-2', icon: 'pvp', title: '加时 2 玩家对战', state: 'next' },
+      { roundId: 'overtime-1', icon: 'pvp', title: '加时 1\n对抗：未知', state: 'current', outcome: null },
+      { roundId: 'overtime-2', icon: 'pvp', title: '加时 2\n对抗：未知', state: 'next', outcome: null },
     ]);
   });
 });

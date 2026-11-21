@@ -1,8 +1,9 @@
+import { isOverflowUnit, usableBenchSlots } from './bench-capacity';
 import { isAnvil } from './content/anvils';
 import { contains, DEFAULT_BOARD, isDeploymentCell, sameCell, type Board } from './board';
 import { UNIT_DEFINITIONS, type Unit, type UnitLocation } from './units';
 import { countsTowardPopulation } from './seat-mechanics/forms';
-export interface GameState { readonly board: Board; readonly benchSize: number; readonly units: readonly Unit[] }
+export interface GameState { readonly board: Board; readonly benchSize: number; readonly usableBenchSlots?: number; readonly overflowUnitIds?: readonly string[]; readonly units: readonly Unit[] }
 export type DeploymentFailure = 'unknown-unit' | 'enemy-unit' | 'invalid-location' | 'outside-deployment-zone' | 'occupied';
 export type DeploymentResult = { readonly ok: true; readonly state: GameState } | { readonly ok: false; readonly reason: DeploymentFailure; readonly state: GameState };
 export function createGame(): GameState {
@@ -23,7 +24,7 @@ function sameLocation(a: UnitLocation, b: UnitLocation): boolean {
 function locationFailure(state: GameState, target: UnitLocation): DeploymentFailure | undefined {
   if (!target || typeof target !== 'object' || (target.kind !== 'board' && target.kind !== 'bench')
     || (target.kind === 'board' && (!target.cell || typeof target.cell !== 'object'))) return 'invalid-location';
-  const valid = target.kind === 'board' ? contains(state.board, target.cell) : Number.isInteger(target.slot) && target.slot >= 0 && target.slot < state.benchSize;
+  const valid = target.kind === 'board' ? contains(state.board, target.cell) : Number.isInteger(target.slot) && target.slot >= 0 && target.slot < usableBenchSlots(state);
   if (!valid) return 'invalid-location';
   if (target.kind === 'board' && !isDeploymentCell(state.board, 'player', target.cell)) return 'outside-deployment-zone';
   return undefined;
@@ -36,6 +37,7 @@ export function validateDeployment(state: GameState, unitId: string, target: Uni
   const unit = state.units.find(unit => unit.id === unitId);
   if (!unit) return 'unknown-unit';
   if (unit.team !== 'player') return 'enemy-unit';
+  if (isOverflowUnit(state, unitId) || state.units.some(u => u.id !== unitId && isOverflowUnit(state,u.id) && sameLocation(u.location,target))) return 'invalid-location';
   const reason = locationFailure(state, target);
   if (reason) return reason;
   if(['trainer-golem','carry-golem'].includes(unit.definitionId) && target.kind==='bench')return 'invalid-location';
@@ -61,6 +63,6 @@ export function deployUnit(state: GameState, unitId: string, target: UnitLocatio
     : unit === occupant ? { ...unit, location: copyLocation(source.location) } : unit) } };
 }
 export function getPlayerDeploymentCount(state: GameState): number {
-  return state.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board' && countsTowardPopulation(unit.definitionId)).length;
+  return state.units.filter(unit => unit.team === 'player' && unit.location.kind === 'board' && !isOverflowUnit(state,unit.id) && countsTowardPopulation(unit.definitionId)).length;
 }
 export function getDefinition(unit: Unit) { return UNIT_DEFINITIONS[unit.definitionId]; }

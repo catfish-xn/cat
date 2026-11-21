@@ -10,9 +10,11 @@ import { historyFreeRerollPriorities } from './fixtures/history-free-augments';
 let targetPrefix: MatchState;
 // Seed 42's prismatic 4-2 records Max Cap offer-level history even without an
 // owned history augment. The fixture-only gold grant is not a replay command;
-// seed 25 and real rerolls keep the anomaly authenticator independently reachable.
+// seed 26 and real rerolls keep the anomaly authenticator independently reachable.
+// v26 D5 pool (7953c99a): seed 26 (was 25). Seed 25's 4-2 offer now holds none of the
+// history-free cards after its rerolls and the route takes rebel-resurgence (augment history).
 beforeAll(async () => {
-  targetPrefix = await publicPrefix('4-6', 25, 'cannon', [], historyFreeRerollPriorities);
+  targetPrefix = await publicPrefix('4-6', 26, 'cannon', [], historyFreeRerollPriorities);
   expect(targetPrefix.augmentHistory).toBeUndefined();
 }, 60000);
 function prepared(suffix: string, solo = false): MatchState {

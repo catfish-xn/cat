@@ -22,6 +22,13 @@ export function renataShieldTarget(event: DisplayCombatEvent): string | null {
   } catch { return null; }
 }
 
+/** The Renata whose rocket granted this shield (the key's owner unit), or null for any other event. */
+export function renataShieldCaster(event: DisplayCombatEvent): string | null {
+  if (!renataShieldTarget(event) || event.type !== 'shieldLayerChanged') return null;
+  const key: unknown[] = JSON.parse(event.key);
+  return typeof key[1] === 'string' ? key[1] : null;
+}
+
 const vertexShader = `varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`;
 const fragmentShader = `
 varying vec2 vUv; uniform float age, alpha, mel;
@@ -111,6 +118,10 @@ export function createReferenceBurst(kind: 'renata' | 'mel', radius: number, red
   }
   let age = 0, disposed = false;
   const duration = kind === 'mel' ? MEL_SAVE_SECONDS : RENATA_BURST_SECONDS;
+  const rearm = () => {
+    if (disposed) return;
+    age = 0; object.removeFromParent(); update(0);
+  };
   const update = (seconds: number, camera?: Camera) => {
     age += Math.max(0, seconds);
     const envelope = melSaveEnvelope(age, reduced);
@@ -136,7 +147,7 @@ export function createReferenceBurst(kind: 'renata' | 'mel', radius: number, red
     if (crown) { crown.scale.setScalar(Math.min(1, age / .15)); crown.material.opacity = envelope.violet; }
   };
   update(0);
-  return { object, get finished() { return age >= duration; }, update,
+  return { object, kind, radius, reduced, rearm, get finished() { return age >= duration; }, update,
     dispose() { if (disposed) return; disposed = true; object.removeFromParent(); geometry.dispose(); material.dispose(); crown?.geometry.dispose(); crown?.material.dispose(); cloud?.geometry.dispose(); cloud?.material.dispose(); wispMaterial?.dispose(); } };
 }
 
@@ -150,7 +161,8 @@ export function createRenataShield(radius: number, reduced: boolean) {
     fragmentShader: `varying vec3 n,v;uniform float alpha;void main(){float rim=pow(1.-abs(dot(normalize(n),normalize(v))),2.);gl_FragColor=vec4(.9,.16,.78,(.07+rim*.7)*alpha);}` });
   const mesh = new Mesh(geometry, material); mesh.position.y = radius * 1.35; mesh.scale.y = 1.3; object.add(mesh);
   let age = 0, disposed = false;
-  return { object, get finished() { return age >= .6; }, update(seconds: number) {
+  const rearm = () => { if (disposed) return; age = 0; object.removeFromParent(); material.uniforms.alpha!.value = 0; };
+  return { object, radius, reduced, rearm, get finished() { return age >= .6; }, update(seconds: number) {
     age += Math.max(0, seconds); material.uniforms.alpha!.value = Math.max(0, 1 - age / .6) * (reduced ? .35 : 1);
   }, dispose() { if (disposed) return; disposed = true; object.removeFromParent(); geometry.dispose(); material.dispose(); } };
 }

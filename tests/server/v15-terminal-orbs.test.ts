@@ -51,8 +51,20 @@ describe('v15 match end: terminal orb forfeit', () => {
     expect(unclaimed(winner.match)).toEqual([]);
     expect(toSeatPrivateView(winner.match).unclaimedOrbs).toEqual([]);
     const forfeited = (readLootView(winner.match).claimReceipts ?? []).filter(receipt => receipt.resolution === 'forfeited');
-    expect(forfeited.length).toBeGreaterThanOrEqual(owed.length);
+    // v26 PvE loot carryover (8f794062; MATCH_CONTRACT: 终局也作废未发的顺延，且不写收据): an owed orb whose drops are
+    // still `carried` from a lost/drawn PvE round is forfeited by a bare lootForfeited per entry, without a receipt;
+    // every earned orb keeps its forfeited receipt. (v25: receipts >= all 4 owed orbs; under v26 the 1-3 m02 orb is carried.)
+    const dropIds = (orb: (typeof owed)[number]) => orb.entries.map((_, index) => JSON.stringify([orb.orbId, index]));
+    const isCarried = (orb: (typeof owed)[number]) => dropIds(orb).some(dropId => before.match.m8.loot.direct.find(d => d.dropId === dropId)?.status === 'carried');
+    const earnedOwed = owed.filter(orb => !isCarried(orb)), carriedOwed = owed.filter(isCarried);
+    expect(earnedOwed.length).toBeGreaterThan(0);
+    expect(forfeited.length).toBeGreaterThanOrEqual(earnedOwed.length);
+    for (const dropId of earnedOwed.flatMap(dropIds)) expect(forfeited.some(receipt => receipt.dropId === dropId), dropId).toBe(true);
     const pushed = winner.serverEvents?.seatRevision === winner.seatRevision ? winner.serverEvents.events : [];
+    for (const dropId of carriedOwed.flatMap(dropIds)) {
+      expect(pushed.some(event => event.type === 'lootForfeited' && event.dropId === dropId), dropId).toBe(true);
+      expect((readLootView(winner.match).claimReceipts ?? []).some(receipt => receipt.dropId === dropId), dropId).toBe(false);
+    }
     const lootEvents = pushed.filter(event => event.type === 'lootForfeited' || event.type === 'lootGranted');
     expect(lootEvents.length).toBeGreaterThan(0);
     const seqs = lootEvents.map(event => (event as { eventSeq?: number }).eventSeq);

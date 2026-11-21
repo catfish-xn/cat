@@ -1,5 +1,5 @@
 import { nextRandom } from './rng';
-import { G24_FORGE_POOLS } from './content/g2-4-forges';
+import { pandoraItemPool } from './pandora-item-pools';
 import type { MatchState } from './match-types';
 import type { ItemInstance } from './strategy-types';
 import { validateResourceReceipts } from './resource-provenance';
@@ -42,8 +42,7 @@ export function batch5RoundInventoryPlan(state:MatchState,base:InventoryPlan):In
    }
    if(pandora&&round>pandora.acquiredRound)for(const item of items){
     if(item.location.kind!=='inventory')continue;
-    const pool=G24_FORGE_POOLS.TFT_ArmoryKeyComponent.includes(item.definitionId)?G24_FORGE_POOLS.TFT_ArmoryKeyComponent
-     :G24_FORGE_POOLS.TFT_ArmoryKeyCompleted.includes(item.definitionId)?G24_FORGE_POOLS.TFT_ArmoryKeyCompleted:null;
+    const pool=pandoraItemPool(item.definitionId);
     if(!pool)continue;
     const namespace=JSON.stringify([BATCH5_S3A_SOURCE,state.multiplayer?.seatId??'solo',pandora.choiceId,round,item.id]);
     let hash=0x811c9dc5;for(let i=0;i<namespace.length;i++)hash=Math.imul(hash^namespace.charCodeAt(i),16777619)>>>0;

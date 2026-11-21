@@ -25,7 +25,10 @@ export type CombinePreview =
   | { readonly allowed: false; readonly reason: EquipmentFailure };
 export type EquipPreview =
   | { readonly allowed: true; readonly reason: null; readonly occupiedSlots: readonly (0 | 1 | 2)[]; readonly conflictingItemIds: readonly [];
-      readonly combination?: { readonly resultDefinitionId: string; readonly consumedItemIds: readonly [string, string] } }
+      readonly combination?: { readonly resultDefinitionId: string; readonly consumedItemIds: readonly [string, string];
+        /** The finished item cannot stay on this unit (own-trait emblem, or Thief's Gloves beside other worn
+         *  items): it is crafted into the inventory and the unit keeps what it wears. */
+        readonly resultReturned?: true } }
   | { readonly allowed: false; readonly reason: EquipmentFailure; readonly conflictingItemIds: readonly string[] };
 export interface UnitEquipmentView {
   readonly unitId: string;

@@ -27,7 +27,9 @@ import {
   drawnPlace,
   drawnPlaceInto,
   erosionDrive,
+  frameInto,
   frameOf,
+  type FrameSlot,
   particleBasisInto,
   type Source,
 } from "../../engine/simulation/particleRead";
@@ -43,6 +45,7 @@ import {
   rowsWritten,
   written,
 } from "../utils/buffers";
+import { releaseMeshBuffers } from "../utils/drawBufferPool";
 import { colorLookupInto } from "../utils/colorLookup";
 import { bucketRange, bucketsOf, renderStamp } from "../utils/emitterBuckets";
 import { meshMaterial } from "../utils/materials";
@@ -50,6 +53,7 @@ import { sourcesScrollInto } from "../utils/palette";
 import { beamEndsInto, beamTint } from "../utils/ribbon";
 import { type LayerDraws, layersOf } from "../utils/uniforms";
 import { layerOf, uvDraw, uvTransformInto } from "../utils/uvTransform";
+import { clipUnderPlay, clipsUnderPlay } from '../utils/playSurface';
 
 /** Scratch the frame reuses, so a draw allocates nothing per particle. */
 const DRAWN = { scale: new Float32Array(3), color: new Float32Array(4) };
@@ -96,6 +100,8 @@ export interface MeshesProps {
   sources: readonly Source[];
   /** The emitter's own geometry, with the per-instance attributes the frame writes. */
   buffers: MeshBuffers;
+  /** Stable pool key for this authored mesh (prepared draw definition key). */
+  meshKey: string;
   samplers: EmitterSamplers;
   /** Where the emitter falls in the system's draw order, from `drawRanks`. */
   rank: number;
@@ -120,6 +126,7 @@ export function createMeshes({
   emitter,
   sources,
   buffers,
+  meshKey,
   samplers,
   rank,
   hidden,
@@ -137,6 +144,8 @@ export function createMeshes({
       fragmentTests(emitter),
       meshSide(emitter),
     );
+    // 11-15: a mesh is clipped below the board, as the floor's depth clipped it, unless its depth test is off (playSurface.ts).
+    if (clipsUnderPlay(emitter)) clipUnderPlay(material);
     if (buffers.pose) {
       material.defines.PARTICLE_SKINNING = 1;
       material.uniforms.particleBones = { value: buffers.pose.texture };
@@ -145,10 +154,23 @@ export function createMeshes({
   }, [emitter, samplers, buffers.pose]);
 
   const instanced = new InstancedMesh(geometry, material, MESHES_PER_EMITTER);
+  /* Nothing draws before the first frame writes the matrices: pooled buffers still hold the last effect's. */
+  instanced.count = 0;
+  /* The mesh's own matrix attribute, handed back before dispose. InstancedMesh.dispose has the renderer delete the GPU
+     buffer of whatever `instanceMatrix` holds; holding the pooled one, that deleted the buffer the pooled geometry's vertex
+     array still binds, and on a GPU the next effect on those buffers drew its mesh from the stale matrices, held still
+     (Tristana's attack shell, 11-16 Windows). */
+  const ownMatrix = instanced.instanceMatrix;
   const pair = { solid: instanced };
-  cleanup(() => () => { buffers.pose?.texture.dispose(); geometry.dispose(); instanced.dispose(); });
+  cleanup(() => () => {
+    buffers.pose?.texture.dispose();
+    instanced.instanceMatrix = ownMatrix;
+    instanced.dispose();
+    releaseMeshBuffers(buffers, meshKey);
+  });
   const drawn = !hidden && !emitter.disabled;
 
+  let frameSlot: FrameSlot | undefined;
   eachFrame((state) => {
     const held = instanced;
     /* Claimed every frame rather than once, because a change of `args` hands the ref a
@@ -171,7 +193,8 @@ export function createMeshes({
     let instance = 0;
     for (const source of sources) {
       const pool = source.pool;
-      const frame = frameOf(source, emitter);
+      frameSlot ??= frameOf(source, emitter) as FrameSlot;
+      const frame = frameInto(source, emitter, frameSlot);
       const time = frame.now;
       const stretch = beam === null ? 0 : stretchInto(source, beam, depth);
       if (beam !== null && stretch === 0) continue;

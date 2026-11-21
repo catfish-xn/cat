@@ -1,7 +1,7 @@
 import { appendAugmentFact, requireAugmentFacts, historySeatId, historyCheck } from './augment-history';
 import { transformH13Item } from './augment-pool-batch5-h13-transforms';
 import { salvageRecipe } from './augment-pool-batch5-h13-salvage';
-import { ITEM_DEFINITIONS } from './content/items';
+import { pandoraItemPool } from './pandora-item-pools';
 import { G24_FORGE_POOLS } from './content/g2-4-forges';
 import { nextRandom } from './rng';
 import type { MatchState } from './match-types';
@@ -17,8 +17,7 @@ export function h13ItemDraw(s:MatchState,choiceId:string,itemId:string,pool:read
 export function h13RoundItemPool(augmentId:string,definitionId:string):readonly string[]|null {
   if(augmentId==='artifactory')return salvageRecipe(definitionId)?G24_FORGE_POOLS.TFT_ArmoryKeyOrnn:null;
   if(augmentId!=='pandoras-items-iii')return null;
-  if(ITEM_DEFINITIONS[definitionId]?.kind==='component')return G24_FORGE_POOLS.TFT_ArmoryKeyComponent;
-  return salvageRecipe(definitionId)?G24_FORGE_POOLS.TFT_ArmoryKeyCompleted:null;
+  return pandoraItemPool(definitionId);
 }
 /** The pre-grant round-entry snapshot is authoritative; acquisition itself never rerolls existing items. */
 export function enterH13ItemRound(initial:MatchState):MatchState {

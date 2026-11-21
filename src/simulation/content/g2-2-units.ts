@@ -55,7 +55,7 @@ export const G22_UNITS: Readonly<Record<string, UnitDefinition>> = freezeContent
     "cost": 2,
     "baseStats": {
       "health": 700,
-      "attack": 50,
+      "attack": 52,
       "armor": 45,
       "magicResist": 45
     },

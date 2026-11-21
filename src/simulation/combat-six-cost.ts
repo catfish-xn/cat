@@ -64,7 +64,9 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
   const destination=free[0];if(destination&&hexDistance(destination,u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:destination}); recordAerialMovement(ctx, u, destination);u.cell=destination;}
   const allies=byDistance(u,ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(u.cell,t.cell)<=2)).slice(0,2);
   for(const t of [u,...allies])grantShield(t,origin(u),variable(u,'Shield'),ctx.tick+P.mel.shieldTicks,ctx.tick,ctx.events);
-  if(u.runtime.castCount%3===0){
+  // One read decides the third-cast bolts and the branch reported (display output only).
+  const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
+  if(third){
     const targets=byDistance(u,enemies(u,ctx.units)).slice(0,5),total=s.storedEnergy+Math.floor(variable(u,'ThirdDamage')*ap(u,ctx.tick,ctx.units)/100);
     if(targets.length){
       const ids=[...targets].sort((a,b)=>a.id<b.id?-1:1),base=Math.floor(total/targets.length),remainder=total%targets.length;

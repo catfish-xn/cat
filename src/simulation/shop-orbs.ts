@@ -2,14 +2,21 @@ import { canonicalContent } from './content';
 import { lootEntryId, lootOrbId, lootReceiptId } from './loot-identity';
 import { getCatalogRoundById } from './round-selectors';
 import type { MatchState } from './match-types';
+import type { MechanicReceipt } from './seat-mechanics/types';
+import { AUGMENT_GIFT_SOURCE } from './augment-gift-plan';
+import { restartMissionGiftPlan } from './restart-mission';
 
-/** Existing mechanic-orb envelope, limited to the new shop gifts in solo mode. */
-export function soloShopOrb(state: MatchState, orbId: string): boolean {
- return !state.multiplayer && !!state.seatMechanics?.receipts.some(r=>r.source==='augment-pool-shop'
+function soloOrbSource(state: MatchState, r: MechanicReceipt): boolean {
+ return r.source==='augment-pool-shop' || r.source===AUGMENT_GIFT_SOURCE && r.kind==='unit'
+  && restartMissionGiftPlan(state).some(g=>g.receiptId===r.receiptId&&g.definitionId===r.definitionId&&g.starLevel===r.starLevel);
+}
+/** Existing mechanic-orb envelope for shop gifts and Restart Mission's explicitly deferred rewards. */
+export function soloRewardOrb(state: MatchState, orbId: string): boolean {
+ return !state.multiplayer && !!state.seatMechanics?.receipts.some(r=>soloOrbSource(state,r)
   &&r.kind==='unit'&&r.resolution==='orb'&&r.orbId===orbId);
 }
 /** Validate the additional mechanic entries before applying the unchanged solo PvE validator.
- * The returned projection excludes only authenticated shop entries; the live save and provenance retain them. */
+ * The returned projection excludes only authenticated deferred rewards; the live save and provenance retain them. */
 export function soloPveLoot(state: MatchState): MatchState['m8']['loot'] {
  const loot=state.m8.loot,orbs=loot.rewardOrbs??[],receipts=state.seatMechanics?.receipts.filter(r=>r.kind==='unit'&&r.resolution==='orb')??[];
  const fail=(ok:unknown)=>{if(!ok)throw new RangeError('Invalid solo shop reward orb');};
@@ -17,7 +24,7 @@ export function soloPveLoot(state: MatchState): MatchState['m8']['loot'] {
  const ids=new Set<string>();
  for(const orb of orbs){
   const r=receipts.find(r=>r.kind==='unit'&&r.orbId===orb.orbId);
-  fail(r?.kind==='unit'&&r.source==='augment-pool-shop'&&soloShopOrb(state,orb.orbId));
+  fail(r?.kind==='unit'&&soloOrbSource(state,r)&&soloRewardOrb(state,orb.orbId));
   if(!r||r.kind!=='unit')throw new RangeError('Invalid solo shop reward receipt');
   const orbId=lootOrbId(r.roundId,'mechanic',r.receiptId,0),dropId=lootEntryId(orbId,0);
   const drop={orbId,entryOrdinal:0,dropId,roundId:r.roundId,encounterId:'mechanic',sourceUnitId:r.receiptId,
@@ -37,7 +44,7 @@ export function soloPveLoot(state: MatchState): MatchState['m8']['loot'] {
   }
   fail(!loot.earnedEvidence.some(e=>e.dropId===dropId));
  }
- fail(receipts.every(r=>r.kind==='unit'&&r.source==='augment-pool-shop'&&r.orbId===lootOrbId(r.roundId,'mechanic',r.receiptId,0)&&orbs.some(o=>o.orbId===r.orbId)));
+ fail(receipts.every(r=>r.kind==='unit'&&soloOrbSource(state,r)&&r.orbId===lootOrbId(r.roundId,'mechanic',r.receiptId,0)&&orbs.some(o=>o.orbId===r.orbId)));
  const {rewardOrbs:_,...pve}=loot;
  return {...pve,direct:loot.direct.filter(d=>!ids.has(d.dropId)),receipts:loot.receipts.filter(r=>!ids.has(r.dropId))};
 }

@@ -61,8 +61,11 @@ if (mode === 'timing') describe('BotDriver: whole matches (§13.3)', () => {
     // The bots built up: every seat levelled, and some upgraded a hero to two stars through the buy command.
     expect(room.state.seats.every(seat => seat.match.level >= 5)).toBe(true);
     expect(room.state.seats.some(seat => seat.match.preparation.units.some(unit => unit.team === 'player' && unit.starLevel >= 2))).toBe(true);
-    expectWallClockBelow('bot-driver eight bots whole match', performance.now() - started, 60_000);
-  }, 60_000); }
+    // Ranged attack landing (2026-11-18, Fable-approved, this number only): battles settle ranged damage on landing and run
+    // about 9% longer on average (15 ranged-heavy battles: 447 -> 486 ticks, median 389 -> 498) with about 2% more work per
+    // tick; the whole-match limit moves from 60 s to 75 s (the vitest timeout with it, so the limit can be reached).
+    expectWallClockBelow('bot-driver eight bots whole match', performance.now() - started, 75_000);
+  }, 75_000); }
 
   if (mode === 'timing') { it('plays one idle human and seven bots through the lobby to a unique ranking; the human seat is never driven', () => {
     const started = performance.now();

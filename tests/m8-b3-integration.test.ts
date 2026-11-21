@@ -1,3 +1,4 @@
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -11,9 +12,12 @@ import { effectIdentity } from '../src/simulation/m8/identity';
 import { source, context } from './fixtures/m8-contract-cases';
 import { heals, packets as packetViews, statusEvents } from './helpers/replay2-views';
 import { vi } from 'vitest';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
 
+// Ranged attack landing (window only): an attack on the dummy one hex away lands LANDING ticks later.
+const LANDING = rangedAttackFlightTicks(1);
 function hero(name: string, authorized: boolean): CombatUnit {
   const item = source('TFT_Item_InfinityEdge', 'i1', 'p');
   return unit('p', 'player', 1, 3, { definitionId: name, ability: resolveAbility(`${name}-ability`, 1),
@@ -39,9 +43,9 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   // replay2: outcome.raw is the frozen pre-crit amount. Third column = the old post-crit event raw (still checked
   // as floor(raw×14000/10000)); fourth column = the pre-crit raw, i.e. the hand amount before ×1.4.
   it.each([
-    ['irelia', 61, [98], [70]], ['maddie', 1, [189], [135]], ['darius', 1, [336], [240]], ['lux', 21, [504], [360]],
-    ['zyra', 1, [364], [260]], ['tristana', 1, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
-    ['leona', 61, [161], [115]], ['kogmaw', 21, [67], [48]], ['scar', 1, [112], [80]], ['ezreal', 1, [217, 378], [155, 270]],
+    ['irelia', 61, [98], [70]], ['maddie', 1, [189], [135]], ['darius', 1, [336], [240]], ['lux', 21 + LANDING, [504], [360]],
+    ['zyra', 1 + CAST_WINDUP_TICKS.zyra, [364], [260]], ['tristana', 1 + CAST_WINDUP_TICKS.tristana, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
+    ['leona', 61, [161], [115]], ['kogmaw', 21 + LANDING, [67], [48]], ['scar', 1, [112], [80]], ['ezreal', 1, [217, 378], [155, 270]],
     ['loris', 81, [210], [150]], ['nami', 1, [168], [120]], ['corki', 1, [57], [41]], ['garen', 1, [350], [250]], ['zoe', 1, [196], [140]], ['caitlyn', 1, [280, 392], [200, 280]],
   ] as const)('%s authorizes only its skill damage packets', (name, ticks, firstExpected, firstPreCrit) => {
     const initial = battle([hero(name, true), dummy()], { rngState: 42, rngDraws: 0 });
@@ -64,12 +68,17 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
     // replay2: the legacy resistanceFlat projection is a stat-buff/debuff group whose armor contribution carries the flat amount (MR rides beside it).
     expect(statusEvents(result.events).flatMap(e => e.kind === 'stat-buff' || e.kind === 'stat-debuff' ? e.group.contributions.filter(c => c.application.modifier?.stat === 'armor' && c.application.modifier.value.kind === 'constant').map(c => (c.application.modifier!.value as { amount: number }).amount) : [])).toEqual([100, 100]);
   });
-  it('rolls A/B/C independently in target order: seed42 words .252/.088/.577', () => {
+  // targeting-p1 (8106acee): eA and eC are both adjacent to Zyra, so the opening target is an equal-distance tie that now
+  // draws the first combat word (.252), selecting eC. The spell-crit rolls still run independently in target order on the
+  // next three words: eA .088 (crit), eB .577 (no crit), eC (crit). v25: eA primary, rolls .252/.088/.577, three draws.
+  it('rolls A/B/C independently in target order after the tie draw: seed42 words .252 (tie) then .088/.577/next', () => {
     const actor = hero('zyra', true), auth = actor.spellCrit!;
-    const result = stepCombat(battle([{ ...actor, spellCrit: { ...auth, chanceBps: 2500 } }, dummy('eA'), dummy('eB', 3, 3), dummy('eC', 2, 4)], { rngState: 42, rngDraws: 0 }));
-    // replay2 pre-crit raw on the critical eB packet: old post-crit 133 = floor(95×14000/10000).
-    expect(packets(result.events).map(e => [e.unitId, e.raw, e.critical])).toEqual([['eA', 260, false], ['eB', 95, true], ['eC', 95, false]]);
-    expect(result.state.rngDraws).toBe(3);
+    // 2026-11-16: the vines (and their crit rolls) land CAST_WINDUP_TICKS.zyra after the cast; the tie draw stays on the cast.
+    const result = advance(battle([{ ...actor, spellCrit: { ...auth, chanceBps: 2500 } }, dummy('eA'), dummy('eB', 3, 3), dummy('eC', 2, 4)], { rngState: 42, rngDraws: 0 }), 1 + CAST_WINDUP_TICKS.zyra);
+    expect(result.state.units.find(u => u.id === 'p')!.targetId).toBe('eC');
+    // replay2 pre-crit raw on the critical packets: old post-crit 133 = floor(95×14000/10000).
+    expect(packets(result.events).map(e => [e.unitId, e.raw, e.critical])).toEqual([['eA', 95, true], ['eB', 95, false], ['eC', 260, true]]);
+    expect(result.state.rngDraws).toBe(4);
   });
   it('cancelled Maddie future shots cost zero words; the committed first shot retains its word', () => {
     const first = stepCombat(battle([hero('maddie', true), dummy()], { rngState: 42, rngDraws: 0 }));
@@ -84,16 +93,17 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   it('Lux appended damage draws separately from the basic packet', () => {
     let first = stepCombat(battle([hero('lux', true), dummy()], { rngState: 42, rngDraws: 0 })).state;
     first = { ...first, units: first.units.map(u => u.id !== 'p' ? u : { ...u, spellCrit: { ...u.spellCrit!, chanceBps: 2500 } }) };
-    const result = advance(first, 20);
+    const result = advance(first, 20 + LANDING);
     // replay2 pre-crit raw on the critical packet: old post-crit 504 = floor(360×14000/10000).
     expect(packets(result.events).map(e => [e.raw, e.critical])).toEqual([[100, false], [360, true]]);
     expect(result.state.rngDraws).toBe(2);
   });
   it('Tristana overflow retains its critical fact and waits for the next tick without drawing again', () => {
-    const first = stepCombat(battle([hero('tristana', true), { ...dummy('eA'), hp: 100 }, { ...dummy('eB', 3, 3), armor: 100 }], { rngState: 42, rngDraws: 0 }));
+    // Wind-up batch 2: the shell lands CAST_WINDUP_TICKS.tristana after her cast.
+    const first = advance(battle([hero('tristana', true), { ...dummy('eA'), hp: 100 }, { ...dummy('eB', 3, 3), armor: 100 }], { rngState: 42, rngDraws: 0 }), 1 + CAST_WINDUP_TICKS.tristana);
     // replay2 pre-crit raw on the critical first shot: old post-crit 805 = floor(575×14000/10000).
     expect(packets(first.events).map(e => [e.unitId, e.raw])).toEqual([['eA', 575]]);
-    expect(first.state.units.find(u => u.id === 'p')!.tasks).toMatchObject([{ amount: 705, executeAtTick: 2, inherited: { critical: true, portion: 'overkill', resolvedAtTick: 1 } }]);
+    expect(first.state.units.find(u => u.id === 'p')!.tasks).toMatchObject([{ amount: 705, executeAtTick: 2 + CAST_WINDUP_TICKS.tristana, inherited: { critical: true, portion: 'overkill', resolvedAtTick: 1 + CAST_WINDUP_TICKS.tristana } }]);
     const second = stepCombat(first.state);
     expect(packets(second.events).map(e => [e.unitId, e.raw, e.mitigated, e.critical])).toEqual([['eB', 705, 705, true]]);
     expect(second.state.rngDraws).toBe(1);
@@ -102,7 +112,7 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
     const gun = { source: source('gunblade', 'i2', 'p'), mechanic: 'gunblade', values: { selfHealBps: 1500, allyHealBps: 2500 } };
     const shieldSource = source('shield', 's', 'e');
     const target = { ...dummy(), shield: 1000, shieldExpiresAtTick: 100, shieldLayers: [{ key: 's', source: shieldSource, granted: 1000, remaining: 1000, absorbed: 0, expiresAtTick: 100 }] };
-    const result = stepCombat(battle([{ ...hero('zyra', false), mechanics: [gun] }, target]));
+    const result = advance(battle([{ ...hero('zyra', false), mechanics: [gun] }, target]), 1 + CAST_WINDUP_TICKS.zyra); // vines land after the wind-up
     expect(packets(result.events).map(e => [e.absorbed, e.hpDamage])).toEqual([[260, 0]]);
     expect(heals(result.events).map(e => [e.unitId, e.requested])).toEqual([['p', 39]]); // 260*.15; no ally => no second self heal
   });

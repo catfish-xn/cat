@@ -1,3 +1,4 @@
+import { stepLanded } from './helpers/landing';
 import {expect,it} from 'vitest';
 import {createMatch} from '../src/simulation/match';
 import {buildStrategySnapshot} from '../src/simulation/strategy-snapshot';
@@ -30,7 +31,7 @@ it('Fortified applies twelve percent health at start and again at four seconds',
  const p=state.units.find(u=>u.id==='p')!;expect(base).toBe(560);expect(p.maxHp).toBe(620);validate(state);
 });
 it('Heavy Hitter adds twenty percent holder HP with a 2.5-second cooldown',()=>{
- const state=start('heavy-hitter'),step=stepCombat({...state,units:state.units.map(u=>({...u,mana:0,maxMana:0}))});
+ const state=start('heavy-hitter'),step=stepLanded({...state,units:state.units.map(u=>({...u,mana:0,maxMana:0}))}); // window: the proc rides the shot
  expect(packets(step.events).filter(p=>p.source.definitionId==='heavy-hitter').map(p=>p.raw)).toEqual([100]);validate(step.state);
 });
 

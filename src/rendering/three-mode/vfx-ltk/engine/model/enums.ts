@@ -112,14 +112,19 @@ export type ColorLookup = (typeof COLOR_LOOKUP)[keyof typeof COLOR_LOOKUP];
  *
  * The reflected enum names the first three. The rest are named for what the cull mask does
  * with them, since the mask keys six tiers (`VfxEmitter_Evaluation.md` section 9.1).
+ *
+ * The 16.17 reading put the low-spec stand-in at 4. The 14.24 bins authored here use 4 for
+ * the high-end extras instead (Viktor's `MAP_DISC_HIGH_WRITE`, the `Avatar_*` overlays,
+ * Vex's `DarkBG`), none of which has a cheaper twin, and the original footage shows them
+ * (Viktor's board-wide disc), so 4 and 5 trade places.
  */
 export const IMPORTANCE = {
   low: 0,
   medium: 1,
   high: 2,
   always: 3,
-  lowSpecOnly: 4,
-  highSpecOnly: 5,
+  highSpecOnly: 4,
+  lowSpecOnly: 5,
 } as const;
 
 export type Importance = (typeof IMPORTANCE)[keyof typeof IMPORTANCE];

@@ -36,13 +36,25 @@ node scripts/assets3d/build-asset-root.mjs --roots "<HEROES_ROOT>" "<FX_BATCH1_R
 
 `precache.json` 调用与批次合并、压缩脚本相同的 `createPrecache`，按 path 排序，每项仅含 path/bytes/sha256。索引仅包含实际运行载荷，不包含 manifest、action-bindings、merge-report 或 precache 自身。`merge-report.json` 写入上述固定生成器标识，并列出各模型、特效、动作单位、playback、variant/单位、notes 和载荷的输入真实根来源，`sources.unavailable` 按输出 unavailable 数组索引标明来源；已合并根作为一个输入，不猜测其历史来源。报告没有时间戳和本次写入计数，相同输入顺序和字节重复执行时所有输出字节一致。
 
+## 子网格补丁（合并入口内，压缩之前，固定一步）
+
+源数据里有的子网格初始隐藏（skin 的 `initialSubmeshToHide`），由片段里的 SubmeshVisibilityEventData 在某一帧显示或隐藏。`build-asset-root.mjs` 在合并未压缩根时，默认用 `scripts/assets3d/submesh-patch.mjs` 读提取缓存（默认 `assets3d-local/trial/local`，按 `extraction.json` 校验；可用 `--submesh-source <路径>` 指定，`--no-submesh-patch` 关闭），把每个模型已导出片段的显示/隐藏事件连同帧号写进 manifest 的 `submeshVisibility.events`。合并入口的输入应已包含 `cast-animations` 追加的施法片段（显示事件常在施法片段里）；输入模型全部已压缩时自动跳过（补丁只在压缩之前运行）。`merge-report.json` 的 `submeshPatch` 记录是否运行、逐模型改前改后 sha256、可追加与未追加的子网格及原因。
+
+本机没有提取缓存（找不到 `extraction.json`）时，合并在写出任何文件之前停下，报 `submesh-source-missing`，提示用 `--submesh-source <路径>` 指向缓存，或加 `--no-submesh-patch` 跳过这一步。
+
+`--submesh-geometry`（默认关）另外把"已导出片段会显示的"初始隐藏子网格追加回模型（`submeshVisibility.initiallyHidden`）。渲染器（`src/rendering3d/submesh-visibility.ts`）在取模型时按材质名隐藏 `initiallyHidden`，播放片段时按事件帧（30 帧/秒）切换；每个片段从默认状态开始，不把上一片段的显隐带过来。不认识这套字段的旧渲染器会把追加的子网格一直画出来，所以开关要等带这套渲染器的版本部署后再开。开关关闭时所有模型逐字节不变。相同输入重复执行，所有输出逐字节一致。也可单独运行同一步：
+
+```powershell
+node scripts/assets3d/submesh-patch.mjs --from "<OUT_DIR>" --source "<ASSETS_LOCAL>/trial/local" --out "<ASSETS_LOCAL>/deploy-submesh" [--submesh-geometry]
+```
+
 ## 压缩顺序
 
-建议先合并一次，再压缩一次，最后把压缩根部署到外部真实目录。这样只压缩最终选中的模型，避免重复处理被覆盖的载荷。`compress.mjs` 的输出仍受原策略限制，须是本仓库 `<ASSETS_LOCAL>` 下不存在的真实目录；本次不扩大压缩器权限。
+建议先合并一次（合并入口同时打子网格补丁），再压缩一次，最后把压缩根部署到外部真实目录。这样只压缩最终选中的模型，避免重复处理被覆盖的载荷。`compress.mjs` 的输出仍受原策略限制，须是本仓库 `<ASSETS_LOCAL>` 下不存在的真实目录；本次不扩大压缩器权限。
 
 ```powershell
 node scripts/assets3d/compress.mjs --from "<OUT_DIR>" --out "<ASSETS_LOCAL>/deploy-compressed"
-node scripts/assets3d/build-asset-root.mjs --roots "<ASSETS_LOCAL>/deploy-compressed" --out "<COMPRESSED_OUT_DIR>" --force
+node scripts/assets3d/build-asset-root.mjs --roots "<ASSETS_LOCAL>/deploy-compressed" --out "<COMPRESSED_OUT_DIR>" --force --no-submesh-patch
 ```
 
 也可先分别压缩各输入根，再按原顺序合并压缩根。不要反复压缩已经压缩的根；压缩后的路径和字节会改变，必须使用重新生成的 precache。两种流程都需要本地已安装的压缩依赖，本任务不会联网安装。压缩器的旧 merge-report 属于历史诊断，最终合并入口会重建来源报告。
@@ -52,7 +64,7 @@ node scripts/assets3d/build-asset-root.mjs --roots "<ASSETS_LOCAL>/deploy-compre
 测试只使用系统临时目录中的合成 GLB、粒子和纹理，覆盖空目录及已标记产物的强制替换、拒绝无标记/损坏/外来报告的非空目录、非强制写入已有非空目录的拒绝，以及已合并根再合并、顺序覆盖、冲突、联接、输出重叠、外部输出、索引和重复执行确定性。
 
 ```powershell
-npm test -- tests/assets3d-build-root.test.ts tests/assets3d-merge.test.ts tests/assets3d-fx-pilot.test.ts tests/assets3d-neutrals.test.ts
+npm test -- tests/assets3d-build-root.test.ts tests/assets3d-submesh-patch.test.ts tests/rendering3d-submesh-visibility.test.ts tests/assets3d-merge.test.ts tests/assets3d-fx-pilot.test.ts tests/assets3d-neutrals.test.ts
 npm run typecheck
 ```
 

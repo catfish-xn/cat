@@ -16,7 +16,11 @@ vi.setConfig({ testTimeout: 20_000 });
 // v24: first seed from 0 with no opening encounter, Investment I offered at
 // 2-1 and an independent 2-7 plan of three items plus 1G whose unchanged public
 // route reaches 66G / 73HP / 136HP-growth. The 2-6 loss keeps win streak gold at 0.
-const SEED=7985;
+// v26: the 14.24 neutral restore (568eeea4, merged e5892c51) makes 7985's unchanged 2-7 board lose the krugs
+// (enemyWin, loss-streak 3 G), so it can no longer witness win-income settlement. Rescanning 0..20000 with the
+// same filters, 18751 is the only seed whose unchanged route wins 2-7 in all three gold variants; its route
+// reaches 62G / 73HP / 128HP-growth (v25 seed 7985: 66G / 73HP / 136).
+const SEED=18751;
 expect(openingEncounter(SEED)).toBe('none');
 expect(independentLootPlan(SEED,10).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload.kind).sort()).toEqual(['gold','item','item','item']);
 expect(independentLootPlan(SEED,10).rounds.at(-1)!.encounterPlan.drops.find(d=>d.payload.kind==='gold')!.payload).toEqual({kind:'gold',quantity:1});
@@ -34,10 +38,11 @@ preparation=accepted(api.equipItem(preparation,'item-2','unit-1',1));
 preparation=accepted(api.equipItem(preparation,'item-3','unit-2',0));
 function roundTrip(s:MatchState){const saved=serializeMatch(s),r=restoreMatch(saved);expect(r).toEqual(s);expect(r).not.toBe(s);expect(serializeMatch(s)).toBe(saved);return r;}
 function reject(s:MatchState,change:(s:any)=>void,message:string){const saved=serializeMatch(s),bad=JSON.parse(saved);change(bad);expect(()=>restoreMatch(bad)).toThrow(message);expect(serializeMatch(s)).toBe(saved);}
-// Isolated H=80 arithmetic remains in the independent oracle. This real route has H=136.
+// Isolated H=80 arithmetic remains in the independent oracle. This real route has H=128 (v25 seed 7985: 136).
 describe('B8 live gold before interest, randomized direct loot',()=>{
- it.each([{gold:9,basis:10,interest:1,after:16,hp:144},{gold:49,basis:50,interest:5,after:60,hp:176},{gold:50,basis:51,interest:5,after:61,hp:176}])('$gold G plus earned 1G settles to $after once, across exact restore/Continue',v=>{
-  expect(preparation).toMatchObject({gold:66,playerHp:73,level:4,augmentProgress:{investmentHp:136}});
+ // Investment growth +8 / +40 is unchanged; from H=128 it reaches 136/168/168 (v25 from H=136: 144/176/176).
+ it.each([{gold:9,basis:10,interest:1,after:16,hp:136},{gold:49,basis:50,interest:5,after:60,hp:168},{gold:50,basis:51,interest:5,after:61,hp:168}])('$gold G plus earned 1G settles to $after once, across exact restore/Continue',v=>{
+  expect(preparation).toMatchObject({gold:62,playerHp:73,level:4,augmentProgress:{investmentHp:128}});
   let before=preparation;
   if(v.gold%2===1){const slot=before.shop.slots.findIndex(o=>o.status==='available'&&UNIT_DEFINITIONS[o.definitionId].cost%2===1);expect(slot).toBeGreaterThanOrEqual(0);before=accepted(api.buyUnit(before,slot,before.shop.generation));}
   while(before.gold>v.gold)before=accepted(api.rerollShop(before));

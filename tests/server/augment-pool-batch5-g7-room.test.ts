@@ -13,11 +13,16 @@ import { drainLootExplosionRewards, lootExplosionRewardPlan } from '../../src/si
 import { validateLootExplosionRewards } from '../../src/simulation/restore-checks/loot-explosion-check';
 import { lootExplosionPlan, validateLootExplosionReceipts } from '../fixtures/m5/augment-rewards-oracle.cjs';
 import type { MatchState } from '../../src/simulation/match-types';
+import { UNIT_DEFINITIONS } from '../../src/simulation/units';
 
 const ID='loot-explosion',SOURCE='augment-pool-batch5-g7';
 let found:{seed:number;seatId:string}|undefined;
 // Cheap offer-only discovery, bounded by the user's 0..100 limit; the actual route below verifies it.
-for(let seed=0;seed<=100&&!found;seed++){
+// #693 (2026-11-16, scene change approved by Fable): the first offer seed, 9, still gets its Ambusher last hit at 2-1 but no
+// Loot Explosion award through 2-3 any more (an opponent's Zyra lands her vines after a wind-up, which moves the later
+// rolls). The search now starts at 10; the next offer seed, 15, meets the premise (a real last hit and at least one award)
+// on #693 and on wind-up batch 2. Searched 0..150: seeds 9 and 137 have no award, every other offer seed has one or more.
+for(let seed=10;seed<=100&&!found;seed++){
   let rng=seed;
   for(let index=0;index<4;index++){
     const draw=nextRandom(rng);rng=draw.state;
@@ -118,7 +123,23 @@ describe('B5-69 real online room',()=>{
     expect(drainLootExplosionRewards(restored)).toBe(restored);
   });
   for(const roundId of ['2-5','2-6','2-7']){
-    it(`continues to ${roundId} after the shared carousel`,()=>{runUntilClaiming(room,clock,s=>s.roundId===roundId&&s.phase==='preparation');});
+    it(`continues to ${roundId} after the shared carousel`,()=>{
+      runUntilClaiming(room,clock,s=>s.roundId===roundId&&s.phase==='preparation');
+      // 14.24 neutrals (568eeea4, v26 merge e5892c51) make the 2-7 krugs survive Camille + Powder alone (v25: they
+      // died), leaving no PvE death to record. Field more units with the real buy/buyXp/deploy room commands.
+      if(roundId!=='2-7')return;
+      for(let n=0;n<8;n++){
+        const m=own(),slot=m.shop.slots.findIndex(o=>o.status==='available'&&UNIT_DEFINITIONS[o.definitionId].cost<=m.gold);
+        if(slot<0||m.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>=m.preparation.benchSize)break;
+        expect(room.handle(seatId,{type:'buy',slot,generation:m.shop.generation})).toMatchObject({ok:true});
+      }
+      while(own().gold>=4&&own().level<6)expect(room.handle(seatId,{type:'buyXp'})).toMatchObject({ok:true});
+      const m=own(),taken=new Set(m.preparation.units.flatMap(u=>u.team==='player'&&u.location.kind==='board'?[`${u.location.cell.col},${u.location.cell.row}`]:[]));
+      const free=Array.from({length:14},(_,i)=>({col:i%7,row:4+Math.floor(i/7)})).filter(c=>!taken.has(`${c.col},${c.row}`));
+      const bench=m.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench');
+      for(const [i,u] of bench.slice(0,m.level-taken.size).entries())
+        expect(room.handle(seatId,{type:'deploy',unitId:u.id,target:{kind:'board',cell:free[i]}})).toMatchObject({ok:true});
+    });
     it(`completes ${roundId} with the same authoritative reward ledger`,()=>{
       runUntil(room,clock,s=>s.roundId===roundId&&s.phase==='settlement');
       expect(()=>validateLootExplosionReceipts(own())).not.toThrow();

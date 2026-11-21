@@ -30,7 +30,7 @@ describe('forced moves as drawn', () => {
   const move = (reason?: string) =>
     ({ type: 'movement', tick: 5, eventSeq: 0, unitId: 'a', from: { col: 1, row: 1 }, to: { col: 2, row: 1 }, ...(reason ? { reason } : {}) }) as unknown as DisplayCombatEvent;
   it('skids the pull, grab and knockback reasons only; walks and dashes stay walks', () => {
-    for (const reason of ['mordekaiser-pull', 'sett-grab', 'sevika-knockback']) expect(isDisplacement(move(reason))).toBe(true);
+    for (const reason of ['mordekaiser-pull', 'sett-grab', 'sevika-knockback', 'vander-knockback']) expect(isDisplacement(move(reason))).toBe(true);
     for (const reason of [undefined, 'ambessa-chain', 'ambessa-fist-retreat']) expect(isDisplacement(move(reason))).toBe(false);
     expect(isDisplacement({ type: 'statusChanged', tick: 5, eventSeq: 0, reason: 'applied', targetId: 'a', kind: 'stun', effectiveMagnitudeBps: 0 } as unknown as DisplayCombatEvent)).toBe(false);
   });

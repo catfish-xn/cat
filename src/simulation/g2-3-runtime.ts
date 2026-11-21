@@ -5,6 +5,7 @@ import { grantAnvilUnit } from './anvils';
 import {recordG23GrantEvidence} from './g2-3-grant-evidence';
 import {drainP2Gifts} from './s13-augments-p2-grants';
 import {transferUpgradeResources} from './upgrades';
+import { anomalyHolderCandidates, reconcileAnomalyResources } from './anomaly-ownership';
 import type {MatchState,MatchEvent,MatchFailure} from './match-types';
 import type {UnitLootPolicy} from './loot-runtime';
 import {readG23Progress,writeG23Progress} from './g2-3-state';
@@ -17,7 +18,12 @@ export function mechanicGrantEvents(before:MatchState,after:MatchState):MatchEve
  const facts=after.resourceProvenance.entries.slice(before.resourceProvenance.entries.length);
  const births=new Set(facts.filter(f=>f.kind==='unit-acquired'&&f.source.kind==='mechanic').map(f=>f.sequence));
  const upgrades=facts.flatMap(f=>f.kind==='unit-upgraded'&&births.has(f.acquisitionSequence)?[f.event]:[]);
- return [...upgrades,...transferUpgradeResources(before.items,before.anomalyBinding,upgrades).events,
+ const transferred=transferUpgradeResources(before.items,before.anomalyBinding,upgrades);
+ const restored=births.size?reconcileAnomalyResources(after.anomalySelection,transferred.anomalyBinding,
+  anomalyHolderCandidates(after),transferred.items).events:[];
+ const promoted:MatchEvent[]=births.size&&after.d14?.phase==='promoted'&&before.d14?.phase!=='promoted'
+  ?[{type:'d14Promoted',unitId:after.d14.unitId,choiceId:after.d14.choiceId}]:[];
+ return [...upgrades,...transferred.events,...restored,...promoted,
   ...(after.seatMechanics?.receipts??[]).filter(r=>!ids.has(r.receiptId)).map(receipt=>({type:'mechanicGranted' as const,receipt}))];
 }
 export function claimG23Atom(state:MatchState,atomId:string,definitionId:string,policy?:UnitLootPolicy):{ok:true;state:MatchState;events:readonly MatchEvent[]}|{ok:false;state:MatchState;reason:MatchFailure}{

@@ -21,11 +21,14 @@ it.skipIf(!existsSync(RESEARCH_FILE))('Malicious Monetization archive numbers',(
 it.each(['2-1','3-2','4-2'])('only offers Monetization at the allowed node %s',node=>{
  expect(augmentCandidates('gold',[],[],null,{node,fieldedTraits:[],blocked:[]}).includes('mirrored-monetization')).toBe(node==='4-2');
 });
-it.each(FIELDED_LEGS)('reaches %s with real commands',leg=>{expect(fieldedRoute(11,leg).roundDefinitionId).toBe(leg);});
+// v26 D5 pool (7953c99a): fielded seed 37 (was 11). Seed 11's route now owns history-proof augments
+// (cluttered-mind), so the battle-less checkpoint save is rejected; seed 37 offers Monetization at 4-2 directly.
+const SEED=37;
+it.each(FIELDED_LEGS)('reaches %s with real commands',leg=>{expect(fieldedRoute(SEED,leg).roundDefinitionId).toBe(leg);});
 let state:import('../src/simulation/match').MatchState;
 let checkpoint:string;
 it('serializes the 4-2 checkpoint',()=>{
- const grant=grantMechanicUnit(fieldedRoute(11,'4-2'),{receiptId:'h8-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
+ const grant=grantMechanicUnit(fieldedRoute(SEED,'4-2'),{receiptId:'h8-kill-witness',source:'test',definitionId:'viktor',starLevel:3});
  expect(grant.ok).toBe(true);if(!grant.ok)throw Error(grant.reason);checkpoint=serializeMatch(grant.state);
 });
 it('finds and selects the 4-2 offer',()=>{

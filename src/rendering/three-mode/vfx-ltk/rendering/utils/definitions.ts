@@ -17,8 +17,8 @@ export interface DrawnEmitter {
   /** The index of the opened system's emitter it descends from, which solo narrows to. */
   readonly root: number;
   /**
-   * Where it falls in the draw order: the opened system's emitters first, each child's
-   * after, and a ground-layer emitter under [`GROUND_ORDER`] before them all.
+   * Where it falls in the draw order: its `pass`, then the opened system's emitters first and
+   * each child's after, and a ground-layer emitter under [`GROUND_ORDER`] before them all.
    */
   readonly rank: number;
 }
@@ -64,9 +64,43 @@ export function hiddenIn(
   return !run.soloed.has(definition.root) && !underChild(run.soloedChildren, definition.path);
 }
 
-/** `rank` as the draw order, which a ground-layer emitter takes under the character. */
+/** How many ranks of one tree fit between two adjacent passes. */
+const RANK_SPAN = 4096;
+
+/**
+ * The bound of [`passOrder`]: every particle stays inside ±90, under the board's damage numbers
+ * (100) and star rows (1000) and over the stage and ground layers far below.
+ */
+export const PASS_ORDER_LIMIT = 90;
+
+/** `pass` is a signed 16-bit field. */
+const PASS_MAX = 32768;
+const PASS_LOG = Math.log1p(PASS_MAX);
+
+/**
+ * `pass` mapped strictly increasing into (-90, 90): sign · log, so every distinct pass keeps its
+ * own place (11-09 survey of the authored passes: they span far into both signs, many past 100) while
+ * none reaches another object's order. Small passes, the bulk, keep the widest spacing.
+ */
+export function passOrder(pass: number): number {
+  const p = Math.max(-PASS_MAX, Math.min(PASS_MAX, pass));
+  return Math.sign(p) * PASS_ORDER_LIMIT * Math.log1p(Math.abs(p)) / PASS_LOG;
+}
+
+/**
+ * `rank` as the draw order, which a ground-layer emitter takes under the character.
+ *
+ * The engine sorts every live emitter by `pass` first, across systems, so the order is the
+ * pass with the tree's own rank as a fraction of the gap to the next pass: two systems drawn
+ * together interleave by pass, and one tree keeps the comparator's order within a pass.
+ * Sevika's slot icons (their own system) carry passes above the machine's reel backs and below
+ * its white lock-in flashes and border; a bare rank drew the
+ * backs and boards of the machine over the icons' emitters (11-09 #579 recording: every reel empty).
+ */
 function orderOf(emitter: EmitterModel, rank: number): number {
-  return emitter.groundLayer ? GROUND_ORDER + rank : rank;
+  const at = passOrder(emitter.pass), gap = passOrder(emitter.pass + 1) - at;
+  const order = at + gap * Math.min(rank, RANK_SPAN - 1) / RANK_SPAN;
+  return emitter.groundLayer ? GROUND_ORDER + order : order;
 }
 
 /**

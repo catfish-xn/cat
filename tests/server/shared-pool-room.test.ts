@@ -1,19 +1,24 @@
+import { placeholderPvp } from './placeholder-resolver-helper';
 import { selectOpeningUnit } from '../../src/simulation/opening-unit';
 /**
  * B5: the room runs on the TP shared card pool (contract §12). Opening order (§12.2), shop commands as pool transactions,
  * free failure of an empty paid reroll, one release per eliminated seat (§12.4), conservation after every publication
  * and through whole matches in both PvP modes, and no pool revision change on a refused command.
  */
-import { describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it } from 'vitest';
 import {
-  applyRoundSettlement, assertSharedPoolConservation, releaseSeatOnElimination, ROUND_SETTLEMENT_VERSION, type RoundSettlementReceipt,
+  assertSharedPoolConservation, releaseSeatOnElimination,
 } from '../../src/server-entry';
 import { type BattleResolver } from '../../src/server/room/battle-resolver';
 import { withOpeningCopies } from '../../src/server/room/room';
 import { toPlayerView } from '../../src/server/room/projection';
-import { TwoSidedBattleResolver, resolveTwoSidedPvp } from '../../src/server/room/two-sided-resolver';
-import type { BattleSeatOutcome, RoomState, SeatState } from '../../src/server/room/types';
+import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
+import type { RoomState, SeatState, SettledSeat } from '../../src/server/room/types';
 import { expectUniqueRanking, makeRoom, runUntil } from './helpers';
+import { battleCacheResolver, type BattleResultCache } from './battle-result-cache';
+import { requireAugmentFacts } from '../../src/simulation/augment-history';
+import { goldenFindGoldPlan } from '../../src/simulation/augment-pool-batch5-h9';
+import { recordRoomBattleFacts } from '../../src/server/room/augment-history';
 
 const conserved = (state: RoomState) => {
   expect(state.poolRevision).toBe(state.pool.revision);
@@ -35,31 +40,6 @@ function killAtRoundOne(victim: string): BattleResolver {
     return inner.resolveBattle(input, pool);
   } };
 }
-
-/**
- * pvpMode=placeholder over a whole match: PvE/supply through the real rules (pool wrapper), PvP fought once by the T2 entry and
- * each real participant settled by the T3 receipt here, then reported as a B1-shaped per-seat outcome the room checks itself.
- */
-const placeholderPvp: BattleResolver = (() => {
-  const twoSided = new TwoSidedBattleResolver();
-  return { resolveBattle(input, pool) {
-    if (input.roundKind !== 'pvp') return twoSided.resolveBattle(input, pool);
-    const fought = resolveTwoSidedPvp(input);
-    const outcomes: BattleSeatOutcome[] = input.seats.map(seat => {
-      const proposal = [fought.proposals.a, fought.proposals.b].find(candidate => candidate.seatId === seat.seatId)!;
-      const receipt: RoundSettlementReceipt = {
-        version: ROUND_SETTLEMENT_VERSION, settlementId: JSON.stringify([input.roomId, input.round, seat.seatId]), battleId: input.battleId, seatId: seat.seatId,
-        round: input.round, roundId: input.roundId, settlementEligible: proposal.settlementEligible, result: proposal.result, damage: proposal.damage,
-        baseDamage: proposal.baseDamage, opposingSurvivors: proposal.opposingSurvivors, growth: proposal.growth,
-        combatTicks: fought.battle.terminal.tick, combatEventCount: fought.battle.events.length,
-      };
-      const applied = applyRoundSettlement(seat.state, receipt);
-      if (!applied.ok) throw new Error(`seat ${seat.seatId}: ${applied.reason}`);
-      return { seatId: seat.seatId, state: applied.state, result: null, damage: proposal.damage, combat: fought.battle };
-    });
-    return { kind: 'placeholder', battleId: input.battleId, round: input.round, roomRevision: input.roomRevision, outcomes };
-  } };
-})();
 
 describe('Room on the shared pool: opening (§12.2)', () => {
   it('imports eight openings by fixed seat index, refreshes once and publishes a balanced pool', () => {
@@ -242,5 +222,69 @@ describe('Room on the shared pool: whole matches stay balanced', () => {
     return state;
   }
   it('pvpMode=two-sided', () => { playToEnd(new TwoSidedBattleResolver(), 'two-sided'); }, 90_000);
-  it('pvpMode=placeholder', () => { playToEnd(placeholderPvp, 'placeholder'); }, 90_000);
+
+  // Placeholder warm hooks stay in this nested suite. A hook failure here does not skip two-sided.
+  // Two-sided results carry death samples on the event objects themselves; a cloned replay is not a substitute.
+  describe('placeholder replay', () => {
+    const placeholderBattles: BattleResultCache = new Map();
+    let warmPlace: ReturnType<typeof makeRoom> | undefined;
+    const warmUntil = (done: (state: RoomState) => boolean) => {
+      runUntil(warmPlace!.room, warmPlace!.clock, done, 20_000);
+    };
+    beforeAll(() => {
+      warmPlace = makeRoom(battleCacheResolver(placeholderBattles, 'record', placeholderPvp), { pvpMode: 'placeholder' });
+      warmPlace.room.start();
+      warmUntil(state => state.round >= 2 || state.phase === 'ended');
+    });
+    for (const round of [4, 8, 12, 16, 20, 24, 28, 32, 36]) beforeAll(() => warmUntil(state => state.round >= round || state.phase === 'ended'));
+    beforeAll(() => {
+      warmUntil(state => state.phase === 'ended');
+      warmPlace!.room.dispose();
+    });
+    it('pvpMode=placeholder', () => { playToEnd(battleCacheResolver(placeholderBattles, 'read', placeholderPvp), 'placeholder'); }, 90_000);
+    it('keeps the timed-out Golden Find across rounds 19/20 and the next settlement without forfeiting', () => {
+      const state = warmPlace!.room.state;
+      expect(state.fault).toBeNull();
+      expect(state.round).toBeGreaterThan(21);
+      const match = state.seats.find(s => s.seatId === 's3')!.match;
+      expect(match.augments).toContainEqual(expect.objectContaining({ definitionId: 'a-golden-find', acquiredRound: 19 }));
+      for (const round of [19, 20]) {
+        const [binding] = requireAugmentFacts(match, 'combat-binding', round);
+        expect(requireAugmentFacts(match, 'pvp-roster', round).map(f => f.battleId)).toEqual([binding.battleId]);
+        const deaths = requireAugmentFacts(match, 'deaths', round);
+        expect(deaths.map(f => f.battleId)).toEqual([binding.battleId]);
+        expect(deaths[0].completeThroughTick).toBeGreaterThanOrEqual(match.roundResults.find(r => r.round === round)!.combatTicks);
+        expect(deaths[0].deaths.every(d => Object.hasOwn(d, 'killer'))).toBe(true);
+        expect(requireAugmentFacts(match, 'player-damage', round)).toHaveLength(1);
+      }
+      expect(() => goldenFindGoldPlan(match)).not.toThrow();
+    });
+    function goldenBattle() {
+      const result = [...placeholderBattles.values()].find(r => r.kind === 'placeholder' && r.round === 19 && r.outcomes.some(s => s.seatId === 's3'))!;
+      if (result.kind !== 'placeholder') throw new Error('expected placeholder battle');
+      const seats: SettledSeat[] = result.outcomes.map(s => ({ seatId: s.seatId, match: s.state, damage: s.damage,
+        hpBefore: s.state.roundResults.at(-1)!.hpBefore, hpAfterRaw: s.state.playerHp, hpAfter: s.state.playerHp, receipt: null, events: [] }));
+      return { result, seats };
+    }
+    it('treats an omitted mirror marker as a real opponent with its actual HP damage', () => {
+      const { result, seats } = goldenBattle();
+      expect(result.outcomes[0].combat!.mirrorOfSeatId).toBeNull();
+      const omitted = { ...result, outcomes: result.outcomes.map(s => ({ ...s, combat: { ...s.combat!, mirrorOfSeatId: undefined } })) };
+      const recorded = recordRoomBattleFacts(seats, [omitted]);
+      for (const seat of recorded) {
+        if (!seat.match.augmentHistory) continue;
+        const opponent = seats.find(s => s.seatId !== seat.seatId)!;
+        const record = opponent.match.roundResults.at(-1)!;
+        expect(requireAugmentFacts(seat.match, 'player-damage', 19)).toEqual([expect.objectContaining({
+          battleId: result.battleId, opponentSeatId: opponent.seatId, mirror: false,
+          hpBefore: record.hpBefore, hpAfterDamage: record.hpAfter, actualDamage: record.hpLost,
+        })]);
+      }
+    });
+    it('rejects missing executed death samples rather than inventing an empty combat', () => {
+      const { result, seats } = goldenBattle();
+      expect(result.outcomes[0].combat!.events.some(e => e.type === 'death')).toBe(true);
+      expect(() => recordRoomBattleFacts(seats, [structuredClone(result)])).toThrow('Invalid augment history: missing executed death samples');
+    });
+  });
 });

@@ -10,7 +10,7 @@
  * tests/g2-4a-conqueror-items.test.ts; here the tier-9 bundle (exactly as `advanceG23Economy` records it) is placed in
  * the seat's live G2-3 progress while its round-4 battle plays, so the room's own commit is what grants it.
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
 import { seatPushEvents, toPlayerView, toSeatPrivateView } from '../../src/server/room/projection';
 import type { MatchState } from '../../src/simulation/match-types';
@@ -38,9 +38,17 @@ function toAnvil(room: ReturnType<typeof makeRoom>['room'], runNext: () => boole
 }
 
 describe('G2-4a: the completed-item anvil in an online room', () => {
+  const prepared = new Map<number, ReturnType<typeof makeRoom>>();
+  for (let index = 0; index < 4; index++) beforeAll(() => {
+    const own = makeRoom(new TwoSidedBattleResolver());
+    own.room.start();
+    runUntil(own.room, own.clock, state => state.round === 4 && state.phase === 'battle');
+    prepared.set(index, own);
+  });
+  afterAll(() => { for (const own of prepared.values()) own.room.dispose(); });
+
   it('opened from the bench it offers four distinct ordinary completed items, and its own 30 s deadline grants the first offer once', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(0)!;
     const unit = toAnvil(room, () => clock.runNext(), 's0');
     expect(readG23Progress(seatOf(room.state, 's0').match)!.rewardClaims.filter(claim => claim.atomId === 'g23:conqueror:9:atom:0'))
       .toEqual([expect.objectContaining({ kind: 'anvil', definitionId: ANVIL.completed, instanceId: unit.id })]);
@@ -81,8 +89,7 @@ describe('G2-4a: the completed-item anvil in an online room', () => {
   }, 30_000);
 
   it('a pick before the deadline grants that item, cancels the deadline at once and the old deadline grants nothing more', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(1)!;
     const unit = toAnvil(room, () => clock.runNext(), 's0');
     const choice = openAnvil(room, 's0', unit.id, true); // selling the anvil opens it the same way
     const deadline = seatOf(room.state, 's0').choiceDeadline!.deadlineAt, before = seatOf(room.state, 's0').match;
@@ -115,8 +122,7 @@ describe('G2-4a: the completed-item anvil in an online room', () => {
   }, 30_000);
 
   it('never shows the four offers, the choice or its deadline to another seat, in its view or its pushes', () => {
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(2)!;
     const unit = toAnvil(room, () => clock.runNext(), 's0');
     const choice = openAnvil(room, 's0', unit.id);
     const state = room.state;
@@ -138,8 +144,7 @@ describe('G2-4a: the completed-item anvil in an online room', () => {
   it('a JSON copy of the seat with the open anvil re-derives the same choice and continues exactly like the live seat', () => {
     // The room keeps no save of its own; what survives a restart or a hand-over is the seat's MatchState as JSON. The
     // rules rebuild an open anvil's four offers from its reward receipt (validateAnvils), never from a stored list.
-    const { room, clock } = makeRoom(new TwoSidedBattleResolver());
-    room.start();
+    const { room, clock } = prepared.get(3)!;
     const unit = toAnvil(room, () => clock.runNext(), 's0');
     const choice = openAnvil(room, 's0', unit.id);
     const state = room.state, live = seatOf(state, 's0').match;

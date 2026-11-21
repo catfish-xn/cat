@@ -1,0 +1,2 @@
+/* Scout hide only; the row's size and look live in src/style.css. */
+body:has(.opponent-board[data-scout-3d]:not([hidden])) .augment-strip { display: none !important; }

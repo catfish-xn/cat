@@ -1,6 +1,7 @@
 /* P-B5-82, user approved 2026-10-27. Literal Gemini primary table + 14.24 economy 7/15/20.
  * No production imports or reward-receipt reads. BigInt independently implements the stream. */
 const assert = require('node:assert/strict');
+const {identicalPrefix} = require('./observed-equal.cjs');
 const modulus = 2n ** 32n;
 function draws(s, identity, sizes) {
  let cursor = 2166136261n;
@@ -63,7 +64,11 @@ function pipelineBonuses(s) {
 /** Authenticate openings from the claim or the pre-settlement FIFO and raw tables, never a reward receipt. */
 function validatePipelineClaim(before, after, command, events) {
  const prior = before.augmentHistory?.facts ?? [], next = after.augmentHistory?.facts ?? [];
- assert.deepEqual(next.slice(0, prior.length), prior, 'augment history facts append-only');
+ // Same append-only fact check. A reference-stable prefix is already equal;
+ // slicing and deep-equaling thousands of deaths rows on every combat tick was
+ // quadratic once v26 started recording one deaths fact per tick.
+ if (!identicalPrefix(next, prior))
+  assert.deepEqual(next.slice(0, prior.length), prior, 'augment history facts append-only');
  const openings = next.slice(prior.length).filter(f => f.kind === 'orb-opened');
  const a = before.augments.find(a => a.definitionId === 'prismatic-pipeline');
  if (!a) { assert.equal(openings.length, 0, 'no pipeline opening without its owner'); return; }

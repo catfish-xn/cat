@@ -10,6 +10,12 @@ import { freezeContent } from './freeze';
  * Watcher Growth carries all three and is therefore never offered at an augment round.
  */
 export const AUGMENT_STAGE_BANS: Readonly<Record<string, readonly string[]>> = freezeContent({
+  TFT13_Augment_Grant6Cost_Warwick:['2-1','3-2'],
+  TFT_Augment_BRB:['3-2','4-2'],
+  TFT11_Augment_OverEncumbered:['3-2','4-2'],
+  TFT_Augment_RestartMission:['2-1','4-2'],
+  TFT13_Augment_Formswapper:['2-1'],
+  TFT13_TeamupAugment_BloodBrothers:['2-1','4-2'],
   TFT_Augment_TombRaider1:['2-1','3-2'],
   TFT_Augment_TombRaider2:['2-1','3-2'],
   TFT13_Augment_AnotherAnomaly:['2-1','3-2'],

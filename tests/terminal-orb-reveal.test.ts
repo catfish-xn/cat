@@ -55,7 +55,13 @@ describe('terminal orb rule boundary', () => {
     expect(opened.state.pendingCombatTerminal).toBe(opened.streamInitial);
     expect(opened.state.phase).toBe('preparation');
     expect(opened.state.combat).toBeNull();
-    expect(opened.events.some(e => e.type === 'lootForfeited')).toBe(true);
+    // pve-loot-carryover (8f794062, merged c684c3ec, user-approved 2026-10-29): a surviving 1-2 loss now carries
+    // every unearned planned drop to 1-3 instead of emitting lootForfeited (v25).
+    expect(opened.events.some(e => e.type === 'lootForfeited')).toBe(false);
+    const carried = opened.events.flatMap(e => e.type === 'lootCarried' ? [e] : []);
+    expect(carried.map(e => e.dropId).sort()).toEqual(source.m8.loot.direct.filter(d => d.status === 'planned').map(d => d.dropId).sort());
+    expect(carried.length).toBeGreaterThan(0);
+    expect(carried.every(e => e.deliverRoundId === '1-3')).toBe(true);
     expect(opened.events.some(e => e.type === 'lootRevealed')).toBe(false);
     for (const field of ['gold', 'items', 'playerHp', 'roundResults', 'preparation', 'rngState',
       'rewardRngState', 'choiceRngState', 'sharedPool'] as const) expect(opened.state[field]).toEqual(source[field]);
@@ -122,10 +128,13 @@ describe('terminal orb rule boundary', () => {
     const orb = readLootView(revealed.state).unclaimedOrbs!.find(o => !previous.has(o.orbId)
       && plans.find(p => p.orbId === o.orbId)!.entries.some(e => e.payload.kind === 'item'))!;
     expect(orb).toBeDefined();
+    // TFT: an orb claimed before the settlement opens at once; the settlement pays nothing of it again.
     const queued = accept(runSharedMatchCommand(pool, revealed.state, { type: 'claimOrb', round: before.round, orbId: orb.orbId }));
     valid(queued.state);
-    expect(queued.state.items).toEqual(before.items);
-    expect(queued.state.m8.loot.receipts).toEqual(before.m8.loot.receipts);
+    expect(queued.state.m8.loot.queuedOrbClaims ?? []).toEqual([]);
+    const opened = queued.state.m8.loot.receipts.filter(r => JSON.parse(r.dropId)[0] === orb.orbId);
+    expect(opened).toHaveLength(plans.find(p => p.orbId === orb.orbId)!.entries.length);
+    expect(queued.state.items.length).toBeGreaterThan(before.items.length);
     const restored = restoreSharedOrbSnapshot(queued.pool, json(queued.state));
     expect(json(restored)).toBe(json(queued.state));
     const settle = (state: MatchState) => accept(runSharedMatchCommand(queued.pool, state, { type: 'settleCombatStream', terminal }));
@@ -141,7 +150,7 @@ describe('terminal orb rule boundary', () => {
       if (entry.payload.kind === 'item') expect(receipts[0].grantedItemIds).toHaveLength(entry.payload.quantity);
       for (const id of receipts[0].grantedItemIds) expect(paid.state.items.filter(i => i.id === id)).toHaveLength(1);
     }
-    expect(paid.state.m8.loot.queuedOrbClaims).toEqual([]);
+    expect(paid.state.m8.loot.queuedOrbClaims ?? []).toEqual([]);
     expect(runSharedMatchCommand(paid.pool, paid.state, { type: 'claimOrb', round: before.round, orbId: orb.orbId })).toMatchObject({ ok: false, reason: 'already-claimed' });
     expect(runSharedMatchCommand(paid.pool, paid.state, { type: 'settleCombatStream', terminal })).toMatchObject({ ok: false, state: paid.state });
   });

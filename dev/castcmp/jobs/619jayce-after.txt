@@ -1,0 +1,4 @@
+# Jayce black shell check (Fable 11-12): 8d9d784b and e07c8088 attached overlays held back (cue-overrides ATTACHED_HELD_BACK).
+# Both systems must still run; no layer is expected on screen (--layers none); --probe attached lists what draws.
+v-capture.cjs jayce w-jayce-after --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b,e07c8088 --layers none --probe attached --column after --snapshot c1333710ad8e
+v-capture.cjs jayce w-jayce-off --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b,e07c8088 --layers none --probe attached --column off --snapshot c1333710ad8e --attached off

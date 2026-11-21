@@ -1,0 +1,12 @@
+# Projectile beams pinned (PR #642), re-record, before column. Same machine, same asset snapshot; only --column and output names differ.
+# Viktor 2★ basic attack, one dummy 4 rows away (nothing between, dummies never move): beam 87913524 from about 567 ms.
+v-capture-attack.cjs viktor vkbeam2-viktor-before --star 2 --dist 4 --nfoes 1 --times 600,667,733,800,900,1000,1100,1200,1300 --systems 87913524 --layers none --from 600 --to 1300 --probe emitters --column before --snapshot c1333710ad8e
+# Viktor 2★ real combat, the earlier line unchanged: checks his storm cast (about 3567/3667 ms) is the same in both columns now.
+v-capture.cjs viktor vkbeam2-viktor-real-before --real 1 --star 2 --dist 3 --nfoes 1 --foestar 2 --ms 4000 --systems 87913524 --layers none --from 2800 --to 3900 --probe emitters --column before --snapshot c1333710ad8e
+# Zeri 2★, one dummy 4 rows away: two warm attacks, so the recorded one is her third, the empowered shot d160dfa9 (about 267 ms on).
+v-capture-attack.cjs zeri vkbeam2-zeri-before --star 2 --dist 4 --nfoes 1 --warm 2 --times 300,367,433,500,600,700,800,900 --systems d160dfa9 --layers none --from 300 --to 900 --probe emitters --column before --snapshot c1333710ad8e
+# Mel 2★ real combat, the earlier line unchanged: it cannot be spread out. Her third cast kills ranged foes on the spot
+# (the replay ends inside the window), melee foes walk up to her, and dummies never reach the third branch.
+# Third cast (branch third, 7750 ms into the window) plays 4f2eb343 from about 8150 ms; both Garens cast about 3900 ms
+# (jobs-check FAILs this line for that; the judged 8050–8950 ms is clear).
+v-capture.cjs mel vkbeam2-mel-real-before --real 1 --star 2 --dist 3 --nfoes 2 --foestar 3 --ms 9050 --systems 4f2eb343 --layers none --from 8050 --to 8950 --probe emitters --column before --snapshot c1333710ad8e

@@ -9,6 +9,7 @@ import type { S13Unit } from '../src/simulation/combat-s13-state';
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { S13_P3_SOURCE } from '../src/simulation/content/s13-p3-source';
 import { grantedItemPrograms } from '../src/simulation/m8/combat-item-programs';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 function initial(augments: string[] = [], anomaly?: string, item?: string, champion = 'leona', stage = 2): CombatState {
   const base = createMatch(42);
@@ -68,14 +69,20 @@ it('高压电: Ionic aura/cast radius is 5, actual 125 spent mana yields raw 250
   validate(r.state);
 });
 it.each([['piercing-lotus-i', 3000, 'tristana'], ['piercing-lotus-ii', 4500, 'tristana'], ['piercing-lotus-i', 3000, 'zyra'], ['piercing-lotus-ii', 4500, 'zyra']] as const)('%s: %s crit chance, %s physical/magic critical spell applies both 20% shred/sunder for 60 ticks', (id, chance, champion) => {
-  const s = initial([id], undefined, undefined, champion); expect(unit(s).spellCrit!.chanceBps).toBe(chance); expect(unit(s).spellCrit!.enabled).toBe(true);
+  // targeting-p1 (8106acee): e0 and e1 are both adjacent to p0, an equal-distance tie that now draws the combat stream
+  // (Tristana's draw picked e1 and consumed the crit word). Lock the fixture's intended ordinary target e0 so the tie
+  // draws nothing; P0 keeps an alive, in-range target.
+  const s = patch(initial([id], undefined, undefined, champion), 'p0', { targetId: 'e0' }); expect(unit(s).spellCrit!.chanceBps).toBe(chance); expect(unit(s).spellCrit!.enabled).toBe(true);
   // Seed 0's next word is <30%; preserve the compiled authorization and roll through the standard pipeline.
-  const r = stepCombat({ ...cast(s), rngState: 0 });
-  const hit = r.events.find(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p0');
+  // 2026-11-16: Zyra's vines and Tristana's shell (and their crit roll) land CAST_WINDUP_TICKS after the cast (Tristana: batch 2).
+  const w = CAST_WINDUP_TICKS[champion];
+  let r = stepCombat({ ...cast(s), rngState: 0 }); const events = [...r.events];
+  for (let n = 0; n < w; n++) { r = stepCombat(r.state); events.push(...r.events); }
+  const hit = events.find(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p0');
   expect(hit?.type === 'packetDamage' && hit.outcome.critical).toBe(true);
   for (const kind of ['sunder', 'shred']) {
     const c = unit(r.state, 'e0').mechanismState!.statuses.find(g => g.kind === kind)!.contributions[0];
-    expect(c.application.magnitudeBps).toBe(2000); expect(c.expiresAtTick).toBe(61);
+    expect(c.application.magnitudeBps).toBe(2000); expect(c.expiresAtTick).toBe(61 + w);
   }
   validate(r.state); expect(stepCombat(JSON.parse(JSON.stringify(r.state)))).toEqual(stepCombat(r.state));
 });
@@ -101,17 +108,24 @@ it('释放野兽: Sterak trigger grants +35% AS and 200-tick CC immunity exactly
   expect(statuses.find(c => c.application.kind === 'control-immunity')!.expiresAtTick).toBe(201); validate(r.state);
 });
 it('终结者: shared Collector execution kills at 185/1240 after hit, strict 186 boundary survives; no gold receipt', () => {
-  let s = initial([], 'the-finisher'); s = patch(s, 'e0', { hp: 285, armor: 0 });
+  // targeting-p1 (8106acee): lock p0 on e0; the e0/e1 equal-distance tie would otherwise draw the combat stream.
+  let s = patch(initial([], 'the-finisher'), 'p0', { targetId: 'e0' }); s = patch(s, 'e0', { hp: 285, armor: 0 });
   const r = stepCombat(attack(s)); expect(unit(r.state, 'e0').hp).toBe(0); expect(damage(r.events, 'the-finisher').map(o => o.hpDamage)).toEqual([185]);
   expect(r.state.itemGoldReceipts ?? []).toHaveLength(0);
   const boundary = stepCombat(attack(patch(s, 'e0', { hp: 286, armor: 0 }))); expect(unit(boundary.state, 'e0').hp).toBe(186);
 });
 it('冰霜触摸: spell chills for 80 ticks; chilled enemy death stuns the nearest surviving enemy for 20 ticks', () => {
-  const r = stepCombat(cast(initial([], 'touch-of-frost', undefined, 'tristana'))), chilled = unit(r.state, 'e0');
+  // targeting-p1 (8106acee): lock p0 on e0; the e0/e1 equal-distance tie would otherwise draw the combat stream.
+  // Wind-up batch 2: Tristana's shell (and the chill) lands CAST_WINDUP_TICKS.tristana after her cast.
+  let r = stepCombat(cast(patch(initial([], 'touch-of-frost', undefined, 'tristana'), 'p0', { targetId: 'e0' })));
+  for (let n = 0; n < CAST_WINDUP_TICKS.tristana; n++) r = stepCombat(r.state);
+  const chilled = unit(r.state, 'e0');
   const c = chilled.mechanismState!.statuses.flatMap(g => g.contributions).find(c => c.application.modifier?.stat === 'attackSpeed')!;
-  expect(c.application.modifier!.value).toEqual({ kind: 'constant', amount: -2000 }); expect(c.expiresAtTick).toBe(81);
+  expect(c.application.modifier!.value).toEqual({ kind: 'constant', amount: -2000 }); expect(c.expiresAtTick).toBe(81 + CAST_WINDUP_TICKS.tristana);
   expect(readCombatStats(chilled, r.state).attackIntervalTicks).toBeGreaterThan(readCombatStats(unit(initial(), 'e0'), initial()).attackIntervalTicks);
-  const killed = stepCombat(attack(patch(r.state, 'e0', { hp: 1, armor: 0 })));
+  // Ranged attack landing (window only): Tristana's attack kills e0 when its shot lands; step on until it does.
+  let killed = stepCombat(attack(patch(r.state, 'e0', { hp: 1, armor: 0 })));
+  for (let n = 0; n < 20 && !killed.events.some(e => e.type === 'attackLanded' && e.attackerId === 'p0'); n++) killed = stepCombat(killed.state);
   const stun = unit(killed.state, 'e1').mechanismState!.statuses.find(g => g.kind === 'stun')!.contributions[0];
   expect(stun.expiresAtTick! - stun.appliedAtTick).toBe(20); validate(killed.state);
 });
@@ -127,9 +141,14 @@ it('火球: 70 actual mana launches radius-2 burn and 5 pulses total 74 per targ
   const resumed = run(JSON.parse(JSON.stringify(run(cast(s), 21).state)), 80); expect(resumed.state).toEqual(full.state);
 });
 it('龙魂: first attack on each target adds 20% target max HP true damage, returning to an old target adds zero', () => {
-  let s = initial([], 'dragonsoul'); const first = stepCombat(attack(s)); expect(damage(first.events, 'dragonsoul').map(o => o.hpDamage)).toEqual([248]);
+  // targeting-p1 (8106acee): lock p0 on e0; the e0/e1 equal-distance tie would otherwise draw the combat stream.
+  let s = patch(initial([], 'dragonsoul'), 'p0', { targetId: 'e0' }); const first = stepCombat(attack(s));
+  expect(unit(first.state).targetId).toBe('e0'); expect(damage(first.events, 'dragonsoul').map(o => o.hpDamage)).toEqual([248]);
   const repeat = stepCombat(attack(first.state)); expect(damage(repeat.events, 'dragonsoul')).toHaveLength(0);
-  s = patch(repeat.state, 'e0', { cell: { col: 6, row: 0 } }); const other = stepCombat(attack(s));
+  // targeting P0 (d6a75a4e, 28fd974a): an alive, targetable, in-range target is kept, and attack() gives range 20, so moving
+  // e0 away no longer retargets p0 (v25 rescanned to the nearer e1). Move e0 away and hand p0 the new target e1 directly.
+  s = patch(repeat.state, 'e0', { cell: { col: 6, row: 0 } }); const other = stepCombat(patch(attack(s), 'p0', { targetId: 'e1' }));
+  expect(unit(other.state).targetId).toBe('e1');
   expect(damage(other.events, 'dragonsoul').map(o => o.hpDamage)).toEqual([248]); validate(other.state);
 });
 it('绝不浪费: freeze a dying ally at 50 mana before cleanup, grant 35; simultaneously dying holder receives nothing', () => {

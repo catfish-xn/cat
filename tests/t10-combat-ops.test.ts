@@ -84,21 +84,20 @@ describe('t10-combat-ops phase whitelist',()=>{
 });
 
 describe('t10-choice trading keeps anomaly selection usable',()=>{
-  it('selling the selected bench target preserves its offer and permits retargeting without RNG',async()=>{
+  it('refuses sales of the selected bench target and other units until confirmation',async()=>{
     const { selectAnomalyTarget, selectChoice }=await import('../src/simulation/match');
     const { catalogPreparation }=await import('./t5r-helpers');
     const base=operating('choice'),catalog=catalogPreparation('4-6'),choiceId='round:4-6:anomaly';
     const state:MatchState={...base,round:catalog.round,roundDefinitionId:catalog.roundDefinitionId,m8:catalog.m8,
       pendingChoice:{kind:'anomaly',step:'target',choiceId,eventId:choiceId,generation:0,offers:[],targetId:null,rerollCount:0,returnPhase:'preparation'}};
     const targeted=accepted(selectAnomalyTarget(state,choiceId,0,'unit-2'));
-    const sold=accepted(sellUnit(targeted,'unit-2'));
-    expect(sold.pendingChoice).toMatchObject({step:'target',targetId:null,generation:2,offers:targeted.pendingChoice!.offers});
-    expect(sold.choiceRngState).toBe(targeted.choiceRngState);
-    const retargeted=accepted(selectAnomalyTarget(sold,choiceId,2,'unit-3'));
-    expect(retargeted.choiceRngState).toBe(sold.choiceRngState);
-    expect(retargeted.pendingChoice!.offers).toEqual(targeted.pendingChoice!.offers);
-    rejected(retargeted,s=>selectChoice(s,choiceId,1,targeted.pendingChoice!.offers[0]),'stale-choice');
-    expect(accepted(selectChoice(retargeted,choiceId,3,retargeted.pendingChoice!.offers[0])).anomalyBinding?.unitId).toBe('unit-3');
+    for (const unit of targeted.preparation.units.filter(u=>u.team==='player'))
+      rejected(targeted,s=>sellUnit(s,unit.id),'wrong-phase');
+    rejected(targeted,s=>selectAnomalyTarget(s,choiceId,1,'unit-3'),'invalid-choice');
+    rejected(targeted,s=>selectChoice(s,choiceId,0,targeted.pendingChoice!.offers[0]),'stale-choice');
+    const chosen=accepted(selectChoice(targeted,choiceId,1,targeted.pendingChoice!.offers[0]));
+    expect(chosen.anomalyBinding?.unitId).toBe('unit-2');
+    expect(accepted(sellUnit(chosen,'unit-2')).preparation.units.some(u=>u.id==='unit-2')).toBe(false);
   });
   it('buying a triple migrates a consumed anomaly target and invalidates its old generation',()=>{
     const base=operating('choice'),state:MatchState={...base,

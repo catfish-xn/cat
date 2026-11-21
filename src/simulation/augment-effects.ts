@@ -17,6 +17,7 @@ import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect, OwnedAugment, TraitSnapshot } from './strategy-types';
 import { UNIT_DEFINITIONS } from './units';
+import { strongestHeroCopy } from './hero-carry';
 import { hexDistance } from './board';
 import { getMultiplayerRoundByOrdinal } from './multiplayer-round';
 import { ROUND_CATALOG } from './content/round-catalog';
@@ -113,8 +114,7 @@ export function compileAugmentEffect(effect:Effect,state:CombatStrategyInputs,un
     }
     case 'heroCarry': {
       // P 2026-10-24: "strongest" = highest star, then most equipped items, then lowest id, among this side's board copies.
-      const id=HERO_UNITS[v.hero],held=(x:Unit)=>state.items.filter(i=>i.location.kind==='unit'&&i.location.unitId===x.id).length;
-      const strongest=allies.filter(x=>x.definitionId===id&&x.location.kind==='board').sort((a,b)=>b.starLevel-a.starLevel||held(b)-held(a)||(a.id<b.id?-1:a.id>b.id?1:0))[0];
+      const strongest=strongestHeroCopy(allies,state.items,HERO_UNITS[v.hero]);
       if(!strongest||strongest.id!==unit.id)return [];
       const star=Math.min(3,unit.starLevel) as 1|2|3,picked:Record<string,number>={...v,star};
       for(const key of Object.keys(v))if(/[123]$/.test(key))delete picked[key];
