@@ -1,10 +1,12 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CRIT_ATTACK_HIT, CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
+import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
-import { CUE_DROPPED_SYSTEMS } from './fixtures/cue-dropped-systems';
+import { CUE_DROPPED_SYSTEMS, SPELL_UNPLAYED_SYSTEMS } from './fixtures/cue-dropped-systems';
 const require = createRequire(import.meta.url);
 const { readCueIndexSystems } = require('../scripts/cue-index-systems.cjs') as { readCueIndexSystems: (root: string) => Record<string, string[]> };
 
@@ -66,5 +68,71 @@ describe.skipIf(!root)('the exported-list fixture matches the assets (VFX_LTK_RO
   it(`tests/fixtures/cue-index-systems.json (snapshot ${fixture.source.snapshot})`, () => {
     const actual = readCueIndexSystems(root!);
     expect(actual, 'the asset index differs from the fixture: rerun `node scripts/cue-index-systems.cjs <asset root>/vfx-ltk <snapshot id>`').toEqual(fixture.champions);
+  });
+});
+
+// Systems a champion's spell data names as a hit or missile effect (tests/fixtures/spell-referenced-systems.json: champion
+// ids and system ids only). The fixture is generated from the asset data by a local tool kept outside the repository; the
+// tool is in the project Library. Each must be played by the repository lists (every exported list as the loader rewrites it, the batch-1 and
+// Set 13 timelines) or registered with a reason: SPELL_UNPLAYED_SYSTEMS, or CUE_DROPPED_SYSTEMS when a row dropped it.
+const spellFixture = JSON.parse(readFileSync(new URL('./fixtures/spell-referenced-systems.json', import.meta.url), 'utf8')) as
+  { source: { snapshot: string }; champions: Record<string, string[]> };
+/** The systems a champion's crit plays through its own entry in CRIT_ATTACK_HIT.own: its swaps' systems and its flash. */
+function critSystems(own: { readonly swap?: Readonly<Record<string, unknown>>; readonly flash?: { readonly system: string } } | undefined): string[] {
+  const ofSwap = (to: unknown) => typeof to === 'string' ? to : (to as { system: string }).system;
+  return [...Object.values(own?.swap ?? {}).map(ofSwap), ...(own?.flash ? [own.flash.system] : [])];
+}
+/** Per champion, the spell-referenced systems nothing in the repository plays for it. */
+function spellUnplayed(exported: Record<string, readonly string[]>, referenced: Record<string, readonly string[]>): Record<string, string[]> {
+  const tables = [CUE_OVERRIDES, CUE_ADDITIONS, CUE_EXTRA_SKILLS].flatMap(table => Object.values(table)).flat() as TimelineCue[];
+  const systems = Object.fromEntries([...Object.values(exported).flat(), ...Object.values(referenced).flat(), ...tables.map(cue => cue.system)]
+    .map(id => [id, `systems/${id}.json`]));
+  const skills = Object.fromEntries(Object.entries(exported).map(([champion, ids]) =>
+    [champion, ids.map(system => ({ system, action: 'cast', event: 'hit', delay: 0, duration: 1 }))]));
+  const out = (withCueOverrides({ version: 1, systems, assets: {}, skills } as never) as unknown as { skills: Record<string, TimelineCue[]> }).skills;
+  const timelines = { ...BATCH1_TIMELINES, ...S13_TIMELINES } as Record<string, readonly TimelineCue[]>;
+  const unplayed: Record<string, string[]> = {};
+  for (const [champion, ids] of Object.entries(referenced)) {
+    const plays = new Set([...[...Object.entries(out).filter(([key]) => key === champion || key.startsWith(`${champion}-`)).flatMap(([, cues]) => cues),
+      ...(timelines[champion] ?? [])].map(cue => cue.system), ...critSystems(CRIT_ATTACK_HIT.own[champion])]);
+    const lost = ids.filter(id => !plays.has(id)).sort();
+    if (lost.length) unplayed[champion] = lost;
+  }
+  return unplayed;
+}
+const spellRegistered = (() => {
+  const all: Record<string, Set<string>> = {};
+  for (const registry of [CUE_DROPPED_SYSTEMS, SPELL_UNPLAYED_SYSTEMS]) for (const [champion, systems] of Object.entries(registry))
+    for (const id of Object.keys(systems)) (all[champion] ??= new Set()).add(id);
+  return all;
+})();
+const spellEntries = Object.entries(SPELL_UNPLAYED_SYSTEMS).flatMap(([champion, systems]) =>
+  Object.entries(systems).map(([system, drop]) => ({ champion, system, ...drop })));
+
+describe(`spell-referenced systems are played or registered (snapshot ${spellFixture.source.snapshot})`, () => {
+  it('the fixture lists champions', () => expect(Object.keys(spellFixture.champions).length).toBeGreaterThan(30));
+  it('every spell-referenced system nothing plays is registered', () => {
+    const unplayed = spellUnplayed(fixture.champions, spellFixture.champions);
+    const missing = Object.entries(unplayed).flatMap(([champion, ids]) => ids.filter(id => !spellRegistered[champion]?.has(id)).map(id => `${champion} ${id}`));
+    expect(missing).toEqual([]);
+  });
+  it('SPELL_UNPLAYED_SYSTEMS holds only spell-referenced systems nothing plays (none stale, none also in CUE_DROPPED_SYSTEMS)', () => {
+    const unplayed = spellUnplayed(fixture.champions, spellFixture.champions);
+    for (const { champion, system } of spellEntries) {
+      expect(unplayed[champion] ?? [], `${champion} ${system}`).toContain(system);
+      expect(Object.hasOwn(CUE_DROPPED_SYSTEMS[champion] ?? {}, system), `${champion} ${system}`).toBe(false);
+    }
+  });
+  it('a system a crit plays (CRIT_ATTACK_HIT.own: a swap or a flash) counts as played', () => {
+    expect(critSystems({ swap: { plain: 'crit-shot', other: { system: 'crit-swing', bone: 'Hand' } }, flash: { system: 'flash' } }))
+      .toEqual(['crit-shot', 'crit-swing', 'flash']);
+    expect(critSystems(undefined)).toEqual([]);
+    for (const [champion, own] of Object.entries(CRIT_ATTACK_HIT.own))
+      for (const system of critSystems(own)) expect(spellUnplayed({}, { [champion]: [system] })).toEqual({});
+  });
+  it.each(spellEntries)('$champion $system: a system id, a status and a reason', ({ system, status, reason }) => {
+    expect(system).toMatch(/^[0-9a-f]{8}$/);
+    expect(['dropped', 'replaced', 'pending']).toContain(status);
+    expect(reason.trim().length).toBeGreaterThan(10);
   });
 });
