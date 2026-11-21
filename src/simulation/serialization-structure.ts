@@ -1,3 +1,4 @@
+import { ABILITY_PROJECTILE_OWNER, ABILITY_PROJECTILE_SKILLS } from './ability-projectile';
 import { validateAnomalyHistoryProof } from './anomaly-history-restore';
 import { validateOverEncumbered } from './over-encumbered';
 import { maximumPlayerHp } from './augment-pool-batch5-h7-health';
@@ -74,7 +75,7 @@ import { planCatalogRoundEconomy } from './opening-economy';
 import { getCatalogRoundByOrdinal } from './round-selectors';
 import { freezeContent } from './content/freeze';
 import { grantXp } from './progression';
-import { sourceKey, variable, mechanic, champion } from './combat-s13-state';
+import { sourceKey, variable, mechanic, champion, heroLive } from './combat-s13-state';
 import { M5_UNIT_DEFINITIONS } from './units';
 import { DEFAULT_BOARD, contains } from './board';
 import { validateMechanisms } from './m8/restore';
@@ -83,6 +84,7 @@ import { validateSpellCrit } from './m8/crit';
 import { M8_VERSION } from './m8/version';
 import { validateSeatMechanicsState } from './seat-mechanics/state';
 import { isMechanicChoice, validateMechanicPendingChoice } from './seat-mechanics/choices';
+import { combatGrowthSteps, growthRepresentable, validLedgerGrowth } from './persistent-growth';
 
 // Reuse the pure default-catalog compilation, never any candidate validation.
 // Only local, already authenticated JSON basis inputs enter this byte-keyed map.
@@ -330,7 +332,7 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   requireValue(same(state.augmentProgress.magicRoll ?? null, expectedMagicRoll(state) ?? null), 'magic roll progress');
   list(state.persistentGrowth); const growthIds = new Set<string>();
   for (const growth of state.persistentGrowth) { record(growth); id(growth.unitId); integer(growth.attackDamageBps,1);
-    requireValue(units.get(growth.unitId)?.definitionId === 'tristana' && !growthIds.has(growth.unitId) && growth.attackDamageBps % 125 === 0, 'persistent growth'); growthIds.add(growth.unitId); }
+    requireValue(units.has(growth.unitId) && validLedgerGrowth(growth.attackDamageBps, units.get(growth.unitId)!.definitionId, state.augments.map(a => a.definitionId), state.round) && !growthIds.has(growth.unitId), 'persistent growth'); growthIds.add(growth.unitId); }
   requireValue(state.playerHp === (settled ? batch2HpAfterSettlement(state,state.round,state.roundResults.at(-1)!.hpAfter) : openingHpBeforeRound(state, state.roundDefinitionId, state.roundResults.at(-1)?.hpAfter ?? 100)), 'current HP');
   if (!settled) requireValue(validPreparationExperience(preparationExperience(state,experienceAfter,state.round),state.level,state.xp,xpPurchaseAmount(state.augments,state.round),augmentLevelCap(state.augments)), 'current XP preparation chain');
   // Equipment history uses these validated round identities and pre/post-settlement level bounds.
@@ -381,6 +383,11 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
       list(combat.removedUnitIds);
       requireValue(combat.removedUnitIds.every(id => typeof id === 'string' && !combatIds.has(id))
         && new Set(combat.removedUnitIds).size === combat.removedUnitIds.length, 'removed combat IDs');
+    }
+    if (combat.departedUnits !== undefined) {
+      list(combat.departedUnits); for (const unit of combat.departedUnits) record(unit);
+      requireValue(combat.departedUnits.length > 0 && combat.departedUnits.every(unit => typeof unit.id === 'string' && combat.removedUnitIds?.includes(unit.id))
+        && new Set(combat.departedUnits.map(unit => unit.id)).size === combat.departedUnits.length, 'departed combat units');
     }
     // G2-4b: items gained mid-combat are receipts of a fired chest. Checked before any unit compiles them; the holders'
     // stored declarations used here are proven equal to their compiled ones by validateMechanisms below.
@@ -522,8 +529,9 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
   integer(unit.attackDamageBase); integer(unit.attackDamagePercentBps); integer(unit.abilityPower); integer(unit.baseAttackSpeedBps, 1); integer(unit.attackSpeedBonusBps);
   record(unit.runtime);
   for (const field of ['attackCount','castCount','attackSpeedBps','abilityPowerFlat','rangeBonus','nextAttackMagic','nextAttackPhysical','permanentAdBps']) integer(unit.runtime[field as keyof typeof unit.runtime]);
-  requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick && unit.runtime.permanentAdBps % 125 === 0, 'combat runtime');
-  if (unit.definitionId !== 'tristana') requireValue(unit.runtime.permanentAdBps === 0, 'growth owner');
+  requireValue(typeof unit.runtime.buddyTriggered === 'boolean' && unit.runtime.attackCount <= tick && unit.runtime.castCount <= tick, 'combat runtime');
+  const growthSteps = combatGrowthSteps(unit.definitionId, heroLive(unit));
+  requireValue(unit.runtime.permanentAdBps === 0 || growthRepresentable(unit.runtime.permanentAdBps, growthSteps), growthSteps.length ? 'combat runtime' : 'growth owner');
   if (unit.g22 !== undefined) {
     record(unit.g22); const g = unit.g22;
     requireValue(typeof g.initialized === 'boolean' && typeof g.rebelTriggered === 'boolean', 'G22 flags');
@@ -575,7 +583,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     possibleAp.add(archangels.reduce((sum, m) => sum + Math.floor(at / m.values.periodTicks) * m.values.abilityPower, 0));
   const periodicAp = runtime.abilityPowerFlat - triggeredAbilityPowerGrowth(unit,combatId);
   requireValue(unit.alive ? periodicAp === maximumAp : possibleAp.has(periodicAp), 'derived ability power');
-  requireValue(runtime.permanentAdBps <= runtime.castCount * (champion(unit) === 'tristana' ? Math.round(variable(unit, 'ASKillGain', 1.25) * 100) : 0), 'derived growth bound');
+  requireValue(runtime.permanentAdBps <= runtime.castCount * Math.max(0, ...combatGrowthSteps(champion(unit), heroLive(unit))), 'derived growth bound');
   if (runtime.nextAttackMagic > 0) {
     requireValue(champion(unit) === 'lux' && runtime.castCount > 0 && [...abilityPowerCandidates(unit,0,combatId)].some(ap=>[...possibleAp].some(value =>
       Math.floor((ap + value) * variable(unit, 'Damage') / 100) === runtime.nextAttackMagic)), 'derived empowered magic');
@@ -639,7 +647,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','attackLanding','g2Landing','g2PowderRelease','g2PowderMonkey','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Stab','g23RenniLift','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','attackLanding','skillShot','g2Landing','g2PowderRelease','g2PowderMonkey','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Stab','g23RenniLift','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
     // Ranged attack landing: one shot of its owner's attack to targetId, its packets and statuses taken on the attack tick.
     if (task.kind === 'attackLanding') {
       const landing = task.landing; record(landing); list(landing!.packets); list(landing!.effects);
@@ -650,6 +658,15 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
           && Number.isSafeInteger(p.raw) && p.raw >= 0 && p.raw <= 100000000 && lockedShape(p.locked))
         && landing!.effects.every(e => combatUnits.some(u => u.id === e.holderId)), 'attack landing');
     } else requireValue(task.landing === undefined, 'attack landing');
+    // Landing batch skill projectile: owned by its caster's ability; before launch on its launch tick, in flight on arrival.
+    if (task.kind === 'skillShot') {
+      const shot = task.shot; record(shot);
+      requireValue(Object.keys(shot!).every(k => k === 'skill' || k === 'arrivalTick') && ABILITY_PROJECTILE_SKILLS.includes(shot!.skill)
+        && champion(owner) === ABILITY_PROJECTILE_OWNER[shot!.skill] && task.source.ownerId === unit.id && task.source.sourceKind === 'ability'
+        && task.source.definitionId === champion(owner) + '-ability' && Number.isSafeInteger(task.amount) && task.amount >= 0
+        && (shot!.arrivalTick === undefined ? (task.cancellable === (shot!.skill === 'maddie-shot') && shot!.skill !== 'lux-shield' && (shot!.skill === 'maddie-shot' || task.targetId !== null))
+          : (shot!.arrivalTick === task.executeAtTick && task.cancellable === false && task.targetId !== null)), 'skill shot');
+    } else requireValue(task.shot === undefined, 'skill shot');
     if (task.kind.startsWith('g2')) {
       const expected = ({g22Vex:'vex',g22Curse:'morgana',g22ViSlam:'vi',g22CamilleKick:'camille',g2BlitzShock:'blitzcrank',g2Drain:'illaoi',g2Slam:'illaoi',g2Infection:'malzahar',g2SingedSpeed:'singed',g2PowderRelease:'powder',g2PowderMonkey:'powder',g23Flame:'sevika',g23Chomp:'sevika',g23Roll:'sevika'} as Record<string,string>)[task.kind];
       requireValue(task.source.ownerId === unit.id && task.cancellable === (task.kind==='g23Flame'||task.kind==='g23Chomp'), 'G2 task owner');
@@ -660,7 +677,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
       if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
       if(task.kind === 'g23Smeech' || task.kind === 'g23Stab') requireValue(champion(owner) === 'smeech', 'Smeech task owner');
       if(task.kind === 'g23RenniLift') requireValue(champion(owner) === 'renni' && task.targetId !== null, 'Renni lift owner');
-      if(task.kind === 'g2Landing') requireValue(['trundle','zyra','tristana','renata','malzahar'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability' && task.total >= 1, 'G2 landing source');
+      if(task.kind === 'g2Landing') requireValue(['trundle','zyra','tristana','renata','malzahar','darius','lux'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability' && task.total >= 1, 'G2 landing source');
       if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');
     }
     if (task.kind === 'g22ViSlam') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && task.total === 2 && task.targetId !== null, 'Vi slam task'); }

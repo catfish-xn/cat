@@ -88,7 +88,15 @@ check skipped as above. SHA-256: `f2be9d16394fc40944810cb7c8461ee33734b1feec4ce4
 fields only melee units). Exported with the same command, v24 gameplay check skipped as above; the export equals the old file
 with that one substitution. SHA-256: `9164136961297336b3fed3376a006ed77c36cdec879635715977ce30c79b80e6`.
 
-2026-11-20 玛尔扎哈技能改为横跨目标的直线 (#783): identity-only refresh, `contentDigest` (×2) `cf212873` → `d1f4cd83`
-(`S13_COMBAT_RULES.malzaharGate`); `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed (the 1-2 fight has
-no Malzahar). Exported with the same command, v24 gameplay check skipped as above; the export equals the old file with that one
-substitution. SHA-256: `8ede2ef8b38121a13c6744b8eaf116e86143764d26732fee8a54d34e15bce7e6`.
+2026-11-20 技能落地结算批: identity-only refresh, `contentDigest` (×2) `cf212873` → `2f642cc0` (`S13_COMBAT_RULES.skillLanding`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed (the 1-2 fight has none of the batch's heroes).
+Exported with the same command, v24 gameplay check skipped as above; the export equals the old file with that one substitution.
+SHA-256: `65b0a55d862a47254941e29386f36f5a23bb4422eb4da0c329ddfa7067d80b76`.
+
+2026-11-21 死亡判定随机键 v1: identity-only refresh, `contentDigest` (×2) `2f642cc0` → `6983672c` (`S13_COMBAT_RULES.deathRollKeys`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `81cda1aa2103d88fa9f1dd4a05d01a670d69cbaf379c5929a0226c05c3262aa4`.
+
+2026-11-21 玛尔扎哈门线 v1: identity-only refresh, `contentDigest` (×2) `6983672c` → `57428247` (`S13_COMBAT_RULES.malzaharGate`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `bea914e1e7464436978a0c0bdf8f79526b6091e88470f73ceb0a1d3386a02344`.

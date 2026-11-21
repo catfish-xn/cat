@@ -1,3 +1,5 @@
+import { scheduleShot } from './ability-projectile';
+import { heimerRocketLaunchTick, MORDEKAISER_CLAW_TICKS } from './cast-windup';
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
 import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
@@ -68,8 +70,10 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'draven':ids.push(u.id);break;
     case 'heimerdinger': {
+      // Landing batch (11-20): each rocket's target is drawn now and it settles where it lands (abilityProjectile
+      // 'heimerdinger-rocket', HEIMER_ROCKET_TIMING): the k-th of n leaves heimerRocketLaunchTick(k, n) after the cast.
       const n=v('StartingRockets')+Math.max(0,u.runtime.castCount-1)*v('MissileIncreasePerCast'),targets=foes();
-      for(let i=0;i<n;i++)strike(targets[Math.floor(ctx.draw()/2**32*targets.length)],mag('Damage'));break;
+      for(let i=0;i<n;i++){const x=targets[Math.floor(ctx.draw()/2**32*targets.length)];scheduleShot(u,'heimerdinger-rocket',ctx.tick+heimerRocketLaunchTick(i,n),x.id,mag('Damage'),seq,i,n);ids.push(x.id);}break;
     }
     case 'trundle': {
       const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp),hero=heroLive(u);
@@ -120,7 +124,10 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const lines=lineDirections(u.cell).map(direction=>({hits:targets.filter(x=>lineContains(u.cell,direction,x.cell,3,8)),target:lineContains(u.cell,direction,t.cell,3,8)}));
       // Stable sort preserves direction order after count and current-target ties.
       lines.sort((a,b)=>b.hits.length-a.hits.length||Number(b.target)-Number(a.target));
-      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);
+      // Landing batch (11-20): who is hit and how much is taken now; the claw appears and comes down MORDEKAISER_CLAW_TICKS after
+      // the cast (abilityProjectile 'mordekaiser-claw'), where the damage settles. DR, empower and pull stay on the cast.
+      const claw=MORDEKAISER_CLAW_TICKS[(u.starLevel??1) as 1|2|3],hits=lines[0].hits;
+      hits.forEach(x=>{scheduleShot(u,'mordekaiser-claw',ctx.tick+claw.appear,x.id,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),seq,ids.length,hits.length);ids.push(x.id);});
       const nearest=targets.slice(0,v('NearestEnemies'));
       pullToward(ctx,u,DISPLACEMENT_POLICY.mordekaiser.onlyLineHits?nearest.filter(x=>lines[0].hits.includes(x)):nearest,rawRangeToHexes(v('Displacement')),'mordekaiser-pull');break;
     }
@@ -195,6 +202,9 @@ export function startG22Traits(ctx:AbilityContext):void {
   }
 }
 export function advanceG22Traits(ctx:AbilityContext):void {
+  // Display only: Mordekaiser's empowered time ran out (it lasts while mordeUntilTick > tick).
+  for(const u of ctx.units.filter(u=>u.alive&&u.hp>0))if(champion(u)==='mordekaiser'&&(u.g22?.mordeUntilTick??0)>0&&u.g22!.mordeUntilTick===ctx.tick)
+    ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'mordekaiser-empower',targetIds:[]});
   for(const u of ctx.units.filter(u=>u.alive&&u.hp>0))for(const m of u.mechanics??[]){
     if(m.mechanic==='enforcer'){
       const state=g22(u),count=state.wanted.filter(id=>ctx.units.some(x=>x.id===id&&!x.alive)).length;

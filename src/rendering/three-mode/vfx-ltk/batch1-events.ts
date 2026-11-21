@@ -46,6 +46,12 @@ const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne'
  * offline passes the ledger of whole steps (BoardScene.ts), so a shot's packets never straddle two batches
  * (tests/vfx-ltk-caitlyn-shots.test.ts).
  */
+/**
+ * The rules' LeBlanc NumAttacks (src/simulation/content/g2-abilities.ts, the same at every star): the attacks after each
+ * cast that are empowered (combat-g2.ts planG2Attack). Mirrored here as CAST_WINDUP_TICKS is; tests/vfx-ltk-leblanc-empowered.test.ts
+ * checks it against the rules' data.
+ */
+export const LEBLANC_EMPOWERED_ATTACKS = 3;
 /** Caitlyn's shots planned, and how many found no enemy struck twice and fell back to the last one struck (dev load harness). */
 export const CAITLYN_SHOT_STATS = { shots: 0, fallback: 0 };
 export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: number, sourceId: string): string | undefined {
@@ -92,6 +98,10 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const strikes = new Map<string, { tick: number; struck: Set<string> }>();
   /** Smeech since his last cast: stabs drawn (his swing turns with each) and the enemy his last stab hit (a new one is a leap). */
   const smeech = new Map<string, { stabs: number; target: string | undefined }>();
+  /** Mordekaisers whose cast's empowered time is running (from the cast to the rules' mordekaiser-empower end). */
+  const empoweredMorde = new Set<string>();
+  /** LeBlanc: her empowered attacks left since her last cast (LEBLANC_EMPOWERED_ATTACKS from each cast). */
+  const leblancAttacks = new Map<string, number>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -99,7 +109,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); empoweredMorde.clear(); leblancAttacks.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -294,6 +304,18 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
+        // Mordekaiser: his attacks while his cast's empowered time runs are his empowered ones (the mace glow, CUE_OVERRIDES).
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'mordekaiser') empoweredMorde.add(event.sourceId);
+        if (event.type === 'abilityEffectEnded' && event.effect === 'mordekaiser-empower') empoweredMorde.delete(event.unitId);
+        if (event.type === 'death') empoweredMorde.delete(event.unitId);
+        if (event.type === 'attack' && empoweredMorde.has(event.attackerId)) plan.variant = 'empowered';
+        // LeBlanc: her cast empowers her next LEBLANC_EMPOWERED_ATTACKS attacks (the rules count them from each cast, whether
+        // or not they land), so those attacks play her empowered missile; a new cast starts the count again.
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'leblanc') leblancAttacks.set(event.sourceId, LEBLANC_EMPOWERED_ATTACKS);
+        if (event.type === 'death') leblancAttacks.delete(event.unitId);
+        if (event.type === 'attack' && (leblancAttacks.get(event.attackerId) ?? 0) > 0) {
+          plan.variant = 'empowered'; leblancAttacks.set(event.attackerId, leblancAttacks.get(event.attackerId)! - 1);
+        }
         if (!tracked) return plan;
         // Nocturne's strike (P_tar) plays on every enemy his empowered swing bleeds: its own target with the swing's hit, each
         // other one when its first bleed tick lands. The rules name no bleed targets at the swing (Fable 11-18, C71 option A).

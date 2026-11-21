@@ -1,4 +1,4 @@
-/** The chest locator: 14.24 basic attacks hit here (BasicAttack mHitBoneName), and their missiles fly to it. */
+/** The chest locator: basic attacks hit here (the bone their attack data names for a hit), and their missiles fly to it. */
 export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
@@ -36,11 +36,13 @@ export interface TimelineCue {
   readonly main?: boolean;
   /**
    * A decided rank instead of the event's own (effect-budget.ts effectImportance): 'body' for a hit or projectile that must
-   * not crowd skill impacts out (Steb's heal share) or a cast-start that draws the skill itself; 'decorative' for a
-   * flourish a plain attack or a place's run may end (cue-ranks.ts), or a visual that must give way to every skill and
-   * basic-attack visual (Heimerdinger's rocket hits, Fable 11-19). A display priority decision, not original data.
+   * not crowd skill impacts out (Steb's heal share) or a cast-start that draws the skill itself; 'critical' for a cast-start
+   * body that must never yield its slot (Mordekaiser's aura, LeBlanc's channel: Fable 11-19); 'decorative' for a flourish a
+   * plain attack or a place's run may end (cue-ranks.ts), a visual that must give way to every skill and basic-attack visual
+   * (Heimerdinger's rocket hits, Fable 11-19), or a layer shown all fight long as decoration (cue-overrides.ts SUSTAIN_RANKS).
+   * A display priority decision, not original data.
    */
-  readonly rank?: 'body' | 'decorative';
+  readonly rank?: 'body' | 'critical' | 'decorative';
   /** A single world point supplied by the board, never an invented unit target. */
   readonly location?: 'board';
   /** Fan out projectiles/impacts only to this many actual receipt targets. */
@@ -65,16 +67,26 @@ export interface TimelineCue {
     readonly staggerTicks: number; readonly spreadTicks: number; readonly fan?: StrikeFan;
     /** Rows only for the first `shown` strikes of a cast; later strikes play nothing of this cue (their damage still shows). */
     readonly shown?: number;
-    /** A strike lands no row of this cue when an earlier strike of the same cast at the same target lands under this many ticks before. */
-    readonly mergeTicks?: number;
     /** At most this many of this system's rows queued on one rule tick across every caster (runtime); the rest are left out. */
     readonly tickCap?: number;
   };
+  /**
+   * Hits of one play on one target merge: a row of this cue lands nothing when an earlier row of the same play at the same
+   * target lands under this many rule ticks before (1: the same tick only). It applies to the rows a cue plays once per
+   * strike (perStrike) or once per receipt (everyReceipt), whose targets may repeat. Several copies of one burst on one
+   * spot at once can add up to a flat white block. A display rule of our own, not original data.
+   */
+  readonly mergeTicks?: number;
   /**
    * A projectile whose caster is its own target still flies (from its bone to its own targetBone), instead of being left
    * out with its landing hits moved to its release (the default for a self-projectile). Off unless set per cue.
    */
   readonly selfFlight?: boolean;
+  /**
+   * At its end the cue stops emitting and lets the particles already out finish their own lives, for at most this many
+   * seconds, instead of being cut there (cue-overrides.ts PLAY_OUT_AT_DEADLINE; per cue, Fable 11-19).
+   */
+  readonly playOut?: number;
   /**
    * Uniform size of this system about its anchor. Omitted means 1.
    *
@@ -93,6 +105,14 @@ export interface TimelineCue {
    * `duration` is only what it keeps where the asset gives no end. Never with `stopAfter`.
    */
   readonly ownLife?: boolean;
+  /**
+   * One row for each receipt target after the first, in receipt order and repeats kept: one per projectile the rules sent
+   * (Ziggs's split bombs may strike one enemy twice, or his primary target again). Not with `others`, `primary` or `targetLimit`.
+   */
+  readonly everyReceipt?: boolean;
+  /** A projectile that starts where the play's primary target (its first receipt target) stands when the play comes, not at
+   * its caster: Ziggs's split bombs leave his main bomb's crater. It plays even once that target is gone. */
+  readonly fromPrimary?: boolean;
   /**
    * A target cue the cast can do without: with no living recipient it is left out instead of
    * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).
@@ -164,6 +184,8 @@ export interface TimelineSpawn extends TimelineCue {
   readonly facing?: WorldPoint;
   /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
   readonly aimId?: string;
+  /** TimelineCue.fromPrimary: the unit whose place the projectile starts from. */
+  readonly fromId?: string;
 }
 /** How far a perStrike projectile's curve swings: `side` at most to either side and `lift` up, as shares of its flight. */
 export interface StrikeFan { readonly side: number; readonly lift: number }
@@ -195,6 +217,15 @@ export interface TimelineMapping {
   /** A partial plan is diagnostic only; never enqueue it or suppress the old action. */
   readonly unsupported: readonly { cue: TimelineCue; reason: 'missing-target' | 'self-projectile' | 'missing-point' }[];
 }
+/** TimelineCue.mergeTicks for one play: whether a row landing on `targetId` at rule tick `at` merges into an earlier one. */
+function hitMerge(mergeTicks: number | undefined): (targetId: string, at: number) => boolean {
+  const landed = new Map<string, number>();
+  return (targetId, at) => {
+    const last = landed.get(targetId);
+    if (mergeTicks !== undefined && last !== undefined && at - last < mergeTicks) return true;
+    landed.set(targetId, at); return false;
+  };
+}
 /** Hits preserve authoritative self/ally targets. Projectiles need a distinct primary
  * endpoint; never skip self and silently retarget to a later member of the list. */
 export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string, targets: readonly string[], board?: WorldPoint): TimelineMapping {
@@ -204,12 +235,11 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
     if (cue.perStrike && cue.event !== 'cast-start' && cue.location !== 'board') {
       const strikes = targets.filter(id => id !== sourceId), { staggerTicks, spreadTicks, fan } = cue.perStrike;
       if (!strikes.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
-      const { shown, mergeTicks } = cue.perStrike, landed = new Map<string, number>();
+      const { shown } = cue.perStrike, merged = hitMerge(cue.mergeTicks);
       strikes.forEach((targetId, k) => {
         if (shown !== undefined && k >= shown) return;
-        const at = strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks), last = landed.get(targetId);
-        if (mergeTicks !== undefined && last !== undefined && at - last < mergeTicks) return;
-        landed.set(targetId, at);
+        const at = strikeOffsetTicks(k, strikes.length, staggerTicks, spreadTicks);
+        if (merged(targetId, at)) return;
         spawns.push({ ...cue, sourceId, targetId, strike: k, delay: cue.delay + at * STRIKE_TICK_SECONDS,
           ...(cue.event === 'projectile' && fan ? { curve: strikeCurve(k, strikes.length, fan) } : {}) });
       });
@@ -226,10 +256,18 @@ export function mapSkillTimeline(cues: readonly TimelineCue[], sourceId: string,
       if (cue.optional) continue;
       unsupported.push({ cue, reason: 'self-projectile' }); continue;
     }
+    if (cue.everyReceipt) {
+      const each = targets.slice(1);
+      if (!each.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
+      // Every row of a receipt cue lands at the same time (its delay), so mergeTicks keeps one row per target.
+      const merged = hitMerge(cue.mergeTicks);
+      for (const targetId of each) if (!merged(targetId, 0)) spawns.push({ ...cue, sourceId, targetId, ...(cue.fromPrimary ? { fromId: targets[0] } : {}) });
+      continue;
+    }
     const pool = cue.others ? unique.slice(1) : unique;
     if (!pool.length) { if (!cue.optional) unsupported.push({ cue, reason: 'missing-target' }); continue; }
     for (const targetId of cue.primary ? pool.slice(0, 1) : cue.targetLimit ? pool.slice(0, cue.targetLimit) : cue.event === 'projectile' ? pool.slice(0, 1) : pool) {
-      spawns.push({ ...cue, sourceId, targetId });
+      spawns.push({ ...cue, sourceId, targetId, ...(cue.fromPrimary ? { fromId: unique[0] } : {}) });
     }
   }
   // A projectile from the caster to itself is left out (self-projectile). The hit on the caster that lands when it would have
