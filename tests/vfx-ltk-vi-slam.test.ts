@@ -46,6 +46,14 @@ describe("Vi's landing group follows her slam", () => {
     for (const event of [cast(10, ['f1']), slam(22, 'f1'), cast(10, ['f1']), slam(22, 'f1')]) bridge.event(event, true);
     expect(played.map(p => p.skill)).toEqual(['vi-slam', 'vi-slam']);
   });
+  it('two combats in a row (the renderer clears between them): the second one\'s slam plays, on its own target', () => {
+    const { bridge, played } = harness();
+    for (const event of [cast(10, ['f1']), slam(22, 'f1')]) bridge.event(event, true);
+    bridge.clear();
+    // The second combat's cast names no target the bridge can keep: its slam must not land on the first combat's target.
+    for (const event of [cast(10, []), slam(22, 'f2')]) bridge.event(event, true);
+    expect(played.map(p => [p.skill, ...p.targets])).toEqual([['vi-slam', 'f1'], ['vi-slam', 'f2']]);
+  });
   it('a held target that died: still on it (its place); nothing from catch-up', () => {
     const { bridge, played } = harness();
     bridge.event(cast(10, ['f1']), true); bridge.event(slam(22, 'f2'), true);
@@ -70,5 +78,10 @@ describe("Vi's slam from the real rules", () => {
     const slams = played.filter(p => p.skill === 'vi-slam');
     expect(slams).toHaveLength(1);
     expect(slams[0]!.tick).toBeGreaterThan(run.castIndex);
+    // The same combat again, as a second combat of a match (cleared between, as the renderer does) or a replay from the
+    // start: its slam comes on the same tick and plays again.
+    bridge.clear();
+    shown.forEach((events, at) => { tick = at; for (const event of events) bridge.event(event, true); });
+    expect(played.filter(p => p.skill === 'vi-slam').map(p => p.tick)).toEqual([slams[0]!.tick, slams[0]!.tick]);
   });
 });
