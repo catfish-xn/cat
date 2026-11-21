@@ -67,7 +67,7 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('3d80d4878671f3d39cdae71863b9e463aff55bc519640ddfc94716c176f21095'); // Mel cast v3 eb2d4cee -> 2acd4414 (was 04dbe61e…, Swain drain cadence v2; 4f7b1725… Heimerdinger focus)
+    .toBe('3d80d4878671f3d39cdae71863b9e463aff55bc519640ddfc94716c176f21095'); // Mel cast v3 eb2d4cee -> 2acd4414 (was c6362193…, Mel cast v2; 04dbe61e… Swain drain cadence v2)
   expect(restoreMatch(save)).toEqual(started);
 });
 

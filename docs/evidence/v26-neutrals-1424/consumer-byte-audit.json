@@ -306,9 +306,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 14299,
+      "currentBytes": 14292,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "ec4f64fc605f105402d3448bee4c4e3a306c797018afced3157c7044f546be67",
+      "currentSha256": "49e00d1694236d1a0fa088a2782c2cc5f09f64303a8c5d3108accdedc775b3bf",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
