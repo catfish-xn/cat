@@ -91,12 +91,13 @@ export interface WindowStart { fromStart?: boolean; leadMs?: number | null; cast
  * subject of (`event:<type>`, e.g. `event:packetDamage` for a passive's periodic damage). For a unit that never casts
  * (Amumu, Zeri) an attack or event anchor still finds a window. N is --cast-index (castNumber).
  */
-export type Anchor = { kind: 'cast' } | { kind: 'attack-hit' } | { kind: 'event'; type: string };
+export type Anchor = { kind: 'cast' } | { kind: 'attack-hit' } | { kind: 'crit-hit' } | { kind: 'event'; type: string };
 export const CAST_ANCHOR: Anchor = { kind: 'cast' };
-/** --anchor's value as an Anchor, or null when it is not one (`cast`, `attack-hit`, `event:<display event type>`). */
+/** --anchor's value as an Anchor, or null when it is not one (`cast`, `attack-hit`, `crit-hit`, `event:<display event type>`). */
 export function parseAnchor(value: string | null | undefined): Anchor | null {
   if (value == null || value === 'cast') return CAST_ANCHOR;
   if (value === 'attack-hit') return { kind: 'attack-hit' };
+  if (value === 'crit-hit') return { kind: 'crit-hit' };
   const m = /^event:([A-Za-z][A-Za-z0-9]{0,31})$/.exec(value);
   return m ? { kind: 'event', type: m[1]! } : null;
 }
@@ -104,10 +105,12 @@ export function parseAnchor(value: string | null | undefined): Anchor | null {
 export function anchorMatches(anchor: Anchor, e: any): boolean {
   if (anchor.kind === 'cast') return e.type === 'cast' && e.sourceId === 'me';
   if (anchor.kind === 'attack-hit') return e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'basic-attack' && e.hit === true;
+  // `crit-hit`: a basic attack of `me` that lands and crits (crit variants of an attack: Renata's crit missile, 11-21).
+  if (anchor.kind === 'crit-hit') return e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'basic-attack' && e.hit === true && e.critical === true;
   return e.type === anchor.type && (e.sourceId === 'me' || e.attackerId === 'me' || e.unitId === 'me');
 }
 /** How an anchor reads in messages: "cast", "basic attack hit", "packetDamage event". */
-export const anchorName = (anchor: Anchor) => anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'basic attack hit' : `${anchor.type} event`;
+export const anchorName = (anchor: Anchor) => anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'basic attack hit' : anchor.kind === 'crit-hit' ? 'basic attack crit' : `${anchor.type} event`;
 /**
  * The display events before a replay window, as one catch-up batch for the renderer: every event of ticks 0 to `from` - 1,
  * then a marker two ticks past the window's first tick. The renderer moves its counts and states on every event of a batch
