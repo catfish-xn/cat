@@ -63,3 +63,15 @@ describe('Swain drain: files written before it', () => {
     expect(readCompatibility(file)).toMatchObject({ status: 'rejected', reason: 'digest-mismatch' });
   });
 });
+
+describe('Swain demon form extension event', () => {
+  it('a takedown extends the form once per victim and says so with swainAscensionExtended (display only)', () => {
+    const start = battle([swain(), dummy('weak', 2, 3), dummy('far', 6, 0)], { rngState: 42 });
+    Object.assign(start.units[1]!, { hp: 1, maxHp: 1 });
+    const r = run(start, 60);
+    const ext = r.out.flatMap(s => s.events.filter(e => e.type === 'swainAscensionExtended')) as any[];
+    expect(ext.map(e => [e.unitId, e.victimId])).toEqual([['p', 'weak']]);
+    expect(ext[0].untilTick - ext[0].beforeUntilTick).toBe(Math.round(variable(start.units[0] as S13Unit, 'BonusDuration') * 20));
+    expect(r.state.units.find(u => u.id === 'p')!.g23!.ascension!.untilTick).toBe(ext[0].untilTick);
+  });
+});

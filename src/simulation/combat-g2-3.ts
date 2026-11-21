@@ -310,7 +310,9 @@ export function recordG23SkillDamage(ctx:AbilityContext,u:S13Unit|undefined,t:S1
 export function extendG23Swain(ctx:AbilityContext,victimId:string,contributors:readonly string[]):void{
  for(const u of ctx.units.filter(u=>u.hp>0&&contributors.includes(u.id))){
   const a=u.g23?.ascension;
-  if(a&&a.untilTick>=ctx.tick&&!a.takedowns.includes(victimId)){a.takedowns.push(victimId);a.untilTick+=Math.round(variable(u,'BonusDuration')*20);}
+  if(a&&a.untilTick>=ctx.tick&&!a.takedowns.includes(victimId)){const before=a.untilTick;a.takedowns.push(victimId);a.untilTick+=Math.round(variable(u,'BonusDuration')*20);
+   // Display only: the takedown extended the demon form (once per victim).
+   ctx.events.push({type:'swainAscensionExtended',tick:ctx.tick,unitId:u.id,victimId,beforeUntilTick:before,untilTick:a.untilTick});}
  }
 }
 

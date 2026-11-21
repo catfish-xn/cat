@@ -155,6 +155,7 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'carryChanged': return { ...envelope, ...pick(event, ['type', 'holderId', 'targetId', 'carried']) };
     case 'attackLaunched': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'arrivalTick', 'projectile']) };
     case 'attackLanded': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'hit']) };
+    case 'swainAscensionExtended': return { ...envelope, ...pick(event, ['type', 'unitId', 'victimId', 'beforeUntilTick', 'untilTick']) };
     case 'abilityProjectileLaunched': return { ...envelope, ...pick(event, ['type', 'sourceId', 'targetId', 'arrivalTick', 'skill', 'ordinal', 'actionSeq', 'count']) };
     case 'abilityProjectileLanded': return { ...envelope, ...pick(event, ['type', 'sourceId', 'targetId', 'skill', 'ordinal', 'actionSeq', 'count', 'hit']) };
     case 'abilityEffectEnded': return { ...envelope, ...pick(event, ['type', 'unitId', 'effect']), targetIds: [...event.targetIds] };
