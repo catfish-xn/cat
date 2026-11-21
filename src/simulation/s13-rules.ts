@@ -53,9 +53,9 @@ export const S13_COMBAT_RULES = Object.freeze({
   heimerFocus: 'first-floor-half-of-volley-at-current-target-rest-random',
   // Swain's demon form drain, cadence v2 (11-20): pulses every SWAIN_PULSE_TICKS (cast-windup.ts), each a part of the per-second values (splitTotal).
   swainDrain: 'swain-drain-pulse-cadence-v2',
-  // Mel's barrage, settle on landing v1 (11-20): her dash lands and her bolts leave later (MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS in
-  // cast-windup.ts); the bolts settle where they land (abilityProjectile mel-barrage).
-  melBarrage: 'mel-barrage-settle-on-landing-v1',
+  // Mel's cast v2 (11-21): bolts settle where they land, her dash lands and her bolts leave later (MEL_DASH_LAND_TICKS,
+  // MEL_RELEASE_TICKS in cast-windup.ts); every normal cast dashes, the third does not move.
+  melBarrage: 'mel-barrage-settle-on-landing-dash-each-normal-cast-v2',
   // Violet's combo v1 (11-21): two jabs and the uppercut each settle on their own tick (cast-windup.ts); the knock-up starts with the uppercut.
   violetCombo: 'violet-combo-settle-per-hit-v1',
 });
