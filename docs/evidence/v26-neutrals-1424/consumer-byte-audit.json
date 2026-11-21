@@ -4646,6 +4646,14 @@
       "currentSha256": "a8fb613e73462dc6125ec22c6f027ba81a5f2b2f9238248ee5bdd98d280089b2",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-leblanc-empowered.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3777,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "dc68f36bcf7ade87caaa504f968f08ae5903087c49f5c92bad7d3038aeff5778",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-leona-burst.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4849,6 +4857,14 @@
       "currentBytes": 2443,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "95e0d388a3a724e431bd30d7f4431050be3b3e5d889be9cd0db432916f104c0f",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-skill-cue-gate.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4945,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "488707f903435868c7ccdb1f75b1c517d8e7af97c4403ed718598e22e0e8cb45",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-smeech-stabs.test.ts": {
