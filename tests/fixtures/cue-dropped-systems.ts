@@ -33,7 +33,7 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
     '7078e23e': { status: 'dropped', reason: 'an entry effect outside the cast we play, left out in the 11-03 review (PR #524)' },
   },
   cassiopeia: {
-    c83f1f21: { status: 'pending', reason: 'left out by mistake when the row was first written (11-03); to be played or dropped' },
+    c83f1f21: { status: 'pending', reason: 'purpose not verified: the asset is a large red light column that matches none of the original footage we have (11-21 per-layer render); not played until its use is found' },
   },
   scar: {
     '95d62c6a': { status: 'dropped', reason: 'not seen in the original cast footage (11-21 review): left out' },

@@ -1011,9 +1011,9 @@
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2510,
+      "currentBytes": 2596,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "30678b7c74a623c0c7a80c0119bc211b5171350920d7cc0c5eb965f92e1a53c5",
+      "currentSha256": "803ebc66144ab08a6bd98c1c7dac7cfeb3db8d078949794ca03293ea6c34fe19",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
