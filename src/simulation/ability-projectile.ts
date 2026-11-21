@@ -11,11 +11,11 @@ import { byDistance, enemies, grantShield, origin, path, variable, type S13Unit 
  * (abilityProjectileLaunched) and settles on its arrival tick (abilityProjectileLanded, then its effect). A target that died
  * in flight takes nothing and no other one is picked (hit false), as ranged basic attacks do.
  */
-export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw' | 'mel-barrage' | 'jinx-rocket';
-export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw', 'mel-barrage', 'jinx-rocket'];
+export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw' | 'mel-barrage' | 'jinx-rocket' | 'mel-bolt';
+export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw', 'mel-barrage', 'jinx-rocket', 'mel-bolt'];
 /** The champion each projectile belongs to. */
 export const ABILITY_PROJECTILE_OWNER: Readonly<Record<AbilityProjectileSkill, string>> =
-  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser', 'mel-barrage': 'mel', 'jinx-rocket': 'jinx' };
+  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser', 'mel-barrage': 'mel', 'jinx-rocket': 'jinx', 'mel-bolt': 'mel' };
 /** A skillShot task: before launch (arrivalTick absent) it runs on its launch tick; after, on arrivalTick (= executeAtTick). */
 export interface SkillShotState { readonly skill: AbilityProjectileSkill; readonly arrivalTick?: number }
 

@@ -146,3 +146,25 @@ describe('Mel barrage: files written before it', () => {
     expect(() => restoreMatch(JSON.stringify({ ...state, contentDigest: BEFORE_DIGEST }))).toThrow('content-digest');
   });
 });
+
+// The ten-bolt normal cast changes battle results: a save written under the digest just before it (Vi's slam) is turned away.
+const BEFORE_BOLTS_DIGEST = 'fnv1a32-utf16:c4667f33';
+describe("Mel's ten bolts: files written before them", () => {
+  it('the constants, the rule identifier, and the digest moved', () => {
+    expect([MEL_BOLTS_PER_TARGET, MEL_TARGET_STAGGER_TICKS, MEL_BOLT_SPAN_TICKS]).toEqual([10, 1, 16]);
+    expect(S13_COMBAT_RULES.melBolts).toBe('mel-normal-cast-ten-bolts-per-target-staggered-v1');
+    expect(CONTENT_DIGEST).not.toBe(BEFORE_BOLTS_DIGEST);
+  });
+  it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
+    const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
+      runId: 'before-mel-bolts', createdAt: '2026-11-21T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE_BOLTS_DIGEST }, battles: [], currentBattle: null };
+    expect(readCompatibility(file)).toEqual({ status: 'rejected', currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion: M8_VERSION.rulesVersion,
+      canResume: false, canReplay: false, canExportOriginal: false, reason: 'digest-mismatch' });
+    expect(routeSaveFile(file).envelope).toBeNull();
+    const admission = admitArchives([file], routeSaveFile);
+    expect(admission.records).toEqual([]);
+    expect(admission.quarantined.map(q => q.runId)).toEqual(['before-mel-bolts']);
+    const state = JSON.parse(serializeMatch(readyMatch(42)));
+    expect(() => restoreMatch(JSON.stringify({ ...state, contentDigest: BEFORE_BOLTS_DIGEST }))).toThrow('content-digest');
+  });
+});

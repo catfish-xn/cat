@@ -119,3 +119,11 @@ export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TIC
 /** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
  * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
 export const JINX_ROCKET_LAUNCH_TICKS = 27, JINX_ROCKET_FLIGHT_TICKS = 10;
+
+/** Mel's normal cast fires MEL_BOLTS_PER_TARGET bolts at each target (11-21, authorization ②). Target k starts
+ * MEL_TARGET_STAGGER_TICKS × k after her release and its bolts spread over MEL_BOLT_SPAN_TICKS, first to last (both aligned to
+ * the original frame by frame). The single-bolt spacing is fitted, not original data: the bolts are laid evenly over the span,
+ * rounding to the nearest tick (melBoltOffset). */
+export const MEL_BOLTS_PER_TARGET = 10, MEL_TARGET_STAGGER_TICKS = 1, MEL_BOLT_SPAN_TICKS = 16;
+/** Ticks after its target's start that bolt i (0..MEL_BOLTS_PER_TARGET-1) leaves. */
+export function melBoltOffset(i: number): number { return Math.round(i * MEL_BOLT_SPAN_TICKS / (MEL_BOLTS_PER_TARGET - 1)); }
