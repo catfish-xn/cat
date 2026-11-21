@@ -56,11 +56,12 @@ describe('rule-driven cast choice in the renderer', () => {
     expect(calls.map(c => c.branch)).toEqual(['chompers', undefined]);
   });
 
-  it('Cassiopeia: splash only on the reported third cast; an older replay plays the comet and no ground hit', () => {
+  it('Cassiopeia: splash only on the reported third cast; an older replay plays the comet and its hit, no ground hit', () => {
     const cass = CUE_OVERRIDES.cassiopeia;
     expect(kept(cass, 'single').filter(c => c.system === 'b124a9c5')).toHaveLength(1);
     expect(kept(cass, 'splash').find(c => c.system === 'b124a9c5')?.targetLimit).toBe(3);
-    expect(kept(cass).map(c => c.system)).toEqual(['9f19f946']);
+    // The bolt's own hit effect is not branch-bound: it plays with the comet on every cast.
+    expect(kept(cass).map(c => c.system)).toEqual(['9f19f946', '259c4cbc']);
   });
 
   it('Mel: the third cast is the rule branch `third`; anything else, or no branch, is the plain cast', () => {
