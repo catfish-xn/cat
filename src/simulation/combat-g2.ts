@@ -1,3 +1,5 @@
+import { luxShieldTicks } from './ability-projectile';
+import { splitTotal } from './m8/periodic';
 import { recordAerialMovement, startAerialDash } from './augment-pool-batch5-g3-combat';
 import { batch2AutomataBlast } from './augment-pool-batch2-combat';
 import { detonateMenaces, teamup } from './combat-v20-traits';
@@ -219,8 +221,20 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     // the caster after the cast does not stop it. A target that died meanwhile takes nothing and no other one is picked.
     const name = champion(unit);
     if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
+    // Landing batch (11-20): Lux's shield on herself (ShieldDuration from here).
+    if (name === 'lux') { grantShield(unit, t.source, t.amount, ctx.tick + luxShieldTicks(unit), ctx.tick, ctx.events); return; }
+    if (name === 'darius' && t.ordinal === t.total - 2) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
+    if (name === 'darius' && t.ordinal === t.total - 1) {
+      // The bleed starts here: a new one replaces the target's earlier one; four parts, 20 ticks apart, same total length.
+      if (!target) return;
+      unit.tasks = unit.tasks.filter(x => x.kind !== 'bleed' || x.targetId !== target.id);
+      for (let n = 0; n < 4; n++) unit.tasks.push({ key: `${unit.id}:${t.actionSeq}:bleed:${n}`, kind: 'bleed', source: t.source, executeAtTick: ctx.tick + (n + 1) * 20,
+        targetId: target.id, amount: splitTotal(t.amount, 4)[n], ordinal: n, total: 4, cancellable: false, actionSeq: t.actionSeq, attachedDot: true });
+      return;
+    }
     if (!target) return;
     if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    else if (name === 'darius') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'physical', true, t.source); // the spin: packet n
     else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
       ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,
         delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: false, triggeringCastActionSeq: t.actionSeq, bounce: true });
