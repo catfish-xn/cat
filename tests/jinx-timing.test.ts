@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatEvent, type CombatState } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
-import { JINX_CHOMPERS_TICKS, JINX_ROCKET_FLIGHT_TICKS, JINX_ROCKET_LAUNCH_TICKS } from '../src/simulation/cast-windup';
+import { JINX_ROCKET_FLIGHT_TICKS, JINX_ROCKET_LAUNCH_TICKS } from '../src/simulation/cast-windup';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import { CONTENT_DIGEST } from '../src/simulation/content';
 import { readCompatibility, routeSaveFile } from '../src/persistence/compatibility';
@@ -12,8 +12,8 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import { battle, unit } from './combat-helpers';
 import { readyMatch } from './match-helpers';
 
-// Jinx's rocket and chompers (11-21, authorization ②): aligned to the original frame by frame; the zap is unchanged.
-// docs/S13_RULES_GAP.md (金克丝飞弹、手雷).
+// Jinx's rocket (11-21, authorization ②): aligned to the original frame by frame; the zap and the chompers are unchanged.
+// docs/S13_RULES_GAP.md (金克丝飞弹).
 const jinx = () => unit('p', 'player', 3, 7, { definitionId: 'jinx', starLevel: 2, ability: resolveAbility('jinx-ability', 2), hp: 100000, maxHp: 100000, mana: 0, maxMana: 60,
   attackDamage: 100, abilityPower: 100, attackRange: 20, baseAttackSpeedBps: 10000, cooldownTicks: 0, moveCooldownTicks: 1000, targetId: 'e',
   runtime: { ...EMPTY_RUNTIME }, statuses: [], tasks: [], shieldLayers: [], mechanics: [] } as any);
@@ -34,10 +34,8 @@ describe('Jinx cast timing', () => {
     expect(casts.map(c => c.branch).slice(0, 3)).toEqual(['zap', 'chompers', 'rocket']);
     expect(hitsBetween(at('zap'), at('zap')).length).toBeGreaterThan(0);
   });
-  it('the chompers go off JINX_CHOMPERS_TICKS after the cast, nothing before', () => {
-    const c = at('chompers');
-    expect(hitsBetween(c, c + JINX_CHOMPERS_TICKS - 1)).toEqual([]);
-    expect(hitsBetween(c + JINX_CHOMPERS_TICKS, c + JINX_CHOMPERS_TICKS).length).toBeGreaterThan(0);
+  it('the chompers still settle on their cast', () => {
+    expect(hitsBetween(at('chompers'), at('chompers')).length).toBeGreaterThan(0);
   });
   it('the rocket leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS later, hitting every enemy there', () => {
     const c = at('rocket');
@@ -60,7 +58,7 @@ describe('Jinx cast timing', () => {
 const BEFORE_DIGEST = 'fnv1a32-utf16:3ade1e2c';
 describe('Jinx timing: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
-    expect(S13_COMBAT_RULES.jinxRocketChompers).toBe('jinx-rocket-and-chompers-settle-when-they-go-off-v1');
+    expect(S13_COMBAT_RULES.jinxRocket).toBe('jinx-rocket-settle-on-explosion-v1');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_DIGEST);
   });
   it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {

@@ -63,13 +63,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 斯维因吸取节奏 v2 (2026-11-20): contentDigest 9ccd5f96->eb2d4cee only; loot replay unchanged.
   // 梅尔施法 v2 (2026-11-21): contentDigest eb2d4cee->6ad3ea6f only.
   // 蔚奥莱连击 v1 (2026-11-21): contentDigest 6ad3ea6f->3ade1e2c only.
-  // 金克丝飞弹手雷 v1 (2026-11-21): contentDigest 3ade1e2c->8dd39163 only.
-  const back=save.split('8dd39163').join('3ade1e2c').split('3ade1e2c').join('6ad3ea6f').split('6ad3ea6f').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 金克丝飞弹 v1 (2026-11-21): contentDigest 3ade1e2c->8ce74891 only.
+  const back=save.split('8ce74891').join('3ade1e2c').split('3ade1e2c').join('6ad3ea6f').split('6ad3ea6f').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('118e5570c3035fc646e4108ed39f87581358efb1eecc2fd6a53285569c419fe4'); // Jinx rocket and chompers v1 3ade1e2c -> 8dd39163 (was 050215f4…, Violet combo v1; c6362193… Mel cast v2)
+    .toBe('a5fa00150354c22b2cb722461777c4b8d047903b60aa96790c3e65229900d829'); // Jinx rocket v1 3ade1e2c -> 8ce74891 (was 050215f4…, Violet combo v1; c6362193… Mel cast v2)
   expect(restoreMatch(save)).toEqual(started);
 });
 
