@@ -137,7 +137,12 @@ export function createBatch2VfxBridge(host: Host) {
       if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
         if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
       }
+      // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing.
       if (!current) return;
+      if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
+        // The rocket's flash and flight as it leaves; its explosion at the board's centre where it lands.
+        play('jinx', event.sourceId, [event.targetId], event.type === 'abilityProjectileLaunched' ? 'jinx-rocket-fire' : 'jinx-rocket-boom', 'cast', true);
+      }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
       if (event.type === 'melEnergyChanged' && event.after > event.before && energyTicks.get(event.unitId) !== event.tick) {
