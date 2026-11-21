@@ -240,6 +240,7 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     }
     if (!target) return;
     if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    else if (name === 'jinx') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'physical', true, t.source); // a chomper: packet n
     else if (name === 'darius') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'physical', true, t.source); // the spin: packet n
     else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
       ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,

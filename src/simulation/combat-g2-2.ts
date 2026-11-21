@@ -1,5 +1,5 @@
 import { scheduleShot } from './ability-projectile';
-import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, MORDEKAISER_CLAW_TICKS } from './cast-windup';
+import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, JINX_CHOMPERS_TICKS, JINX_ROCKET_LAUNCH_TICKS, MORDEKAISER_CLAW_TICKS } from './cast-windup';
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
 import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
@@ -112,8 +112,19 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'jinx': {
       const phase=(u.runtime.castCount-1)%3;ctx.castBranch=(['zap','chompers','rocket'] as const)[phase];
       if(phase===0){const cells=u.starLevel===3?null:path(ctx.board,u.cell,t.cell);for(const x of foes().filter(x=>cells?cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row):lineContains(u.cell,t.cell,x.cell,1,14))){strike(x,ad('ZapPercentAD'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('ZapStunDuration')*20),ctx.tick,ctx.events);}}
-      else if(phase===1){const centers=foes().slice(0,v('NumOfFlameChompers'));for(const x of foes().filter(x=>centers.some(c=>hexDistance(c.cell,x.cell)<=1)))strike(x,ad('FlameChompersPercentAD'),'physical',true);}
-      else {const center={col:Math.floor((ctx.board.columns-1)/2),row:Math.floor((ctx.board.rows-1)/2)};for(const x of foes())strike(x,Math.floor(ad('DeathRocketPercentAD','DeathRocketAP')*Math.max(0,10000-Math.round(v('FalloffPercent')*10000)*hexDistance(center,x.cell))/10000),'physical',true);}break;
+      else if(phase===1){
+        // 11-21 (authorization ②): the chompers go off JINX_CHOMPERS_TICKS after the cast (g2Landing, packet n); how many, where,
+        // who is hit and how much are taken now, as before. A target that died meanwhile takes nothing.
+        const centers=foes().slice(0,v('NumOfFlameChompers')),hits=foes().filter(x=>centers.some(c=>hexDistance(c.cell,x.cell)<=1));
+        hits.forEach((x,n)=>{schedule(u,'g2Landing',ctx.tick+JINX_CHOMPERS_TICKS,x,ad('FlameChompersPercentAD'),seq,n,hits.length);ids.push(x.id);});
+      }
+      else {
+        // 11-21 (authorization ②): the rocket leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes at the board's centre
+        // JINX_ROCKET_FLIGHT_TICKS later (abilityProjectile 'jinx-rocket'), where who is hit and the falloff are read. The amount
+        // before falloff is taken now. She channels until it leaves.
+        scheduleShot(u,'jinx-rocket',ctx.tick+JINX_ROCKET_LAUNCH_TICKS,t.id,ad('DeathRocketPercentAD','DeathRocketAP'),seq,0,1);
+        applyStatus(u,origin(u),'channel',0,JINX_ROCKET_LAUNCH_TICKS,ctx.tick,ctx.events,true,'',seq);ids.push(t.id);
+      }break;
     }
     case 'ambessa': {
       // One parity read decides the branch that resolves and the branch reported (display output only).

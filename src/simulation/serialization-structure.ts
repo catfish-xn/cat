@@ -677,7 +677,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
       if(task.kind === 'g2Blast') requireValue(task.source.sourceKind === 'trait' && task.source.definitionId === 'automata' && mechanic(owner,'automata','crystals') === 20, 'G2 blast source');
       if(task.kind === 'g23Smeech' || task.kind === 'g23Stab') requireValue(champion(owner) === 'smeech', 'Smeech task owner');
       if(task.kind === 'g23RenniLift') requireValue(champion(owner) === 'renni' && task.targetId !== null, 'Renni lift owner');
-      if(task.kind === 'g2Landing') requireValue(['trundle','zyra','tristana','renata','malzahar','darius','lux','violet'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability' && task.total >= 1, 'G2 landing source');
+      if(task.kind === 'g2Landing') requireValue(['trundle','zyra','tristana','renata','malzahar','darius','lux','violet','jinx'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability' && task.total >= 1, 'G2 landing source');
       if(task.kind === 'g2Retaliation') requireValue(['blitzcrank','leblanc'].includes(champion(owner)) && task.source.sourceKind === 'ability' && task.source.definitionId === champion(owner)+'-ability', 'G2 retaliation source');
     }
     if (task.kind === 'g22ViSlam') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && task.total === 2 && task.targetId !== null, 'Vi slam task'); }
