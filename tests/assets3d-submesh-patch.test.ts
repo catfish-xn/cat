@@ -14,7 +14,7 @@ import { encodePng } from '../scripts/assets3d/texture.mjs';
 // @ts-expect-error Pure Node build utility.
 import { fnv1a } from '../scripts/assets3d/bin.mjs';
 // @ts-expect-error Pure Node build utility.
-import { submeshVisibilityEvents, submeshPatchPlan, appendSubmeshes, patchModel } from '../scripts/assets3d/submesh-patch.mjs';
+import { submeshVisibilityEvents, submeshPatchPlan, appendSubmeshes, patchModel, TIMED_FORM_SUBMESHES } from '../scripts/assets3d/submesh-patch.mjs';
 import { assertManifest } from '../src/rendering3d/contracts';
 
 /** A two-submesh SKN (Body, Prop; one triangle each) on a one-joint rig, in the layout inspectSkn reads. */
@@ -84,6 +84,17 @@ describe('submesh patch', () => {
     expect(submeshPatchPlan({ hidden: ['Prop'], submeshes: ['Body', 'Prop'], events: {}, exportedClips: [] }).skipped).toEqual([{ name: 'Prop', reason: 'never-shown' }]);
   });
 
+  it('appends a hidden submesh no carried clip shows when the unit\'s timed form names it', () => {
+    const events = { x_attackprops: [{ frame: 0, show: ['Toy'], hide: [] }] };
+    expect(submeshPatchPlan({ hidden: ['Wings', 'Toy', 'Prop'], submeshes: ['Body', 'Wings', 'Toy', 'Prop'], events, exportedClips: [], timedForm: ['wings', 'Toy', 'Gone'] })).toEqual({
+      append: [{ name: 'Wings', shownBy: 'timed-form' }, { name: 'Toy', shownBy: 'timed-form', alsoShownInMissing: ['x_attackprops'] }],
+      skipped: [{ name: 'Prop', reason: 'never-shown' }],
+    });
+    // Only a hidden submesh is appended: a timed-form name the mesh shows from the start or lacks adds nothing.
+    expect(submeshPatchPlan({ hidden: [], submeshes: ['Body', 'Wings'], events: {}, exportedClips: [], timedForm: ['Wings'] })).toEqual({ append: [], skipped: [] });
+    expect(TIMED_FORM_SUBMESHES).toEqual({ swain: ['wings'] });
+  });
+
   it('nothing to append returns the very same bytes', () => {
     const f = fixtures(), glb = makeModel(f.mesh, f.rig, [], { Body: f.body }, { hiddenSubmeshes: ['Prop'] }).glb;
     expect(appendSubmeshes(glb, f.mesh, [])).toBe(glb);
@@ -131,10 +142,10 @@ describe('submesh patch', () => {
     ] } },
     { hash: fnv1a('skinAnimationProperties'), value: { fields: [{ hash: fnv1a('animationGraphData'), value: { hash: 77 } }] } },
   ] }] }];
-  const patched = async (appendGeometry: boolean) => {
+  const patched = async (appendGeometry: boolean, clips = graph(clip('X_SpellProp', [{ show: ['Prop'] }, { frame: 9, hide: ['Prop'] }])), extra = {}) => {
     const f = fixtures(), before = makeModel(f.mesh, f.rig, [{ name: 'x_spellprop', bytes: anm() }], { Body: f.body }, { hiddenSubmeshes: ['Prop'] }).glb;
     const result = await patchModel({ before, entry: { path: 'models/x/model.glb' }, skn: f.mesh, docs: skinDocs(),
-      graphEntries: graph(clip('X_SpellProp', [{ show: ['Prop'] }, { frame: 9, hide: ['Prop'] }])), appendGeometry,
+      graphEntries: clips, appendGeometry, ...extra,
       texture: async (path: string) => { expect(path).toBe('prop.tex'); return f.prop; } });
     return { before, ...result };
   };
@@ -152,6 +163,15 @@ describe('submesh patch', () => {
     expect(readGlb(data).document.materials.map((m: { name: string }) => m.name)).toEqual(['Body', 'Prop']);
     expect(entry.submeshVisibility.initiallyHidden).toEqual(['Prop']);
     expect(report).toMatchObject({ changed: true, appended: [{ name: 'Prop', shownIn: ['x_spellprop'] }] });
+  });
+
+  it('switch on, no clip shows it: the timed form\'s submesh is appended and initially hidden, by unit id', async () => {
+    const { data, entry, report } = await patched(true, [], { timedForm: ['Prop'] });
+    expect(readGlb(data).document.materials.map((m: { name: string }) => m.name)).toEqual(['Body', 'Prop']);
+    expect(entry.submeshVisibility).toEqual({ initiallyHidden: ['Prop'] });
+    expect(report).toMatchObject({ changed: true, appended: [{ name: 'Prop', shownBy: 'timed-form' }] });
+    // Without a timed form (an id the table does not name, an inherited key included) it stays out.
+    for (const id of ['x', 'constructor']) expect((await patched(true, [], { id })).report).toMatchObject({ changed: false, skipped: [{ name: 'Prop', reason: 'never-shown' }] });
   });
 
   it('the merge entry runs it from an extraction cache: models stay byte for byte, the manifest gets the events', async () => {
