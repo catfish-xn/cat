@@ -306,9 +306,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 14623,
+      "currentBytes": 14736,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "e94b3142dbe859b4d866e157f1d280d93bf284567915a223eb78837df9308e88",
+      "currentSha256": "6f16fc4189bd62c1e3e5902a1a2922f184df0920f7f1135ccd4e4699debde57a",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -708,9 +708,9 @@
     "tests/cast-branch-rotations.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7947,
+      "currentBytes": 7955,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0b045cbd58e3db2e8aa75474346465da5c1e3e78114ecdebd239eb5c9cac6278",
+      "currentSha256": "75cbbf2b1abfa5372ff0020f1e8599d650d248492b239c84261fb9b2ac51442e",
       "firstDifferentByte": 0
     },
     "tests/cast-windup-batch1.test.ts": {
@@ -1002,9 +1002,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 8986,
+      "currentBytes": 9402,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "3e88b5d21291c7839dfa87d356f2ebe055b2daf1f59c5e58b01ee2d1a52036d7",
+      "currentSha256": "b67b489392cd49d93784584b25f68c02c4cfee867f875c19d3544b634661057a",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1012,7 +1012,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "682619d0608fc4eefd02440131c0fd41cd9b0692958821f7cc9eb0bbd6577eef",
+      "currentSha256": "e3e8db2dc9878a0dc3312e1a336fbce4dd0db463fe6f8b3a06f8307df9464d10",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
@@ -1161,17 +1161,17 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17774,
+      "currentBytes": 17772,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "2da9595d7a1c9488c469b8bdadda2d6ae64a0851884eee5d3c975820bee6b7ba",
+      "currentSha256": "4e07f881cd2439cb470f1a3bd23ad6a8ca5f9c6566f64a38e9dbf78098a34f78",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23872,
+      "currentBytes": 23871,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "16eccfb51226d4b2c0b194a1e5e6b5ad8857226bdaa2bf2cc7cce2e77343915b",
+      "currentSha256": "bb13d44bf34bc3887db4e4b64a4a0f571cd4e87d658a57329766ccab4a08d01a",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1826,9 +1826,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 17964,
+      "currentBytes": 18081,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "66cb0632d38cddc844c61fa28b9f627c52d82dc635f735cdc3a11b286802f8f2",
+      "currentSha256": "9a8606672b3a24c6238c37368345f29b962ea2d051214bd469791307b0a1c7cc",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -2242,9 +2242,9 @@
     "tests/mel-barrage.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11203,
+      "currentBytes": 14457,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0e1782f157cc9abb3dccdb7871b81238ba40599a09769bcd974e50f76c00b460",
+      "currentSha256": "cdd80aa445c285861d9afac00099f559bea3d047ec26835c10c89f526daa7702",
       "firstDifferentByte": 0
     },
     "tests/melee-dead-claim.test.ts": {
