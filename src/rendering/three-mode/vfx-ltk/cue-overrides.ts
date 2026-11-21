@@ -487,9 +487,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
-  // The gate (11-21): its portal (portal_1 10e4e326) opens at the two ends of the line of cells the rules' cast names
+  // The gate (11-21): its portal (10e4e326) opens at the two ends of the line of cells the rules' cast names
   // (CastReceipt.area), facing each other, from the renderer (placeholder-renderer.ts, CUE_EXTRA_SKILLS malzahar-gate);
-  // its bolt Q_mis 7d0f4b1e still flies from his body to each enemy the gate hits. Then the spell ring on targets and the
+  // its bolt (7d0f4b1e) still flies from his body to each enemy the gate hits. Then the spell ring on targets and the
   // infection, as before.
   // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
