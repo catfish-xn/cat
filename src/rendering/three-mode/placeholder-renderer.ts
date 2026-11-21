@@ -1,3 +1,4 @@
+import { attackCritKeys } from './attack-crits';
 import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { pieceModel, type UnitModelChoice } from './unit-model';
@@ -1507,9 +1508,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
-    // Basic attacks that crit (CRIT_ATTACK_HIT): the rules deal an attack's damage on its own tick, so its packet is in this batch.
-    const crits = new Set<string>();
-    for (const event of events) if (event.type === 'packetDamage' && event.critical && event.delivery === 'basic-attack') crits.add(`${event.sourceId}>${event.targetId}@${event.tick}`);
+    // Basic attacks that crit (CRIT_ATTACK_HIT), melee by their packet, ranged by their launch (attack-crits.ts).
+    const crits = attackCritKeys(events);
     // A skill's direct damage that crits flashes the crit system on its target (CRIT_SKILL_HIT). Only CRIT_FLASH_MAX are out at
     // once, so the batch's crits go hardest first (then by target id), never by chance: a recording replays the same flashes.
     if (!reducedMotion()) {
