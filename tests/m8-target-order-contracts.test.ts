@@ -68,6 +68,10 @@ describe('R2 all19 old-code targeting evidence; no new M8 selector implementatio
     expect(path(DEFAULT_BOARD, { col: 3, row: 4 }, { col: 4, row: 3 })).toEqual([{ col: 4, row: 4 }, { col: 4, row: 3 }]);
     const shot = fixture('maddie'); planS13Cast(shot.ctx, shot.caster, shot.primary, 1);
     executeTask(shot.ctx, shot.caster, shot.caster.tasks[0]);
+    // Landing batch (11-20): the shot leaves for the first enemy on the path and settles where it lands.
+    const flight = shot.caster.tasks.find(t => t.shot?.arrivalTick !== undefined)!;
+    expect(flight.targetId).toBe('B');
+    shot.ctx.tick = flight.executeAtTick; executeTask(shot.ctx, shot.caster, flight);
     expect(shot.ctx.packets.map(p => p.targetId)).toEqual(['B']);
     expect(abilityPlans.rell.operations[1]).toMatchObject({ targeting: { pathOrder: 'E-SE-SW-W-NW-NE', hitOrder: 'id' } });
   });
