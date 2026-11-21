@@ -11,7 +11,7 @@ vi.mock('../src/rendering/three-mode/vfx-ltk/particles', async importOriginal =>
   return { ...real, createLtkParticles: (prepared: unknown, options: unknown) => { const fx = real.createLtkParticles(prepared, options); built.push(fx); return fx; } };
 });
 import { createVfxLibrary, attachedMeshOfItsOwn, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
-import { createLtkRuntime, PLAY_OUT_CAP } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, MAX_LTK_SYSTEMS, PLAY_OUT_CAP } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { ATTACHED_HELD_BACK, DISABLED_EMITTERS, LINGER_PLAY_OUT, MUTED_EMITTERS, PLAY_OUT_SYSTEMS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { readVfxSystem } from '../src/rendering/three-mode/vfx-ltk/engine/parsing/readVfxSystem';
 import { drawnEmitters } from '../src/rendering/three-mode/vfx-ltk/rendering/utils/definitions';
@@ -71,6 +71,49 @@ describe('projectiles whose trails linger play out when they land (LINGER_PLAY_O
   it('the set holds ids, none of them already ending by PLAY_OUT_SYSTEMS', () => {
     expect(LINGER_PLAY_OUT.size).toBeGreaterThan(0);
     for (const id of LINGER_PLAY_OUT) { expect(id).toMatch(/^[0-9a-f]{8}$/); expect(Object.hasOwn(PLAY_OUT_SYSTEMS, id)).toBe(false); }
+  });
+});
+
+// A lingering projectile's tail is only what is left of a landed missile, so on a full board it gives way to any newcomer, a
+// plain attack included; a tail that PLAY_OUT_SYSTEMS lists still gives way only to a critical or body newcomer (Fable
+// 11-13). Before this, the board-load runs dropped two attack hits and a swing more than before the tails (Fable 11-21).
+describe('a lingering tail gives way to any newcomer on a full board', () => {
+  const LISTED_END = Object.keys(PLAY_OUT_SYSTEMS)[0]!;
+  const hit = (system: string, duration: number, action?: TimelineCue['action']): TimelineCue => ({ system, event: 'hit', delay: 0, duration, ...(action ? { action } : {}) });
+  async function fullBoard(tail: string) {
+    built.length = 0;
+    const skills: Record<string, TimelineCue[]> = { long: [hit('filler', 5)], shot: [flight(tail)], swing: [hit('late', 0.6, 'attack')] };
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems: { filler: 'systems/filler.json', late: 'systems/late.json', [tail]: `systems/${tail}.json` }, assets: { 'synthetic.tex': 'texture.png' }, skills }
+      : syntheticSystem({ lifetime: num(5), particleLifetime: constant(num(0.5)), particleLinger: num(0.5) }), readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map<string, { root: Group; body: null; alive: boolean }>();
+    const find = (id: string) => { let unit = units.get(id); if (!unit) { unit = { root: new Group(), body: null, alive: true }; units.set(id, unit); scene.add(unit.root); } return unit; };
+    const runtime = createLtkRuntime(library, scene, find);
+    for (const champion of Object.keys(skills)) await runtime.warm(champion);
+    const camera = new Camera(), step = (seconds: number) => { for (let t = 0; t < seconds; t += 1 / 60) runtime.update(1 / 60, camera); };
+    for (let i = 0; i < MAX_LTK_SYSTEMS - 1; i++) expect(runtime.play('long', `c${i}`, [`t${i}`])).toBe(true);
+    expect(runtime.play('shot', 'caster', ['target'])).toBe(true);
+    step(0.1);
+    const shot = built.find(fx => fx.object.userData.ltkSystem === tail)!;
+    Object.defineProperty(shot, 'playedOut', { get: () => false });
+    step(0.6);
+    // Landed and playing out: still on the board, every slot taken.
+    expect(shot.object.parent).toBe(scene);
+    expect(runtime.active).toBe(MAX_LTK_SYSTEMS);
+    expect(runtime.play('swing', 'hitter', ['victim'], 'attack')).toBe(true);
+    step(1 / 60);
+    return { runtime, scene, shot, swing: built.find(fx => fx.object.userData.ltkSystem === 'late') };
+  }
+  it('a LINGER_PLAY_OUT tail leaves for a plain attack, and the attack starts', async () => {
+    const { runtime, scene, shot, swing } = await fullBoard(LISTED);
+    expect(shot.object.parent).toBeNull();
+    expect(swing?.object.parent).toBe(scene);
+    runtime.dispose();
+  });
+  it('a PLAY_OUT_SYSTEMS tail stays: a plain attack does not end it early', async () => {
+    const { runtime, scene, shot } = await fullBoard(LISTED_END);
+    expect(shot.object.parent).toBe(scene);
+    runtime.dispose();
   });
 });
 

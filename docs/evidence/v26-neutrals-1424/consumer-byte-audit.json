@@ -4597,9 +4597,9 @@
     "tests/vfx-ltk-linger-play-out.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7296,
+      "currentBytes": 10430,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4a557f500191f9e027bc83cbdb75f5a99a67f4e30ffc6c1df6c8b9473d4bf026",
+      "currentSha256": "113780b68b79f66ef97ba564b70c3e3e0f906c46eb127367d0498d150e3c7b8a",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-long-background.test.ts": {
