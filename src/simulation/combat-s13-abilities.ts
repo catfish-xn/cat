@@ -25,6 +25,10 @@ export interface S13Packet { locked?: import('./combat-s13').AttackerSide; sevik
   area: boolean; triggeringCastActionSeq: number | null; inherited?: Extract<DamageInput, { stage: 'after-mitigation' }>['inherited'] }
 export interface S13Heal { g22Shared?: boolean; lateAmount?: Amount; reactionKey?: string; source: CombatOrigin; targetId: string; amount: number; request?: HealRequest; periodic?: PeriodicReference }
 export interface AbilityContext {
+  /** Step-local copies of CombatState.departedUnits: removed units still named as an effect's source (effectSourceUnit). */
+  departedUnits?: S13Unit[];
+  /** The step's full roster while banished units are out of `units` (effectSourceUnit). */
+  roster?: readonly S13Unit[];
   movementReservations?: Set<string>;
   ambessaRetreats?: { unitId: string; targetCell: HexCell }[];
   anomalySeed?: number;

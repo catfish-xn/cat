@@ -92,6 +92,8 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   const strikes = new Map<string, { tick: number; struck: Set<string> }>();
   /** Smeech since his last cast: stabs drawn (his swing turns with each) and the enemy his last stab hit (a new one is a leap). */
   const smeech = new Map<string, { stabs: number; target: string | undefined }>();
+  /** Mordekaisers whose cast's empowered time is running (from the cast to the rules' mordekaiser-empower end). */
+  const empoweredMorde = new Set<string>();
   let lastSeq = -1;
   const unit = (id: string) => {
     let state = units.get(id);
@@ -99,7 +101,7 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
     return state;
   };
   return {
-    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); lastSeq = -1; },
+    clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); empoweredMorde.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
       const packets = new Map<string, string[]>(), attacks = new Set<string>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
@@ -294,6 +296,11 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
         // Sett: a cast that grabbed one enemy plays his one-target slam ('single'); two enemies keep the plain cast.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'sett' && event.targetIds.length === 1)
           plan.variant = 'single';
+        // Mordekaiser: his attacks while his cast's empowered time runs are his empowered ones (the mace glow, CUE_OVERRIDES).
+        if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'mordekaiser') empoweredMorde.add(event.sourceId);
+        if (event.type === 'abilityEffectEnded' && event.effect === 'mordekaiser-empower') empoweredMorde.delete(event.unitId);
+        if (event.type === 'death') empoweredMorde.delete(event.unitId);
+        if (event.type === 'attack' && empoweredMorde.has(event.attackerId)) plan.variant = 'empowered';
         if (!tracked) return plan;
         // Nocturne's strike (P_tar) plays on every enemy his empowered swing bleeds: its own target with the swing's hit, each
         // other one when its first bleed tick lands. The rules name no bleed targets at the swing (Fable 11-18, C71 option A).

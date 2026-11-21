@@ -39,7 +39,7 @@ describe('knock-up stuns carry the rules mark', () => {
   it('维克托 knocks up every enemy', () => expect(stunsOf('viktor').marks).toEqual({ e: true, f: true }));
   it('瑟提 stuns without a knock-up', () => expect(Object.values(stunsOf('sett').marks)).toEqual([false, false]));
 
-  it('the board float says 击飞 for a knock-up stun and 眩晕 for a plain one (local ledger); the wire event stays 眩晕', () => {
+  it('a knock-up stun reads 击飞 and a plain one 眩晕 (local ledger); the wire event stays 眩晕 (the word only, no board float)', () => {
     const { applied } = viSlam();
     expect(Object.fromEntries(applied.map(e => [e.group.targetId, appliedStatusFloat(e as never)]))).toEqual({ e: '眩晕', f: '击飞' });
     expect(appliedStatusFloat({ type: 'statusChanged', tick: 1, eventSeq: 1, targetId: 'f', kind: 'stun', reason: 'applied', effectiveMagnitudeBps: 0 } as never)).toBe('眩晕');

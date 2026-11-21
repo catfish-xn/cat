@@ -48,9 +48,9 @@ export type G23CombatEventData =
    * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
    * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
    * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended;
-   * 'swain-ascension': the demon form ran out (takedown extensions included).
+   * 'mordekaiser-empower': the cast's empowered time ran out; 'swain-ascension': the demon form ran out (takedown extensions included).
    */
-  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'swain-ascension'; readonly targetIds: readonly string[] };
+  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 
@@ -74,7 +74,16 @@ export function removeCombatUnit(state: CombatState, unitId: string, reason: str
     if (unit.targetId !== unitId) return unit;
     const copy = { ...unit, targetId: null }; delete copy.targetEngaged; delete copy.meleeApproach; return copy;
   });
-  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId] }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+  const removed = state.units.find(unit => unit.id === unitId)!;
+  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId],
+    ...(namedAsEffectSource(units, unitId) ? { departedUnits: [...state.departedUnits ?? [], removed] } : {}) }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+}
+
+/** True when a remaining unit's periodic task or status contribution still names unitId as its source. Such a source
+ * is kept in CombatState.departedUnits on removal so the effect runs to its end with its original source. */
+export function namedAsEffectSource(remaining: readonly CombatUnit[], unitId: string): boolean {
+  return remaining.some(unit => unit.mechanismState?.periodicTasks.some(task => task.source.ownerId === unitId)
+    || unit.mechanismState?.statuses.some(group => group.contributions.some(c => c.source.ownerId === unitId)));
 }
 
 export function castOutcomeEvent(tick: number, unitId: string, abilityKey: string, outcome: string, subOutcomes: readonly string[] = []): CombatEvent {
