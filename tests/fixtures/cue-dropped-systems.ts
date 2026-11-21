@@ -17,6 +17,9 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
   sett: {
     '0856b131': { status: 'replaced', reason: 'drawn inside f7d4d344, which his cast plays whole instead (PR #674)' },
   },
+  'swain-back': {
+    '9ad716c2': { status: 'replaced', reason: 'drawn inside 3d2697ac, which his back-row cast now flies whole instead (Fable 11-21)' },
+  },
   blitzcrank: {
     fc6cdcf0: { status: 'dropped', reason: 'hook cast: our skill is the shield and the shock, no hook (PR #524)' },
     '00f6794e': { status: 'dropped', reason: 'hook flight: our skill has no hook (PR #524)' },
