@@ -15,6 +15,10 @@ import { encodePng } from '../scripts/assets3d/texture.mjs';
 import { fnv1a } from '../scripts/assets3d/bin.mjs';
 // @ts-expect-error Pure Node build utility.
 import { submeshVisibilityEvents, submeshPatchPlan, appendSubmeshes, patchModel, TIMED_FORM_SUBMESHES } from '../scripts/assets3d/submesh-patch.mjs';
+// @ts-expect-error Pure Node build utility.
+import { graftSubmeshes } from '../scripts/assets3d/submesh-graft.mjs';
+// @ts-expect-error Offline Node script.
+import { compressModelGlb } from '../scripts/assets3d/compress.mjs';
 import { assertManifest } from '../src/rendering3d/contracts';
 
 /** A two-submesh SKN (Body, Prop; one triangle each) on a one-joint rig, in the layout inspectSkn reads. */
@@ -173,6 +177,25 @@ describe('submesh patch', () => {
     // Without a timed form (an id the table does not name, an inherited key included) it stays out.
     for (const id of ['x', 'constructor']) expect((await patched(true, [], { id })).report).toMatchObject({ changed: false, skipped: [{ name: 'Prop', reason: 'never-shown' }] });
   });
+
+  it('grafts the appended submesh into an already compressed model, clips and body left as they were', async () => {
+    const f = fixtures(), clips = [{ name: 'x_spellprop', bytes: anm() }];
+    const plain = makeModel(f.mesh, f.rig, clips, { Body: f.body }, { hiddenSubmeshes: ['Prop'] }).glb;
+    const compressed = await compressModelGlb(plain), rebuilt = appendSubmeshes(plain, f.mesh, ['Prop'], { Prop: f.prop });
+    const { data, report } = await graftSubmeshes({ compressed, rebuilt, names: ['Prop'] });
+    // The compressed GLB has a fallback buffer readGlb does not take: read its JSON chunk directly.
+    const out = JSON.parse(data.subarray(20, 20 + data.readUInt32LE(12)).toString('utf8'));
+    expect(out.extensionsUsed).toContain('EXT_meshopt_compression');
+    expect(out.materials.map((m: { name: string }) => m.name)).toEqual(['Body', 'Prop']);
+    expect(out.meshes[0].primitives).toHaveLength(2);
+    expect(report).toMatchObject({ grafted: [{ name: 'Prop', vertices: 3, triangles: 1 }], clips: 1 });
+    expect(report.maxDistance.Body).toBeLessThan(0.01);
+    expect(report.maxDistance.Prop).toBeLessThan(0.01);
+    // Same inputs, same bytes; a second graft of the same submesh is refused.
+    expect((await graftSubmeshes({ compressed, rebuilt, names: ['Prop'] })).data.equals(data)).toBe(true);
+    await expect(graftSubmeshes({ compressed: data, rebuilt, names: ['Prop'] })).rejects.toThrow('submesh-graft-already-present:Prop');
+    await expect(graftSubmeshes({ compressed, rebuilt, names: ['Wings'] })).rejects.toThrow('submesh-graft-missing-primitive:Wings');
+  }, 30000);
 
   it('the merge entry runs it from an extraction cache: models stay byte for byte, the manifest gets the events', async () => {
     const root = await mkdtemp(join(tmpdir(), 'submesh-merge-'));
