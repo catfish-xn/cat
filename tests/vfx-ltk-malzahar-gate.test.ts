@@ -3,16 +3,15 @@ import { readFileSync } from 'node:fs';
 import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, MALZAHAR_GATE_DELAY } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { gateEnds } from '../src/rendering/three-mode/vfx-ltk/gate-ends';
 
-// Malzahar's gate (11-21): the bolt flies to each enemy the gate hits; the portal opens at the two ends of the rules' line
-// of cells (CastReceipt.area), facing each other, not under each enemy (fitted opening time, docs/S13_RULES_GAP.md).
+// Malzahar's gate (11-21): the portal opens at the two ends of the rules' line of cells (CastReceipt.area), facing each
+// other, not under each enemy (fitted opening time, docs/S13_RULES_GAP.md); nothing flies from him to it.
 const BOLT = '7d0f4b1e', PORTAL = '10e4e326';
 
 describe('vfx-ltk Malzahar gate', () => {
-  it('the bolt still goes to every enemy hit; the portal is no cue of his cast but the board gate skill', () => {
+  it('nothing flies from him (no bolt); the portal is no cue of his cast but the board gate skill', () => {
     const cues = CUE_OVERRIDES.malzahar!;
-    const bolt = cues.find(cue => cue.system === BOLT);
-    expect(bolt).toMatchObject({ action: 'cast', event: 'projectile' });
-    expect(bolt!.primary).toBeUndefined(); expect(bolt!.targetLimit).toBeUndefined();
+    // Windows review 11-21: in the original nothing leaves him on his cast; the gate appears on the ground.
+    expect(cues.some(cue => cue.system === BOLT)).toBe(false);
     expect(cues.some(cue => cue.system === PORTAL)).toBe(false);
     expect(CUE_EXTRA_SKILLS['malzahar-gate']).toEqual([{ system: PORTAL, action: 'cast', event: 'cast-start', location: 'board', delay: MALZAHAR_GATE_DELAY, duration: 2 }]);
     expect(MALZAHAR_GATE_DELAY).toBeGreaterThanOrEqual(0);
