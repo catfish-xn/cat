@@ -61,3 +61,8 @@ export const RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION: Readonly<Record<string, nu
 export function rangedAttackFlightTicks(hexes: number, championId = ''): number {
   return Math.max(1, Math.ceil(hexes * (RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION[championId] ?? RANGED_ATTACK_TICKS_PER_HEX)));
 }
+
+/** Malzahar's line (11-20, the 14.24 description "a 5-hex line across the target", square to the line from him to it as in the
+ * original footage; the hex axis it takes is self-chosen, board.ts hexCrossLine): this many cells on either side of the target.
+ * docs/S13_RULES_GAP.md (玛尔扎哈技能直线). */
+export const MALZAHAR_LINE_HALF = 2;

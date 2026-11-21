@@ -58,12 +58,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // (was 6c5f207e…).
   // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
   // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
-  const back=save.split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 玛尔扎哈直线 (2026-11-20, #783): contentDigest cf212873->d1f4cd83 only; loot replay unchanged.
+  const back=save.split('d1f4cd83').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('6dc0e5097ab0843434671cc5b4e6253a6eb73c5abb8d42e4673575f7f9a6d123'); // #739 digest d94c78f1 -> cf212873 (was 91a0760c…)
+    .toBe('d25fd72a72b5384ab46c799866c58c0a10e25d89eb9d98adef4b9d1803779c6a'); // #783 digest cf212873 -> d1f4cd83 (was 6dc0e509…, before #739 91a0760c…)
   expect(restoreMatch(save)).toEqual(started);
 });
 
