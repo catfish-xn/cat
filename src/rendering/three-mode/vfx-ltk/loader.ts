@@ -160,13 +160,15 @@ export const SKILL_CUES_TOGETHER = 12;
  * empowered attacks beside her plain cast); each such set is counted on its own.
  */
 export function skillCuesTogether(cues: readonly { action?: string; variant?: string }[]): boolean {
-  const actionOf = (cue: { action?: string }) => cue.action ?? 'cast';
-  for (const variant of [undefined, ...new Set(cues.map(cue => cue.variant).filter(v => v !== undefined))]) {
-    const own = new Set(cues.filter(cue => cue.variant === variant).map(actionOf));
-    const together = cues.filter(cue => cue.variant === variant || (cue.variant === undefined && !own.has(actionOf(cue)))).length;
-    if (together > SKILL_CUES_TOGETHER) return false;
-  }
+  for (const variant of [undefined, ...new Set(cues.map(cue => cue.variant).filter(v => v !== undefined))])
+    if (skillCuesPlayable(cues, variant).length > SKILL_CUES_TOGETHER) return false;
   return true;
+}
+/** What can play under `variant` (none: the plain rows): its rows, plus the plain rows of every action it has none for. */
+export function skillCuesPlayable<T extends { action?: string; variant?: string }>(cues: readonly T[], variant: string | undefined): T[] {
+  const actionOf = (cue: { action?: string }) => cue.action ?? 'cast';
+  const own = new Set(cues.filter(cue => cue.variant === variant).map(actionOf));
+  return cues.filter(cue => cue.variant === variant || (cue.variant === undefined && !own.has(actionOf(cue))));
 }
 
 export function parseIndex(raw: unknown): VfxIndex {

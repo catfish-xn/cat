@@ -4794,9 +4794,9 @@
     "tests/vfx-ltk-skill-cue-gate.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2311,
+      "currentBytes": 4945,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "391e80b34c11d9009cceb4d1e4fb72ddee73c1a38c1b2f5687f197a68fb5f43f",
+      "currentSha256": "488707f903435868c7ccdb1f75b1c517d8e7af97c4403ed718598e22e0e8cb45",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-smeech-stabs.test.ts": {
