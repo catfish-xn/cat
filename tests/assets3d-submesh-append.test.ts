@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Document, NodeIO } from '@gltf-transform/core';
 import { KHRTextureBasisu } from '@gltf-transform/extensions';
 import { MeshoptDecoder } from 'meshoptimizer';
@@ -23,6 +23,7 @@ async function model(options: { factor: number; withWing: boolean; ibms?: number
   const prim = (points: number[], name: string) => {
     const p = doc.createPrimitive()
       .setAttribute('POSITION', doc.createAccessor().setType('VEC3').setArray(new Float32Array(points.map(v => v / options.factor))).setBuffer(buffer))
+      .setAttribute('NORMAL', doc.createAccessor().setType('VEC3').setNormalized(true).setArray(new Int16Array([0, 0, 32767, 0, 0, 32767, 0, 0, 32767])).setBuffer(buffer))
       .setAttribute('JOINTS_0', doc.createAccessor().setType('VEC4').setArray(new Uint8Array([0, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])).setBuffer(buffer))
       .setAttribute('WEIGHTS_0', doc.createAccessor().setType('VEC4').setArray(new Float32Array([1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0])).setBuffer(buffer))
       .setIndices(doc.createAccessor().setType('SCALAR').setArray(new Uint16Array([0, 1, 2])).setBuffer(buffer))
@@ -83,5 +84,16 @@ describe('assets3d submesh append', () => {
       { path: 'm/model.glb', bytes: 3, sha256: createHash('sha256').update(bytes).digest('hex') }]);
     expect(out.endsWith(']\n}\n')).toBe(true);
     expect(() => updatePrecache(text, 'missing.glb', bytes)).toThrow('submesh-append-precache-missing');
+  });
+  it("parses with three.js's GLTFLoader, strided attributes included", async () => {
+    await MeshoptDecoder.ready;
+    vi.stubGlobal('self', globalThis); // GLTFLoader reads `self` for its blob URLs
+    const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js');
+    const { Loader, Texture } = await import('three');
+    class Ktx2Stub extends Loader { load(_url: string, onLoad: (texture: InstanceType<typeof Texture>) => void) { const texture = new Texture(); setTimeout(() => onLoad(texture)); return texture; } }
+    const out = appendSubmeshes(await model({ factor: 1, withWing: false }), await model({ factor: 3, withWing: true }));
+    const parsed = await new GLTFLoader().setKTX2Loader(new Ktx2Stub() as never).parseAsync(out.slice().buffer, '');
+    const meshes: unknown[] = []; parsed.scene.traverse(o => { if ((o as { isMesh?: boolean }).isMesh) meshes.push(o); });
+    expect(meshes).toHaveLength(2);
   });
 });

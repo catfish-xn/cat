@@ -43,7 +43,9 @@ function readAccessor(glb, index) {
   const accessor = glb.json.accessors[index], view = glb.json.bufferViews[accessor.bufferView];
   const all = viewBytes(glb, accessor.bufferView), size = SIZE[accessor.componentType], elem = size * COUNT[accessor.type];
   const isIndex = view.target === 34963, stride = isIndex ? elem : (view.byteStride ?? view.extensions?.EXT_meshopt_compression?.byteStride ?? elem);
-  const start = accessor.byteOffset ?? 0, raw = all.subarray(start, start + (accessor.count - 1) * stride + elem);
+  // An interleaved (strided) view keeps its last element's padding too: readers take count * stride bytes from it.
+  const start = accessor.byteOffset ?? 0, length = stride === elem ? accessor.count * elem : accessor.count * stride;
+  const raw = Buffer.concat([all.subarray(start, start + length), Buffer.alloc(Math.max(0, start + length - all.length))]);
   const values = [];
   for (let i = 0; i < accessor.count; i++) for (let c = 0; c < COUNT[accessor.type]; c++) {
     const v = raw[READ[accessor.componentType]](i * stride + c * size);
