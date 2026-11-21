@@ -17,6 +17,8 @@ import { ATTACHED_SLOTS, ATTACHED_STATS, type AttachedDraw } from './rendering/c
 /** Bone cues and projectiles follow the caster. A board point or a target hit does not. */
 function needsLivingSource(spawn: TimelineSpawn): boolean {
   if (spawn.event === 'hit') return false;
+  // A projectile from its play's primary target (TimelineCue.fromPrimary) does not leave the caster.
+  if (spawn.fromId !== undefined) return false;
   return !(spawn.point && spawn.event !== 'projectile');
 }
 
@@ -123,7 +125,9 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
    * Rows at a dead target's place (placeTargets), by system: started, and dropped for want of free room. They only take free
    * room, so they are kept apart from `started`/`dropped`, which count the rows that compete for it.
    */
-  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number> };
+  placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number>,
+  /** Rows of a system whose definition draws nothing (an empty system: every emitter culled or none), skipped when due. */
+  emptySkipped: {} as Record<string, number> };
 /**
  * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
  * was dead and the cue does not keep a dead target's place (a plain attack, a link, a state the target carries), or its
@@ -205,6 +209,8 @@ export interface LtkPlayOptions {
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its random seed, fixed when it was queued (seedOf). */
   seed: number;
+  /** Where a projectile from its play's primary target starts (TimelineCue.fromPrimary), taken when the play came. */
+  from?: WorldPoint;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
   place?: WorldPoint;
   /** It plays at a dead target's place (its snapshot was taken by placeTargets, not asked for): it only takes free room. */
@@ -817,13 +823,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const unit = findUnit(spawn.targetId);
           if (unit && !unit.disposed) snapshot = standingPoint(unit.root);
         }
+        // A projectile from the primary target's place (TimelineCue.fromPrimary) takes that place now: the main bomb that lands
+        // there may kill it first. Without that unit it does not play.
+        const fromUnit = spawn.fromId !== undefined ? findUnit(spawn.fromId) : undefined;
+        const from = fromUnit && !fromUnit.disposed ? standingPoint(fromUnit.root) : undefined;
+        if (spawn.fromId !== undefined && !from) continue;
         // A flight by distance (TimelineCue.flightTicks) is timed now, from where caster and target stand.
         if (spawn.flightTicks) {
           const caster = findUnit(spawn.sourceId), aimed = spawn.targetId ? findUnit(spawn.targetId) : undefined;
           const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
           spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
         }
-        waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}),
+        waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
       }
@@ -950,8 +961,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
         // A flying projectile at its still living target, from a row that kept its place (a row or a falling projectile has fixed
         // ends; a beam row holds by part): if the target dies it flies on to where it was (Running.holdTarget).
-        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && row.part !== 'beam';
-        const loaded = catalog.get(spawn.system); if (!loaded || loaded.empty) continue;
+        const lands = !!row.place && !snapshot && spawn.event === 'projectile' && !spawn.rowSide && !spawn.fromAbove && !row.from && row.part !== 'beam';
+        const loaded = catalog.get(spawn.system); if (!loaded) continue;
+        if (loaded.empty) { LTK_RUN_STATS.emptySkipped[spawn.system] = (LTK_RUN_STATS.emptySkipped[spawn.system] ?? 0) + 1; continue; }
         const hidden = spawn.hide ? withHidden(loaded, spawn.hide) : loaded, split = row.part ? beamSplit(hidden) : null;
         const prepared = split ? (row.part === 'beam' ? split.beam : split.flight ?? hidden) : hidden;
         // A refreshing buff replaces its own earlier run from the same caster instead of drawing a second layer over it,
@@ -971,7 +983,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
         const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
-        const dropFrom = dropAt ? dropStart(dropAt, spawn.fromAbove!) : null;
+        if (spawn.fromId !== undefined && !row.from) continue;
+        // A projectile from the primary target's place (TimelineCue.fromPrimary) starts there, like a falling one starts above.
+        const dropFrom = row.from ?? (dropAt ? dropStart(dropAt, spawn.fromAbove!) : null);
         // A ground line (TimelineCue.lineCells) runs on the floor from where its caster stands toward where its target stands
         // (its snapshot point once it is dead), lineCells cells in all, both ends taken now. With no target point, or the two
         // on one spot, it does not play: it never falls back to a flight from the caster's bone.
@@ -1102,7 +1116,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const tail = Math.min(0.25, runFor / 4);
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
-        const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
+        // A cue that plays out at its end (TimelineCue.playOut) keeps full strength to it: its particles then finish on their own.
+        const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && !spawn.playOut && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
         const rootRoom = roots.get(spawn.system);
@@ -1138,8 +1153,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || undefined,
-            playOutEnd: spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || !!spawn.playOut || undefined,
+            playOutEnd: spawn.playOut ? { seconds: spawn.playOut, fade: spawn.playOut } : spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
             ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;

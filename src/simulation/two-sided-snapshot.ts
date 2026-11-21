@@ -28,6 +28,7 @@ import { M8_VERSION } from './m8/version';
 import { G22_EMISSARY_WIN_CAP, priorPvpWins } from './g2-2-pvp-history';
 import type { MatchState } from './match-types';
 import { BattleValidationError, PLAYER_BATTLE_SNAPSHOT_VERSION, type PlayerBattleSnapshot } from './two-sided-types';
+import { validLedgerGrowth } from './persistent-growth';
 
 function requireSnapshot(condition: unknown): asserts condition {
   if (!condition) throw new BattleValidationError('invalid-snapshot');
@@ -130,7 +131,7 @@ export function* restorePlayerBattleSnapshotSteps(input: unknown): Generator<voi
     for (const growth of s.persistentGrowth) {
       record(growth); integer(growth.attackDamageBps, 1);
       requireSnapshot(units.has(growth.unitId) && !UNIT_DEFINITIONS[units.get(growth.unitId)!.definitionId]?.summon
-        && (units.get(growth.unitId)!.definitionId === 'tristana' || augmentIds.has('pandoras-bench') || augmentIds.has('recombobulator')) && growth.attackDamageBps % 125 === 0 && !growthIds.has(growth.unitId));
+        && validLedgerGrowth(growth.attackDamageBps, units.get(growth.unitId)!.definitionId, augmentIds, round.ordinal) && !growthIds.has(growth.unitId));
       growthIds.add(growth.unitId);
     }
     if(s.augmentCopyKills){list(s.augmentCopyKills);const seen=new Set<string>();for(const g of s.augmentCopyKills){record(g);id(g.itemId);integer(g.count,1);requireSnapshot(s.items.some(i=>i.id===g.itemId)&&!seen.has(g.itemId)&&Object.keys(g).sort().join(',')==='count,itemId');seen.add(g.itemId);}requireSnapshot(s.augmentCopyKills.length>0);}
