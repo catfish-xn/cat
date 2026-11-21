@@ -86,12 +86,36 @@ describe('Mel dash: every normal cast, never the third', () => {
   });
 });
 
+// 11-21 (Fable): among equally good cells (same allies nearby, same distance) she goes away from the nearest enemy, on either
+// side of the board. Self-chosen, not original data.
+describe('Mel dash: ties go away from the nearest enemy', () => {
+  function landing(team: 'player' | 'enemy') {
+    const mine = team === 'player' ? { col: 3, row: 5 } : { col: 3, row: 2 }, foeRow = team === 'player' ? 1 : 6;
+    const units: any[] = [{ id: 'mel', definitionId: 'mel', team, starLevel: 1, location: { kind: 'board', cell: mine } },
+      ...['amumu', 'sett'].map((definitionId, i) => ({ id: `f${i}`, definitionId, team: team === 'player' ? 'enemy' : 'player', starLevel: 3, location: { kind: 'board', cell: { col: 2 + 2 * i, row: foeRow } } }))];
+    const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
+    const { state } = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items: [], temporaryEquipment: [], augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'mel-away', 7) as { state: CombatState };
+    const s = { ...state, units: state.units.map(u => u.id === 'mel' ? { ...u, mana: u.maxMana, moveCooldownTicks: 2000 } : { ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 }) } as CombatState;
+    const r = run(s, 40);
+    const move = r.out.flatMap(o => o.events.filter(e => e.type === 'movement' && (e as any).unitId === 'mel') as any[])[0];
+    return { from: mine, to: move?.to, foeRow };
+  }
+  it('lands one hex away, on the side away from the enemies, for both teams', () => {
+    for (const team of ['player', 'enemy'] as const) {
+      const { from, to, foeRow } = landing(team);
+      expect(to, team).toBeDefined();
+      expect(hexDistance(from, to)).toBe(1);
+      expect(Math.abs(to.row - foeRow), team).toBeGreaterThan(Math.abs(from.row - foeRow));
+    }
+  });
+});
+
 // The barrage timing changes battle results, so its rule identifier is part of the content digest: a save or replay written
 // under the digest just before it (Swain's drain) is turned away as another version, never replayed under the new rule.
 const BEFORE_DIGEST = 'fnv1a32-utf16:eb2d4cee';
 describe('Mel barrage: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
-    expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-dash-each-normal-cast-v2');
+    expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-dash-each-normal-cast-away-from-foes-v3');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_DIGEST);
   });
   it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
