@@ -48,13 +48,22 @@ describe("Jinx's rocket and chompers follow the rules' events", () => {
       damage(62, 'f1', 'basic-attack')]);
     expect(played.map(p => [p.skill, ...p.targets])).toEqual([['jinx-chompers-boom', 'f1'], ['jinx-chompers-boom', 'f2'], ['jinx-chompers-boom', 'f3']]);
   });
-  it('catch-up draws nothing; the next combat (cleared between) starts afresh', () => {
-    const { played, send, bridge } = harness();
+  it('catch-up draws nothing', () => {
+    const { played, send } = harness();
     send([cast(20, 'chompers'), damage(61, 'f1')], false);
     expect(played).toEqual([]);
+  });
+  it('the next combat (cleared between) starts afresh: a combat that ended before her chompers went off leaves nothing behind', () => {
+    const { played, send, bridge } = harness();
+    send([cast(20, 'chompers')]); // the combat ends before they go off
     bridge.clear();
-    send([damage(61, 'f1')]); // no chompers cast of hers in this combat: nothing
+    send([damage(70, 'f1')]); // the next combat, no chompers cast of hers in it yet: her damage draws nothing
     expect(played).toEqual([]);
+  });
+  it('a replay that starts over (castcmp warm pass, a rewind) draws the explosion again on the same tick', () => {
+    const { played, send } = harness();
+    send([cast(20, 'chompers'), damage(61, 'f1'), cast(20, 'chompers'), damage(61, 'f1')]);
+    expect(played.map(p => p.skill)).toEqual(['jinx-chompers-boom', 'jinx-chompers-boom']);
   });
 });
 
