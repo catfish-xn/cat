@@ -60,14 +60,14 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
   // 技能落地结算批 (2026-11-20): contentDigest cf212873->2f642cc0 only; loot replay unchanged.
   // 黑默丁格火箭集火 (2026-11-20): contentDigest 2f642cc0->9ccd5f96 only; loot replay unchanged.
-  // 梅尔弹幕 (2026-11-21): contentDigest 3476d8d4->16f19467 only.
-  // 斯维因吸取跳频 (2026-11-20): contentDigest 9ccd5f96->3476d8d4 only; loot replay unchanged.
-  const back=save.split('16f19467').join('3476d8d4').split('3476d8d4').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 斯维因吸取节奏 v2 (2026-11-20): contentDigest 9ccd5f96->eb2d4cee only; loot replay unchanged.
+  // 梅尔弹幕落地结算 v1 (2026-11-21): contentDigest eb2d4cee->74aa81a7 only.
+  const back=save.split('74aa81a7').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('7b0f9325e210d87ab4d3495c82269e819ef489ccd62538812acdc5b2bc347785'); // Mel barrage 3476d8d4 -> 16f19467 (was 4533680f…, Swain drain; 4f7b1725… Heimerdinger focus)
+    .toBe('7f53b08e6c251b15286a9706255b768063373a6f9926d4a7dac2164ba6b27eec'); // Mel barrage v1 eb2d4cee -> 74aa81a7 (was 04dbe61e…, Swain drain cadence v2; 4f7b1725… Heimerdinger focus)
   expect(restoreMatch(save)).toEqual(started);
 });
 

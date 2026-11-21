@@ -5,7 +5,9 @@ import { DEFAULT_BOARD, hexDistance } from '../src/simulation/board';
 import { MEL_BOLT_TICKS_PER_HEX, MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS } from '../src/simulation/cast-windup';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import { CONTENT_DIGEST } from '../src/simulation/content';
-import { readCompatibility } from '../src/persistence/compatibility';
+import { readCompatibility, routeSaveFile } from '../src/persistence/compatibility';
+import { admitArchives } from '../src/replay';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { readyMatch } from './match-helpers';
 
@@ -27,7 +29,7 @@ describe('Mel barrage timing', () => {
     const moves = r.out.filter(s => s.tick > castAt && s.events.some(e => e.type === 'movement' && (e as any).unitId === 'mel')).map(s => s.tick);
     expect(moves[0]).toBe(castAt + MEL_DASH_LAND_TICKS);
   });
-  it('her bolts leave MEL_RELEASE_TICKS after the cast and settle on arrival (MEL_BOLT_TICKS_PER_HEX a hex), ten packets each', () => {
+  it('her bolts leave MEL_RELEASE_TICKS after the cast and settle on arrival (MEL_BOLT_TICKS_PER_HEX a hex), the same packets as before', () => {
     const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-barrage') as any[]);
     expect(launched.length).toBeGreaterThan(0);
     expect(launched.every(l => l.tick === castAt + MEL_RELEASE_TICKS)).toBe(true);
@@ -52,13 +54,24 @@ describe('Mel barrage timing', () => {
     expect(landed.map(l => [l.targetId, l.hit])).toEqual([[victim.targetId, false]]);
   });
 });
+// The barrage timing changes battle results, so its rule identifier is part of the content digest: a save or replay written
+// under the digest just before it (Swain's drain) is turned away as another version, never replayed under the new rule.
+const BEFORE_DIGEST = 'fnv1a32-utf16:eb2d4cee';
 describe('Mel barrage: files written before it', () => {
-  it('has its own identifier; a save with an earlier digest is rejected', () => {
-    expect(S13_COMBAT_RULES.melBarrage).toBe('dash-lands-10-bolts-leave-15-fly-2-per-hex-settle-on-landing-channel-until-release');
-    const before = 'fnv1a32-utf16:3476d8d4';
-    expect(CONTENT_DIGEST).not.toBe(before);
+  it('the rule has its own identifier and the digest moved', () => {
+    expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-v1');
+    expect(CONTENT_DIGEST).not.toBe(BEFORE_DIGEST);
+  });
+  it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
     const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
-      runId: 'before-mel', createdAt: '2026-11-21T00:00:00Z', match: { ...readyMatch(42), contentDigest: before }, battles: [], currentBattle: null };
-    expect(readCompatibility(file)).toMatchObject({ status: 'rejected', reason: 'digest-mismatch' });
+      runId: 'before-mel', createdAt: '2026-11-21T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE_DIGEST }, battles: [], currentBattle: null };
+    expect(readCompatibility(file)).toEqual({ status: 'rejected', currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion: M8_VERSION.rulesVersion,
+      canResume: false, canReplay: false, canExportOriginal: false, reason: 'digest-mismatch' });
+    expect(routeSaveFile(file).envelope).toBeNull();
+    const admission = admitArchives([file], routeSaveFile);
+    expect(admission.records).toEqual([]);
+    expect(admission.quarantined.map(q => q.runId)).toEqual(['before-mel']);
+    const state = JSON.parse(serializeMatch(readyMatch(42)));
+    expect(() => restoreMatch(JSON.stringify({ ...state, contentDigest: BEFORE_DIGEST }))).toThrow('content-digest');
   });
 });
