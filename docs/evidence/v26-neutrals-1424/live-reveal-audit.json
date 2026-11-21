@@ -200,7 +200,7 @@
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
     "src/simulation/combat-types.ts": "55c77e0d7dd99a9cc643ce646c4ff14d8d8cdcd4cc37ccf7fb0b4996ed16ce89",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
-    "src/simulation/combat-v20-traits.ts": "761944a2e973677ccca1c6cc217b9aa7b41de86ed9f596dd1e4e73a8747cc5c1",
+    "src/simulation/combat-v20-traits.ts": "b1427e6b7d1e21ab11d602a1b965332d23c86748ed2cfb056b93e352d8317c98",
     "src/simulation/combat.ts": "812792cf31746e20006da6c8efd1b9db814c92b2ab7e22f58dd09c12e47bd559",
     "src/simulation/component-pool.ts": "1b062923fdfec971b0eaf3b8646470750093565a7bc8d24b27339eaee60f0857",
     "src/simulation/consumable-types.ts": "356658d072bdc230862d25052c3d080a2f7955a7629bddf2db8c0ab74a8aa042",
