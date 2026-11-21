@@ -1332,7 +1332,7 @@
     "bracerTicks": [
       205
     ],
-    "deathTick": 366,
+    "deathTick": 362,
     "lastLivingPulse": 2
   },
   {
@@ -1368,12 +1368,10 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      203,
-      394,
-      476
+      203
     ],
-    "deathTick": 534,
-    "lastLivingPulse": 4
+    "deathTick": 366,
+    "lastLivingPulse": 2
   },
   {
     "seed": 10653,
@@ -2861,12 +2859,10 @@
     "grantTick": 92,
     "firstPulse": 192,
     "bracerTicks": [
-      212,
-      394,
-      511
+      212
     ],
-    "deathTick": 565,
-    "lastLivingPulse": 4
+    "deathTick": 366,
+    "lastLivingPulse": 2
   },
   {
     "seed": 24004,
@@ -3521,7 +3517,7 @@
       212,
       388
     ],
-    "deathTick": 462,
+    "deathTick": 430,
     "lastLivingPulse": 3
   }
 ]

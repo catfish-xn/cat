@@ -10,6 +10,7 @@ import { EMPTY_RUNTIME, origin, type S13Unit } from '../src/simulation/combat-s1
 import type { AbilityContext } from '../src/simulation/combat-s13-abilities';
 import { nextRandom } from '../src/simulation/rng';
 import { battle, unit, freeze } from './combat-helpers';
+import { MORDEKAISER_CLAW_TICKS } from '../src/simulation/cast-windup';
 
 const c = (col: number, row: number): HexCell => ({ col, row });
 function caster(definitionId: string, cell: HexCell, patch: Partial<CombatUnit> = {}): CombatUnit {
@@ -51,8 +52,11 @@ describe('Mordekaiser pulls the nearest line-hit enemies 1 hex toward him', () =
     }
     expect(at(result.state, 'f')).toEqual(c(6, 0));
     expect(result.state.rngState).toBe(42);
-    expect(result.events.filter(e => e.type === 'packetDamage')).toHaveLength(5);
-    expect(result.events.findIndex(e => e.type === 'movement' && e.reason === 'mordekaiser-pull')).toBeLessThan(result.events.findIndex(e => e.type === 'packetDamage'));
+    // Landing batch (11-20): the pull stays on the cast; the claw's damage lands MORDEKAISER_CLAW_TICKS later, on all five.
+    expect(result.events.filter(e => e.type === 'packetDamage')).toHaveLength(0);
+    let state = result.state; const later: CombatEvent[] = [];
+    for (let n = 0; n < MORDEKAISER_CLAW_TICKS[(line()[0]!.starLevel ?? 1) as 1 | 2 | 3].land; n++) { const r = stepCombat(state); state = r.state; later.push(...r.events); }
+    expect(later.filter(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === line()[0]!.id && e.outcome.context.source.sourceKind === 'ability')).toHaveLength(5);
   });
   it('blocked step stays; control immunity is not pulled', () => {
     const p = caster('mordekaiser', c(3, 6)) as S13Unit, t = dummy('t', c(3, 4)) as S13Unit;
