@@ -67,7 +67,7 @@ describe("Jayce's crystals", () => {
   });
 });
 
-const BEFORE_DIGEST = 'fnv1a32-utf16:93d4dcc9';
+const BEFORE_DIGEST = 'fnv1a32-utf16:5d6aa828';
 describe("Jayce's crystals: files written before them", () => {
   it('the constants, the rule identifier, and the digest moved', () => {
     expect([JAYCE_CRYSTAL_LANDS, JAYCE_MAIN_HIT_TICKS, JAYCE_CRYSTAL_BLASTS]).toEqual([[11, 14, 15], 33, [35, 37, 40]]);

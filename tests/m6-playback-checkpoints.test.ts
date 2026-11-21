@@ -131,7 +131,8 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // Jinx's rocket: contentDigest 3ade1e2c -> 5742ae06 in the record only.
     // Vi's slam: contentDigest 5742ae06 -> c4667f33 in the record only.
     // 梅尔连发 v1: contentDigest c4667f33 -> 5d6aa828 in the record only.
-    const newer = JSON.stringify(before628).split('5d6aa828').join('c4667f33').split('c4667f33').join('5742ae06').split('5742ae06').join('3ade1e2c').split('3ade1e2c').join('6ad3ea6f').split('6ad3ea6f').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    // 杰斯水晶连锁 v1: contentDigest 5d6aa828 -> 8dd42557 in the record only.
+    const newer = JSON.stringify(before628).split('8dd42557').join('5d6aa828').split('5d6aa828').join('c4667f33').split('c4667f33').join('5742ae06').split('5742ae06').join('3ade1e2c').split('3ade1e2c').join('6ad3ea6f').split('6ad3ea6f').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
     expect(bytesHash(JSON.parse(newer))).toBe('aed1abb50ef0355c3c10be7220af546eec1a795b95e380ff5cc35f6e1154d41d');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('0c7864258f8aaea4dfb17643ce3af62ab1e9c9e10c75d02d7f4d8662aafccee6');

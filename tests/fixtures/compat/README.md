@@ -120,3 +120,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-21 梅尔连发 v1: identity-only refresh, `contentDigest` (×2) `c4667f33` → `5d6aa828` (`S13_COMBAT_RULES.melBolts`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `8e1444b4cd4bee528ae261e6af4b2d58738bb863affaba981cdfcf0807e817ae`.
+
+2026-11-21 杰斯水晶连锁 v1: identity-only refresh, `contentDigest` (×2) `5d6aa828` → `8dd42557` (`S13_COMBAT_RULES.jayceCrystals`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `e59b7a483683f916a2d70592f0730e1648b2673eb54f053526ff02d66acda1f8`.
