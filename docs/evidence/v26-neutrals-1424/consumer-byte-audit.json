@@ -2114,9 +2114,9 @@
     "tests/malzahar-line-rules.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4829,
+      "currentBytes": 7214,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dd9e0a57c924f9bfaa13b556e8163b11cac0fcd5c584942e1964023ab25c4546",
+      "currentSha256": "7624f8a6be050e85b08dfbf0bd33d97ef8d8781e57c2c615842265e79c015437",
       "firstDifferentByte": 0
     },
     "tests/match-contract.test.ts": {
