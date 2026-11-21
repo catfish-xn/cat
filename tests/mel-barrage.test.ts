@@ -35,12 +35,12 @@ describe('Mel barrage timing', () => {
     expect(targets.length).toBeGreaterThan(0);
     expect(launched).toHaveLength(targets.length * MEL_BOLTS_PER_TARGET);
     expect(launched.every(l => l.count === targets.length * MEL_BOLTS_PER_TARGET)).toBe(true);
-    const melCell = run(s0, castAt + MEL_RELEASE_TICKS - s0.tick).state.units.find(u => u.id === 'mel')!.cell;
     for (const l of launched) {
       const k = Math.floor(l.ordinal / MEL_BOLTS_PER_TARGET), i = l.ordinal % MEL_BOLTS_PER_TARGET;
       expect(l.tick).toBe(castAt + MEL_RELEASE_TICKS + k * MEL_TARGET_STAGGER_TICKS + melBoltOffset(i));
-      const target = s0.units.find(u => u.id === l.targetId)!;
-      expect(l.arrivalTick - l.tick).toBe(Math.max(1, hexDistance(melCell, target.cell) * MEL_BOLT_TICKS_PER_HEX));
+      // Each bolt's flight is read when it leaves: she may have walked on after her release.
+      const at = run(s0, l.tick - 1 - s0.tick).state.units, from = at.find(u => u.id === 'mel')!.cell, to = at.find(u => u.id === l.targetId)!.cell;
+      expect(l.arrivalTick - l.tick).toBe(Math.max(1, hexDistance(from, to) * MEL_BOLT_TICKS_PER_HEX));
       const landed = r.out.find(s => s.tick === l.arrivalTick)!;
       expect(landed.events.filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel' && (e as any).outcome.context.targetId === l.targetId
         && (e as any).outcome.context.source.sourceKind === 'ability' && (e as any).outcome.context.ordinal === l.ordinal).length + 0).toBeLessThanOrEqual(1);
