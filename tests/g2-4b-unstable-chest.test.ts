@@ -1,3 +1,4 @@
+import { LUX_SHIELD_FLIGHT_TICKS } from '../src/simulation/cast-windup';
 import { prepareInput, copyInput } from './fixtures/prepared-input';
 /** G2-4b Unstable Treasure Chest (user 2026-10-17, option A "完整原版"; conventions G24-CHEST-01…04 in
  * docs/evidence/g2-4/SUPPORT_ITEMS.md): pool, targeting, items gained mid-combat (stats, start effects, legacy
@@ -311,7 +312,9 @@ describe('G2-4b chest restore candidates (sampled stats)', () => {
     // for which both M2 cases hold.
     const { after } = untilGranted({ ...sampledFight('lux', 1, 0, true), rngState: 106 });
     const ready = waitForPulses(after, 200);
-    const cast = castNow({ ...ready, units: ready.units.map(u => u.id === 'z-ally' ? { ...u, hp: 300 } : u) });
+    // Landing batch (11-20, scene change): the shield lands LUX_SHIELD_FLIGHT_TICKS after the cast, when her missile arrives, so
+    // the scene waits that long (everyone idle) before reading the shield and killing her.
+    const cast = waitForPulses(castNow({ ...ready, units: ready.units.map(u => u.id === 'z-ally' ? { ...u, hp: 300 } : u) }), LUX_SHIELD_FLIGHT_TICKS);
     const shield = unitOf(cast, 'z-ally').shieldLayers!.find(s => s.source.ownerId === 'caster')!;
     expect(shield).toBeDefined();
     const state = killCaster(cast);

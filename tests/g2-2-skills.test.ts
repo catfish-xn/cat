@@ -6,7 +6,8 @@ import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit, freeze } from './combat-helpers';
 import { packets, heals } from './helpers/replay2-views';
 import { VI_SLAM_TICKS, CAMILLE_KICK_TICKS } from '../src/simulation/combat-g2-2';
-import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, MORDEKAISER_CLAW_TICKS } from '../src/simulation/cast-windup';
+import { heimerRocketLandTick } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 function hero(name:string,patch:Partial<CombatUnit>={}):CombatUnit{return unit('p','player',1,3,{definitionId:name,ability:resolveAbility(name+'-ability',1),hp:4000,maxHp:5000,armor:0,magicResist:0,mana:100,maxMana:100,attackDamage:100,attackRange:6,abilityPower:100,baseAttackSpeedBps:10000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],...patch});}
 function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'enemy',2,3,{definitionId:'neutral-stage-2',ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,mana:0,maxMana:1,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],...patch});}
 function run(initial:CombatState,count:number){let state=initial;const events:CombatEvent[]=[];for(let n=0;n<count&&state.status==='running';n++){const r=stepCombat(state);state=r.state;events.push(...r.events);}return{state,events};}
@@ -19,9 +20,14 @@ it.each([
   // Vi's damage lands at her slam, VI_SLAM_TICKS after the cast (user 2026-11-11), Camille's at her kick, CAMILLE_KICK_TICKS
   // after the cast (user 2026-11-15); Trundle's CAST_WINDUP_TICKS after it (user 2026-11-16); every other skill on the cast
   // tick.
-  const later=({vi:VI_SLAM_TICKS,camille:CAMILLE_KICK_TICKS,trundle:CAST_WINDUP_TICKS.trundle} as Record<string,number>)[name];
-  expect(raw(later?run(initial,1+later).events:stepCombat(initial).events)).toEqual(values);
-  if(later)expect(raw(run(initial,later).events)).toEqual([]);
+  // Landing batch (11-20): Heimerdinger's rockets land one by one (the last heimerRocketLandTick(4, 5) after the cast, none
+  // before the first), Mordekaiser's claw MORDEKAISER_CLAW_TICKS[1].land after it.
+  const later=({vi:VI_SLAM_TICKS,camille:CAMILLE_KICK_TICKS,trundle:CAST_WINDUP_TICKS.trundle,heimerdinger:heimerRocketLandTick(4,5),mordekaiser:MORDEKAISER_CLAW_TICKS[1].land} as Record<string,number>)[name];
+  const first=({heimerdinger:heimerRocketLandTick(0,5)} as Record<string,number>)[name]??later;
+  // Only the skill's packets: over the claw's wait Mordekaiser also attacks.
+  const skill=(events:readonly CombatEvent[])=>packets(events).filter(x=>x.source.ownerId==='p'&&x.source.sourceKind==='ability').map(x=>x.raw);
+  expect((name==='mordekaiser'?skill:raw)(later?run(initial,1+later).events:stepCombat(initial).events)).toEqual(values);
+  if(later)expect((name==='mordekaiser'?skill:raw)(run(initial,first!).events)).toEqual([]);
   expect(initial.tick).toBe(0);});
 it('Camille heals actual mitigated damage, not raw damage',()=>{const r=run(battle([hero('camille'),dummy('e',{armor:100,magicResist:200})],{rngState:42}),1+CAMILLE_KICK_TICKS);expect(heals(r.events).find(x=>x.unitId==='p')?.actual).toBe(42);});
 it('Vex samples a fixed zone at source delay; Morgana preserves all 525 DOT damage and shield mark',()=>{
