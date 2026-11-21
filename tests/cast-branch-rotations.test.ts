@@ -29,9 +29,8 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // ticks per hex; the attack mana stays at tick 1), and the fight runs 294 -> 303 ticks. With landing switched off the digest
 // is 49e1d29a… again, so nothing but the landing rule moved.
     // Mel's barrage timing (11-20: her dash lands, bolts leave and settle later) changes this mixed combat (was 66c3a9e4…).
-// Jinx's rocket and chompers settle when they go off (11-21), which changes this mixed combat (was ca099f47…, Mel's dash;
-// a50c5309… Mel's barrage).
-const MIXED_DIGEST = 'b0d8464d059fb1c4baf5596b97a4ae240b3063b146d0053a137a97835e8ee0a1';
+// Mel dashes on every normal cast and never on the third (11-21), which changes this mixed combat (was a50c5309…).
+const MIXED_DIGEST = 'ca099f476909451ccbeecd97277f49ae8e4707752916149f40dfc3b983a2b33c';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

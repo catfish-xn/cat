@@ -119,6 +119,3 @@ export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TIC
 /** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
  * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
 export const JINX_ROCKET_LAUNCH_TICKS = 27, JINX_ROCKET_FLIGHT_TICKS = 10;
-/** Jinx's chompers (11-21, authorization ②): they go off JINX_CHOMPERS_TICKS after the cast (aligned to the original frame by
- * frame; docs/S13_RULES_GAP.md 金克丝手雷). Who is hit and how much are still taken on the cast. */
-export const JINX_CHOMPERS_TICKS = 41;

@@ -109,6 +109,6 @@ skipped as above; the export equals the old file with that one substitution. SHA
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `8b74fcdb6eb0977426bbdee886705e7d1a9e6bad68e6ec4898ee40b0b547df94`.
 
-2026-11-21 金克丝飞弹手雷 v1: identity-only refresh, `contentDigest` (×2) `3ade1e2c` → `8dd39163` (`S13_COMBAT_RULES.jinxRocketChompers`);
+2026-11-21 金克丝飞弹 v1: identity-only refresh, `contentDigest` (×2) `3ade1e2c` → `8ce74891` (`S13_COMBAT_RULES.jinxRocket`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
-skipped as above; the export equals the old file with that one substitution. SHA-256: `39769c9bdba69f482b9c2dc7af8970981e9d599c319c54f52d42ee9573b2d314`.
+skipped as above; the export equals the old file with that one substitution. SHA-256: `17abb895a67d4daa6ef3f621d7f8b6e3d84b0370d9fd4a2550de554d9f58def9`.
