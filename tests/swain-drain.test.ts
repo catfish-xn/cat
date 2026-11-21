@@ -33,6 +33,7 @@ describe('Swain demon form drain', () => {
   const drains = r.out.flatMap(s => packets(s.events).filter(p => p.source.ownerId === 'p' && p.unitId === 'e').map(p => ({ tick: s.tick, raw: p.raw })));
   const pulseHeals = r.out.flatMap(s => heals(s.events).filter(h => h.unitId === 'p' && s.tick > cast).map(h => ({ tick: s.tick, requested: h.requested })));
   it('pulses every SWAIN_PULSE_TICKS from SWAIN_PULSE_TICKS after the cast, up to the end of the form and not past it', () => {
+    expect([SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND]).toEqual([5, 4]);
     const end = ascension.untilTick, expected: number[] = [];
     for (let t = cast + SWAIN_PULSE_TICKS; t <= end; t += SWAIN_PULSE_TICKS) expected.push(t);
     expect(drains.map(d => d.tick)).toEqual(expected);
