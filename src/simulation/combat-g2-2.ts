@@ -121,7 +121,7 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       else {
         // 11-21 (authorization ②): the rocket leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes at the board's centre
         // JINX_ROCKET_FLIGHT_TICKS later (abilityProjectile 'jinx-rocket'), where who is hit and the falloff are read. The amount
-        // before falloff is taken now. She channels until it leaves.
+        // before falloff is taken now. She channels until it leaves (self-chosen, not original data); if she dies first, it never leaves.
         scheduleShot(u,'jinx-rocket',ctx.tick+JINX_ROCKET_LAUNCH_TICKS,t.id,ad('DeathRocketPercentAD','DeathRocketAP'),seq,0,1);
         applyStatus(u,origin(u),'channel',0,JINX_ROCKET_LAUNCH_TICKS,ctx.tick,ctx.events,true,'',seq);ids.push(t.id);
       }break;
