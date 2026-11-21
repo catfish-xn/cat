@@ -47,4 +47,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   emptyAnomaly: 'defer-until-purchase-preserve-affordable-offer',
   damageSharing: 'all-hit-packets-including-mitigated-ricochet-one-transfer-no-recursion',
   ricochet: 'primary-lethal-only-once-per-action-no-redirect-no-recursion',
+  // Ranged attack wind-up (11-19): a ranged attack starts, then launches RANGED_ATTACK_WINDUP_TICKS later (cast-windup.ts).
+  rangedAttackWindup: 'start-then-launch-after-fitted-windup-cap-7-half-interval-cancel-on-control-death-range-cooldown-reset',
 });
