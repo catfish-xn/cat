@@ -29,7 +29,6 @@ export function createBatch2VfxBridge(host: Host) {
   const consequences = new Map<string, readonly DisplayCombatEvent[]>();
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
-  const energyTicks = new Map<string, number>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
@@ -140,9 +139,8 @@ export function createBatch2VfxBridge(host: Host) {
       if (!current) return;
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
-      if (event.type === 'melEnergyChanged' && event.after > event.before && energyTicks.get(event.unitId) !== event.tick) {
-        energyTicks.set(event.unitId, event.tick); play('mel', event.unitId, [], 'mel-energy');
-      }
+      // Mel's energy gain plays nothing: its stack visual (P_Stack, 3eab3582) drew a flat disc at her feet on our board, and
+      // where and when it shows is not seen in the original close-ups. Held off as a known difference (Fable 11-21).
       if (event.type === 'shieldLayerChanged' && event.reason === 'granted' && event.remaining > 0) {
         try {
           const key: unknown = JSON.parse(event.key);
@@ -154,7 +152,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); energyTicks.clear(); frenzied.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); },
   };
   return bridge;
 }
