@@ -4981,9 +4981,9 @@
     "tests/violet-combo.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5706,
+      "currentBytes": 5707,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "378aef5bff5eac3f5b42deef5f147ef76b64e6806035d1cce6ce559186bd9090",
+      "currentSha256": "3016cc159878324fc4822a9f3751761b4e226f71002c8c5e920e911df00805ec",
       "firstDifferentByte": 0
     }
   }
