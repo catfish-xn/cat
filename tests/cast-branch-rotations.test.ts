@@ -28,7 +28,8 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // are identical; the first difference is Jinx's first attack at tick 1 (its damage now lands at tick 9, four hexes at two
 // ticks per hex; the attack mana stays at tick 1), and the fight runs 294 -> 303 ticks. With landing switched off the digest
 // is 49e1d29a… again, so nothing but the landing rule moved.
-const MIXED_DIGEST = '66c3a9e462bb536683b06ae66d060bcb8407d0a6e6dd144f2f314c621a36cc5c';
+    // Mel's barrage timing (11-20: her dash lands, bolts leave and settle later) changes this mixed combat (was 66c3a9e4…).
+const MIXED_DIGEST = 'a50c53097703eaaa0486d040c32a8a1d64312d4b4f4f694db18e87798740c6d9';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 
