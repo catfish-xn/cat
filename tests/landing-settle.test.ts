@@ -143,12 +143,20 @@ import { HEIMER_FOCUS_SHARE_BPS } from '../src/simulation/cast-windup';
 describe("Heimerdinger's focus", () => {
   it('sends the first floor(n × HEIMER_FOCUS_SHARE_BPS) rockets of each volley to his current target; the rest are drawn', () => {
     expect(HEIMER_FOCUS_SHARE_BPS).toBe(5000);
-    const start = battle([hero('heimerdinger', 2, 3, 7, { targetId: 'e' }), dummy('e', 'enemy', 3, 1), dummy('f', 'enemy', 5, 1), dummy('g', 'enemy', 0, 0)], { rngState: 42 });
-    const r = run(start, 60), launched = ofType(r.out, 'abilityProjectileLaunched').filter(l => l.actionSeq === ofType(r.out, 'abilityProjectileLaunched')[0]!.actionSeq);
-    const n = launched[0]!.count, focused = Math.floor(n * HEIMER_FOCUS_SHARE_BPS / 10000);
-    expect(focused).toBeGreaterThan(0);
-    const target = r.out.flatMap(s => s.events).find(e => e.type === 'cast' && (e as any).receipt?.source?.ownerId === 'p') as any;
-    const current = target.receipt.targetIds[0];
-    expect(launched.filter(l => l.ordinal < focused).map(l => l.targetId)).toEqual(Array(focused).fill(current));
+    // Seeds 1–3: with every rocket drawn, each of these volleys would send one of its first rockets elsewhere, so a focus
+    // that went to nobody (or to someone else) fails here.
+    const drawn: string[] = [];
+    for (const rngState of [1, 2, 3]) {
+      const start = battle([hero('heimerdinger', 2, 3, 7, { targetId: 'e' }), dummy('e', 'enemy', 3, 1), dummy('f', 'enemy', 5, 1), dummy('g', 'enemy', 0, 0)], { rngState });
+      const r = run(start, 60), all = ofType(r.out, 'abilityProjectileLaunched'), launched = all.filter(l => l.actionSeq === all[0]!.actionSeq);
+      const n = launched[0]!.count, focused = Math.floor(n * HEIMER_FOCUS_SHARE_BPS / 10000);
+      expect(focused).toBeGreaterThan(0);
+      expect(launched.map(l => l.ordinal)).toEqual([...Array(n).keys()]);
+      // His current target is 'e', set on the unit.
+      expect(launched.filter(l => l.ordinal < focused).map(l => l.targetId), `rngState ${rngState}`).toEqual(Array(focused).fill('e'));
+      drawn.push(...launched.filter(l => l.ordinal >= focused).map(l => l.targetId));
+    }
+    // The rest are still drawn at random: they reach more than one enemy.
+    expect(new Set(drawn).size).toBeGreaterThan(1);
   });
 });
