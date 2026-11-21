@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import { describe, expect, it } from 'vitest';
-import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CRIT_ATTACK_HIT, CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { BATCH1_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/batch1-timelines';
 import { S13_TIMELINES } from '../src/rendering/three-mode/vfx-ltk/s13-timelines';
 import { withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
@@ -77,6 +77,11 @@ describe.skipIf(!root)('the exported-list fixture matches the assets (VFX_LTK_RO
 // Set 13 timelines) or registered with a reason: SPELL_UNPLAYED_SYSTEMS, or CUE_DROPPED_SYSTEMS when a row dropped it.
 const spellFixture = JSON.parse(readFileSync(new URL('./fixtures/spell-referenced-systems.json', import.meta.url), 'utf8')) as
   { source: { snapshot: string }; champions: Record<string, string[]> };
+/** The systems a champion's crit plays through its own entry in CRIT_ATTACK_HIT.own: its swaps' systems and its flash. */
+function critSystems(own: { readonly swap?: Readonly<Record<string, unknown>>; readonly flash?: { readonly system: string } } | undefined): string[] {
+  const ofSwap = (to: unknown) => typeof to === 'string' ? to : (to as { system: string }).system;
+  return [...Object.values(own?.swap ?? {}).map(ofSwap), ...(own?.flash ? [own.flash.system] : [])];
+}
 /** Per champion, the spell-referenced systems nothing in the repository plays for it. */
 function spellUnplayed(exported: Record<string, readonly string[]>, referenced: Record<string, readonly string[]>): Record<string, string[]> {
   const tables = [CUE_OVERRIDES, CUE_ADDITIONS, CUE_EXTRA_SKILLS].flatMap(table => Object.values(table)).flat() as TimelineCue[];
@@ -88,8 +93,8 @@ function spellUnplayed(exported: Record<string, readonly string[]>, referenced: 
   const timelines = { ...BATCH1_TIMELINES, ...S13_TIMELINES } as Record<string, readonly TimelineCue[]>;
   const unplayed: Record<string, string[]> = {};
   for (const [champion, ids] of Object.entries(referenced)) {
-    const plays = new Set([...Object.entries(out).filter(([key]) => key === champion || key.startsWith(`${champion}-`)).flatMap(([, cues]) => cues),
-      ...(timelines[champion] ?? [])].map(cue => cue.system));
+    const plays = new Set([...[...Object.entries(out).filter(([key]) => key === champion || key.startsWith(`${champion}-`)).flatMap(([, cues]) => cues),
+      ...(timelines[champion] ?? [])].map(cue => cue.system), ...critSystems(CRIT_ATTACK_HIT.own[champion])]);
     const lost = ids.filter(id => !plays.has(id)).sort();
     if (lost.length) unplayed[champion] = lost;
   }
@@ -117,6 +122,13 @@ describe(`spell-referenced systems are played or registered (snapshot ${spellFix
       expect(unplayed[champion] ?? [], `${champion} ${system}`).toContain(system);
       expect(Object.hasOwn(CUE_DROPPED_SYSTEMS[champion] ?? {}, system), `${champion} ${system}`).toBe(false);
     }
+  });
+  it('a system a crit plays (CRIT_ATTACK_HIT.own: a swap or a flash) counts as played', () => {
+    expect(critSystems({ swap: { plain: 'crit-shot', other: { system: 'crit-swing', bone: 'Hand' } }, flash: { system: 'flash' } }))
+      .toEqual(['crit-shot', 'crit-swing', 'flash']);
+    expect(critSystems(undefined)).toEqual([]);
+    for (const [champion, own] of Object.entries(CRIT_ATTACK_HIT.own))
+      for (const system of critSystems(own)) expect(spellUnplayed({}, { [champion]: [system] })).toEqual({});
   });
   it.each(spellEntries)('$champion $system: a system id, a status and a reason', ({ system, status, reason }) => {
     expect(system).toMatch(/^[0-9a-f]{8}$/);
