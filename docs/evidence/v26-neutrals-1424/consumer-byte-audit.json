@@ -1008,6 +1008,22 @@
       "currentSha256": "9164136961297336b3fed3376a006ed77c36cdec879635715977ce30c79b80e6",
       "firstDifferentByte": 0
     },
+    "tests/fixtures/cue-dropped-systems.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2510,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "30678b7c74a623c0c7a80c0119bc211b5171350920d7cc0c5eb965f92e1a53c5",
+      "firstDifferentByte": 0
+    },
+    "tests/fixtures/cue-index-systems.json": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6832,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "58ef01a47560e101c798268983013096de4b1a2b873ea6b406a43a13c1cedbb1",
+      "firstDifferentByte": 0
+    },
     "tests/fixtures/epic-loot-oracle.cjs": {
       "previousBytes": 6972,
       "currentBytes": 7105,
@@ -1310,7 +1326,7 @@
       "previousBytes": 0,
       "currentBytes": 69922,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5c0853668146dd3b73ebf8dc379b775a7726632d3703f7d3e5952f6571db8b73",
+      "currentSha256": "9b2ba2150b4ee36d7c1ab19b51e8ebcfd977390c7c589a403e661c425f81f220",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -3573,6 +3589,14 @@
       "currentSha256": "c224c64f48617fa53b02f94cd486c62a76777831f464521c26f4fee12fa33a05",
       "firstDifferentByte": 323
     },
+    "tests/server/menaces-expiry-room.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7855,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8ff090df3c3f8c9e88bce4844b45ae312473315dee0a953536f7af5f4001ebbd",
+      "firstDifferentByte": 0
+    },
     "tests/server/net/v17-avarice-reconnect.test.ts": {
       "previousBytes": 8760,
       "currentBytes": 8765,
@@ -4076,12 +4100,20 @@
       "currentSha256": "300834c312ebaa149f31b1c39111a6bfa7d41cc4c0fc070e84b6c0d0d8f916e8",
       "firstDifferentByte": 31164
     },
+    "tests/v20-menaces-death-sample.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2928,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "38893b08ab1135721d21dc2e136d4c1e775568742254f8fdc89d5961d9945d00",
+      "firstDifferentByte": 0
+    },
     "tests/v20-traits.test.ts": {
       "previousBytes": 30738,
-      "currentBytes": 31425,
+      "currentBytes": 32070,
       "previousSha256": "306db3e2e9990c8e5ae43c10897bc689428b864fbc5ac687f0aad1e329d3d62d",
-      "currentSha256": "ad25afb5555fde5b4d7c3bdf2515a9eb65c7a021188cc759fd5d94e337aab1ed",
-      "firstDifferentByte": 56
+      "currentSha256": "e4f6ebffa743e3c3b7ec8326fe92e062bcd7b31657591d1ea803f1d5177c3e48",
+      "firstDifferentByte": 9
     },
     "tests/v23-restore-fuzz.test.ts": {
       "previousBytes": 18126,
@@ -4378,6 +4410,14 @@
       "currentBytes": 448,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "976f69d4f9ccda1c7b943c9f0379391d703194e4f3a70c14fb2aaf7327d5c63b",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-cue-dropped.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5178,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6d3fcd1cf9fe812b96f9381743839995f151558de0be3a69f3e81c3b8386c7ec",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
@@ -4730,9 +4770,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5184,
+      "currentBytes": 5241,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "383c5327ffba7a0c409a620df364472af4535632c3b5f15632c90c28fe11f35c",
+      "currentSha256": "c28f43fce14da4bc01e4161b5eb6380218f04ca5a2e27cdf831449ec21596a28",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {
