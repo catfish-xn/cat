@@ -47,4 +47,8 @@ export const S13_COMBAT_RULES = Object.freeze({
   emptyAnomaly: 'defer-until-purchase-preserve-affordable-offer',
   damageSharing: 'all-hit-packets-including-mitigated-ricochet-one-transfer-no-recursion',
   ricochet: 'primary-lethal-only-once-per-action-no-redirect-no-recursion',
+  // Landing batch (11-20, timing only): these skills settle where they land, with abilityProjectileLaunched/Landed events.
+  skillLanding: 'darius-spin-lux-shield-maddie-shot-heimer-rocket-morde-claw-settle-on-landing-events-launched-landed',
+  // Heimerdinger's focus (11-20, self-chosen share): the first half of each volley, rounded down, at his current target.
+  heimerFocus: 'first-floor-half-of-volley-at-current-target-rest-random',
 });

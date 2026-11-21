@@ -1,3 +1,5 @@
+import { scheduleShot } from './ability-projectile';
+import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, MORDEKAISER_CLAW_TICKS } from './cast-windup';
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
 import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
@@ -68,8 +70,13 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'draven':ids.push(u.id);break;
     case 'heimerdinger': {
+      // Landing batch (11-20): each rocket's target is drawn now and it settles where it lands (abilityProjectile
+      // 'heimerdinger-rocket', HEIMER_ROCKET_TIMING): the k-th of n leaves heimerRocketLaunchTick(k, n) after the cast.
+      // Focus (11-20, user-approved; the share is self-chosen, not original data): the first floor(n × HEIMER_FOCUS_SHARE_BPS)
+      // rockets go to his current target, the rest are drawn at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火).
       const n=v('StartingRockets')+Math.max(0,u.runtime.castCount-1)*v('MissileIncreasePerCast'),targets=foes();
-      for(let i=0;i<n;i++)strike(targets[Math.floor(ctx.draw()/2**32*targets.length)],mag('Damage'));break;
+      const focused=Math.floor(n*HEIMER_FOCUS_SHARE_BPS/10000);
+      for(let i=0;i<n;i++){const x=i<focused?t:targets[Math.floor(ctx.draw()/2**32*targets.length)];scheduleShot(u,'heimerdinger-rocket',ctx.tick+heimerRocketLaunchTick(i,n),x.id,mag('Damage'),seq,i,n);ids.push(x.id);}break;
     }
     case 'trundle': {
       const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp),hero=heroLive(u);
@@ -120,7 +127,10 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const lines=lineDirections(u.cell).map(direction=>({hits:targets.filter(x=>lineContains(u.cell,direction,x.cell,3,8)),target:lineContains(u.cell,direction,t.cell,3,8)}));
       // Stable sort preserves direction order after count and current-target ties.
       lines.sort((a,b)=>b.hits.length-a.hits.length||Number(b.target)-Number(a.target));
-      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);
+      // Landing batch (11-20): who is hit and how much is taken now; the claw appears and comes down MORDEKAISER_CLAW_TICKS after
+      // the cast (abilityProjectile 'mordekaiser-claw'), where the damage settles. DR, empower and pull stay on the cast.
+      const claw=MORDEKAISER_CLAW_TICKS[(u.starLevel??1) as 1|2|3],hits=lines[0].hits;
+      hits.forEach(x=>{scheduleShot(u,'mordekaiser-claw',ctx.tick+claw.appear,x.id,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),seq,ids.length,hits.length);ids.push(x.id);});
       const nearest=targets.slice(0,v('NearestEnemies'));
       pullToward(ctx,u,DISPLACEMENT_POLICY.mordekaiser.onlyLineHits?nearest.filter(x=>lines[0].hits.includes(x)):nearest,rawRangeToHexes(v('Displacement')),'mordekaiser-pull');break;
     }
