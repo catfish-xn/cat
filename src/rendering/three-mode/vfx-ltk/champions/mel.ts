@@ -21,7 +21,6 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
     { system: 'a9cc7bf3', event: 'hit', targetLimit: 5, delay: .8, duration: 1 },
     { system: '3857e78b', event: 'hit', primary: true, delay: 1.2, duration: 6.5 },
   ],
-  'mel-energy': [{ system: '3eab3582', event: 'cast-start', delay: 0, duration: .6, stopAfter: .2 }],
   // Her shield's visual plays its own life and ends when that ally's shield from her ability ends (cue-overrides.ts CUE_RULE_STOPS
   // abilityShieldEndedOnHolder). The duration is a cap past the system's own end (fitted, not original data); the old 0.1 s stop
   // came before some of its layers began.

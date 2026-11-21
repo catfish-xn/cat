@@ -125,9 +125,10 @@ describe('batch 2 exact display stages', () => {
     b.action('cast','m',['target'],melCast(2));
     expect(play.mock.calls.map(c=>c[4].skill)).toEqual(['mel','mel','mel-third','mel','mel']);
     play.mockClear();
+    // Her energy gain plays nothing (its stack visual is held off as a known difference, Fable 11-21).
     for (const tick of [1,1,2]) b.event({type:'melEnergyChanged',eventSeq:1,tick,unitId:'m',before:0,after:10},true);
-    expect(play).toHaveBeenCalledTimes(2); b.save('battle'); expect(play.mock.calls[2]?.[4]).toMatchObject({skill:'mel-save',board:point});
-    b.clear(); b.event({type:'melEnergyChanged',eventSeq:1,tick:2,unitId:'m',before:0,after:10},true); expect(play).toHaveBeenCalledTimes(4);
+    expect(play).not.toHaveBeenCalled(); b.save('battle'); expect(play.mock.calls[0]?.[4]).toMatchObject({skill:'mel-save',board:point});
+    b.clear(); b.event({type:'melEnergyChanged',eventSeq:1,tick:2,unitId:'m',before:0,after:10},true); expect(play).toHaveBeenCalledTimes(1);
   });
   it('uses a Warwick self buff at cast and a snapshotted victim only after a devoured receipt', () => {
     expect(mapSkillTimeline(warwickSkills.warwick.filter(c=>!c.action),'w',['w']).unsupported).toEqual([]);
