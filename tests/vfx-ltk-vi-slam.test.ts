@@ -41,6 +41,11 @@ describe("Vi's landing group follows her slam", () => {
     expect(played[0]!.snapshot).toBe(true);
     expect(stopped).toEqual([{ source: 'vi', systems: [VI_HAND_TRAIL] }]);
   });
+  it('a replay that starts over (castcmp warm pass, a rewind) draws the slam again on the same tick', () => {
+    const { bridge, played } = harness();
+    for (const event of [cast(10, ['f1']), slam(22, 'f1'), cast(10, ['f1']), slam(22, 'f1')]) bridge.event(event, true);
+    expect(played.map(p => p.skill)).toEqual(['vi-slam', 'vi-slam']);
+  });
   it('a held target that died: still on it (its place); nothing from catch-up', () => {
     const { bridge, played } = harness();
     bridge.event(cast(10, ['f1']), true); bridge.event(slam(22, 'f2'), true);

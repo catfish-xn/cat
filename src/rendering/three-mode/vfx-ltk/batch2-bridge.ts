@@ -140,7 +140,12 @@ export function createBatch2VfxBridge(host: Host) {
       if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
         if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
       }
-      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'vi' && event.targetIds[0]) viTargets.set(event.sourceId, event.targetIds[0]);
+      // Each cast of hers starts a fresh slam: a replay that starts over (castcmp's warm pass, a rewind) brings her slam on the
+      // same tick again, and must draw it again.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'vi') {
+        viSlamTicks.delete(event.sourceId);
+        if (event.targetIds[0]) viTargets.set(event.sourceId, event.targetIds[0]);
+      }
       // Vi's slam lands (g22ViSlam: her skill's own damage, never on her cast tick): once per tick, observed in catch-up too.
       const viSlam = event.type === 'packetDamage' && event.sourceKind === 'ability' && event.delivery === 'ability-direct' && event.definitionId === 'vi-ability'
         && host.unit(event.sourceId)?.definitionId === 'vi' && viSlamTicks.get(event.sourceId) !== event.tick;
