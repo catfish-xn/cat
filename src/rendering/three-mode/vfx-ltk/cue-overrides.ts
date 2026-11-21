@@ -786,6 +786,12 @@ function noteOverride(key: string, missing: readonly string[]): void {
  * Times count from the mana bar emptying (0); each is a fitted display time, not original data.
  */
 export const CUE_ADDITIONS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Kog'Maw: every basic attack carries his skill's extra magic packet, whose hit (633e1b82) already plays as the attack
+  // lands. Its flight now plays too: it leaves with the attack's own projectile, from his jaw, and lands with it, so it
+  // arrives on that hit. Times are the attack's (fitted display times, not original data).
+  kogmaw: [
+    { system: 'b9318ef6', action: 'attack', event: 'projectile', delay: .25, duration: .3, travelSeconds: .3, bone: 'Jaw', targetBone: chest },
+  ],
   // R_Energy_Avatar: the red body glow of her cast, a short flash that turns orange and fades. The delay is fitted to a
   // 3-star original side by side (Ambessa thread, 11-11), our fit. No rule event ends it: it plays to its system's own end (11-15).
   ambessa: [
