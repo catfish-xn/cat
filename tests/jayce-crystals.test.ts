@@ -16,7 +16,7 @@ import { readyMatch } from './match-helpers';
 
 // Jayce's ranged cast (11-21): crystals land, stay, and explode one after another around their cells; where the tooltip is
 // silent the reading is self-chosen (docs/S13_RULES_GAP.md 杰斯水晶连锁).
-const jayce = () => unit('p', 'player', 3, 7, { definitionId: 'jayce', ability: resolveAbility('jayce-ranged-ability', 2), starLevel: 2, hp: 100000, maxHp: 100000, armor: 0, magicResist: 0,
+const jayce = (star: 2 | 3 = 2) => unit('p', 'player', 3, 7, { definitionId: 'jayce', ability: resolveAbility('jayce-ranged-ability', star), starLevel: star, hp: 100000, maxHp: 100000, armor: 0, magicResist: 0,
   mana: 100, maxMana: 100, attackDamage: 100, attackRange: 20, abilityPower: 100, baseAttackSpeedBps: 1, cooldownTicks: 2000, moveCooldownTicks: 2000,
   runtime: { ...EMPTY_RUNTIME }, statuses: [], shieldLayers: [], tasks: [], mechanics: [] } as unknown as CombatUnit);
 const foe = (id: string, col: number, row: number, hp = 1000000) => unit(id, 'enemy', col, row, { definitionId: 'neutral-stage-2', ability: resolveAbility('neutral-attack', 1),
@@ -64,6 +64,42 @@ describe("Jayce's crystals", () => {
     const later = after.out.flatMap(s => packets(s.events).filter(p => p.source.ownerId === 'p' && p.source.sourceKind === 'ability').map(p => p.unitId));
     expect(later).not.toContain('b');
     expect(later.length).toBe(hits.filter(h => h.tick - cast > JAYCE_MAIN_HIT_TICKS && h.target !== 'b').length);
+  });
+});
+
+// A tight group: b is beside a and beside c; a and c are two hexes apart. Crystals go to a (nearest), b, c (b before c on the
+// distance tie, by id); they explode a's first, then c's, then b's.
+describe("Jayce's crystals in a tight group", () => {
+  const start = battle([jayce(), foe('a', 3, 4), foe('b', 3, 3), foe('c', 4, 3)], { strategy: { traits: [], units: [] }, combatId: 'jayce-group', rngState: 42 } as any);
+  const r = run(start, JAYCE_CRYSTAL_BLASTS[2]! + 5);
+  const cast = r.out.find(s => s.events.some(e => e.type === 'cast'))!.tick;
+  const hits = r.out.flatMap(s => packets(s.events).filter(p => p.source.ownerId === 'p' && p.source.sourceKind === 'ability').map(p => ({ at: s.tick - cast, target: p.unitId, raw: p.raw })));
+  const blasts = hits.filter(h => h.at > JAYCE_MAIN_HIT_TICKS);
+  const full = blasts.find(h => h.target === 'c')!.raw, half = Math.floor(full / 2);
+  const [aBlast, cBlast, bBlast] = [0, 2, 1].map(i => jayceCrystalBlastTick(jayceCrystalChainPlace(i, 3)));
+  it("the nearest enemy takes no explosion from its own crystal, but does from another crystal beside it", () => {
+    expect(hits.filter(h => h.target === 'a').map(h => h.at)).toEqual([JAYCE_MAIN_HIT_TICKS, bBlast]);
+    expect(blasts.filter(h => h.at === aBlast).map(h => h.target)).toEqual(['b']);
+    expect(blasts.find(h => h.target === 'a')!.raw).toBe(full);
+  });
+  it('an enemy caught by several explosions takes the first in full and every later one halved, not compounded', () => {
+    expect(blasts.filter(h => h.target === 'b').map(h => [h.at, h.raw])).toEqual([[aBlast, full], [cBlast, half], [bBlast, half]]);
+    expect(blasts.filter(h => h.target === 'c').map(h => [h.at, h.raw])).toEqual([[cBlast, full], [bBlast, half]]);
+  });
+});
+describe("Jayce's crystals at 3 stars", () => {
+  it('more crystals than enemies are dealt round robin by distance, every one lands and explodes on its target\'s cell', () => {
+    const start = battle([jayce(3), foe('a', 3, 4), foe('b', 0, 0)], { strategy: { traits: [], units: [] }, combatId: 'jayce-3star', rngState: 42 } as any);
+    const r = run(start, jayceCrystalBlastTick(30) + 5);
+    const cast = r.out.find(s => s.events.some(e => e.type === 'cast'))!.tick;
+    const crystals = r.out.flatMap(s => s.events.filter(e => e.type === 'jayceCrystal') as any[]).filter(c => c.tick - cast <= jayceCrystalBlastTick(30));
+    const count = crystals[0]!.count;
+    expect(count).toBeGreaterThan(2);
+    const landed = crystals.filter(c => c.phase === 'landed');
+    expect(landed.map(c => c.crystal)).toEqual([...Array(count).keys()]);
+    expect(landed.map(c => `${c.cell.col},${c.cell.row}`)).toEqual([...Array(count).keys()].map(i => i % 2 === 0 ? '3,4' : '0,0'));
+    expect(crystals.filter(c => c.phase === 'exploded').map(c => [c.crystal, c.tick - cast]))
+      .toEqual([...Array(count).keys()].map(i => [i, jayceCrystalBlastTick(jayceCrystalChainPlace(i, count))]).sort((x, y) => x[1]! - y[1]!));
   });
 });
 

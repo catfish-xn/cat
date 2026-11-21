@@ -211,12 +211,11 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'jayce-ranged':{
       const forge=reviveG23Forge(ctx,u)??u;
-      // 11-21 (authorization ②; Fable's reading where the tooltip is silent, self-chosen, not original data): a crystal is
-      // thrown at each of the NumOfCrystals nearest enemies (round robin from the nearest when there are fewer), lands on its
-      // cell jayceCrystalLandTick(i) after the cast and stays; they explode one after another in chain order (cast-windup.ts). The
-      // nearest enemy takes the main hit (JAYCE_MAIN_HIT_TICKS) and not its own crystal's explosion; every enemy within 1 hex
-      // of an exploding crystal takes PercentAttackDamage, halved (not compounded) after its first explosion of this cast.
-      // Who is hit and how much are taken now, from where everyone stands; a target that dies first takes nothing.
+      // 11-21 (authorization ②): one crystal per nearest enemy (round robin from the nearest when there are fewer) lands on its
+      // cell and stays; the main hit lands on the nearest, then the crystals explode one after another in chain order around their
+      // cells (cast-windup.ts). Where the tooltip is silent the reading is self-chosen, not original data: the nearest takes no
+      // explosion of its own crystal; an enemy's later explosions this cast are halved, not compounded. Who is hit and how much
+      // are taken now, from where everyone stands; a target that dies first takes nothing.
       const targets=foes(),count=v('NumOfCrystals'),nearest=targets[0];
       if(nearest){
         const hitsSoFar=new Map<string,number>(),blast=physical('PercentAttackDamage'),hits:[S13Unit,number,number][]=[];

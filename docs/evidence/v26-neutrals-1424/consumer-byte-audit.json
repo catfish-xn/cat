@@ -1639,9 +1639,9 @@
     "tests/jayce-crystals.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7771,
+      "currentBytes": 10761,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1df6d6947b5454e888343af70a58ceffa8e2bb89793d7a1b79b324a55d3aa50b",
+      "currentSha256": "93c8f18352bfb8fe7bcc697dd04d5d1f66859e054bd855cbc48ae29f6fe3d5d1",
       "firstDifferentByte": 0
     },
     "tests/jinx-timing.test.ts": {
