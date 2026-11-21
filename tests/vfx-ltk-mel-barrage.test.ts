@@ -62,6 +62,13 @@ describe('Mel barrage cues follow the rules\' events', () => {
     for (const event of [cast(10, 7, true), move(20), launched(25, 7, 'e0', 0)]) bridge.event(event, true);
     expect(played.map(p => p.skill)).toEqual(['mel-third-bolt']);
   });
+  it('a combat that ends after her cast, before her dash lands: her first walk in the next combat plays no dash', () => {
+    const { bridge, played } = harness();
+    bridge.event(cast(10, 1), true);
+    bridge.clear(); // the combat ends (the renderer clears at every combat's start and end)
+    bridge.event(move(5), true); // the next combat: she walks to her first target, no cast of hers before it
+    expect(played).toEqual([]);
+  });
   it('two combats in a row (the renderer clears between them): the second combat\'s cast is its own', () => {
     const { bridge, played } = harness();
     for (const event of [cast(10, 7, true), launched(25, 7, 'e0', 0)]) bridge.event(event, true);
