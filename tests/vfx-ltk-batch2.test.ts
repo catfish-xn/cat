@@ -110,11 +110,13 @@ describe('batch 2 exact display stages', () => {
     expect(w.spawns.some(c=>c.system==='40140250')).toBe(true);
     const e = mapSkillTimeline(of('chompers'),'j',['a','b','c','d'],point);
     expect(e.spawns.filter(c=>c.system==='9bd80364').map(c=>c.targetId)).toEqual(['a','b','c']);
-    const r = mapSkillTimeline(of('rocket', jinxSkills.jinx.filter(c=>!c.action)),'j',['a','b'],point);
+    // 11-21: the rocket's flight and explosion play from the rules' launch and landing (their own branches, batch2-bridge.ts).
+    const rocketCues = [...jinxSkills['jinx-rocket-fire']!, ...jinxSkills['jinx-rocket-boom']!];
+    const r = mapSkillTimeline(rocketCues,'j',['a','b'],point);
     expect(r.spawns.filter(c=>c.location==='board')).toHaveLength(2);
     expect(r.spawns.find(c=>c.system==='809da1b1')).toMatchObject({point});
     expect(r.spawns.find(c=>c.system==='809da1b1')?.targetId).toBeUndefined();
-    expect(mapSkillTimeline(of('rocket'),'j',['a']).unsupported.map(c=>c.reason)).toContain('missing-point');
+    expect(mapSkillTimeline(rocketCues,'j',['a']).unsupported.map(c=>c.reason)).toContain('missing-point');
   });
   it('distinguishes Mel normal/third cast, throttles energy only within the same tick, and keeps confirmed save independent of a living caster', () => {
     const {bridge:b,play}=bridge('mel');
