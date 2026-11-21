@@ -1011,9 +1011,9 @@
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2510,
+      "currentBytes": 3660,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "30678b7c74a623c0c7a80c0119bc211b5171350920d7cc0c5eb965f92e1a53c5",
+      "currentSha256": "e41367edd9f9735cc280884366195bdbe782cc86848ca0dabc12aefb1d859767",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
@@ -1241,6 +1241,14 @@
       "currentBytes": 1407,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "adc4877ba7c4504fecd2372e45325ab14719afb3795e212c3d45c94c1280c6d8",
+      "firstDifferentByte": 0
+    },
+    "tests/fixtures/spell-referenced-systems.json": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1769,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0a471a82d7a770cc28a68dd290540ed6ffc579a9e2c4b21ef58efaecbb5d2540",
       "firstDifferentByte": 0
     },
     "tests/fixtures/t13-loot-public.ts": {
@@ -4415,9 +4423,9 @@
     "tests/vfx-ltk-cue-dropped.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5178,
+      "currentBytes": 9377,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6d3fcd1cf9fe812b96f9381743839995f151558de0be3a69f3e81c3b8386c7ec",
+      "currentSha256": "d06144eee6afb168807b314324a448db7c6df8b1c2f066cc556b8e1c8f3ae15c",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
