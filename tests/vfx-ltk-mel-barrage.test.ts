@@ -57,6 +57,19 @@ describe('Mel barrage cues follow the rules\' events', () => {
     expect(played.map(p => [p.skill, ...p.targets])).toEqual([['mel-third-bolt', 'e0'], ['mel-third-bolt', 'e1'],
       ['mel-third-hit', 'e0'], ['mel-third-blast', 'e0'], ['mel-third-hit', 'e1']]);
   });
+  it('her third cast plays no dash, even should she move before her bolts leave (the rules dash on plain casts only)', () => {
+    const { bridge, played } = harness();
+    for (const event of [cast(10, 7, true), move(20), launched(25, 7, 'e0', 0)]) bridge.event(event, true);
+    expect(played.map(p => p.skill)).toEqual(['mel-third-bolt']);
+  });
+  it('two combats in a row (the renderer clears between them): the second combat\'s cast is its own', () => {
+    const { bridge, played } = harness();
+    for (const event of [cast(10, 7, true), launched(25, 7, 'e0', 0)]) bridge.event(event, true);
+    bridge.clear();
+    // Same action number in the next combat, a plain cast: its bolt is plain, and its dash plays.
+    for (const event of [cast(10, 7), move(20), launched(25, 7, 'e0', 0)]) bridge.event(event, true);
+    expect(played.map(p => p.skill)).toEqual(['mel-third-bolt', 'mel-dash', 'mel-bolt']);
+  });
   it('catch-up plays nothing but still remembers the cast, so a later landing plays as its cast', () => {
     const { bridge, played } = harness();
     bridge.event(cast(10, 7, true), false); bridge.event(launched(25, 7, 'e0', 0), false);

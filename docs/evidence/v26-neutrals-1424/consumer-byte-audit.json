@@ -4681,9 +4681,9 @@
     "tests/vfx-ltk-mel-barrage.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 8413,
+      "currentBytes": 9329,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8a2575ffc25c283976e9b80e4313aa1cc9e554fe2cb25259b7306b30482cf553",
+      "currentSha256": "97329f9c2f3bfdfffaa6705460e05da4e9e2ab41aa257edf30f07aaf619e0e8f",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-mesh-pool-matrix.test.ts": {
