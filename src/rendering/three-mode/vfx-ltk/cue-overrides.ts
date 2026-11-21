@@ -924,6 +924,10 @@ export const DISABLED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Irelia's shield: the cyan ring glow round the bubble is left out, with the bubble itself fainter (EMITTER_ALPHA; Fable
   // 11-20, picked from a three-column toggle).
   '67665513': ['Alpha_RingGlow'],
+  // Renni's final slam: when the slam kills, its dark ground decal draws a large near-black disc on our board where it
+  // lands, for about 0.5 s (Linux probe 11-20, with a kill; without one it never draws). Held off as a known difference
+  // (Fable 11-20, three columns with a kill); the rest of the system draws.
+  '2f79da6f': ['onKill_GlowDecal'],
 };
 
 /**
