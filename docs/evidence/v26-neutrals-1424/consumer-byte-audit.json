@@ -425,9 +425,9 @@
     },
     "tests/augment-pool-batch5-h7.test.ts": {
       "previousBytes": 18878,
-      "currentBytes": 19519,
+      "currentBytes": 19747,
       "previousSha256": "e7d4a528997bb7459ceb58b243a336e0cfdeae5a97c31a651f3c6462d15a8715",
-      "currentSha256": "4b5136d9b18d8556c45afe7f5bef0ccc9c02056494b33519756063974eade42d",
+      "currentSha256": "bd316ad8b7c25b78a65185c4b73fafe0fd0368c9eccb5aa4712ded14d374e4c7",
       "firstDifferentByte": 4738
     },
     "tests/augment-pool-batch5-h8-deaths-room.test.ts": {
@@ -1079,6 +1079,13 @@
       "currentSha256": "da789771c2131241737ea812c4ba29210b955e24e346ad2765bf1ac5c1cdfebe",
       "firstDifferentByte": 299
     },
+    "tests/fixtures/m5/augment-h7-oracle.cjs": {
+      "previousBytes": 1615,
+      "currentBytes": 1747,
+      "previousSha256": "4ff8ca2650aade50c1794a57a81b90a65a6253ca82f4ae17828b6d0508062908",
+      "currentSha256": "98f81dee3511f181121d1383005faf7407b9eb155159e3cc0e8c2ff460c53e47",
+      "firstDifferentByte": 1238
+    },
     "tests/fixtures/m5/augment-inventory-oracle.cjs": {
       "previousBytes": 2893,
       "currentBytes": 3135,
@@ -1088,9 +1095,9 @@
     },
     "tests/fixtures/m5/augment-rewards-oracle.cjs": {
       "previousBytes": 77538,
-      "currentBytes": 78094,
+      "currentBytes": 78292,
       "previousSha256": "4dace593bb3f73fc38e378a047be031610b9c67fd7c0f3c206648861cc7ea71c",
-      "currentSha256": "307b9d49d9a02fc77a3283c931b73865ce4fed4fdeddd8e66bb1f247e7c3b57a",
+      "currentSha256": "d8974887f6156aa296afa635fdf620caa719d38012ae7d4ddeb99e5026c00aa6",
       "firstDifferentByte": 20845
     },
     "tests/fixtures/m5/full-match-golden.v26-neutrals-1424.json": {
@@ -3832,6 +3839,14 @@
       "currentBytes": 11516,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "2663153f2c1ba3fd1399353f6c35aff675d3902b2074cee5a70c46981a06c035",
+      "firstDifferentByte": 0
+    },
+    "tests/server/zz-rngstat.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4875,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "002aaf4945a21c670193c32dce8b6ce703f330e1b16bc74e9f3deaf5881ddd61",
       "firstDifferentByte": 0
     },
     "tests/sevika-high-roller-triple.test.ts": {
