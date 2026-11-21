@@ -120,8 +120,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // #739 save/replay 9 -> 10: contentDigest d94c78f1 -> cf212873 in the record only; substitute it back first.
     // Landing batch: contentDigest cf212873 -> 2f642cc0 in the record only; substitute it back first.
     // Heimerdinger's focus: contentDigest 2f642cc0 -> 9ccd5f96 in the record only; substitute it back first.
+    // Mel's barrage: contentDigest 3476d8d4 -> 16f19467 in the record only.
     // Swain's drain: contentDigest 9ccd5f96 -> 3476d8d4 in the record only; substitute it back first.
-    const newer = JSON.stringify(before628).split('3476d8d4').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    const newer = JSON.stringify(before628).split('16f19467').join('3476d8d4').split('3476d8d4').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
     expect(bytesHash(JSON.parse(newer))).toBe('c274a68d0df96b243d893fc6945c4430097019382009e98e4a458db74d036271');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('870a558cc1d1febac6061a36a9b943777198b2e554f0afeaa0321b8f6673e2e4');
