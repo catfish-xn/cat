@@ -45,6 +45,7 @@ export type G23CombatEventData =
   /** Display only, no rule effect: a flying shot reached targetId; hit false when the target died in flight (the shot did nothing). */
   | { readonly type: 'attackLanded'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly hit: boolean }
   /** Display only, no rule effect: a takedown of victimId extended Swain's demon form from beforeUntilTick to untilTick (once per victim). */
+  | { readonly type: 'jayceCrystal'; readonly tick: number; readonly unitId: string; readonly phase: 'landed' | 'exploded'; readonly crystal: number; readonly count: number; readonly cell: { readonly col: number; readonly row: number } }
   | { readonly type: 'swainAscensionExtended'; readonly tick: number; readonly unitId: string; readonly victimId: string; readonly beforeUntilTick: number; readonly untilTick: number }
   /**
    * Display only, no rule effect (landing batch, 11-20): one projectile of a skill (skill names it; ordinal of count in the

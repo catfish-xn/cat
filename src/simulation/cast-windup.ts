@@ -119,3 +119,13 @@ export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TIC
 /** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
  * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
 export const JINX_ROCKET_LAUNCH_TICKS = 27, JINX_ROCKET_FLIGHT_TICKS = 10;
+
+/** Jayce's ranged cast (11-21, authorization ②; aligned to the original frame by frame, which bang is which crystal still being
+ * checked): his crystals land JAYCE_CRYSTAL_LAND_TICKS after the cast and stay; crystal i explodes jayceCrystalBlastTick(i)
+ * after it, one after another; the main hit on the nearest enemy lands JAYCE_MAIN_HIT_TICKS after it. Past the original's
+ * three crystals (3 stars) the spacing repeats the last measured gap (self-chosen, not original data). */
+export const JAYCE_CRYSTAL_LAND_TICKS = 11, JAYCE_CRYSTAL_BLASTS: readonly number[] = [26, 28, 32], JAYCE_MAIN_HIT_TICKS = 33;
+export function jayceCrystalBlastTick(i: number): number {
+  const n = JAYCE_CRYSTAL_BLASTS.length;
+  return i < n ? JAYCE_CRYSTAL_BLASTS[i]! : JAYCE_CRYSTAL_BLASTS[n - 1]! + (i - n + 1) * (JAYCE_CRYSTAL_BLASTS[n - 1]! - JAYCE_CRYSTAL_BLASTS[n - 2]!);
+}

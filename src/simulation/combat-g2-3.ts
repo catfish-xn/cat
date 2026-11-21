@@ -1,7 +1,7 @@
 import { SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
 import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
-import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_CRYSTAL_LAND_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
@@ -211,7 +211,27 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'jayce-ranged':{
       const forge=reviveG23Forge(ctx,u)??u;
-      const targets=foes();for(let i=0;i<v('NumOfCrystals');i++)strike(targets[i%targets.length],physical(i===0?'ClosestEnemyPercentAD':'PercentAttackDamage'),'physical');
+      // 11-21 (authorization ②; Fable's reading where the tooltip is silent, self-chosen, not original data): a crystal is
+      // thrown at each of the NumOfCrystals nearest enemies (round robin from the nearest when there are fewer), lands on its
+      // cell JAYCE_CRYSTAL_LAND_TICKS after the cast and explodes jayceCrystalBlastTick(i) after it, one after another. The
+      // nearest enemy takes the main hit (JAYCE_MAIN_HIT_TICKS) and not its own crystal's explosion; every enemy within 1 hex
+      // of an exploding crystal takes PercentAttackDamage, halved (not compounded) after its first explosion of this cast.
+      // Who is hit and how much are taken now, from where everyone stands; a target that dies first takes nothing.
+      const targets=foes(),count=v('NumOfCrystals'),nearest=targets[0];
+      if(nearest){
+        const hitsSoFar=new Map<string,number>(),blast=physical('PercentAttackDamage'),hits:[S13Unit,number,number][]=[];
+        for(let i=0;i<count;i++){
+          const aim=targets[i%targets.length]!,cell={...aim.cell};
+          for(const [kind,at] of [['g23CrystalLand',JAYCE_CRYSTAL_LAND_TICKS],['g23CrystalBlast',jayceCrystalBlastTick(i)]] as const)
+            u.tasks.push({key:JSON.stringify([u.id,seq,kind,i]),kind,source:origin(u),executeAtTick:ctx.tick+at,targetId:aim.id,amount:0,actionSeq:seq,ordinal:i,total:count,cancellable:false,cell});
+          for(const x of foes().filter(x=>hexDistance(cell,x.cell)<=1&&!(x.id===nearest.id&&aim.id===nearest.id)).sort((a,b)=>compareText(a.id,b.id))){
+            const before=hitsSoFar.get(x.id)??0;hitsSoFar.set(x.id,before+1);hits.push([x,jayceCrystalBlastTick(i),before?Math.floor(blast/2):blast]);
+          }
+        }
+        // Packet 0 is the main hit, then the explosions in order.
+        later(ctx,u,nearest,'g23Physical',JAYCE_MAIN_HIT_TICKS,physical('ClosestEnemyPercentAD'),seq,0,hits.length+1);ids.push(nearest.id);
+        hits.forEach(([x,at,raw],k)=>later(ctx,u,x,'g23Physical',at,raw,seq,k+1,hits.length+1));
+      }
       for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team&&!x.definitionId.startsWith('g23-forge'))).slice(0,v('NumAlliesAS')))
         applyStatus(ally,origin(u),'attackSpeed',Math.round(v('AttackSpeed')*10000),Math.round(v('ASDuration')*20),ctx.tick,ctx.events,true);break;
     }
@@ -261,6 +281,10 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;
    const next=smeechTarget(ctx,u);if(!next)return;
    leapG23(ctx,u,next);smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
+  }
+  // Jayce's crystals (display only): one lands, or one explodes, at its cell.
+  if(task.kind==='g23CrystalLand'||task.kind==='g23CrystalBlast'){
+   ctx.events.push({type:'jayceCrystal',tick:ctx.tick,unitId:u.id,phase:task.kind==='g23CrystalLand'?'landed':'exploded',crystal:task.ordinal,count:task.total,cell:{...task.cell!}});return;
   }
   // Renni's lift: the stun starts now on her target, if it still lives (display: she lifts it, carryChanged).
   if(task.kind==='g23RenniLift'){
