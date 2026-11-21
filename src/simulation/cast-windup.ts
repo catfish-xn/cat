@@ -46,8 +46,9 @@ export const RENNI_SLAM_AFTER_STUN_TICKS = 2;
  * on that tick still lets it go, one before does not; once let go it walks on (g2PowderMonkey / v20Powder). Renata's missiles
  * leave RENATA_MISSILE_FLIGHT_TICKS before they land.
  */
-export function releasedLanding(task: { kind: string; executeAtTick: number; source: { definitionId: string } }, tick: number): boolean {
+export function releasedLanding(task: { kind: string; executeAtTick: number; source: { definitionId: string }; shot?: { arrivalTick?: number } }, tick: number): boolean {
   if (task.kind === 'g2PowderMonkey' || task.kind === 'attackLanding') return true;
+  if (task.kind === 'skillShot') return task.shot?.arrivalTick !== undefined; // a skill projectile in flight lands even if its caster died
   if (task.kind === 'g2PowderRelease') return task.executeAtTick <= tick;
   return task.kind === 'g2Landing' && task.source.definitionId === 'renata-ability' && task.executeAtTick - RENATA_MISSILE_FLIGHT_TICKS <= tick;
 }
@@ -61,3 +62,60 @@ export const RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION: Readonly<Record<string, nu
 export function rangedAttackFlightTicks(hexes: number, championId = ''): number {
   return Math.max(1, Math.ceil(hexes * (RANGED_ATTACK_TICKS_PER_HEX_BY_CHAMPION[championId] ?? RANGED_ATTACK_TICKS_PER_HEX)));
 }
+
+/**
+ * Landing batch (11-20, user-approved timing only; amounts, ranges and targets unchanged, all taken on the cast). See
+ * docs/S13_RULES_GAP.md (技能落地结算批). Darius's spin (damage, heal, bleed) lands on the render's hit: DARIUS_SPIN_TICKS
+ * after the cast (fitted, not original data); his bleed's clock starts there, same total length.
+ */
+export const DARIUS_SPIN_TICKS = 12;
+/** Lux's shield on an ally lands when her bent missile arrives, LUX_SHIELD_FLIGHT_TICKS after the cast (the render's missile
+ * flight; fitted, not original data). On herself it lands LUX_SELF_SHIELD_TICKS after the cast (aligned to the original
+ * frame by frame, see the GAP section), every star level alike. */
+export const LUX_SHIELD_FLIGHT_TICKS = 6;
+export const LUX_SELF_SHIELD_TICKS = 5;
+/** Maddie's volley shots fly MADDIE_SHOT_TICKS_PER_HEX ticks a hex from her to the enemy they hit, at least MADDIE_SHOT_MIN_TICKS
+ * (the render's flight, cue-overrides.ts; fitted, not original data). Each shot leaves on its own volley offset. */
+export const MADDIE_SHOT_TICKS_PER_HEX = 2, MADDIE_SHOT_MIN_TICKS = 4;
+export function maddieShotFlightTicks(hexes: number): number { return Math.max(MADDIE_SHOT_MIN_TICKS, hexes * MADDIE_SHOT_TICKS_PER_HEX); }
+/**
+ * Heimerdinger's rockets (the rules' copy of the render's HEIMER_ROCKETS timing in cue-overrides.ts; a test keeps the two
+ * equal): the k-th of n leaves launchTicks plus its stagger after the cast and lands flightTicks later. Designed display
+ * values (Fable 11-19), not original data.
+ */
+export const HEIMER_ROCKET_TIMING = Object.freeze({ launchTicks: 4, flightTicks: 10, staggerTicks: 1, spreadTicks: 9 } as const);
+export function heimerRocketLaunchTick(k: number, n: number): number {
+  const t = HEIMER_ROCKET_TIMING;
+  return t.launchTicks + (n <= 1 || k <= 0 ? 0 : Math.round(k * Math.min(t.staggerTicks, t.spreadTicks / (n - 1))));
+}
+/**
+ * Mordekaiser's claw (aligned to the original frame by frame, see the GAP section; 3 stars inferred from 2): it appears
+ * MORDEKAISER_CLAW_TICKS[star].appear ticks after the cast and comes down on .land, where its damage settles. His damage
+ * reduction, empower and pull stay on the cast.
+ */
+export const MORDEKAISER_CLAW_TICKS: Readonly<Record<1 | 2 | 3, { readonly appear: number; readonly land: number }>> =
+  Object.freeze({ 1: { appear: 2, land: 26 }, 2: { appear: 4, land: 27 }, 3: { appear: 4, land: 27 } });
+
+/** Heimerdinger's focus (11-20, user-approved; self-chosen, not original data): this share of each volley's rockets, rounded
+ * down, goes to his current target; the rest pick at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火). */
+export const HEIMER_FOCUS_SHARE_BPS = 5000;
+
+/** Swain's demon form (11-20, user-approved; aligned to the original frame by frame, see docs/S13_RULES_GAP.md 斯维因吸取跳频):
+ * it drains every SWAIN_PULSE_TICKS, the first that long after the cast; each pulse settles one of SWAIN_PULSES_PER_SECOND
+ * parts of the per-second heal and damage (splitTotal), so each second's total is unchanged. */
+export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
+
+/** Mel's cast (11-20, user-approved): she lands from her dash MEL_DASH_LAND_TICKS after the cast and her bolts leave
+ * MEL_RELEASE_TICKS after it (both aligned to the original frame by frame, every star level alike, 3 stars inferred; see
+ * docs/S13_RULES_GAP.md 梅尔弹幕). The bolts fly MEL_BOLT_TICKS_PER_HEX a hex (self-chosen, not original data; the original's
+ * hit time is not measured) and settle where they land. */
+export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PER_HEX = 2;
+
+/** Violet's combo (11-21, authorization ②): two jabs then an uppercut on the target taken at the cast, each landing on its own
+ * tick after the cast (aligned to the original frame by frame; which hit is hers is not fully verified, see
+ * docs/S13_RULES_GAP.md 蔚奥莱连击). The uppercut's knock-up starts with it. */
+export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TICKS = 29;
+
+/** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
+ * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
+export const JINX_ROCKET_LAUNCH_TICKS = 27, JINX_ROCKET_FLIGHT_TICKS = 10;

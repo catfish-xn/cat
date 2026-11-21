@@ -123,7 +123,8 @@ describe('P0 target retention', () => {
     expect(get(first.state).targetId).toBe(old.id);
     const cast = first.events.find(e => e.type === 'cast');
     expect(cast).toMatchObject({ receipt: { targetIds: [far.id] } });
-    expect(get(first.state).tasks!.map(t => t.targetId)).toEqual(Array(5).fill(far.id));
+    // Landing batch (11-20): the first shot left on the cast and is in flight; five more wait for their launch.
+    expect(get(first.state).tasks!.map(t => t.targetId)).toEqual(Array(6).fill(far.id));
     const second = stepCombat(first.state);
     expect(get(second.state).targetId).toBe(old.id);
     expect(get(second.state).tasks).toEqual(get(first.state).tasks);
