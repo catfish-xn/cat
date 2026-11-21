@@ -92,3 +92,7 @@ with that one substitution. SHA-256: `9164136961297336b3fed3376a006ed77c36cdec87
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed (the 1-2 fight has none of the batch's heroes).
 Exported with the same command, v24 gameplay check skipped as above; the export equals the old file with that one substitution.
 SHA-256: `65b0a55d862a47254941e29386f36f5a23bb4422eb4da0c329ddfa7067d80b76`.
+
+2026-11-21 死亡判定随机键: identity-only refresh, `contentDigest` (×2) `2f642cc0` → `2de94b73` (`S13_COMBAT_RULES.deathRollKeys`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `b12bb3e6a23602eaee7bc8f77beef13373d69a349415097426c648440ef21e43`.

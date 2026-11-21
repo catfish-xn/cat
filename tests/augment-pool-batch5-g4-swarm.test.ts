@@ -59,12 +59,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
   // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
   // 技能落地结算批 (2026-11-20): contentDigest cf212873->2f642cc0 only; loot replay unchanged.
-  const back=save.split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 死亡判定随机键 (2026-11-21): contentDigest 2f642cc0->2de94b73 only; loot replay unchanged.
+  const back=save.split('2de94b73').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('efc1c1c8f63d57179cd8945a3efcd40a5f4c571f2bc0bec3aea67d0222cde683'); // landing batch digest cf212873 -> 2f642cc0 (was 6dc0e509…, before #739 91a0760c…)
+    .toBe('75afef99db371d72e96b9a20e59d97036b82cd3059c4ab4b02bb78295c61daea'); // death-keyed rolls 2f642cc0 -> 2de94b73 (was efc1c1c8…, landing batch; 6dc0e509… before it)
   expect(restoreMatch(save)).toEqual(started);
 });
 
