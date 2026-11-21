@@ -50,5 +50,5 @@ export const S13_COMBAT_RULES = Object.freeze({
   // Landing batch (11-20, timing only): these skills settle where they land, with abilityProjectileLaunched/Landed events.
   skillLanding: 'darius-spin-lux-shield-maddie-shot-heimer-rocket-morde-claw-settle-on-landing-events-launched-landed',
   // Death-keyed rolls (Good for Something, Loot Explosion; 2026-11-20): keyed by the death's tick and unit, not its eventSeq.
-  deathRollKeys: 'combat-tick-unit-not-event-seq',
+  deathRollKeys: 'death-roll-key-tick-unit-v1',
 });

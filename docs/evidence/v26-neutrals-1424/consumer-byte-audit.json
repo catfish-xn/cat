@@ -306,9 +306,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 14034,
+      "currentBytes": 14037,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "a162ebf3c1326ade2501d04b27cf5393e5a5ca182b4e41538add16c3368f389b",
+      "currentSha256": "949dd3163470af70e51f9420b390f7cdc607c17f21f7b59ad8fbd07bb8f7f239",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -922,9 +922,9 @@
     "tests/death-roll-keys.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2320,
+      "currentBytes": 3243,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c27800da09947befd6bc9dffc0ec41a17c178557c9699f42adb55a3b77a2b13d",
+      "currentSha256": "811a2bb3f4cddc9eb038de7eee8ad186e25c100b458cecc407b1f5b2e3f3fc83",
       "firstDifferentByte": 0
     },
     "tests/departed-effect-source-restore.test.ts": {
@@ -1010,9 +1010,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 6895,
+      "currentBytes": 6898,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "aa166638d58a464dfc7018a46e728374139051af3e71df26fd07b617c3b8297c",
+      "currentSha256": "d75f8a8fd42f41410d927805eec7929e07126b0168c6bce2f5e9d96595c8fd2a",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1020,7 +1020,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b12bb3e6a23602eaee7bc8f77beef13373d69a349415097426c648440ef21e43",
+      "currentSha256": "81cda1aa2103d88fa9f1dd4a05d01a670d69cbaf379c5929a0226c05c3262aa4",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
@@ -1176,17 +1176,17 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17773,
+      "currentBytes": 17772,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ca7765d07eed7bbdaf7a8f5ac4a04eaba903e94194a5a14ec29ba955988ca5d1",
+      "currentSha256": "c3ca587f0750da7575373c07d2a3bc3aac8c594c379db64bc5af8e22f2db2888",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23872,
+      "currentBytes": 23871,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "866716f8989c5d8e04fad68ec9b824571a8999c1f4ad5703e0f78fa76fda0f08",
+      "currentSha256": "67f8fb03dfc354fcc88ca05c0eaf132258b86e92da598fb9ba592426b42cbb9b",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1758,6 +1758,13 @@
       "currentSha256": "d83fe4bf475beac6b948966c2ced60616078a004a5597ad4946c9d995461ced2",
       "firstDifferentByte": 3999
     },
+    "tests/m5-oracle-loot-explosion.test.ts": {
+      "previousBytes": 9329,
+      "currentBytes": 9714,
+      "previousSha256": "324a4c2c1d995691f811d9ce344708c36185448babdff1cc386986349d78d1a0",
+      "currentSha256": "3a167b43770f47914e5548e36163bbc2082130afe8735d3e9e4c456ab599e91a",
+      "firstDifferentByte": 6064
+    },
     "tests/m5-oracle-route-driver.test.ts": {
       "previousBytes": 1794,
       "currentBytes": 1983,
@@ -1827,7 +1834,7 @@
       "previousBytes": 7455,
       "currentBytes": 17378,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "37e185cffc4ae393c86a031868e64b0fd3e066896ae9fff5fa2e649a91c9c347",
+      "currentSha256": "7bbb9660beaa8f1e05992d46ae6942b82e1c0d99af7fbbaa11529efe77841f49",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
