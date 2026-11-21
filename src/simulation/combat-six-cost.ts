@@ -66,13 +66,13 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
   // 11-20 (user-approved, aligned to the original frame by frame): she lands MEL_DASH_LAND_TICKS after the cast (melDash task)
   // and her bolts leave MEL_RELEASE_TICKS after it; she channels until then. Who is shielded and hit is still decided now, from
   // the cell she dashes to.
-  const destination=free[0],from=u.cell,landing=destination??u.cell;
+  const destination=free[0],landing=destination??u.cell;
   if(destination&&hexDistance(destination,u.cell)>0)u.tasks.push({key:JSON.stringify([u.id,seq,'melDash']),kind:'melDash',source:origin(u),executeAtTick:ctx.tick+MEL_DASH_LAND_TICKS,
     targetId:null,amount:0,ordinal:0,total:1,cancellable:false,actionSeq:seq,cell:{...destination}});
   applyStatus(u,origin(u),'channel',0,MEL_RELEASE_TICKS,ctx.tick,ctx.events,true,'',seq);
   const near=(c:HexCell)=>(t:S13Unit)=>hexDistance(c,t.cell);
   const allies=ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(landing,t.cell)<=2)
-    .sort((a,b)=>near(landing)(a)-near(landing)(b)||(a.id<b.id?-1:1)).slice(0,2);void from;
+    .sort((a,b)=>near(landing)(a)-near(landing)(b)||(a.id<b.id?-1:1)).slice(0,2);
   for(const t of [u,...allies])grantShield(t,origin(u),variable(u,'Shield'),ctx.tick+P.mel.shieldTicks,ctx.tick,ctx.events);
   // One read decides the third-cast bolts and the branch reported (display output only).
   const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
