@@ -108,3 +108,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-21 蔚奥莱连击 v1: identity-only refresh, `contentDigest` (×2) `6ad3ea6f` → `3ade1e2c` (`S13_COMBAT_RULES.violetCombo`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `8b74fcdb6eb0977426bbdee886705e7d1a9e6bad68e6ec4898ee40b0b547df94`.
+
+2026-11-21 金克丝飞弹手雷 v1: identity-only refresh, `contentDigest` (×2) `3ade1e2c` → `8dd39163` (`S13_COMBAT_RULES.jinxRocketChompers`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `39769c9bdba69f482b9c2dc7af8970981e9d599c319c54f52d42ee9573b2d314`.

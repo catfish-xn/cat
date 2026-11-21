@@ -306,9 +306,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 14408,
+      "currentBytes": 14531,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "b4dd5a110a4bd2613df6be794ff71d09e60c9e3695a06639eee769ffb966f6f2",
+      "currentSha256": "5cd44bb7e5fcb19f56576518089100bf86bc8977d4482e1693389924c71ee6de",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -708,9 +708,9 @@
     "tests/cast-branch-rotations.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7768,
+      "currentBytes": 7806,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "382b002fc1ce15d792a7a882d5bd4d17a2f6b79d330ff79eeceef683bfae17b0",
+      "currentSha256": "e9679f37c007045480da82eca8d637911f430665acb1791574ac021de918854c",
       "firstDifferentByte": 0
     },
     "tests/cast-windup-batch1.test.ts": {
@@ -1002,9 +1002,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 8154,
+      "currentBytes": 8586,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "8913d85bec8ff98f164d0a624ebc8f9886fe1dd25170b719ea20734e4bcbf513",
+      "currentSha256": "1c34c4ee453601e7531e9206cf36a89f6038340348815e8e46e4e197253d1bc2",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1012,7 +1012,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8b74fcdb6eb0977426bbdee886705e7d1a9e6bad68e6ec4898ee40b0b547df94",
+      "currentSha256": "39769c9bdba69f482b9c2dc7af8970981e9d599c319c54f52d42ee9573b2d314",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
@@ -1161,17 +1161,17 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17771,
+      "currentBytes": 17773,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "e04e41467eabd13ebf01445fa6d282597b806b69c4b3e353f7c8ec11f8a73f1c",
+      "currentSha256": "b8cf3cc82d9187462898385deac1e89710311b0485210a7dcb6ad5b84b6a4c47",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23870,
+      "currentBytes": 23872,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d02c524a9d0e39fb40714ef0a46f0180e72da864c2ccc8a1596b3ca0ca5fa3b6",
+      "currentSha256": "d1f4e7479035c67f7e6306fcbdc88a54bd828408d11381271c66c22004127bca",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1636,6 +1636,14 @@
       "currentSha256": "032e3fc00711e9640282282f14417034e9528d09d6860d43c144b72d7fbe40d4",
       "firstDifferentByte": 0
     },
+    "tests/jinx-timing.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6724,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "7052221b405c23fe14fe32986436b56204c7c7c1dfafd0462be72eba8e1f0526",
+      "firstDifferentByte": 0
+    },
     "tests/knockup-status.test.ts": {
       "previousBytes": 4240,
       "currentBytes": 6570,
@@ -1818,9 +1826,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 17744,
+      "currentBytes": 17869,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "25dd43e2262e30170975881f26562c089510c0dc0e19d5bd8506ecde778aee83",
+      "currentSha256": "6b98ac2eb399faec23cd2a8db4c22855164b3661fdf5d3aed0eeee596de6c8ac",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -4981,9 +4989,9 @@
     "tests/violet-combo.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5706,
+      "currentBytes": 5707,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "378aef5bff5eac3f5b42deef5f147ef76b64e6806035d1cce6ce559186bd9090",
+      "currentSha256": "3016cc159878324fc4822a9f3751761b4e226f71002c8c5e920e911df00805ec",
       "firstDifferentByte": 0
     }
   }
