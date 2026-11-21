@@ -111,10 +111,11 @@ export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
  * hit time is not measured) and settle where they land. */
 export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PER_HEX = 2;
 
-/** Mel's normal cast fires MEL_BOLTS_PER_TARGET bolts at each target (11-21, authorization ②). Target k starts
- * MEL_TARGET_STAGGER_TICKS × k after her release and its bolts spread over MEL_BOLT_SPAN_TICKS, first to last (both aligned to
- * the original frame by frame). The single-bolt spacing is fitted, not original data: the bolts are laid evenly over the span,
- * rounding to the nearest tick (melBoltOffset). */
-export const MEL_BOLTS_PER_TARGET = 10, MEL_TARGET_STAGGER_TICKS = 1, MEL_BOLT_SPAN_TICKS = 16;
-/** Ticks after its target's start that bolt i (0..MEL_BOLTS_PER_TARGET-1) leaves. */
-export function melBoltOffset(i: number): number { return Math.round(i * MEL_BOLT_SPAN_TICKS / (MEL_BOLTS_PER_TARGET - 1)); }
+/** Violet's combo (11-21, authorization ②): two jabs then an uppercut on the target taken at the cast, each landing on its own
+ * tick after the cast (aligned to the original frame by frame; which hit is hers is not fully verified, see
+ * docs/S13_RULES_GAP.md 蔚奥莱连击). The uppercut's knock-up starts with it. */
+export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TICKS = 29;
+
+/** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
+ * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
+export const JINX_ROCKET_LAUNCH_TICKS = 27, JINX_ROCKET_FLIGHT_TICKS = 10;

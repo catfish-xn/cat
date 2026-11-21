@@ -61,13 +61,16 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 技能落地结算批 (2026-11-20): contentDigest cf212873->2f642cc0 only; loot replay unchanged.
   // 黑默丁格火箭集火 (2026-11-20): contentDigest 2f642cc0->9ccd5f96 only; loot replay unchanged.
   // 斯维因吸取节奏 v2 (2026-11-20): contentDigest 9ccd5f96->eb2d4cee only; loot replay unchanged.
-  // 梅尔施法 v3 (2026-11-21): contentDigest eb2d4cee->2acd4414 only.
-  const back=save.split('2acd4414').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 梅尔施法 v2 (2026-11-21): contentDigest eb2d4cee->6ad3ea6f only.
+  // 蔚奥莱连击 v1 (2026-11-21): contentDigest 6ad3ea6f->3ade1e2c only.
+  // 金克丝飞弹 v1 (2026-11-21): contentDigest 3ade1e2c->5742ae06 only.
+  // 蔚砸地时刻 v2 (2026-11-21): contentDigest 5742ae06->c4667f33 only.
+  const back=save.split('c4667f33').join('5742ae06').split('5742ae06').join('3ade1e2c').split('3ade1e2c').join('6ad3ea6f').split('6ad3ea6f').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('3d80d4878671f3d39cdae71863b9e463aff55bc519640ddfc94716c176f21095'); // Mel cast v3 eb2d4cee -> 2acd4414 (was 04dbe61e…, Swain drain cadence v2; 4f7b1725… Heimerdinger focus)
+    .toBe('91a300f68beb0d5b0760abaf36bdfd459e1f04386bf757699f10125f2de04dd6'); // Vi slam v2 5742ae06 -> c4667f33 (was 0e7dd0e5…, Jinx rocket v1; b955b034… Violet combo v1)
   expect(restoreMatch(save)).toEqual(started);
 });
 

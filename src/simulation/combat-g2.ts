@@ -10,7 +10,7 @@ import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
 import { hexDistance } from './board';
-import { MALZAHAR_3STAR_GATE_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
+import { MALZAHAR_3STAR_GATE_TICKS, VIOLET_JAB_TICKS, VIOLET_UPPERCUT_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -122,10 +122,16 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       ids.push(target.id);
       break;
     }
-    case 'violet':
-      for (let n = 0; n < v('NumStrikes'); n++) strike(target, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), 'physical');
-      strike(target, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), 'physical');
-      applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events, false, '', undefined, true); break; // the uppercut knocks up
+    case 'violet': {
+      // 11-21: two jabs, then the uppercut that knocks up, each on its own tick (VIOLET_JAB_TICKS, VIOLET_UPPERCUT_TICKS; g2Landing,
+      // packets 0, 1, 2). Target and amounts are taken now; a target that dies first takes nothing and no other one is picked. She
+      // channels until the uppercut (no move, attack or cast), like Mel before her release.
+      const total = VIOLET_JAB_TICKS.length + 1;
+      VIOLET_JAB_TICKS.forEach((at, n) => { task(unit, 'g2Landing', ctx.tick + at, target.id, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), seq, n, total); ids.push(target.id); });
+      task(unit, 'g2Landing', ctx.tick + VIOLET_UPPERCUT_TICKS, target.id, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), seq, total - 1, total);
+      applyStatus(unit, origin(unit), 'channel', 0, VIOLET_UPPERCUT_TICKS, ctx.tick, ctx.events, true, '', seq); // busy until the uppercut
+      ids.push(target.id); break;
+    }
     case 'malzahar': {
       // The gate crosses the target row: two hexes on either side, clipped by the board.
       const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
@@ -241,6 +247,10 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     else if (name === 'malzahar') { // the 3-star gate: damage (packet n) and shred, on a target taken on the cast
       hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', true, t.source);
       effect(ctx, unit, target, status('shred', 2000, Math.round(variable(unit, 'ShredDuration') * 20), { activation: 'immediate' }), t.actionSeq);
+    }
+    else if (name === 'violet') { // jab n, or the uppercut (the last), which knocks up
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'physical', false, t.source);
+      if (t.ordinal === t.total - 1) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration') * 20), ctx.tick, ctx.events, false, '', undefined, true);
     }
     else if (name === 'renata') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', t.ordinal > 0, t.source); // her missiles: target, then the blast's neighbours
     else if (name === 'zyra') {

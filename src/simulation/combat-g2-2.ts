@@ -1,5 +1,5 @@
 import { scheduleShot } from './ability-projectile';
-import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, MORDEKAISER_CLAW_TICKS } from './cast-windup';
+import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, JINX_ROCKET_LAUNCH_TICKS, MORDEKAISER_CLAW_TICKS } from './cast-windup';
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
 import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
@@ -16,11 +16,11 @@ import { lineContains, lineDirections } from './combat-skill-lines';
 /** User-approved 10-24 from the S13 third-party data table: Vi's row shockwave knocks up for 0.5 s (was 0.25 s). */
 export const VI_ROW_KNOCKUP_TICKS = 10;
 /**
- * User-approved 2026-11-11 (original 3-star footage: the damage lands shortly after the shield):
- * Vi grabs her target and slams 12 ticks (0.6 s, our fitted value, not original data) after the cast. The target is held (a knock-up) until the slam; damage,
- * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚).
+ * Vi grabs her target and slams VI_SLAM_TICKS after the cast (user-approved 2026-11-11; 11-21, authorization ②: aligned to the
+ * original frame by frame from two independent clips, was a fitted value). The target is held (a knock-up) until the slam; damage,
+ * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚, 蔚砸地时刻).
  */
-export const VI_SLAM_TICKS = 12;
+export const VI_SLAM_TICKS = 17;
 /**
  * User-approved 2026-11-15 (original footage: the damage number shows when the kick lands, not on the cast):
  * Camille's kick lands 5 ticks (0.25 s) after the cast. It follows the rising kick of our cast animation
@@ -113,7 +113,13 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const phase=(u.runtime.castCount-1)%3;ctx.castBranch=(['zap','chompers','rocket'] as const)[phase];
       if(phase===0){const cells=u.starLevel===3?null:path(ctx.board,u.cell,t.cell);for(const x of foes().filter(x=>cells?cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row):lineContains(u.cell,t.cell,x.cell,1,14))){strike(x,ad('ZapPercentAD'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('ZapStunDuration')*20),ctx.tick,ctx.events);}}
       else if(phase===1){const centers=foes().slice(0,v('NumOfFlameChompers'));for(const x of foes().filter(x=>centers.some(c=>hexDistance(c.cell,x.cell)<=1)))strike(x,ad('FlameChompersPercentAD'),'physical',true);}
-      else {const center={col:Math.floor((ctx.board.columns-1)/2),row:Math.floor((ctx.board.rows-1)/2)};for(const x of foes())strike(x,Math.floor(ad('DeathRocketPercentAD','DeathRocketAP')*Math.max(0,10000-Math.round(v('FalloffPercent')*10000)*hexDistance(center,x.cell))/10000),'physical',true);}break;
+      else {
+        // 11-21 (authorization ②): the rocket leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes at the board's centre
+        // JINX_ROCKET_FLIGHT_TICKS later (abilityProjectile 'jinx-rocket'), where who is hit and the falloff are read. The amount
+        // before falloff is taken now. She channels until it leaves (self-chosen, not original data); if she dies first, it never leaves.
+        scheduleShot(u,'jinx-rocket',ctx.tick+JINX_ROCKET_LAUNCH_TICKS,t.id,ad('DeathRocketPercentAD','DeathRocketAP'),seq,0,1);
+        applyStatus(u,origin(u),'channel',0,JINX_ROCKET_LAUNCH_TICKS,ctx.tick,ctx.events,true,'',seq);ids.push(t.id);
+      }break;
     }
     case 'ambessa': {
       // One parity read decides the branch that resolves and the branch reported (display output only).
