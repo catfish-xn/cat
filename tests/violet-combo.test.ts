@@ -50,7 +50,7 @@ describe('Violet combo timing', () => {
 
 // The combo timing changes battle results, so its rule identifier is part of the content digest: a save written under the
 // digest just before it (Mel's barrage) is turned away as another version, never replayed under the new rule.
-const BEFORE_DIGEST = 'fnv1a32-utf16:6ad3ea6f';
+const BEFORE_DIGEST = 'fnv1a32-utf16:2acd4414';
 describe('Violet combo: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
     expect(S13_COMBAT_RULES.violetCombo).toBe('violet-combo-settle-per-hit-v1');

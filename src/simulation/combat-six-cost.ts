@@ -61,13 +61,15 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
   const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
   // 11-21 (Fable, from original footage): every normal cast dashes (her own cell is no candidate); the third cast does not move.
   // Where she lands is self-chosen, not original data: the free cell within dashRadius with the most allies within 2 hexes
-  // (counted up to 2), then the nearest, then row and column. With no free cell she stays.
+  // (counted up to 2), then the nearest, then the farthest from its nearest enemy (11-21), then row and column. With no free
+  // cell she stays.
   const free:HexCell[]=[];
   if(!third)for(let row=0;row<ctx.board.rows;row++)for(let col=0;col<ctx.board.columns;col++){
     const cell={col,row};if(hexDistance(u.cell,cell)<=P.mel.dashRadius&&hexDistance(u.cell,cell)>0&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(t.cell,cell)===0))free.push(cell);
   }
   const coverage=(cell:HexCell)=>ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(cell,t.cell)<=2).length;
-  free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
+  const foesNow=enemies(u,ctx.units),clearance=(cell:HexCell)=>foesNow.length?Math.min(...foesNow.map(t=>hexDistance(cell,t.cell))):0;
+  free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||clearance(b)-clearance(a)||a.row-b.row||a.col-b.col);
   // 11-20 (user-approved, aligned to the original frame by frame): she lands MEL_DASH_LAND_TICKS after the cast (melDash task)
   // and her bolts leave MEL_RELEASE_TICKS after it; she channels until then. Who is shielded and hit is still decided now, from
   // the cell she dashes to.

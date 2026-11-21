@@ -55,7 +55,7 @@ describe('Jinx cast timing', () => {
 
 // The new timing changes battle results, so its rule identifier is part of the content digest: a save written under the digest
 // just before it (Violet's combo) is turned away as another version, never replayed under the new rule.
-const BEFORE_DIGEST = 'fnv1a32-utf16:3ade1e2c';
+const BEFORE_DIGEST = 'fnv1a32-utf16:40111d4d';
 describe('Jinx timing: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
     expect(S13_COMBAT_RULES.jinxRocket).toBe('jinx-rocket-settle-on-explosion-v1');
