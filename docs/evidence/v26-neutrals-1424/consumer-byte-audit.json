@@ -741,9 +741,9 @@
     "tests/castcmp-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5150,
+      "currentBytes": 6137,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "562fff85d23d7acfbcd92726ad40604530c98afd1d56acdec022797ec7fa1ba8",
+      "currentSha256": "947c08fafc8c97227ecaa119666fd3d8b3935115fd20cf95d9724af6a3586caa",
       "firstDifferentByte": 0
     },
     "tests/castcmp-as-scale.test.ts": {
@@ -4391,9 +4391,9 @@
     "tests/vfx-ltk-crit-flash.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5789,
+      "currentBytes": 7056,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "cd91802d03d770c780c94754a5a96ba0a7c1338b8fd42573d568d890af3cdd8b",
+      "currentSha256": "f65cafa410badc6d37e756aa1beb6237021ecfcd89894ed5b8c357318d7e782c",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-bone.test.ts": {

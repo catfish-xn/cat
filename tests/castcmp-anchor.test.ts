@@ -8,6 +8,7 @@ describe('castcmp real-combat window anchors', () => {
     expect(parseAnchor(undefined)).toEqual(CAST_ANCHOR);
     expect(parseAnchor('cast')).toEqual(CAST_ANCHOR);
     expect(parseAnchor('attack-hit')).toEqual({ kind: 'attack-hit' });
+    expect(parseAnchor('crit-hit')).toEqual({ kind: 'crit-hit' });
     expect(parseAnchor('event:packetDamage')).toEqual({ kind: 'event', type: 'packetDamage' });
     for (const bad of ['', 'attack', 'event:', 'event:9x', 'event:a b']) expect(parseAnchor(bad), bad).toBeNull();
   });
@@ -20,6 +21,10 @@ describe('castcmp real-combat window anchors', () => {
     expect(anchorMatches({ kind: 'attack-hit' }, { ...hit, hit: false })).toBe(false);
     expect(anchorMatches({ kind: 'attack-hit' }, { ...hit, delivery: 'ability-direct' })).toBe(false);
     expect(anchorMatches({ kind: 'attack-hit' }, { ...hit, sourceId: 'foe' })).toBe(false);
+    expect(anchorMatches({ kind: 'crit-hit' }, hit)).toBe(false);
+    expect(anchorMatches({ kind: 'crit-hit' }, { ...hit, critical: true })).toBe(true);
+    expect(anchorMatches({ kind: 'crit-hit' }, { ...hit, critical: true, hit: false })).toBe(false);
+    expect(anchorMatches({ kind: 'crit-hit' }, { ...hit, critical: true, delivery: 'ability-direct' })).toBe(false);
     expect(anchorMatches({ kind: 'event', type: 'packetDamage' }, { ...hit, delivery: 'ability-direct' })).toBe(true);
     expect(anchorMatches({ kind: 'event', type: 'attack' }, { type: 'attack', attackerId: 'me' })).toBe(true);
     expect(anchorMatches({ kind: 'event', type: 'death' }, { type: 'death', unitId: 'foe' })).toBe(false);
@@ -42,6 +47,13 @@ describe('castcmp real-combat window anchors', () => {
     expect(audit.targets.length).toBe(1);
   });
 
+  it('a crit-hit window is about a basic attack of me that crits', () => {
+    const units = realUnits({ unit: 'renata', star: 2, form: null, foe: 'amumu', dist: 4, nfoes: 2, foestar: 2 });
+    const events: any[][] = [];
+    const run = runRealCombat(units, 60, (_state, shown) => { events.push(shown); }, 1, { kind: 'crit-hit' });
+    expect(run.castIndex).toBeGreaterThan(0);
+    expect(events[run.castIndex]!.some(e => e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'basic-attack' && e.critical === true)).toBe(true);
+  });
   it('N counts ticks, not events: a pulse striking both foes in one tick counts once', () => {
     const units = realUnits({ unit: 'amumu', star: 1, form: null, foe: 'amumu', dist: 2, nfoes: 2, foestar: 2 });
     const anchor = { kind: 'event', type: 'packetDamage' } as const, ticks: number[] = [];

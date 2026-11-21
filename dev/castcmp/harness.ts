@@ -216,7 +216,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     import('../../src/presentation/combat-display'), import('../../src/presentation/control-display')]);
   // A bad ?anchor throws: the recording must not fall back to the first cast.
   const anchor = rc.parseAnchor(start.anchor);
-  if (!anchor) throw new Error(`?anchor must be cast, attack-hit or event:<type>, got ${start.anchor}`);
+  if (!anchor) throw new Error(`?anchor must be cast, attack-hit, crit-hit or event:<type>, got ${start.anchor}`);
   const nfoes = Number(params.get('nfoes') ?? 4), foeOffset = params.get('foeoffset') !== null ? Number(params.get('foeoffset')) : 0;
   // ?foeoffset=K (v-capture --foe-offset K): the foes K columns to the side, the target ahead and to the side of the caster.
   if (foeOffset !== 0) { const why = rc.foeOffsetProblem(foeOffset, nfoes); if (why) throw new Error(why); }

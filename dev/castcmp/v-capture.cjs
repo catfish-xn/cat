@@ -7,7 +7,7 @@
 //   [--render-probe 1]: also expose the renderer's debug hook (?debug3d) so render-meta.json lists each unit's animation clock
 //   [--hide-units 1]: unit models are not drawn (bars, stars, shadows and effects are); every frame and the keyframes caption say so
 //   [--pin-foe N]: dummies only; one dummy N hexes straight ahead of the caster (overrides --dist/--nfoes; casts target it), labelled 'pinned dummy'
-//   [--anchor attack-hit | event:<type>]: --real only; the window is about me's N-th basic attack that hits, or N-th display event
+//   [--anchor attack-hit | crit-hit | event:<type>]: --real only; the window is about me's N-th basic attack that hits, or N-th display event
 //     of that type it sends or is the subject of (real-combat.ts Anchor; N = --cast-index, default 1) instead of its N-th cast:
 //     a unit that never casts (Amumu, Zeri) still gets a window.
 //   [--cast-index N] [--from-start 1 | --lead-ms MS]: --real only; one window choice (real-combat.ts leadTicksFor): the anchor
