@@ -30,6 +30,11 @@ export function createBatch2VfxBridge(host: Host) {
   const storms = new Map<string, { tick: number; targets: readonly string[]; star: number }>();
   const attacks = new Set<string>();
   const energyTicks = new Map<string, number>();
+  // Mel's casts by caster, then action: true for her third cast (its own bolts, hits and explosion). Her latest two casts are
+  // kept, enough for bolts still flying from one cast when the next begins.
+  const melCasts = new Map<string, Map<number, boolean>>();
+  // Mel casters whose cast has begun and whose bolts have not left yet: their next movement is that cast's dash landing.
+  const melDashing = new Set<string>();
   // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
   let release: LtkPlayOptions['release'];
   // The attack being played crits (LtkPlayOptions.crit); only attack plays carry it.
@@ -125,7 +130,30 @@ export function createBatch2VfxBridge(host: Host) {
           }
         }
       }
+      // Mel (rules 'mel-barrage'): her dash lands, then her bolts leave and land, each reported by the rules; observed in
+      // catch-up too, so a later bolt still knows its cast.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'mel') {
+        const casts = melCasts.get(event.sourceId) ?? new Map<number, boolean>();
+        casts.set(event.actionSeq, event.branch?.branch === 'third');
+        for (const seq of [...casts.keys()].slice(0, -2)) casts.delete(seq);
+        melCasts.set(event.sourceId, casts); melDashing.add(event.sourceId);
+      }
+      const melDash = event.type === 'movement' && melDashing.delete(event.unitId);
+      const melBolt = (event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'mel-barrage';
+      if (melBolt && event.type === 'abilityProjectileLaunched') melDashing.delete(event.sourceId);
       if (!current) return;
+      if (melDash) play('mel', event.unitId, [], 'mel-dash');
+      if (melBolt) {
+        const third = melCasts.get(event.sourceId)?.get(event.actionSeq) === true;
+        // Each bolt flies the rules' own flight (champions/mel.ts MEL_BOLT_FLIGHT) from where she stands as it leaves.
+        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : 'mel-bolt');
+        // Its hit when it lands on a target still there (a bolt whose target died in flight lands on nothing).
+        if (event.type === 'abilityProjectileLanded' && event.hit) {
+          play('mel', event.sourceId, [event.targetId], third ? 'mel-third-hit' : 'mel-bolt-hit', 'cast', true);
+          // The third cast's explosion, on its main target (the first bolt's, the enemy nearest where she landed).
+          if (third && event.ordinal === 0) play('mel', event.sourceId, [event.targetId], 'mel-third-blast', 'cast', true);
+        }
+      }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
       if (event.type === 'melEnergyChanged' && event.after > event.before && energyTicks.get(event.unitId) !== event.tick) {

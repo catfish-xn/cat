@@ -86,7 +86,8 @@ export const CAST_START_RANKS: Readonly<Record<string, Readonly<Record<string, '
   // Jayce back form: build-up, blast
   'jayce-back': { '508e8c05': 'decorative', 'e5c0f9d8': 'body' },
   // Mel: dash, cast flash
-  'mel': { '9f8fe9f1': 'body', 'e75b9fe8': 'decorative' },
+  'mel': { 'e75b9fe8': 'decorative' },
+  'mel-dash': { '9f8fe9f1': 'body' },
 };
 
 /**

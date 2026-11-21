@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CUE_ADDITIONS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_ADDITIONS, CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
 
 // Early-stop group A, first batch (11-15): no rule event ends these cues, so each plays to its system's own end
@@ -8,9 +8,10 @@ import { elise } from '../src/rendering/three-mode/vfx-ltk/batch3/elise';
 const cue = (list: readonly { system: string }[] | undefined, system: string) => list!.find(c => c.system === system) as Record<string, unknown>;
 describe('early-stop group A plays to each system\'s own end', () => {
   it.each([
-    ['mel-third', 'e2f2798d', 2.3], ['mel-third', '4c885a29', 1.2], ['mel-third', '3857e78b', 6.5], ['elise-front', '6d6525e8', 2.1],
+    ['mel-third', 'e2f2798d', 2.3], ['mel-third', '4c885a29', 1.2], ['mel-third-blast', '3857e78b', 6.5], ['elise-front', '6d6525e8', 2.1],
   ] as const)('%s %s plays to its own end (%s)', (key, system, duration) => {
-    const entry = cue(CUE_OVERRIDES[key], system);
+    // Mel's third-cast explosion plays when its bolt lands (11-21, batch2-bridge.ts), from its own display branch.
+    const entry = cue(CUE_OVERRIDES[key] ?? CUE_EXTRA_SKILLS[key], system);
     expect(entry).toMatchObject({ duration });
     expect(entry.stopAfter).toBeUndefined(); expect(entry.fadeOut).toBeUndefined();
   });
