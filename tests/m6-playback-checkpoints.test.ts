@@ -141,7 +141,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // again (was 856e39a9…, #795); events and terminal below are unchanged.
     // #796: the record's contentDigest is now the Heimer focus digest (57428247 -> 31713f8c), so the record hash moves again
     // (was a77da78b…, #783); events and terminal below are unchanged.
-    expect(bytesHash(record)).toBe('69a6c99c07ee01f6c9818e435612396a75aca538f0c37fab64ff0b61aa472a07');
+    // #797: the record's contentDigest moves (31713f8c -> b74b81b0), so the record hash moves again (was 69a6c99c…); events and
+    // terminal below are unchanged.
+    expect(bytesHash(record)).toBe('c12c3ed64a8ba1c29e33fad20f784ccf20320cb6eb24aa10dd9ef1713635f256');
     expect(bytesHash(record.events)).toBe('3d9c7fc139b05e5795d4133ffaeff78a9e7084e14912bc9599fa23e69722fa7a');
     expect(bytesHash(expected.terminal)).toBe('fbf3b60ecf7829825848d88d79ade4df4076b05e2cbbc71a8b5ece3b689ee12e');
     // An external JSON record is cold on each constructor, like browser fixtures.
