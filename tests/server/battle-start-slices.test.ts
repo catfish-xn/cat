@@ -201,7 +201,8 @@ describe('battle opening slices', () => {
         // from the first battles on (battle-start.json re-recorded with landing off is byte-identical to the previous file),
         // so seat 5 now fields 7 (was 9). The assertion below is about slices, not about these counts.
         // Landing batch (battle-start.json re-recorded on a3d6db81): seat 4 now fields 8 (was 7).
-        .toEqual([8, 8, 8, 8, 7, 8, 8]); // [8, 8, 8, 7, 7, 8, 8] before the landing batch; was [8, 8, 8, 7, 9, 8, 8] before #739; v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-rec; seat 5 fields 9 (was 8) in the wind-up batch 2 re-recordording; the fifth live seat fields 8 (was 9) after the 14.24b unit values re-recording (2026-11-12)
+        // #797 (Swain's drain four times a second; battle-start.json re-recorded at its epoch): the route changes again.
+        .toEqual([8, 8, 9, 7, 8, 8, 7]); // [8, 8, 8, 8, 7, 8, 8] before #797; [8, 8, 8, 7, 7, 8, 8] before the landing batch; was [8, 8, 8, 7, 9, 8, 8] before #739; v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-rec; seat 5 fields 9 (was 8) in the wind-up batch 2 re-recordording; the fifth live seat fields 8 (was 9) after the 14.24b unit values re-recording (2026-11-12)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

@@ -3506,9 +3506,9 @@
     },
     "tests/server/battle-start-slices.test.ts": {
       "previousBytes": 13052,
-      "currentBytes": 14571,
+      "currentBytes": 14728,
       "previousSha256": "8ee63aeeac5cdc9056d7b8145465bc964baba2ec402706d59f5265eec21f8ad7",
-      "currentSha256": "b7f23027abdd046cb351e4fb96f38bac332558ab512f1613bc1ad8f04b9523bf",
+      "currentSha256": "6007dba9d08d26f4430d52128453442c965ff0713da0e0db8de4eb8a5462a5be",
       "firstDifferentByte": 623
     },
     "tests/server/bot-driver-helper.ts": {
