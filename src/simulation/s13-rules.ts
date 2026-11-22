@@ -51,4 +51,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   skillLanding: 'darius-spin-lux-shield-maddie-shot-heimer-rocket-morde-claw-settle-on-landing-events-launched-landed',
   // Death-keyed rolls (Good for Something, Loot Explosion; 2026-11-20): keyed by the death's tick and unit, not its eventSeq.
   deathRollKeys: 'death-roll-key-tick-unit-v1',
+  // Malzahar's gate v1 (11-20): a line across his target (14.24 description), square to him -> target (footage); axis pick self-chosen.
+  malzaharGate: 'malzahar-gate-line-across-target-square-to-caster-v1',
 });
