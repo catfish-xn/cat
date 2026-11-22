@@ -4410,9 +4410,9 @@
     "tests/vfx-ltk-batch3.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 26762,
+      "currentBytes": 28998,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "52d29f3dc16fc91d3218434198eecd604293982cfeb67984c8b9039ba35c9847",
+      "currentSha256": "1cdf1be0669d123b882c8fe1db6815773db102128026a9e766accef4e8bac5d9",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-beam-trim.test.ts": {
