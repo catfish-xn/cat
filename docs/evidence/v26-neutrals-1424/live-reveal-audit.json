@@ -20,7 +20,7 @@
     "scripts/verify-v26-neutrals-1424-epoch.cjs": "d49dd679d9bdc213819617c345a338f96f7e3cc870ac39a8e4e118908f797087",
     "src/simulation/ability-display-source.ts": "320132c6ec4be8a8e149be979e16539488ee676a31b8b95c87df1512849e60bb",
     "src/simulation/ability-display.ts": "13292b832a0e201ae70b202e08ff742bb56bd975c322ed8450b6022320014312",
-    "src/simulation/ability-projectile.ts": "54b8d320dd97d18b84b39b692ba3a56bed141403a102bfaffb2816e73832397a",
+    "src/simulation/ability-projectile.ts": "398284a7c8b2202bb5fb52522ef210a013ccbfb6be7deda7b8d80de7fb25efa4",
     "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
     "src/simulation/anomalies/availability.ts": "ef9b07c61873878c909ba026366b19d6936df200d8870c29c7a0e48b63fb2634",
     "src/simulation/anomalies/bonuses.ts": "0d94565002943d87cee29811dc03d1ebbebd28d4dbc4794be80774e86fd053e5",
@@ -163,7 +163,7 @@
     "src/simulation/carousel-types.ts": "055372e4fa7e86b9321c354902ffb4e3a789999e3914b913abca960572e8ebae",
     "src/simulation/carousel-units.ts": "543124b87b5274a7b78431b014281b7f41db8b35fcc78940bde868ffcad7e845",
     "src/simulation/carousel.ts": "173001302eacd2630bed172a71734a66371112498dacd576e873120a2f2eec7e",
-    "src/simulation/cast-windup.ts": "d6f5115be23282253e50742eed6f069b424970cfe93360c5679c527bcd877a73",
+    "src/simulation/cast-windup.ts": "bed74fe13318d18b3013265d34622ffcc52317daf7d2d802a8fbb63bdcef63d4",
     "src/simulation/choice-acquisition.ts": "0cadd1023ff0425aa00da94847237339fc21d10645aea64d5160f1901744c57b",
     "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
     "src/simulation/combat-abilities.ts": "2a485296e0ca8425f19afe9211f47630af196604efa30ae26dbf98ea8efd7dae",
@@ -189,17 +189,17 @@
     "src/simulation/combat-overtime.ts": "d0fc70ea91bb542106b2a0f15d107dfb2b1d65dc036594311d006133dc1e3660",
     "src/simulation/combat-replay-view.ts": "877c58adef0719a55ad5f36aca00477d67748ae61601a01afc7c6517fa4d94ca",
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
-    "src/simulation/combat-s13-abilities.ts": "f1f6781aa10b9ec75b9b95a1f611489b261b97124e5858a80e39e718c3bdd908",
+    "src/simulation/combat-s13-abilities.ts": "78a94856bc8ba862059d044d1e5f52c47a42babaaa4bc81b5663311f09efd835",
     "src/simulation/combat-s13-state.ts": "74355dd524a62a597dcb057f7938e834b2185f778f8f0444a11c22e4b14c8123",
     "src/simulation/combat-s13.ts": "fae5bd5fba07b866ecf4013dbc01fc00fed4caaf522cc513ebd49ea4746ac548",
-    "src/simulation/combat-six-cost.ts": "b39df5cbc230995b0c9ed9aae27852e648182951ad774e10d66cc84fa5eddb49",
+    "src/simulation/combat-six-cost.ts": "2fe54a48d07e0965798098e24174d42fc0b41d299bf7515691d560746acc31d3",
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
     "src/simulation/combat-stream-terminal.ts": "4c933b425868e0fb032f01575be01afe116b023220c62c40559abaf42895aca3",
     "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
     "src/simulation/combat-targeting.ts": "88392e74ecad17c1f8813ad581edaa52aea41c003c35701c0558471731723b3d",
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
-    "src/simulation/combat-types.ts": "d87b712bb21f8cee72c0137a7071448ab96d3b7d42d841de260b8309993f48b4",
+    "src/simulation/combat-types.ts": "8d83bea6b6fb4afcdb2fdbf0f5ee5484be25b71f3b43f8b2986ee91250c626c7",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
     "src/simulation/combat-v20-traits.ts": "b1427e6b7d1e21ab11d602a1b965332d23c86748ed2cfb056b93e352d8317c98",
     "src/simulation/combat.ts": "812792cf31746e20006da6c8efd1b9db814c92b2ab7e22f58dd09c12e47bd559",
@@ -308,7 +308,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "6816656cf1a55347e9d1dcc7cd83483e036013de2cd8aaf15cf1ffc08ed7dc54",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "4c430d60421659c85f949980cc02cbda89f3b4868d3d94d419507d4352ecb7fe",
+    "src/simulation/content/identity-constants.ts": "b393a077b4e4140f08ca0cb997bc9f2ffe64f0a5b249d5e3f5821330005ab95f",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -586,7 +586,7 @@
     "src/simulation/s13-augments-p2-strategy.ts": "a38577954f2a3a53617df55963ca01c1db1a8b2ddd4d0c64478c3d0304c68eeb",
     "src/simulation/s13-p3-combat.ts": "9796af159ea92ceb29f22d28261cc916aa8308769f99ac882eec24ac5ed2044a",
     "src/simulation/s13-p3-programs.ts": "5368142348225dfe8d63b5913481192c4bf49d8fc7028b534d93e2e28c467769",
-    "src/simulation/s13-rules.ts": "37d594f789baf7f6175d5be9206c68cdadd895e72d93f57dcd132258ae107044",
+    "src/simulation/s13-rules.ts": "b0c34a2b1060c529c3fa134d8a881a2653f09f569a334d7b87bbe26fdedd044a",
     "src/simulation/seat-mechanics/choices.ts": "f68964fa36561844dc5524632ef78fb4c86cc22f305579d62fcc08c5ba7d2c60",
     "src/simulation/seat-mechanics/combat-events.ts": "34232bdaf8f46c87e8ec3395ffed10c551a57b8ce2775eae5f72c90e9340e5f1",
     "src/simulation/seat-mechanics/forms.ts": "4d6e378e85e942d5922cfb75d2c09a5d4e242f97af26728aba51b7f69eb2b90a",
@@ -596,7 +596,7 @@
     "src/simulation/seat-mechanics/replay-units.ts": "9e73e8cf4a7f2d21e5a10e62674a31771b0ea90e10fe9817726337109b3035fb",
     "src/simulation/seat-mechanics/state.ts": "313391d455f813f223797bccc92360a0dc4ae1be0c87ad838dbda0ed0b14427e",
     "src/simulation/seat-mechanics/types.ts": "ab5406abf6544fb533c49eb7ee30ac6a2fb17bb79819ff4ac702c8a502cd0c6f",
-    "src/simulation/serialization-structure.ts": "06d1b384b22f7da5d4344b6f6ee7af4ca7bb7a20b958ca8f00bc3da91dbaadf3",
+    "src/simulation/serialization-structure.ts": "7a1df28e139f710a76029ecf41f9c3a6d60f5bca6c33967b302f91b98a4d6601",
     "src/simulation/serialization.ts": "2a80600b71ef2d1a228c3798986f0c2d140f4899a2f8fcacde9c6d1539af316a",
     "src/simulation/setup-work.ts": "e7832d5d78d5f5b477de28ccf63ac2521870b45c1bde10a93fe012ee24e81ef9",
     "src/simulation/shared-pool-ledger.ts": "3e06e304056d7b42f3bbc6dd9445d4972014fad60d4e111185cceee99c8722df",
@@ -663,12 +663,12 @@
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
   },
-  "contentDigest": "fnv1a32-utf16:b74b81b0",
+  "contentDigest": "fnv1a32-utf16:1ca19aae",
   "route": "mage",
   "seed": 15972,
   "partialSeed": 54239,
   "roundId": "4-7",
-  "prefixHash": "114d9564f3329d7334b2341ab3b00db05f0ae24caf12deac5b727d0e1b053dc7",
+  "prefixHash": "8270064c96559513faeef219e22abb74ecb2c65e3a3094c50db70a1c88ed7eda",
   "previousAssertions": {
     "simultaneous": [
       {
@@ -953,7 +953,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "aba39829f2cd874cd9821285187fd32e214b3f08edef928c934c7f1aa0b9c105",
-      "terminalHash": "4acf4b5aacd83d6ea3b7264c99305e23866160de41dcafa8e1e2bb66e40b15f7",
+      "terminalHash": "5d8d46f565923448d4aa7d2413f720731d827fa7b934ffce967a4cfb18a9cb31",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1127,7 +1127,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "9abf80f86edbabc33dfba02e10c15796e6102d277f16604b834c76710197591b",
-      "terminalHash": "2e530fb42f010f108ccb6a95c45f0b4528ea0d7f51f84fef95ee0db0a4771565",
+      "terminalHash": "590b0a4b58debedfd4dd39d7811e068fae060e28298622d8c8f88b06776de604",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1301,7 +1301,7 @@
       "result": "playerWin",
       "phase": "settlement",
       "eventHash": "73598480f5c190ff55950d9c13df0c27cffaa8a4fb1cb48af7ffba229d7673b0",
-      "terminalHash": "32cd18457d37598813c58eb22d387e6cbdb281896c99703b739fffee155b8cc0",
+      "terminalHash": "3a759c2ccfc6c0fc2cd89c5960a9436ea0a3bf3213dbb8ced78ff35c4795f4d2",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1362,7 +1362,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "5e687912d549d469d662f7ceebeb8e1dcc2647723f2f980657f1affddd5ce1a2",
-      "terminalHash": "eb2f5528ce49385e5b0e110e4c1910ff744d41e93265c990549a5b43bd92a70d",
+      "terminalHash": "98aa9165f3b08897e144355391fc1685a3ddbe07b503d68d30d078fbf7148ef9",
       "receipts": 2,
       "unitSerialDelta": 1,
       "itemSerialDelta": 0,
@@ -1371,7 +1371,7 @@
         "col": 6,
         "row": 7
       },
-      "prefixHash": "0f3b1410a43a5e4bd2953ac19d7d3b93c128d28ddc88ed24502615dd7b81520e"
+      "prefixHash": "eab4d9df33802ce21dca26b4b59731a55c5fb7587db6ae6dbe3ea5dab5d2a6fd"
     },
     "loris-r01": {
       "deaths": [
@@ -1420,7 +1420,7 @@
       "result": "enemyWin",
       "phase": "settlement",
       "eventHash": "c523e5b3b6f29abf9e90755e6ea22760303fb1efd4429a3f8f08e5b2f8519372",
-      "terminalHash": "761901f6e9bc4f18435de38310b94630bbfccfc166e8fb3f2363b729e05eec03",
+      "terminalHash": "126aa4475c1b608feb5ec4ba55dee8725b5a8264f4a51450760e7d57ad38ff68",
       "receipts": 1,
       "unitSerialDelta": 0,
       "itemSerialDelta": 1,
@@ -1429,7 +1429,7 @@
         "col": 0,
         "row": 6
       },
-      "prefixHash": "0f3b1410a43a5e4bd2953ac19d7d3b93c128d28ddc88ed24502615dd7b81520e"
+      "prefixHash": "eab4d9df33802ce21dca26b4b59731a55c5fb7587db6ae6dbe3ea5dab5d2a6fd"
     },
     "unloadedCarrier": {
       "roundId": "1-4",
