@@ -29,7 +29,7 @@ export interface ExpansionState {
 }
 export interface G22State { initialized: boolean; rebelTriggered: boolean; wanted: string[]; wantedDeaths: number; mordeUntilTick: number; reaveUntilTick: number; reaveBps: number; exposureFromTick: number; exposureUntilTick: number; exposureBps: number }
 export interface G23State {
-  ascension:{untilTick:number;nextPulseTick:number;actionSeq:number;takedowns:string[]}|null;
+  ascension:{untilTick:number;nextPulseTick:number;actionSeq:number;takedowns:string[];pulse:number}|null;
   conquestTakedowns:string[];
   experimentTakedowns:string[];
   cuts: Record<string,number>;

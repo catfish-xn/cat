@@ -55,4 +55,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   malzaharGate: 'malzahar-gate-line-across-target-square-to-caster-v1',
   // Heimerdinger's focus v1 (11-20, self-chosen share HEIMER_FOCUS_SHARE_BPS): the first part of each volley at his current target.
   heimerFocus: 'heimer-rockets-focus-current-target-v1',
+  // Swain's demon form drain, cadence v2 (11-20): pulses every SWAIN_PULSE_TICKS (cast-windup.ts), each a part of the per-second values (splitTotal).
+  swainDrain: 'swain-drain-pulse-cadence-v2',
 });
