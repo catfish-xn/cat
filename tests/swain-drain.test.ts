@@ -5,7 +5,9 @@ import { amount, EMPTY_RUNTIME, variable, type S13Unit } from '../src/simulation
 import { SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from '../src/simulation/cast-windup';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
 import { CONTENT_DIGEST } from '../src/simulation/content';
-import { readCompatibility } from '../src/persistence/compatibility';
+import { readCompatibility, routeSaveFile } from '../src/persistence/compatibility';
+import { admitArchives } from '../src/replay';
+import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { battle, unit } from './combat-helpers';
 import { heals, packets } from './helpers/replay2-views';
@@ -40,11 +42,11 @@ describe('Swain demon form drain', () => {
     expect(expected.at(-1)).toBe(end - (end - cast) % SWAIN_PULSE_TICKS);
     expect(drains.some(d => d.tick > end)).toBe(false);
   });
-  it("each second's four pulses add up to the per-second values exactly", () => {
+  it("each second's pulses add up to the per-second values exactly", () => {
     const perSecondDamage = amount(me, cast, { ap: variable(me, 'DamagePerSecond') }), perSecondHeal = amount(me, cast, { ap: variable(me, 'HealPerSecond') });
     for (let k = 0; k + SWAIN_PULSES_PER_SECOND <= drains.length; k += SWAIN_PULSES_PER_SECOND) {
-      expect(drains.slice(k, k + 4).reduce((n, d) => n + d.raw, 0)).toBe(perSecondDamage);
-      expect(pulseHeals.slice(k, k + 4).reduce((n, h) => n + h.requested, 0)).toBe(perSecondHeal);
+      expect(drains.slice(k, k + SWAIN_PULSES_PER_SECOND).reduce((n, d) => n + d.raw, 0)).toBe(perSecondDamage);
+      expect(pulseHeals.slice(k, k + SWAIN_PULSES_PER_SECOND).reduce((n, h) => n + h.requested, 0)).toBe(perSecondHeal);
     }
     expect(Math.max(...drains.map(d => d.raw)) - Math.min(...drains.map(d => d.raw))).toBeLessThanOrEqual(1);
   });
@@ -53,14 +55,25 @@ describe('Swain demon form drain', () => {
   });
 });
 
-const BEFORE_DIGEST = 'fnv1a32-utf16:cf212873';
+// The drain cadence changes battle results, so its rule identifier is part of the content digest: a save or replay written
+// under the digest just before it (Heimerdinger's focus) is turned away as another version, never replayed under the new rule.
+const BEFORE_DIGEST = 'fnv1a32-utf16:31713f8c';
 describe('Swain drain: files written before it', () => {
-  it('has its own identifier; a save with an earlier digest is rejected', () => {
-    expect(S13_COMBAT_RULES.swainDrain).toBe('every-5-ticks-first-at-5-quarter-of-per-second-split-total-adjacency-each-pulse');
+  it('the rule has its own identifier and the digest moved', () => {
+    expect(S13_COMBAT_RULES.swainDrain).toBe('swain-drain-pulse-cadence-v2');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_DIGEST);
+  });
+  it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
     const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
       runId: 'before-swain', createdAt: '2026-11-20T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE_DIGEST }, battles: [], currentBattle: null };
-    expect(readCompatibility(file)).toMatchObject({ status: 'rejected', reason: 'digest-mismatch' });
+    expect(readCompatibility(file)).toEqual({ status: 'rejected', currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion: M8_VERSION.rulesVersion,
+      canResume: false, canReplay: false, canExportOriginal: false, reason: 'digest-mismatch' });
+    expect(routeSaveFile(file).envelope).toBeNull();
+    const admission = admitArchives([file], routeSaveFile);
+    expect(admission.records).toEqual([]);
+    expect(admission.quarantined.map(q => q.runId)).toEqual(['before-swain']);
+    const state = JSON.parse(serializeMatch(readyMatch(42)));
+    expect(() => restoreMatch(JSON.stringify({ ...state, contentDigest: BEFORE_DIGEST }))).toThrow('content-digest');
   });
 });
 

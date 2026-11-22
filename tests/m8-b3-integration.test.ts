@@ -1,3 +1,4 @@
+import { DARIUS_SPIN_TICKS, maddieShotFlightTicks } from '../src/simulation/cast-windup';
 import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit, type CombatEvent } from '../src/simulation/combat';
@@ -43,7 +44,8 @@ describe('B3 existing nineteen champions on the G01–G03 pipeline', () => {
   // replay2: outcome.raw is the frozen pre-crit amount. Third column = the old post-crit event raw (still checked
   // as floor(raw×14000/10000)); fourth column = the pre-crit raw, i.e. the hand amount before ×1.4.
   it.each([
-    ['irelia', 61, [98], [70]], ['maddie', 1, [189], [135]], ['darius', 1, [336], [240]], ['lux', 21 + LANDING, [504], [360]],
+    // Landing batch (11-20): Maddie's first shot lands maddieShotFlightTicks(1) after leaving; Darius's spin DARIUS_SPIN_TICKS after his cast.
+    ['irelia', 61, [98], [70]], ['maddie', 1 + maddieShotFlightTicks(1), [189], [135]], ['darius', 1 + DARIUS_SPIN_TICKS, [336], [240]], ['lux', 21 + LANDING, [504], [360]],
     ['zyra', 1 + CAST_WINDUP_TICKS.zyra, [364], [260]], ['tristana', 1 + CAST_WINDUP_TICKS.tristana, [805], [575]], ['urgot', 1, [469], [335]], ['rell', 1, [168], [120]],
     ['leona', 61, [161], [115]], ['kogmaw', 21 + LANDING, [67], [48]], ['scar', 1, [112], [80]], ['ezreal', 1, [217, 378], [155, 270]],
     ['loris', 81, [210], [150]], ['nami', 1, [168], [120]], ['corki', 1, [57], [41]], ['garen', 1, [350], [250]], ['zoe', 1, [196], [140]], ['caitlyn', 1, [280, 392], [200, 280]],
