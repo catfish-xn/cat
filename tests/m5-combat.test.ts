@@ -1,3 +1,4 @@
+import { DARIUS_SPIN_TICKS, LUX_SELF_SHIELD_TICKS, LUX_SHIELD_FLIGHT_TICKS, maddieShotFlightTicks } from '../src/simulation/cast-windup';
 import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { stepLanded } from './helpers/landing';
 import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
@@ -89,7 +90,8 @@ describe('M5 independent finite combat rules', () => {
     expect(stun).toMatchObject({ kind: 'stun', startsAtTick: 2 + CAST_WINDUP_TICKS.zyra, expiresAtTick: 22 + CAST_WINDUP_TICKS.zyra });
   });
   it('Lux selects lowest current HP rather than percentage and buffs only the next attack', () => {
-    const result = stepLanded(battle([hero('lux'), dummy(), dummy('p2', 0, 3, { hp: 50, maxHp: 100 }), dummy('p3', 0, 4, { hp: 100, maxHp: 1000 })]));
+    // Landing batch (11-20): the ally's shield lands when the missile arrives, LUX_SHIELD_FLIGHT_TICKS after the cast.
+    const result = advance(battle([hero('lux'), dummy(), dummy('p2', 0, 3, { hp: 50, maxHp: 100 }), dummy('p3', 0, 4, { hp: 100, maxHp: 1000 })]), 1 + LUX_SHIELD_FLIGHT_TICKS);
     expect(result.state.units.find(u => u.id === 'p2')!.shield).toBe(160);
     expect(result.state.units.find(u => u.id === 'p3')!.shield).toBe(0);
     expect(result.state.units.find(u => u.id === 'p')!.runtime!.nextAttackMagic).toBe(360);
@@ -98,17 +100,20 @@ describe('M5 independent finite combat rules', () => {
     expect(next.state.units.find(u => u.id === 'p')!.runtime!.nextAttackMagic).toBe(0);
   });
   it('Darius bleed has four conserving tasks and persists after source death', () => {
-    const initial = stepCombat(battle([hero('darius'), dummy()]));
+    // Landing batch (11-20): the spin (and the bleed with it) lands DARIUS_SPIN_TICKS after the cast; the bleed runs from there.
+    const initial = advance(battle([hero('darius'), dummy()]), 1 + DARIUS_SPIN_TICKS);
     const owner = initial.state.units.find(u => u.id === 'p')!;
-    expect(owner.tasks!.filter(t => t.kind === 'bleed').map(t => [t.executeAtTick, t.amount])).toEqual([[21, 50], [41, 50], [61, 50], [81, 50]]);
+    expect(owner.tasks!.filter(t => t.kind === 'bleed').map(t => [t.executeAtTick, t.amount])).toEqual([[21, 50], [41, 50], [61, 50], [81, 50]].map(([t, a]) => [t + DARIUS_SPIN_TICKS, a]));
     const state = { ...initial.state, units: [...initial.state.units.map(u => u.id === 'p' ? { ...u, alive: false, hp: 0, mana: 0 } : u), dummy('p2', 0, 0)] };
     const later = advance(state, 80);
     expect(packets(later.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([50, 50, 50, 50]);
   });
   it('Maddie six shots use fixed offsets and the first enemy along the path intercepts', () => {
-    const result = advance(battle([hero('maddie'), dummy(), dummy('e2', 5, 3)]), 24);
-    const shots = packets(result.events).filter(p => p.source.definitionId === 'maddie-ability');
-    expect(shots.map(p => p.tick)).toEqual([1, 5, 10, 14, 19, 24]);
+    // Landing batch (11-20): each shot leaves on its offset and lands maddieShotFlightTicks later (e is one hex away).
+    const flight = maddieShotFlightTicks(1), result = advance(battle([hero('maddie'), dummy(), dummy('e2', 5, 3)]), 24 + flight);
+    // The longer window also takes in her next basic attack; only the skill's packets count here.
+    const shots = packets(result.events).filter(p => p.source.definitionId === 'maddie-ability' && p.source.sourceKind === 'ability');
+    expect(shots.map(p => p.tick)).toEqual([1, 5, 10, 14, 19, 24].map(t => t + flight));
     expect(shots.every(p => p.unitId === 'e' && p.raw === 135)).toBe(true);
   });
   it('cancels future multishots after control without undoing committed same-tick shots', () => {
@@ -116,8 +121,10 @@ describe('M5 independent finite combat rules', () => {
     // Stun from e applied at tick1, active from tick2 (next-tick) and expiring at tick50.
     const state = { ...initial.state, units: initial.state.units.map(u => u.id !== 'p' ? u : withStatus(u, source('e'), 'stun', 0, 1, 50)) };
     const result = advance(state, 30);
-    expect(packets(initial.events)).toHaveLength(1);
-    expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(0);
+    // Landing batch (11-20): the cast tick's shot has left (committed) and lands under the stun; the rest never leave.
+    expect(initial.events.filter(e => e.type === 'abilityProjectileLaunched')).toHaveLength(1);
+    expect(packets(initial.events)).toHaveLength(0);
+    expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(1);
     expect(result.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
   });
   it('Kog stacks speed and each third cast adds range with no cross-battle state', () => {
@@ -343,7 +350,8 @@ describe('M5 independent finite combat rules', () => {
   it('Kog passive and Darius initial spin use distinct noncritical magic/physical coefficients', () => {
     const kog = stepLanded(battle([hero('kogmaw', 'p', { mana: 0, abilityPower: 150 }), dummy()], { rngState: 42 }));
     expect(packets(kog.events).map(p => [p.damageType, p.raw, p.critical])).toEqual([['physical', 100, false], ['magic', 72, false]]);
-    const darius = stepCombat(battle([hero('darius', 'p', { hp: 4700, targetId: 'e' }), dummy(), dummy('e2', 1, 2)])); // e/e2 are tied; pin e.
+    // Landing batch (11-20): his spin lands DARIUS_SPIN_TICKS after the cast.
+    const darius = advance(battle([hero('darius', 'p', { hp: 4700, targetId: 'e' }), dummy(), dummy('e2', 1, 2)]), 1 + DARIUS_SPIN_TICKS); // e/e2 are tied; pin e.
     expect(packets(darius.events).map(p => p.raw)).toEqual([240, 240]);
     expect(heals(darius.events)[0]).toMatchObject({ requested: 150, actual: 150 });
     expect(darius.state.units.find(u => u.id === 'p')!.tasks!.map(t => t.targetId)).toEqual(['e', 'e', 'e', 'e']);
@@ -457,8 +465,9 @@ describe('M5 independent finite combat rules', () => {
   });
   it('the scheduled Archangel boundary precedes action planning: tick99 Lux shields160, tick100 shields208', () => {
     const owner = hero('lux', 'p', { mechanics: [mechanic('p', 'archangel', { periodTicks: 100, abilityPower: 30 })] });
-    const before = stepCombat(battle([owner, dummy()], { tick: 98 }));
-    const boundary = stepCombat(battle([owner, dummy()], { tick: 99 }));
+    // Landing batch (11-20): her own shield lands LUX_SELF_SHIELD_TICKS after the cast, its amount taken on the cast.
+    const before = advance(battle([owner, dummy()], { tick: 98 }), 1 + LUX_SELF_SHIELD_TICKS);
+    const boundary = advance(battle([owner, dummy()], { tick: 99 }), 1 + LUX_SELF_SHIELD_TICKS);
     expect(before.state.units.find(u => u.id === 'p')!.shield).toBe(160);
     expect(boundary.state.units.find(u => u.id === 'p')!.shield).toBe(208); //160×130/100.
     expect(boundary.events.find(e => e.type === 'statChanged')).toMatchObject({ stat: 'abilityPower', before: 100, after: 130 });

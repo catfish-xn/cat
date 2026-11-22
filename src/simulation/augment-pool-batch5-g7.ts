@@ -39,7 +39,9 @@ export function lootExplosionRewardPlan(state:MatchState) {
       const kill=death.lootExplosion;
       if(!kill || !death.ordinaryHero || kill.killerSeatId!==historySeatId(state) || death.ownerSeatId===historySeatId(state))continue;
       const namespace=[LOOT_EXPLOSION_SOURCE,historySeatId(state),owner.choiceId,result.round,death.combatId,death.eventSeq];
-      let hash=0x811c9dc5;const key=JSON.stringify(namespace);
+      // The drop roll is keyed by the death's tick and unit (rule state), not its eventSeq, which display-only events move
+      // (2026-11-20); the receipt identity keeps the eventSeq it names.
+      let hash=0x811c9dc5;const key=lootExplosionRollKey(historySeatId(state),owner.choiceId,result.round,death);
       for(let i=0;i<key.length;i++)hash=Math.imul(hash^key.charCodeAt(i),0x01000193)>>>0;
       let rng=(state.seed^hash)>>>0;
       const drop=rollLootExplosion(getMultiplayerRoundByOrdinal(result.round).stage,kill.critChanceBps,()=>{const next=nextRandom(rng);rng=next.state;return next.word;});
@@ -60,3 +62,8 @@ export function drainLootExplosionRewards(state:MatchState):MatchState {
   return state;
 }
 
+
+/** The Loot Explosion drop roll's key: the death's battle, tick and unit (rule state), never its eventSeq (2026-11-20). */
+export function lootExplosionRollKey(seat:string,choiceId:string,round:number,death:{readonly combatId:string;readonly tick:number;readonly unitId:string}):string {
+  return JSON.stringify([LOOT_EXPLOSION_SOURCE,seat,choiceId,round,death.combatId,death.tick,death.unitId]);
+}

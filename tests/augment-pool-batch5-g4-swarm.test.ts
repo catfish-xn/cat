@@ -58,13 +58,15 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // (was 6c5f207e…).
   // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
   // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
-  // 玛尔扎哈直线 (2026-11-20, #783): contentDigest cf212873->d1f4cd83 only; loot replay unchanged.
-  const back=save.split('d1f4cd83').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 技能落地结算批 (2026-11-20): contentDigest cf212873->2f642cc0 only; loot replay unchanged.
+  // 死亡判定随机键 (2026-11-21): contentDigest 2f642cc0->6983672c only; loot replay unchanged.
+  // 玛尔扎哈门线 v1 (2026-11-21): contentDigest 6983672c->57428247 only.
+  const back=save.split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('d25fd72a72b5384ab46c799866c58c0a10e25d89eb9d98adef4b9d1803779c6a'); // #783 digest cf212873 -> d1f4cd83 (was 6dc0e509…, before #739 91a0760c…)
+    .toBe('2bcb58efc5a40426686d6c45ae1e25f52f1c2033e1892c8e452e5877355fbd0b'); // Malzahar gate v1 6983672c -> 57428247 (was bedc822e…, death-keyed rolls v1; efc1c1c8… landing batch)
   expect(restoreMatch(save)).toEqual(started);
 });
 

@@ -48,10 +48,10 @@ describe('Malzahar line geometry', () => {
 
 // The line changes battle results, so its rule identifier is part of the content digest: a save or replay written under the
 // earlier digest (before this rule) is turned away as not matching this version, never replayed under the new rule.
-const BEFORE_LINE_DIGEST = 'fnv1a32-utf16:cf212873';
+const BEFORE_LINE_DIGEST = 'fnv1a32-utf16:6983672c';
 describe('Malzahar line: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
-    expect(S13_COMBAT_RULES.malzaharGate).toBe('line-across-target-hex-axis-most-square-to-caster-target-tie-row-then-rising-2-either-side-target-then-steps-then-id');
+    expect(S13_COMBAT_RULES.malzaharGate).toBe('malzahar-gate-line-across-target-square-to-caster-v1');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_LINE_DIGEST);
   });
   it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
