@@ -53,4 +53,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   deathRollKeys: 'death-roll-key-tick-unit-v1',
   // Malzahar's gate v1 (11-20): a line across his target (14.24 description), square to him -> target (footage); axis pick self-chosen.
   malzaharGate: 'malzahar-gate-line-across-target-square-to-caster-v1',
+  // Heimerdinger's focus v1 (11-20, self-chosen share HEIMER_FOCUS_SHARE_BPS): the first part of each volley at his current target.
+  heimerFocus: 'heimer-rockets-focus-current-target-v1',
 });

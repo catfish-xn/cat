@@ -100,3 +100,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-21 玛尔扎哈门线 v1: identity-only refresh, `contentDigest` (×2) `6983672c` → `57428247` (`S13_COMBAT_RULES.malzaharGate`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `bea914e1e7464436978a0c0bdf8f79526b6091e88470f73ceb0a1d3386a02344`.
+
+2026-11-21 黑默丁格火箭集火 v1: identity-only refresh, `contentDigest` (×2) `57428247` → `31713f8c` (`S13_COMBAT_RULES.heimerFocus`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `0f5eaf021d9a71a91d2ca4e0898779b6867fd66c2d13d0dd5c316685f34ad0ee`.

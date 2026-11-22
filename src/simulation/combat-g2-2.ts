@@ -1,5 +1,5 @@
 import { scheduleShot } from './ability-projectile';
-import { heimerRocketLaunchTick, MORDEKAISER_CLAW_TICKS } from './cast-windup';
+import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, MORDEKAISER_CLAW_TICKS } from './cast-windup';
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
 import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
@@ -72,8 +72,11 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'heimerdinger': {
       // Landing batch (11-20): each rocket's target is drawn now and it settles where it lands (abilityProjectile
       // 'heimerdinger-rocket', HEIMER_ROCKET_TIMING): the k-th of n leaves heimerRocketLaunchTick(k, n) after the cast.
+      // Focus (11-20, user-approved; the share is self-chosen, not original data): the first floor(n × HEIMER_FOCUS_SHARE_BPS)
+      // rockets go to his current target, the rest are drawn at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火).
       const n=v('StartingRockets')+Math.max(0,u.runtime.castCount-1)*v('MissileIncreasePerCast'),targets=foes();
-      for(let i=0;i<n;i++){const x=targets[Math.floor(ctx.draw()/2**32*targets.length)];scheduleShot(u,'heimerdinger-rocket',ctx.tick+heimerRocketLaunchTick(i,n),x.id,mag('Damage'),seq,i,n);ids.push(x.id);}break;
+      const focused=Math.floor(n*HEIMER_FOCUS_SHARE_BPS/10000);
+      for(let i=0;i<n;i++){const x=i<focused?t:targets[Math.floor(ctx.draw()/2**32*targets.length)];scheduleShot(u,'heimerdinger-rocket',ctx.tick+heimerRocketLaunchTick(i,n),x.id,mag('Damage'),seq,i,n);ids.push(x.id);}break;
     }
     case 'trundle': {
       const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp),hero=heroLive(u);
