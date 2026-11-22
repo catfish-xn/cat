@@ -6,9 +6,11 @@ import { grantMechanicGold } from './seat-mechanics/grants';
 
 export const BATCH5_H7_SOURCE = 'augment-pool-batch5-h7';
 /** Independent explicit lcg32-v1 draw per death identity; never perturbs combat/shop/offer RNG. */
-function deathWins(seed: number, seat: string, choice: string, battle: string, event: number): boolean {
+// The roll is keyed by the death's tick and unit (rule state), not its eventSeq: display-only events move eventSeqs, and
+// must not change who is paid (2026-11-20). One unit dies at most once per tick, so the key stays unique per death.
+export function deathWins(seed: number, seat: string, choice: string, battle: string, tick: number, unitId: string): boolean {
   let hash = 2166136261;
-  const identity = JSON.stringify([BATCH5_H7_SOURCE, seat, choice, battle, event]);
+  const identity = JSON.stringify([BATCH5_H7_SOURCE, seat, choice, battle, tick, unitId]);
   for (let i = 0; i < identity.length; i++) hash = Math.imul(hash ^ identity.charCodeAt(i), 16777619) >>> 0;
   return nextRandom((seed ^ hash) >>> 0).word < AUGMENT_BATCH5_H7['good-for-something'].source.values.DropChance * 0x100000000;
 }
@@ -61,7 +63,7 @@ export function batch5H7GoldPlan(state: MatchState) {
         if (seen.has(key)) continue;
         seen.add(key);
         if (d.ownerSeatId !== historySeatId(state) || !d.ordinaryHero || d.equipment.length || d.combatItemGrants.length) continue;
-        if (deathWins(state.seed, historySeatId(state), a.choiceId, d.combatId, d.eventSeq)) plan.push({
+        if (deathWins(state.seed, historySeatId(state), a.choiceId, d.combatId, d.tick, d.unitId)) plan.push({
           receiptId: JSON.stringify([BATCH5_H7_SOURCE, a.choiceId, d.combatId, d.eventSeq]), source: BATCH5_H7_SOURCE,
           round, amount: AUGMENT_BATCH5_H7['good-for-something'].source.values.Gold,
         });

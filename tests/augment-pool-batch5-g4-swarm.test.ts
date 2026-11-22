@@ -59,15 +59,17 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
   // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
   // 技能落地结算批 (2026-11-20): contentDigest cf212873->2f642cc0 only; loot replay unchanged.
-  // 黑默丁格火箭集火 (2026-11-20): contentDigest 2f642cc0->9ccd5f96 only; loot replay unchanged.
-  // 斯维因吸取节奏 v2 (2026-11-20): contentDigest 9ccd5f96->eb2d4cee only; loot replay unchanged.
-  // 梅尔施法 v3 (2026-11-21): contentDigest eb2d4cee->2acd4414 only.
-  const back=save.split('2acd4414').join('eb2d4cee').split('eb2d4cee').join('9ccd5f96').split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 死亡判定随机键 (2026-11-21): contentDigest 2f642cc0->6983672c only; loot replay unchanged.
+  // 玛尔扎哈门线 v1 (2026-11-21): contentDigest 6983672c->57428247 only.
+  // 黑默丁格火箭集火 v1 (2026-11-21): contentDigest 57428247->31713f8c only.
+  // 斯维因吸取节奏 v2 (2026-11-21): contentDigest 31713f8c->b74b81b0 only.
+  // 梅尔施法 v3 (2026-11-21): contentDigest b74b81b0->1ca19aae only.
+  const back=save.split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('3d80d4878671f3d39cdae71863b9e463aff55bc519640ddfc94716c176f21095'); // Mel cast v3 eb2d4cee -> 2acd4414 (was c6362193…, Mel cast v2; 04dbe61e… Swain drain cadence v2)
+    .toBe('12912e17c95230c5bacc808e546decd0080611cf9dad68d99fa412dbd5464cc9'); // Mel cast v3 b74b81b0 -> 1ca19aae (was 2906a075…, Swain drain cadence v2; d86654e8… Heimerdinger focus v1)
   expect(restoreMatch(save)).toEqual(started);
 });
 
