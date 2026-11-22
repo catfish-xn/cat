@@ -136,6 +136,15 @@ const TRISTANA_SHELL_TRAVEL = 0.4;
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Gangplank's ranged-form attack (batch2-bridge.ts), drawn from the rules' attackLaunched / attackLanded: the shot leaves
+  // his right hand on the launch and flies the rule's own flight (LtkPlayOptions.flightSeconds), so it lands on the tick his
+  // damage does; its hit plays on a landing that hit. The travelSeconds here is only a stand-in the rule's flight replaces.
+  'gangplank-ranged-flight': [
+    { system: 'bb62fca2', action: 'passive', event: 'projectile', bone: 'r_hand', targetBone: chest, delay: 0, duration: 0.3, travelSeconds: 0.3 },
+  ],
+  'gangplank-ranged-land': [
+    { system: '0f2af66b', action: 'passive', event: 'hit', bone: chest, delay: 0, duration: 1.5 },
+  ],
   // Dr. Mundo (batch1-events.ts): the beam from him to the enemy his once-a-second damage hits; at his closing blast, the blast
   // body on him and the zap on each enemy it hits.
   'drmundo-beam': [{ system: 'b8ba6c19', action: 'passive', event: 'link', delay: 0, duration: 0.6, bone: chest, targetBone: chest }],

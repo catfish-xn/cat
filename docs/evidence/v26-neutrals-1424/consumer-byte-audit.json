@@ -1042,9 +1042,9 @@
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3781,
+      "currentBytes": 3748,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ed13f96c3a8e4f37f50b9237f2c107df092b3649905c1eecc09e41485d695627",
+      "currentSha256": "a1e8481bd87950f353435e7e0d9898bc42a2d285169ccb5175487399137ba9b7",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
@@ -4642,6 +4642,14 @@
       "currentBytes": 5524,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "4a06278191f1caf63a9d5f5d3af1a7890693b06909fd266a5aac756013985db1",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-gangplank-ranged-attack.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3942,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1e4bf2ec713a597e8538b8045cadb4638908fe91aa055ff5fb8180a5bec56e06",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-ground-line.test.ts": {
