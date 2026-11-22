@@ -1,19 +1,38 @@
 import { describe, expect, it } from 'vitest';
-import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { readFileSync } from 'node:fs';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, MALZAHAR_GATE_DELAY } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { gateEnds } from '../src/rendering/three-mode/vfx-ltk/gate-ends';
 
-// Malzahar's gate (cue-overrides.ts): the bolt flies to each enemy the gate hits and the portal opens under that enemy the
-// moment the bolt lands, so the two read as one strike per enemy (fitted timings, docs/S13_RULES_GAP.md 2026-11-16).
+// Malzahar's gate (11-21): the portal opens at the two ends of the rules' line of cells (CastReceipt.area), facing each
+// other, not under each enemy (fitted opening time, docs/S13_RULES_GAP.md); nothing flies from him to it.
 const BOLT = '7d0f4b1e', PORTAL = '10e4e326';
 
 describe('vfx-ltk Malzahar gate', () => {
-  it('opens the portal on the ground under each hit enemy exactly when the bolt lands there', () => {
+  it('nothing flies from him (no bolt); the portal is no cue of his cast but the board gate skill', () => {
     const cues = CUE_OVERRIDES.malzahar!;
-    const bolt = cues.find(cue => cue.system === BOLT), portal = cues.find(cue => cue.system === PORTAL);
-    expect(bolt).toMatchObject({ action: 'cast', event: 'projectile' });
-    expect(portal).toMatchObject({ action: 'cast', event: 'hit', bone: 'BUFFBONE_GLB_GROUND_LOC' });
-    // Both go to every enemy the gate hits: neither is limited to the primary target or to a count.
-    for (const cue of [bolt!, portal!]) { expect(cue.primary).toBeUndefined(); expect(cue.targetLimit).toBeUndefined(); expect(cue.others).toBeUndefined(); }
-    expect(bolt!.travelSeconds).toBeGreaterThan(0);
-    expect(portal!.delay).toBeCloseTo(bolt!.delay + bolt!.travelSeconds!, 9);
+    // Windows review 11-21: in the original nothing leaves him on his cast; the gate appears on the ground.
+    expect(cues.some(cue => cue.system === BOLT)).toBe(false);
+    expect(cues.some(cue => cue.system === PORTAL)).toBe(false);
+    expect(CUE_EXTRA_SKILLS['malzahar-gate']).toEqual([{ system: PORTAL, action: 'cast', event: 'cast-start', location: 'board', delay: MALZAHAR_GATE_DELAY, duration: 2 }]);
+    expect(MALZAHAR_GATE_DELAY).toBeGreaterThanOrEqual(0);
+  });
+
+  it('opens at the two ends of the line, each facing the other; a one-cell line opens once', () => {
+    const line = [{ col: 1, row: 2 }, { col: 2, row: 2 }, { col: 3, row: 2 }, { col: 4, row: 2 }, { col: 5, row: 2 }];
+    expect(gateEnds(line)).toEqual([{ cell: line[0], facing: line[4] }, { cell: line[4], facing: line[0] }]);
+    // Off-board cells are already left out by the rules: a clipped line opens at its own ends.
+    expect(gateEnds(line.slice(0, 3))).toEqual([{ cell: line[0], facing: line[2] }, { cell: line[2], facing: line[0] }]);
+    expect(gateEnds([line[2]])).toEqual([{ cell: line[2], facing: null }]);
+    expect(gateEnds([])).toEqual([]);
+  });
+
+  it('the renderer opens it from the cast event\'s area, for Malzahar only', () => {
+    const source = readFileSync(new URL('../src/rendering/three-mode/placeholder-renderer.ts', import.meta.url), 'utf8');
+    const at = source.indexOf("event.type === 'cast' && event.area?.cells.length");
+    expect(at).toBeGreaterThan(0);
+    const block = source.slice(at, source.indexOf('\n      }\n', at));
+    expect(block).toContain("definitionId === 'malzahar'");
+    expect(block).toContain('gateEnds(event.area.cells)');
+    expect(block).toContain("skill: 'malzahar-gate'");
   });
 });

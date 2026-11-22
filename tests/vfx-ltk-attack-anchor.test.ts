@@ -26,18 +26,18 @@ function collect(): { where: string; cue: TimelineCue }[] {
  * Keyed `where|system|event`.
  */
 const NO_TARGET_ANCHOR: Readonly<Record<string, string>> = {
-  'CUE_OVERRIDES.scar|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'CUE_OVERRIDES.irelia|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'elise.ts:elise.elise|a0484f04|projectile': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'elise.ts:elise.elise|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'illaoi.ts:illaoi.illaoi|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'loris.ts:loris.loris|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'rell.ts:rell.rell|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'silco.ts:silco.silco|a6bde11c|projectile': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'silco.ts:silco.silco|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'sion.ts:sion.g23-sion|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'swain.ts:swain.swain|f4e3e1bc|projectile': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
-  'swain.ts:swain.swain|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local 14.24 export has no mHitBoneName for it, decision with Fable',
+  'CUE_OVERRIDES.scar|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'CUE_OVERRIDES.irelia|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'elise.ts:elise.elise|a0484f04|projectile': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'elise.ts:elise.elise|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'illaoi.ts:illaoi.illaoi|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'loris.ts:loris.loris|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'rell.ts:rell.rell|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'silco.ts:silco.silco|a6bde11c|projectile': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'silco.ts:silco.silco|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'sion.ts:sion.g23-sion|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'swain.ts:swain.swain|f4e3e1bc|projectile': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
+  'swain.ts:swain.swain|0f2af66b|hit': 'pending: found by this guard on 11-12, outside the approved Jinx/Mel/Jayce/Viktor/Sevika/Warwick fix; the local export names no hit bone for it, decision with Fable',
 };
 
 /**
@@ -73,7 +73,7 @@ describe('basic-attack hits and flights anchor on the target body', () => {
     expect(PENDING_AT_627.size).toBeLessThanOrEqual(12);
   });
 
-  it('the six champions fixed on 11-12 hit and aim at the chest (14.24 BasicAttack mHitBoneName)', () => {
+  it('the six champions fixed on 11-12 hit and aim at the chest, the bone their attacks name for a hit', () => {
     for (const [file, system, event] of [
       ['jinx.ts', '0f2af66b', 'hit'], ['jinx.ts', '6d9e0430', 'projectile'], ['mel.ts', '0f2af66b', 'hit'], ['mel.ts', '539901e6', 'projectile'],
       ['jayce.ts', '0f2af66b', 'hit'], ['jayce.ts', '53b93f82', 'projectile'], ['viktor.ts', 'a7e3596a', 'hit'], ['viktor.ts', '87913524', 'projectile'],
