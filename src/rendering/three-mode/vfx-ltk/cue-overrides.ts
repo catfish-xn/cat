@@ -24,6 +24,8 @@ import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
+export const MALZAHAR_GATE_DELAY = 0.2;
 /**
  * Seconds a cue that plays out at its end (TimelineCue.playOut) may keep its particles after it, at most: our own cap
  * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
@@ -147,6 +149,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
   // Dr. Mundo (batch1-events.ts): the beam from him to the enemy his once-a-second damage hits; at his closing blast, the blast
   // body on him and the zap on each enemy it hits.
+  // Malzahar's gate (placeholder-renderer.ts): its portal at each end of the cast's line of cells (CastReceipt.area), on the
+  // board, facing the other end. It opens just after his cast (fitted, 自定): its frame, crystals and ground band first, its
+  // own close flash a moment later, after the damage the rules deal at the cast.
+  'malzahar-gate': [{ system: '10e4e326', action: 'cast', event: 'cast-start', location: 'board', delay: MALZAHAR_GATE_DELAY, duration: 2 }],
   'drmundo-beam': [{ system: 'b8ba6c19', action: 'passive', event: 'link', delay: 0, duration: 0.6, bone: chest, targetBone: chest }],
   'drmundo-zap': [{ system: '56c38cb9', action: 'passive', event: 'hit', delay: 0, duration: 1.5, bone: chest }],
   // Nocturne (batch1-events.ts): his strike on each other enemy his empowered swing bleeds, when its first bleed tick lands
@@ -554,17 +560,15 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
-  // The gate (fitted, 11-16): its bolt Q_mis 7d0f4b1e flies from his body to each enemy the gate hits, and the portal
-  // portal_1 10e4e326 opens on the ground under each of them the moment the bolt lands, so bolt and portal read as one
-  // strike per enemy. Cues target units only, so the gate's empty hexes get no portal (docs/S13_RULES_GAP.md, 11-16).
-  // Then the spell ring on targets and the infection, as before.
+  // The gate (11-21): its portal (10e4e326) opens at the two ends of the line of cells the rules' cast names
+  // (CastReceipt.area), facing each other, from the renderer (placeholder-renderer.ts, CUE_EXTRA_SKILLS malzahar-gate);
+  // nothing flies from him to it (Windows review 11-21: the gate appears on the ground straight away), so its bolt system
+  // (7d0f4b1e) is not played. Then the spell ring on targets and the infection, as before.
   // The E mark (88a717e0, looping emitters) ends when the target's shred does (CUE_RULE_STOPS); its duration is only a cap.
   malzahar: [
     { system: '3c65ee71', action: 'attack', event: 'projectile', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.8666666666666667, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 1.1666666666666667, duration: 1.5 },
     { system: '6d06c644', action: 'cast', event: 'cast-start', delay: 0, duration: 0.4, bone: 'R_hand' },
-    { system: '7d0f4b1e', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.6, bone: 'C_BUFFBONE_GLB_CHEST_LOC', travelSeconds: 0.5, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '10e4e326', action: 'cast', event: 'hit', delay: 0.7, duration: 2, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: 'a3390cb7', action: 'cast', event: 'hit', delay: 0.35, duration: 0.8, bone: 'BUFFBONE_GLB_GROUND_LOC' },
     { system: '88a717e0', action: 'cast', event: 'hit', delay: 0.8, duration: 6, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: 'd5de11de', action: 'cast', event: 'hit', delay: 1, duration: 2.7, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
