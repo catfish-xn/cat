@@ -647,7 +647,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     requireValue(task.amount <= 100000000 && task.executeAtTick <= 2401
       && Number.isSafeInteger(task.amount * (10000 + maximumAmp) * 10000), 'task arithmetic bound');
     requireValue(!taskKeys.has(task.key) && task.executeAtTick > tick && task.ordinal < task.total && typeof task.cancellable === 'boolean', 'task range');
-    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','attackLanding','skillShot','g2Landing','g2PowderRelease','g2PowderMonkey','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Stab','g23RenniLift','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
+    requireValue(['maddie','bleed','ireliaEnd','leonaEnd','lorisEnd','corki','caitlyn','tristanaBounce','g2Drain','g2Slam','g2Infection','g2SingedSpeed','g2Blast','g2Retaliation','g22Vex','g22Curse','g22ViSlam','g22CamilleKick','g2BlitzShock','attackLanding','skillShot','melDash','g2Landing','g2PowderRelease','g2PowderMonkey','g23Heal','g23Magic','g23Physical','g23True','g23Smeech','g23Stab','g23RenniLift','g23Flame','g23Chomp','g23Roll','g24Heal','g24Mana'].includes(task.kind), 'task kind');
     // Ranged attack landing: one shot of its owner's attack to targetId, its packets and statuses taken on the attack tick.
     if (task.kind === 'attackLanding') {
       const landing = task.landing; record(landing); list(landing!.packets); list(landing!.effects);
@@ -683,6 +683,8 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     if (task.kind === 'g22ViSlam') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && task.total === 2 && task.targetId !== null, 'Vi slam task'); }
     else if (task.kind === 'g2PowderRelease') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && (task.ordinal === 0 || task.ordinal === 1) && task.total >= 2 && task.total < 18 && task.targetId !== null, 'Powder release'); }
     else if (task.kind === 'g2PowderMonkey') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && task.total === 1, 'Powder monkey cell'); }
+    else if (task.kind === 'melDash') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && champion(owner) === 'mel'
+      && task.source.ownerId === unit.id && task.source.sourceKind === 'ability' && task.targetId === null && task.amount === 0 && task.total === 1 && task.cancellable === false, 'Mel dash'); }
     else if (task.kind === 'g22Vex') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8, 'G22 zone cell'); }
     else requireValue(task.cell === undefined, 'Unexpected task zone');
     if (task.kind === 'tristanaBounce') {

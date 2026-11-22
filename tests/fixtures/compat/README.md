@@ -108,3 +108,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-21 斯维因吸取节奏 v2: identity-only refresh, `contentDigest` (×2) `31713f8c` → `b74b81b0` (`S13_COMBAT_RULES.swainDrain`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `31bb6479bddf6154650f07a876a5cea84ecc5026affe0abc236cc4630e49aa6f`.
+
+2026-11-21 梅尔施法 v3: identity-only refresh, `contentDigest` (×2) `b74b81b0` → `1ca19aae` (`S13_COMBAT_RULES.melBarrage`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `9a79ad7b0951446b60cfa8d40f33d945597dc16fe9214a9f2303345adbeccbad`.
