@@ -95,6 +95,10 @@ export function heimerRocketLaunchTick(k: number, n: number): number {
  */
 export const MORDEKAISER_CLAW_TICKS: Readonly<Record<1 | 2 | 3, { readonly appear: number; readonly land: number }>> =
   Object.freeze({ 1: { appear: 2, land: 26 }, 2: { appear: 4, land: 27 }, 3: { appear: 4, land: 27 } });
+/** Malzahar's line (11-20, the 14.24 description "a 5-hex line across the target", square to the line from him to it as in the
+ * original footage; the hex axis it takes is self-chosen, board.ts hexCrossLine): this many cells on either side of the target.
+ * docs/S13_RULES_GAP.md (玛尔扎哈技能直线). */
+export const MALZAHAR_LINE_HALF = 2;
 
 /** Heimerdinger's focus (11-20, user-approved; self-chosen, not original data): this share of each volley's rockets, rounded
  * down, goes to his current target; the rest pick at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火). */
