@@ -35,6 +35,9 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
   mordekaiser: {
     '7078e23e': { status: 'dropped', reason: 'an entry effect outside the cast we play, left out in the 11-03 review (PR #524)' },
   },
+  malzahar: {
+    '7d0f4b1e': { status: 'dropped', reason: 'nothing flies from him on his cast in the original footage (11-21 review): his gate appears on the ground (PR #801)' },
+  },
   cassiopeia: {
     c83f1f21: { status: 'pending', reason: 'purpose not verified: the asset is a large red light column that matches none of the original footage we have (11-21 per-layer render); not played until its use is found' },
   },

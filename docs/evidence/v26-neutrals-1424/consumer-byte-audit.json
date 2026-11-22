@@ -1042,9 +1042,9 @@
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3748,
+      "currentBytes": 3933,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a1e8481bd87950f353435e7e0d9898bc42a2d285169ccb5175487399137ba9b7",
+      "currentSha256": "4325b96859db42368f3695f9a078d24df71856b325fbd96780bd7ecc0404012b",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
@@ -4758,9 +4758,9 @@
     "tests/vfx-ltk-malzahar-gate.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1285,
+      "currentBytes": 2478,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "e9dc114776f13fafcffe745408ddb865309fdc29d50f4da858b1047970003532",
+      "currentSha256": "faad29488527284df5e9ba87d733ebe5b553a94b77f1e7b303b14ed92c0269f7",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-mesh-pool-matrix.test.ts": {
