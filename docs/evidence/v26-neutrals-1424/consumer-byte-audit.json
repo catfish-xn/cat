@@ -97,6 +97,14 @@
       "currentSha256": "c366ca3681ab77ba102ca2a7f6d333a59ba162a6c53b055a50c0ae0f16d1f716",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-clip-append.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6097,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "c28bfe78c32bf0d7dbc00b77e59516d90dbddedb4119a203f94ddad493282621",
+      "firstDifferentByte": 0
+    },
     "tests/assets3d-convert.test.ts": {
       "previousBytes": 13630,
       "currentBytes": 14803,
@@ -126,12 +134,20 @@
       "currentSha256": "e91d21cd94029677c827f9e162ab58614d47f4d7f8cd1f4770ee675a48558777",
       "firstDifferentByte": 0
     },
+    "tests/assets3d-submesh-append.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7664,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e18144505dfb2dfc94c6fcd7b96f48866a2a5ea1015a4b829afeb00015a6b360",
+      "firstDifferentByte": 0
+    },
     "tests/assets3d-submesh-patch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17166,
+      "currentBytes": 20761,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ca3d5f941bba3b77bdd1be1f79bf55490cfa0952c4f200a353afa6020200ca95",
+      "currentSha256": "12f3bb58c76ddc0c8723223edf48bc84e2c788471ec1b8dc88695f4816d919db",
       "firstDifferentByte": 0
     },
     "tests/assets3d-ui-batch.test.ts": {
@@ -306,9 +322,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 14038,
+      "currentBytes": 14288,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "ba97de57f34e95ba1f9784d541edb4a2f74f6542abf3f660f16eb283f4d20ece",
+      "currentSha256": "1c89b12e0996d5c2c0d27dad716f44fb93bd0aa9672a5928e08aa54079a26aeb",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -425,9 +441,9 @@
     },
     "tests/augment-pool-batch5-h7.test.ts": {
       "previousBytes": 18878,
-      "currentBytes": 19519,
+      "currentBytes": 19747,
       "previousSha256": "e7d4a528997bb7459ceb58b243a336e0cfdeae5a97c31a651f3c6462d15a8715",
-      "currentSha256": "4b5136d9b18d8556c45afe7f5bef0ccc9c02056494b33519756063974eade42d",
+      "currentSha256": "bd316ad8b7c25b78a65185c4b73fafe0fd0368c9eccb5aa4712ded14d374e4c7",
       "firstDifferentByte": 4738
     },
     "tests/augment-pool-batch5-h8-deaths-room.test.ts": {
@@ -700,9 +716,9 @@
     "tests/cast-branch-renderer.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5324,
+      "currentBytes": 5427,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f6bff4c6cf586c669afb63df3a029bc5ed72f5c9505f0700018ce3baed07ad08",
+      "currentSha256": "d82a21b81cd034af88b7e790eb8c9b66471a6ce9c6941e160295076d32fd1e7a",
       "firstDifferentByte": 0
     },
     "tests/cast-branch-rotations.test.ts": {
@@ -919,6 +935,14 @@
       "currentSha256": "1061f40d159fe054d26fb51c36d63f221e9283893210ff20dc02abbd4cc02160",
       "firstDifferentByte": 0
     },
+    "tests/death-roll-keys.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3243,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "811a2bb3f4cddc9eb038de7eee8ad186e25c100b458cecc407b1f5b2e3f3fc83",
+      "firstDifferentByte": 0
+    },
     "tests/departed-effect-source-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -966,16 +990,16 @@
     },
     "tests/five-cost-fixes.test.ts": {
       "previousBytes": 10037,
-      "currentBytes": 10888,
+      "currentBytes": 11340,
       "previousSha256": "fe2713cec2f30cb12732f948fb7a72e1307ea8c685527fadc2bfa74de4944bc2",
-      "currentSha256": "48e1c922803ae5bcd118ca1447459bcd2c55a2de18c1b4f8b8d4d372fbfacbbe",
+      "currentSha256": "81c4829aa970b8d6803fa974fc79adf4348b97c238abfbd6dd44a5d042ec14c4",
       "firstDifferentByte": 502
     },
     "tests/five-cost-geometry.test.ts": {
       "previousBytes": 6253,
-      "currentBytes": 7993,
+      "currentBytes": 8345,
       "previousSha256": "373025bb8bd6bdb0687fc34154b55ab6f11fc8b821a08459ccb7e750d5d7882d",
-      "currentSha256": "34596c5f27ee639eb01e1949adc50bcf4a6ad2dfce1bd065c1e1147254fcec6b",
+      "currentSha256": "132d1b78c24e6ee422d0cb454d589483236004963d43fea8502775796b97a0ab",
       "firstDifferentByte": 145
     },
     "tests/five-cost-replay.test.ts": {
@@ -1002,9 +1026,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 6896,
+      "currentBytes": 7749,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "732858623e1b7fedf43b9ffb69dcec8dcaf63cb2b6c665d7425de2d159b7bafb",
+      "currentSha256": "bd8e6e8665488c24c4268051eea03ceb03713dfa3da0641e6c44bf3e93448bec",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1012,15 +1036,15 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c40095c968cf1f29aacb9ac38b4bbf81b22fb342b5a0424edcee41bd0b7bc2a3",
+      "currentSha256": "0f5eaf021d9a71a91d2ca4e0898779b6867fd66c2d13d0dd5c316685f34ad0ee",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2510,
+      "currentBytes": 3748,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "30678b7c74a623c0c7a80c0119bc211b5171350920d7cc0c5eb965f92e1a53c5",
+      "currentSha256": "a1e8481bd87950f353435e7e0d9898bc42a2d285169ccb5175487399137ba9b7",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
@@ -1087,6 +1111,13 @@
       "currentSha256": "da789771c2131241737ea812c4ba29210b955e24e346ad2765bf1ac5c1cdfebe",
       "firstDifferentByte": 299
     },
+    "tests/fixtures/m5/augment-h7-oracle.cjs": {
+      "previousBytes": 1615,
+      "currentBytes": 1747,
+      "previousSha256": "4ff8ca2650aade50c1794a57a81b90a65a6253ca82f4ae17828b6d0508062908",
+      "currentSha256": "98f81dee3511f181121d1383005faf7407b9eb155159e3cc0e8c2ff460c53e47",
+      "firstDifferentByte": 1238
+    },
     "tests/fixtures/m5/augment-inventory-oracle.cjs": {
       "previousBytes": 2893,
       "currentBytes": 3135,
@@ -1096,9 +1127,9 @@
     },
     "tests/fixtures/m5/augment-rewards-oracle.cjs": {
       "previousBytes": 77538,
-      "currentBytes": 78094,
+      "currentBytes": 78292,
       "previousSha256": "4dace593bb3f73fc38e378a047be031610b9c67fd7c0f3c206648861cc7ea71c",
-      "currentSha256": "307b9d49d9a02fc77a3283c931b73865ce4fed4fdeddd8e66bb1f247e7c3b57a",
+      "currentSha256": "d8974887f6156aa296afa635fdf620caa719d38012ae7d4ddeb99e5026c00aa6",
       "firstDifferentByte": 20845
     },
     "tests/fixtures/m5/full-match-golden.v26-neutrals-1424.json": {
@@ -1106,7 +1137,7 @@
       "previousBytes": 0,
       "currentBytes": 107763,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b336a6b8029e452a37210ede4050de9827419fd17643f7b633a66b50e0c68744",
+      "currentSha256": "fed3ed520838231c287d549db663affc120125b6cc828d31e8f77dbddf9010c7",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m5/h13-inventory-oracle.cjs": {
@@ -1163,15 +1194,15 @@
       "previousBytes": 0,
       "currentBytes": 17772,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "cc05033c4f1209d2da455a252f2698b39b7e71b739023aa8f53c85f59078ce6d",
+      "currentSha256": "6bd685b18cc6aeb892c7578729ad90ee497a6f2906d217b5fcc7e6d9a9774871",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23871,
+      "currentBytes": 23870,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "46f5b692fd344d68f858a7ccb3e8dbbe20c60d28fa7730e658707d8587c75b0c",
+      "currentSha256": "b79d5cba2c50885f408e642df4a4e02e2acf02deea43cb830c5f9c49e2a873bb",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1250,6 +1281,14 @@
       "currentSha256": "adc4877ba7c4504fecd2372e45325ab14719afb3795e212c3d45c94c1280c6d8",
       "firstDifferentByte": 0
     },
+    "tests/fixtures/spell-referenced-systems.json": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1769,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0a471a82d7a770cc28a68dd290540ed6ffc579a9e2c4b21ef58efaecbb5d2540",
+      "firstDifferentByte": 0
+    },
     "tests/fixtures/t13-loot-public.ts": {
       "previousBytes": 10339,
       "currentBytes": 10738,
@@ -1277,7 +1316,7 @@
       "previousBytes": 0,
       "currentBytes": 32276,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "075199207bb35bd6a37a368b6ba8b99aa8386cb68621762775b54d9c0e7d549b",
+      "currentSha256": "bb755201d1b6ed0cc6ecbf8a1a000f5005a1b0db738e9b9f3b6a2d99e361603c",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-chest-trial.json": {
@@ -1285,7 +1324,7 @@
       "previousBytes": 0,
       "currentBytes": 50951,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "830e62d2cc929d1b1f7f89e111ed54c7810bf4a44c6fd1b8178c00f07c555b00",
+      "currentSha256": "80acdb0d4b41eb02932b8b1ebf0c45ade51a0ea3786fd27a4d365f4ee66b481d",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-chest-trial.ts": {
@@ -1301,7 +1340,7 @@
       "previousBytes": 0,
       "currentBytes": 294080,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "94d03b5ccf94522c299735890d533d3cf308d3d621e1dbd95354620f2f0baff9",
+      "currentSha256": "36d46aa87a5aee72bc91b7379bf47a0932ddf20d1b1186563c775c9e3f088488",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/evenshroud.json": {
@@ -1309,7 +1348,7 @@
       "previousBytes": 0,
       "currentBytes": 293545,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "21deee7bfa7d807a87880ad9214b259aaf64d8718b70e481e8890785a2a2bc0a",
+      "currentSha256": "c7f2772dd1592ef09f9636440a795932e5f0c97eec09f1a201ebea0c13fb2f85",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark--evenshroud.json": {
@@ -1317,7 +1356,7 @@
       "previousBytes": 0,
       "currentBytes": 293069,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5c935b23c54df38f6376501011df0990b5fd9571bf2bef67e7ed5a75d3efd5cd",
+      "currentSha256": "be830dbaf84122f12f754b77983c1ce74b8cb065d9441b313e60b27745a4e3a4",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark.json": {
@@ -1325,7 +1364,7 @@
       "previousBytes": 0,
       "currentBytes": 293544,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "158abbd5cc2a633ed1c47841343ead94607179ddf9a7b0127f281471117cdb0d",
+      "currentSha256": "630b414c454bce855a187e1c3435a8e1826b0d7bd43503bc67f80ed59340f0de",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/manifest.json": {
@@ -1333,7 +1372,7 @@
       "previousBytes": 0,
       "currentBytes": 70028,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fa6a0c4bf104f6a818e37b7cbc73b05b29cf5b4041c61125c12c2088393d837b",
+      "currentSha256": "5fef96a563afa17498ba78cbd846f75642ac9268bb8e0fe3b5041b63ed348592",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
@@ -1341,7 +1380,7 @@
       "previousBytes": 0,
       "currentBytes": 293553,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c38033dcd7201965addc77b5884286f7f60f4c466ac864862a437ec5a9a1e1b0",
+      "currentSha256": "86830b236ae562a883b73d1e41772c543c0b6666fc13798567391d09baed5147",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
@@ -1349,7 +1388,7 @@
       "previousBytes": 0,
       "currentBytes": 335760,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "31472aae370aa91d143fc8b6c3b7f5bb1e7895583f7467bdaaae48377de29263",
+      "currentSha256": "2b9e691c31ea1aea1769a4d2276d51cc11e890433fd45ad0aed4f4ab392f5703",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": {
@@ -1363,17 +1402,17 @@
     "tests/fixtures/v26-neutrals-1424-recorded-states/cannon.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1160524,
+      "currentBytes": 1160416,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "86483c4f4c1829e9d4298ffd9067419522c843a2b603586ded6a1bb85f403257",
+      "currentSha256": "4c446ab8afc0e4faf9a3afcceeb7683e8beaaba353a2fa66b44c098fa0769aa8",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-recorded-states/sniper.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1219101,
+      "currentBytes": 1219039,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ea48e05c8c6c25b4e53e045c91c2a8e0aee7b7b199939adf0e13d607fd07c7e3",
+      "currentSha256": "df3bae1b2bb1ec6e3d58a44e318991cd1cf587b01ff64a52c3047e15e1389661",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-transfer-route.json": {
@@ -1381,7 +1420,7 @@
       "previousBytes": 0,
       "currentBytes": 840,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c97e613c2a0e13c15c3e0898b3dc8925b06b1e1670ddb69040d4fbbcab9dfe51",
+      "currentSha256": "5888204f1f33c144459d3c75287329a9bb0a0a61435f08e1cd4d02443f47ee3c",
       "firstDifferentByte": 0
     },
     "tests/forming-history-equipment.test.ts": {
@@ -1602,7 +1641,7 @@
       "previousBytes": 0,
       "currentBytes": 2221,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "2e93e24f83a1d0d839efac1bcb9314ceef10896c32108bfe710189ae33c5a989",
+      "currentSha256": "9b020f92dbb4241562ad127127f744d5ee311277b292f613d529fc073bb7123e",
       "firstDifferentByte": 0
     },
     "tests/helpers/g24-forge-states.ts": {
@@ -1751,6 +1790,13 @@
       "currentSha256": "d83fe4bf475beac6b948966c2ced60616078a004a5597ad4946c9d995461ced2",
       "firstDifferentByte": 3999
     },
+    "tests/m5-oracle-loot-explosion.test.ts": {
+      "previousBytes": 9329,
+      "currentBytes": 9714,
+      "previousSha256": "324a4c2c1d995691f811d9ce344708c36185448babdff1cc386986349d78d1a0",
+      "currentSha256": "3a167b43770f47914e5548e36163bbc2082130afe8735d3e9e4c456ab599e91a",
+      "firstDifferentByte": 6064
+    },
     "tests/m5-oracle-route-driver.test.ts": {
       "previousBytes": 1794,
       "currentBytes": 1983,
@@ -1818,9 +1864,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 17381,
+      "currentBytes": 18016,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "f0f372c3f3d323b80f2e3eca05702a5fadbc97b1d594243cf6a29b6653b71dbe",
+      "currentSha256": "48f2d5194e50a50c5cca2dfa034a5ac8830421c2644f89e803ea31900f925502",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -2202,6 +2248,14 @@
       "previousSha256": "a7be61170b8f40122362bec5bf4e67079d428c55f60e4b8fe67a90a75f2b3e2f",
       "currentSha256": "d047767fae1dd9b94ef91638ffc376468bd73eabceec8f5f324d5209358f6cab",
       "firstDifferentByte": 1879
+    },
+    "tests/malzahar-line-rules.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7150,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b742fd58ff078cc13c214682922009fb1e286f36d888b5f2d75140dc11555558",
+      "firstDifferentByte": 0
     },
     "tests/match-contract.test.ts": {
       "previousBytes": 6867,
@@ -3564,9 +3618,9 @@
     },
     "tests/server/fixtures/battle-start.json": {
       "previousBytes": 4979457,
-      "currentBytes": 3361891,
+      "currentBytes": 3362768,
       "previousSha256": "23ae0c381311cdff05560f2e39f33c6e68d96df79b9f51df56537fdbe6418b1e",
-      "currentSha256": "5e7e7a1984cf021a3f1a14fcf2a2c93b69b314068064b9232bd3309668e2ac5a",
+      "currentSha256": "fa61ab417f6b2971b9becedf8fa186746cff4e0f9b73a8cf7280fbb6a1f054b1",
       "firstDifferentByte": 13
     },
     "tests/server/forming-room.test.ts": {
@@ -3636,9 +3690,9 @@
     "tests/server/menaces-expiry-room.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7855,
+      "currentBytes": 9470,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8ff090df3c3f8c9e88bce4844b45ae312473315dee0a953536f7af5f4001ebbd",
+      "currentSha256": "f58074dffa9f6467e5705be399097f061eea416ca142bde250646c6bbbdb4207",
       "firstDifferentByte": 0
     },
     "tests/server/net/v17-avarice-reconnect.test.ts": {
@@ -4262,7 +4316,7 @@
       "previousBytes": 0,
       "currentBytes": 1185,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d919c12b2622058c915465858a516c626918c2b832fc05ad17956fb843e98fd0",
+      "currentSha256": "901cb3bb45a2cd5c69e47b7c77731c2208e607ac86720c45239a0df42e02c5c6",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-2cost-bindings.test.ts": {
@@ -4284,9 +4338,9 @@
     "tests/vfx-ltk-attack-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9966,
+      "currentBytes": 9876,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d15b4dfd5b83ddd4df19887718734706f2b5dd8737066e4f99ee1ff727cd2263",
+      "currentSha256": "87c9707ea75cf942a8996495cfa250d65f4b7fceaf3a45fe205e7bd57931c636",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-release-map.test.ts": {
@@ -4340,9 +4394,9 @@
     "tests/vfx-ltk-batch2.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 31972,
+      "currentBytes": 32074,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "593d12b536f18f025841df5037bbf329593bd0fe1c3137257d705330c82de9a2",
+      "currentSha256": "155fb17cab6b39eab19513900750606487805f4f6691c68ff5c5a0cba3569ce7",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-batch3.test.ts": {
@@ -4401,6 +4455,14 @@
       "currentSha256": "6dc639f0521290204a1bebb7178628441e3bb8414ea74acc8385dbe46f7859cc",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-cass-bolt-hit.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1277,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "10e7b970b5eff1538f108b8c7f3a0ee04ac285027f7fbadf5e13b0ad92654582",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-cast-branch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4432,6 +4494,13 @@
       "currentSha256": "1991eec2b61df1e95ea7cb90ae4e482317abd2124878087b3b5d27a2dfb8611d",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-converted-events.test.ts": {
+      "previousBytes": 5365,
+      "currentBytes": 5597,
+      "previousSha256": "aaf8f652cfa25f1dea150504c5b278ad25f2ff0c449638b9715eebb5fd1506a8",
+      "currentSha256": "e79681ebb151b95cf4fe8c3cded520ac30371a7ceed514ddec74b4795dc26e91",
+      "firstDifferentByte": 850
+    },
     "tests/vfx-ltk-crit-flash.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4459,9 +4528,9 @@
     "tests/vfx-ltk-cue-dropped.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5178,
+      "currentBytes": 10440,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6d3fcd1cf9fe812b96f9381743839995f151558de0be3a69f3e81c3b8386c7ec",
+      "currentSha256": "2372af210ded66c0c7916e23240fbd59c4d12334aee62756f5d9dc67af069c41",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-override-627.test.ts": {
@@ -4475,9 +4544,9 @@
     "tests/vfx-ltk-cue-overrides.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 22913,
+      "currentBytes": 23520,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c86ddad1bf4b27357a4c4f2a05999f92b7f7a5b12cc4508f784957903938a7d1",
+      "currentSha256": "68940e93885db8eea3c9fd69bd74a8abd93c75ad593b1c8237958fa922ab8929",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-ranks-coverage.test.ts": {
@@ -4491,9 +4560,9 @@
     "tests/vfx-ltk-cue-ranks.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3226,
+      "currentBytes": 3287,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4d11de08e0ffbbfcdac5008c6147b4b35960e842174812465ca484164ff22420",
+      "currentSha256": "2c2eb4e730292ee8613859a2fa187503321d7880ae2d1e6bfc6e48c0393a33d8",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-dead-target.test.ts": {
@@ -4591,6 +4660,14 @@
       "currentSha256": "4a06278191f1caf63a9d5f5d3af1a7890693b06909fd266a5aac756013985db1",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-gangplank-ranged-attack.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3942,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1e4bf2ec713a597e8538b8045cadb4638908fe91aa055ff5fb8180a5bec56e06",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-ground-line.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4630,12 +4707,36 @@
       "currentSha256": "47c7754a7f47b32d6ed11e037f45499c5e94a03f20fa22afc36818c18da60c39",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-kogmaw-q-flyer.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1996,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a8fb613e73462dc6125ec22c6f027ba81a5f2b2f9238248ee5bdd98d280089b2",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-leblanc-empowered.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3777,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "dc68f36bcf7ade87caaa504f968f08ae5903087c49f5c92bad7d3038aeff5778",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-leona-burst.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
       "currentBytes": 1325,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "0053fe739dcbe1b0765927e9fb736db7045300b090de5af89f7d7973d2d13e6e",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-linger-play-out.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 10430,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "113780b68b79f66ef97ba564b70c3e3e0f906c46eb127367d0498d150e3c7b8a",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-long-background.test.ts": {
@@ -4814,9 +4915,9 @@
     "tests/vfx-ltk-sevika-reels.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5172,
+      "currentBytes": 5238,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fdabc98fa3f9d5bf9f754fb44a1751331a9d887ba0ac4c61e9d98aa7c8fec8a1",
+      "currentSha256": "accf54642ab97fb7dac5a5994ebac777cd0ddaf193cd63b35163d3a80e5744d7",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-singed-cast.test.ts": {
@@ -4825,6 +4926,14 @@
       "currentBytes": 2443,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "95e0d388a3a724e431bd30d7f4431050be3b3e5d889be9cd0db432916f104c0f",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-skill-cue-gate.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4945,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "488707f903435868c7ccdb1f75b1c517d8e7af97c4403ed718598e22e0e8cb45",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-smeech-stabs.test.ts": {
@@ -4873,6 +4982,14 @@
       "currentBytes": 5052,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "43b562b439d01dfa58b3734e85b59d0b3b0724be13b91e82bd3a6abf244f85e2",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-swain-crow.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1154,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a30ec18d0f5566bb07db20fab0bb3e1004e175c2faeea6aa954934cec7436954",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-tail-fade.test.ts": {
@@ -4928,6 +5045,14 @@
       "currentBytes": 3600,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "b63eb91949fd2ead528ce067277c44b04604ab1b8d49ab68a3d85125bc8b2fa8",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-vi-slam.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6383,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a95060d600ceed7b394c51d1e1ac5e551e7ad04d2e010fffdf869530e1924e59",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-vladimir-heal.test.ts": {

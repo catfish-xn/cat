@@ -317,7 +317,14 @@ export interface CastReceipt {
   readonly castIndex?: number;
   /** Display-only: which branch this cast took, written where the rule chose it; absent when the ability has none. */
   readonly branch?: CastBranch;
+  /**
+   * Display-only: the board cells the cast's area covers, written where the rule draws one (Malzahar's gate: the 5-hex line
+   * across his target, board.ts hexCrossLine, cells off the board left out, from one end to the other). The rule's hits
+   * stay in targetIds; this is for drawing the area, empty cells included.
+   */
+  readonly area?: CastArea;
 }
+export interface CastArea { readonly cells: readonly HexCell[] }
 /** castIndex: the caster's cast count this combat including this cast (runtime.castCount, from 1). */
 export interface CastBranch { readonly castIndex: number; readonly branch: string }
 export type Trigger = 'combat-start' | 'attack-completed' | 'incoming-basic-hit' | 'cast-completed'

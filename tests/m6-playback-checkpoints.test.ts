@@ -124,15 +124,21 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     before628.version = { ...before628.version, replayFormatVersion: 8 }; before628.eventHash = digestContent(before628.events);
     // #739 save/replay 9 -> 10: contentDigest d94c78f1 -> cf212873 in the record only; substitute it back first.
     // Landing batch: contentDigest cf212873 -> 2f642cc0 in the record only; substitute it back first.
-    // Heimerdinger's focus: contentDigest 2f642cc0 -> 9ccd5f96 in the record only; substitute it back first.
-    const newer = JSON.stringify(before628).split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    // Death-keyed rolls: contentDigest 2f642cc0 -> 6983672c in the record only; substitute it back first.
+    // 玛尔扎哈门线 v1: contentDigest 6983672c -> 57428247 in the record only.
+    // 黑默丁格火箭集火 v1: contentDigest 57428247 -> 31713f8c in the record only.
+    const newer = JSON.stringify(before628).split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
     expect(bytesHash(JSON.parse(newer))).toBe('aed1abb50ef0355c3c10be7220af546eec1a795b95e380ff5cc35f6e1154d41d');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('0c7864258f8aaea4dfb17643ce3af62ab1e9c9e10c75d02d7f4d8662aafccee6');
     expect(bytesHash(JSON.parse(back))).toBe('4855c22c0529a7622d5d6145178390a1c76a8f1d71b2d6c299d64dd298d61a4c');
     // #739 save/replay 9 -> 10: record.version carries replayFormatVersion 10 and contentDigest cf212873 (was d94c78f1), so the
     // record hash moves again (was 4a7302a1… with replay 9 / d94c78f1); the chain above substitutes both back, so its pins hold.
-    expect(bytesHash(record)).toBe('bd21423e93d39726cbfe5677a9c03bb4f7dc1d95e0ac469c2d0e6900d6416aca');
+    // #795: the record's contentDigest is now the death-keyed rolls' digest, so the record hash moves (was bd21423e…, landing
+    // batch); events and terminal below are unchanged.
+    // #783: the record's contentDigest is now the Malzahar gate line's digest (6983672c -> 57428247), so the record hash moves
+    // again (was 856e39a9…, #795); events and terminal below are unchanged.
+    expect(bytesHash(record)).toBe('a77da78be43831d14a9bb0b2bfb9c472a2b74afd7a6fa3cebe415b0fb176dda3');
     expect(bytesHash(record.events)).toBe('3d9c7fc139b05e5795d4133ffaeff78a9e7084e14912bc9599fa23e69722fa7a');
     expect(bytesHash(expected.terminal)).toBe('fbf3b60ecf7829825848d88d79ade4df4076b05e2cbbc71a8b5ece3b689ee12e');
     // An external JSON record is cold on each constructor, like browser fixtures.

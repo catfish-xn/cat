@@ -59,13 +59,15 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 回放格式 8→9 (2026-11-12, #628): contentDigest db6dc9b6->d94c78f1 only; loot replay unchanged.
   // 存档/回放格式 9→10 (2026-11-19, #739): contentDigest d94c78f1->cf212873 only; loot replay unchanged.
   // 技能落地结算批 (2026-11-20): contentDigest cf212873->2f642cc0 only; loot replay unchanged.
-  // 黑默丁格火箭集火 (2026-11-20): contentDigest 2f642cc0->9ccd5f96 only; loot replay unchanged.
-  const back=save.split('9ccd5f96').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 死亡判定随机键 (2026-11-21): contentDigest 2f642cc0->6983672c only; loot replay unchanged.
+  // 玛尔扎哈门线 v1 (2026-11-21): contentDigest 6983672c->57428247 only.
+  // 黑默丁格火箭集火 v1 (2026-11-21): contentDigest 57428247->31713f8c only.
+  const back=save.split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('4f7b1725fdb247d72689841dfb8edc508a1e8012bdfb425ddcabc4b8b2b4ec42'); // Heimerdinger focus 2f642cc0 -> 9ccd5f96 (was efc1c1c8…, landing batch; 6dc0e509… before it)
+    .toBe('d86654e8089db63dbd132fb842c90a7d02f614db6583a06e7c628c88da0445e7'); // Heimerdinger focus v1 57428247 -> 31713f8c (was 2bcb58ef…, Malzahar gate v1; bedc822e… death-keyed rolls v1)
   expect(restoreMatch(save)).toEqual(started);
 });
 
