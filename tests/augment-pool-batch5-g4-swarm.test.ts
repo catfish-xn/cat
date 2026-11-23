@@ -67,12 +67,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 蔚奥莱连击 v1 (2026-11-21): contentDigest 1ca19aae->6130956b only.
   // 金克丝飞弹 v1 (2026-11-21): contentDigest 6130956b->946379e4 only.
   // 蔚砸地时刻 v2 (2026-11-21): contentDigest 946379e4->36e7e2c1 only.
-  const back=save.split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 梅尔连发 v1 (2026-11-21): contentDigest 36e7e2c1->57ffb53e only.
+  const back=save.split('57ffb53e').join('36e7e2c1').split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('d9816ba34dab70cb73ad3cc75a3c879efc9cf4a368f992294e894dee89588094'); // Vi slam v2 946379e4 -> 36e7e2c1 (was d369b482…, Jinx rocket v1; 0864f2a1… Violet combo v1)
+    .toBe('478209ecbbee77008e4f39f5bc1923486a4af080e2dceb3e23d1c1771e5f83d8'); // Mel bolt volley v1 36e7e2c1 -> 57ffb53e (was d9816ba3…, Vi slam v2; d369b482… Jinx rocket v1)
   expect(restoreMatch(save)).toEqual(started);
 });
 
