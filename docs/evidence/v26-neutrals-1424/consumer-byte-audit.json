@@ -3514,9 +3514,9 @@
     },
     "tests/server/battle-start-slices.test.ts": {
       "previousBytes": 13052,
-      "currentBytes": 14728,
+      "currentBytes": 14882,
       "previousSha256": "8ee63aeeac5cdc9056d7b8145465bc964baba2ec402706d59f5265eec21f8ad7",
-      "currentSha256": "6007dba9d08d26f4430d52128453442c965ff0713da0e0db8de4eb8a5462a5be",
+      "currentSha256": "02e8dfb2287df8cac0834c25e65dd67a1b9ab1c4d60a851c436ad2355943cef0",
       "firstDifferentByte": 623
     },
     "tests/server/bot-driver-helper.ts": {
@@ -3698,9 +3698,9 @@
     "tests/server/menaces-expiry-room.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9470,
+      "currentBytes": 9565,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f58074dffa9f6467e5705be399097f061eea416ca142bde250646c6bbbdb4207",
+      "currentSha256": "0e3c0553d0d0adadeb2ea44c46f3b8cf243a14b27b6aab60cf5bbed00c6b37dd",
       "firstDifferentByte": 0
     },
     "tests/server/net/v17-avarice-reconnect.test.ts": {
@@ -3720,9 +3720,9 @@
     "tests/server/orb-ledger-partial-forge-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7249,
+      "currentBytes": 7635,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f6f7fc9b1616ea82b1bd3b22adb1f19489277af7443a0659d1a7c32825b0aa1b",
+      "currentSha256": "8460300f339abf0a9e8cf8f852c8231dde8ee2277098dd8da3f98fd0a37ac62e",
       "firstDifferentByte": 0
     },
     "tests/server/pairing-room.test.ts": {
