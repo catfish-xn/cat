@@ -127,7 +127,13 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
    */
   placeStarted: {} as Record<string, number>, placeDropped: {} as Record<string, number>,
   /** Rows of a system whose definition draws nothing (an empty system: every emitter culled or none), skipped when due. */
-  emptySkipped: {} as Record<string, number> };
+  emptySkipped: {} as Record<string, number>,
+  /**
+   * Give-way cues (TimelineCue.giveWay), by system: not started for want of free room, or ended for a newcomer. Kept apart
+   * from `dropped`: such a cue never takes room another run needs (Fable 11-21, as #812's tails give way).
+   */
+  gaveWay: {} as Record<string, number> };
+const countGaveWay = (system: string) => { LTK_RUN_STATS.gaveWay[system] = (LTK_RUN_STATS.gaveWay[system] ?? 0) + 1; };
 /**
  * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
  * was dead and the cue does not keep a dead target's place (a plain attack, a link, a state the target carries), or its
@@ -243,6 +249,8 @@ interface Running { reserved: number; system: string; stopped?: boolean;
   bodyGone?: boolean;
   /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
   playOut?: boolean;
+  /** It only gives way (TimelineCue.giveWay): any newcomer short of room ends it. */
+  giveWay?: boolean;
   /** Its play-out is a lingering projectile's own tail (cue-overrides.ts LINGER_PLAY_OUT): it gives way to any newcomer. */
   lingerTail?: boolean;
   /** How a listed projectile's play-out ends (cue-overrides.ts PLAY_OUT_SYSTEMS); PLAY_OUT_CAP with none. */
@@ -1039,6 +1047,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const crowded = () => slotsFull() || !!(options.budget
           && (shared ? options.budget.live : reservedNow()) + need + heldNeed > options.budget.max);
         const blocked = () => crowded() || starts + partners.length >= 6;
+        // A give-way cue (TimelineCue.giveWay) starts only in free room: short of it, it does not play, and nothing else is
+        // ended, displaced or held for it.
+        if (spawn.giveWay && blocked()) { countGaveWay(spawn.system); for (const other of partners) { countGaveWay(other.spawn.system); waiting.splice(waiting.indexOf(other), 1); } continue; }
+        // Any other newcomer short of room first ends running give-way runs, oldest first, before anything else is weighed.
+        while (!spawn.giveWay && crowded()) {
+          let way: Running | undefined;
+          for (const run of running) if (run.giveWay && (!way || run.started < way.started)) way = run;
+          if (!way) break;
+          countGaveWay(way.system); leave(way);
+        }
         // A run playing out after its end (Running.playOut) is a tail: it gives way to any new run that lacks room, oldest
         // first, before anything still in its own time is weighed for eviction. Only when giving up every tail would let the
         // new run in: one that stays out anyway is weighed below as before, and no tail is cut for it (Fable 11-12, a
@@ -1175,7 +1193,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && (!!loaded.playOut || !!loaded.lingerPlayOut)) || !!spawn.playOut || undefined, lingerTail: (spawn.event === 'projectile' && !rowStart && !loaded.playOut && !spawn.playOut && !!loaded.lingerPlayOut) || undefined,
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, ...(spawn.giveWay ? { giveWay: true } : {}), ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && (!!loaded.playOut || !!loaded.lingerPlayOut)) || !!spawn.playOut || undefined, lingerTail: (spawn.event === 'projectile' && !rowStart && !loaded.playOut && !spawn.playOut && !!loaded.lingerPlayOut) || undefined,
             playOutEnd: spawn.playOut ? { seconds: spawn.playOut, fade: spawn.playOut } : spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
             ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
