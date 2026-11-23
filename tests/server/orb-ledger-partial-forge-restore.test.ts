@@ -27,9 +27,12 @@ import { getMultiplayerRoundById } from '../../src/simulation/multiplayer-round'
  * 6-1, so the room reaches 6-2. Searched seeds 0..149 (non-streamed rooms, every seat) with the same premises: three seats
  * qualify (seed 84 s2, 105 s1, 133 s3), each still in at 6-1's preparation with that forge waiting (the only mixed orb) and the
  * last seat out in 6-1. Seed 84 s2, the first, is used; all three still hold with Heimerdinger's focus and Swain's drain on top.
+ * #808 (2026-11-23, Violet's combo; scene change approved by Fable, premises and assertions unchanged): seed 84's s2 is out
+ * before 6-1. Searched seeds 0..107 (non-streamed rooms, every seat) with the same premises: seed 71 s1 is the first that holds
+ * (seed 75 s0 also does), still in at 6-1's preparation with that forge waiting (the only mixed orb) and the last seat out in 6-1.
  */
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 84, combatStreaming: true });
-const seatId = 's2', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 71, combatStreaming: true });
+const seatId = 's1', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
 afterAll(() => room.dispose());
 const mixedOrbs = (state: MatchState) => state.m8.loot.frozen.rounds.flatMap(r => r.orbs).map(orb => ({ orb,
   statuses: orb.entries.map(e => state.m8.loot.direct.find(d => d.dropId === e.dropId)?.status) })).filter(o => new Set(o.statuses).size > 1);

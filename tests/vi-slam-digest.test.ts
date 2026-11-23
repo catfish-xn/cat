@@ -10,7 +10,7 @@ import { readyMatch } from './match-helpers';
 
 // Vi's slam at the original's time (11-21, authorization ②; docs/S13_RULES_GAP.md 蔚砸地时刻). The timing itself is covered by
 // tests/vi-grab-slam.test.ts, which reads VI_SLAM_TICKS.
-const BEFORE_DIGEST = 'fnv1a32-utf16:5742ae06';
+const BEFORE_DIGEST = 'fnv1a32-utf16:946379e4';
 describe("Vi's slam timing: files written before it", () => {
   it('the slam constant, the rule identifier, and the digest moved', () => {
     expect(VI_SLAM_TICKS).toBe(17);

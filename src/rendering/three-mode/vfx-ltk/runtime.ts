@@ -205,6 +205,11 @@ export interface LtkPlayOptions {
   crit?: boolean;
   /** This play is a crit flash of its own (CRIT_SKILL_HIT): refused while CRIT_FLASH_MAX of them are out. */
   critFlash?: boolean;
+  /**
+   * The rule's flight in seconds (abilityProjectileLaunched: arrivalTick − tick, 50 ms a tick): projectile cues fly this long
+   * and spanFlight cues last it, in place of a flight estimated from the distance (TimelineCue.flightTicks).
+   */
+  flightSeconds?: number;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its random seed, fixed when it was queued (seedOf). */
@@ -238,6 +243,8 @@ interface Running { reserved: number; system: string; stopped?: boolean;
   bodyGone?: boolean;
   /** At its end it stops emitting and stays until its particles have played out on their own curves (PLAY_OUT_CAP at most). */
   playOut?: boolean;
+  /** Its play-out is a lingering projectile's own tail (cue-overrides.ts LINGER_PLAY_OUT): it gives way to any newcomer. */
+  lingerTail?: boolean;
   /** How a listed projectile's play-out ends (cue-overrides.ts PLAY_OUT_SYSTEMS); PLAY_OUT_CAP with none. */
   playOutEnd?: PreparedVfx['playOut'];
   /** Its end came and it is playing out. */
@@ -330,6 +337,16 @@ export function withFlight<T extends TimelineCue>(cue: T, cells: number | null):
   const { perCell, min } = cue.flightTicks, seconds = (cells === null ? min : flightTicksFor(cells, perCell, min)) * 0.05;
   if (cue.event === 'projectile') return { ...cue, travelSeconds: seconds, duration: seconds + cue.duration - (cue.travelSeconds ?? 0) };
   return { ...cue, delay: cue.delay + seconds };
+}
+/**
+ * A cue timed by the rule's flight (LtkPlayOptions.flightSeconds): a projectile flies `seconds`, keeping what it holds past
+ * its nominal flight; a spanFlight cue lasts the flight plus its own duration; any other cue keeps its own times.
+ */
+export function withFlightSeconds<T extends TimelineCue>(cue: T, seconds: number): T {
+  if (!(seconds >= 0)) return cue;
+  if (cue.event === 'projectile') return { ...cue, travelSeconds: seconds, duration: seconds + cue.duration - (cue.travelSeconds ?? 0) };
+  if (cue.spanFlight) return { ...cue, duration: seconds + cue.duration };
+  return cue;
 }
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
@@ -828,8 +845,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fromUnit = spawn.fromId !== undefined ? findUnit(spawn.fromId) : undefined;
         const from = fromUnit && !fromUnit.disposed ? standingPoint(fromUnit.root) : undefined;
         if (spawn.fromId !== undefined && !from) continue;
-        // A flight by distance (TimelineCue.flightTicks) is timed now, from where caster and target stand.
-        if (spawn.flightTicks) {
+        // A flight the rule timed (LtkPlayOptions.flightSeconds), else one by distance (TimelineCue.flightTicks), from where
+        // caster and target stand now.
+        if (context.flightSeconds !== undefined) spawn = withFlightSeconds(spawn, context.flightSeconds);
+        else if (spawn.flightTicks) {
           const caster = findUnit(spawn.sourceId), aimed = spawn.targetId ? findUnit(spawn.targetId) : undefined;
           const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
           spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
@@ -1027,9 +1046,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // removes the whole tail at once, its rock children and smoke included: what was left of it disappears in that frame.
         // Counted the way crowded() counts: a tail's together group is one slot and leaves whole (leave()), so the slots
         // freed are the groups with a tail in them and the room freed is every run of those groups, tail or not.
-        const tailsAdmit = () => {
+        const tailsAdmit = (takes: (run: Running) => boolean) => {
           const gone = new Set<Running>(); let groups = 0;
-          for (const run of running) if (yields(run) && !gone.has(run)) {
+          for (const run of running) if (takes(run) && !gone.has(run)) {
             groups++;
             for (const other of running) if (other === run || (run.together && other.together === run.together)) gone.add(other);
           }
@@ -1040,11 +1059,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
             && !(options.budget && (shared ? options.budget.live : reservedNow()) - room + need + heldNeed > options.budget.max);
         };
         // Only a critical or body newcomer takes a tail's place: a plain attack or a flourish never ends one early (Fable 11-13:
-        // Gangplank's scorch gave way the frame it began to play out, both times, in an 8 v 8).
+        // Gangplank's scorch gave way the frame it began to play out, both times, in an 8 v 8). A lingering projectile's own
+        // tail (LINGER_PLAY_OUT) is only what is left of a landed missile, so it gives way to any newcomer, a plain attack or
+        // a flourish included: it never costs anything a drop (Fable 11-21: hrA/hrB dropped two attack hits and a swing more).
         const takesTails = !atPlace && (importance === 'critical' || importance === 'body');
-        while (takesTails && crowded() && tailsAdmit()) {
+        const takes = (run: Running) => yields(run) && (takesTails || (!atPlace && !!run.lingerTail));
+        while (crowded() && tailsAdmit(takes)) {
           let tail: Running | undefined;
-          for (const run of running) if (yields(run) && (!tail || run.started < tail.started)) tail = run;
+          for (const run of running) if (takes(run) && (!tail || run.started < tail.started)) tail = run;
           if (!tail) break;
           leave(tail);
         }
@@ -1153,7 +1175,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && !!loaded.playOut) || !!spawn.playOut || undefined,
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && (!!loaded.playOut || !!loaded.lingerPlayOut)) || !!spawn.playOut || undefined, lingerTail: (spawn.event === 'projectile' && !rowStart && !loaded.playOut && !spawn.playOut && !!loaded.lingerPlayOut) || undefined,
             playOutEnd: spawn.playOut ? { seconds: spawn.playOut, fade: spawn.playOut } : spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
             ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;

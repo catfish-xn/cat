@@ -57,7 +57,7 @@ describe('Swain demon form drain', () => {
 
 // The drain cadence changes battle results, so its rule identifier is part of the content digest: a save or replay written
 // under the digest just before it (Heimerdinger's focus) is turned away as another version, never replayed under the new rule.
-const BEFORE_DIGEST = 'fnv1a32-utf16:9ccd5f96';
+const BEFORE_DIGEST = 'fnv1a32-utf16:31713f8c';
 describe('Swain drain: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
     expect(S13_COMBAT_RULES.swainDrain).toBe('swain-drain-pulse-cadence-v2');
