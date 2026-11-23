@@ -134,7 +134,8 @@ function animationEvent(event: LedgerCombatEvent) {
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),
       targetIds: [...event.receipt.targetIds], completionCell: cellView(event.receipt.completionCell),
       ...(event.receipt.castIndex !== undefined ? { castIndex: event.receipt.castIndex } : {}),
-      ...(event.receipt.branch ? { branch: pick(event.receipt.branch, ['castIndex', 'branch']) } : {}) };
+      ...(event.receipt.branch ? { branch: pick(event.receipt.branch, ['castIndex', 'branch']) } : {}),
+      ...(event.receipt.area ? { area: { cells: event.receipt.area.cells.map(c => pick(c, ['col', 'row'])) } } : {}) };
     case 'shieldLayerChanged': return { ...envelope, type: event.type, reason: event.reason,
       ...pick(event.layer, ['key', 'targetId', 'remaining']) };
     case 'statusChanged': return { ...envelope, type: event.type, reason: event.reason,

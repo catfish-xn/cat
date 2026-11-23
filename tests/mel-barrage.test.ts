@@ -10,6 +10,9 @@ import { admitArchives } from '../src/replay';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { readyMatch } from './match-helpers';
+import { packets } from './helpers/replay2-views';
+import { ap, variable, type S13Unit } from '../src/simulation/combat-s13-state';
+import { splitTotal } from '../src/simulation/m8/periodic';
 
 // Mel's cast (11-20, user-approved timing; dash and release aligned to the original frame by frame, bolt flight self-chosen):
 // docs/S13_RULES_GAP.md (梅尔弹幕).
@@ -41,15 +44,18 @@ describe('Mel barrage timing', () => {
       // Each bolt's flight is read when it leaves (from where she stands that tick): she may walk on after her release.
       const at = run(s0, l.tick - s0.tick).state.units, from = at.find(u => u.id === 'mel')!.cell, to = at.find(u => u.id === l.targetId)!.cell;
       expect(l.arrivalTick - l.tick).toBe(Math.max(1, hexDistance(from, to) * MEL_BOLT_TICKS_PER_HEX));
+      // On its arrival tick its target takes exactly one packet per bolt arriving there.
       const landed = r.out.find(s => s.tick === l.arrivalTick)!;
-      expect(landed.events.filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel' && (e as any).outcome.context.targetId === l.targetId
-        && (e as any).outcome.context.source.sourceKind === 'ability').length).toBeGreaterThan(0);
+      expect(packets(landed.events).filter(p => p.source.ownerId === 'mel' && p.source.sourceKind === 'ability' && p.unitId === l.targetId))
+        .toHaveLength(launched.filter(o => o.targetId === l.targetId && o.arrivalTick === l.arrivalTick).length);
     }
-    // One packet per bolt; per target they add up to the cast's per-target amount (split evenly, remainder first).
+    // Per target, the bolts' packets (in bolt order) are the cast's per-target amount split as before: splitTotal over the bolts.
+    const caster = run(s0, castAt - s0.tick).state.units.find(u => u.id === 'mel')! as unknown as S13Unit;
+    const per = Math.floor(variable(caster, 'Damage') * ap(caster, castAt, run(s0, castAt - s0.tick).state.units as unknown as S13Unit[]) / 100);
     for (const t of targets) {
-      const raws = r.out.flatMap(s => s.events.filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel' && (e as any).outcome.context.targetId === t
-        && (e as any).outcome.context.source.sourceKind === 'ability').map(e => (e as any).outcome.context.raw ?? (e as any).raw));
-      expect(raws).toHaveLength(MEL_BOLTS_PER_TARGET);
+      const raws = r.out.flatMap(s => packets(s.events).filter(p => p.source.ownerId === 'mel' && p.source.sourceKind === 'ability' && p.unitId === t).map(p => p.raw));
+      expect(raws).toEqual(splitTotal(per, MEL_BOLTS_PER_TARGET));
+      expect(raws.reduce((a, b) => a + b, 0)).toBe(per);
     }
     expect(r.out.filter(s => s.tick < castAt + MEL_RELEASE_TICKS).flatMap(s => s.events).filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel'
       && (e as any).outcome.context.source.sourceKind === 'ability')).toEqual([]);
@@ -127,7 +133,7 @@ describe('Mel dash: ties go away from the nearest enemy', () => {
 
 // The barrage timing changes battle results, so its rule identifier is part of the content digest: a save or replay written
 // under the digest just before it (Swain's drain) is turned away as another version, never replayed under the new rule.
-const BEFORE_DIGEST = 'fnv1a32-utf16:eb2d4cee';
+const BEFORE_DIGEST = 'fnv1a32-utf16:b74b81b0';
 describe('Mel barrage: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
     expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-dash-each-normal-cast-away-from-foes-v3');
@@ -147,12 +153,12 @@ describe('Mel barrage: files written before it', () => {
   });
 });
 
-// The ten-bolt normal cast changes battle results: a save written under the digest just before it (Vi's slam) is turned away.
-const BEFORE_BOLTS_DIGEST = 'fnv1a32-utf16:c4667f33';
-describe("Mel's ten bolts: files written before them", () => {
+// The bolt-volley normal cast changes battle results: a save written under the digest just before it (Vi's slam) is turned away.
+const BEFORE_BOLTS_DIGEST = 'fnv1a32-utf16:36e7e2c1';
+describe("Mel's bolt volley: files written before it", () => {
   it('the constants, the rule identifier, and the digest moved', () => {
     expect([MEL_BOLTS_PER_TARGET, MEL_TARGET_STAGGER_TICKS, MEL_BOLT_SPAN_TICKS]).toEqual([10, 1, 16]);
-    expect(S13_COMBAT_RULES.melBolts).toBe('mel-normal-cast-ten-bolts-per-target-staggered-v1');
+    expect(S13_COMBAT_RULES.melBolts).toBe('mel-normal-cast-bolt-volley-per-target-staggered-v1');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_BOLTS_DIGEST);
   });
   it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
