@@ -60,4 +60,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   // Mel's cast v2 (11-21): bolts settle where they land, her dash lands and her bolts leave later (MEL_DASH_LAND_TICKS,
   // MEL_RELEASE_TICKS in cast-windup.ts); every normal cast dashes, the third does not move; v3: ties go away from the nearest foe.
   melBarrage: 'mel-barrage-settle-on-landing-dash-each-normal-cast-away-from-foes-v3',
+  // Violet's combo v1 (11-21): two jabs and the uppercut each settle on their own tick (cast-windup.ts); the knock-up starts with the uppercut.
+  violetCombo: 'violet-combo-settle-per-hit-v1',
 });
