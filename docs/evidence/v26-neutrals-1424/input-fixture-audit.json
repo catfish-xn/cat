@@ -20,7 +20,7 @@
     "scripts/verify-v26-neutrals-1424-epoch.cjs": "d49dd679d9bdc213819617c345a338f96f7e3cc870ac39a8e4e118908f797087",
     "src/simulation/ability-display-source.ts": "320132c6ec4be8a8e149be979e16539488ee676a31b8b95c87df1512849e60bb",
     "src/simulation/ability-display.ts": "13292b832a0e201ae70b202e08ff742bb56bd975c322ed8450b6022320014312",
-    "src/simulation/ability-projectile.ts": "bc975fb1c3e989e7ca54ea75ca1a4892f2ef121cd0f7022a93e4bfff40c8a069",
+    "src/simulation/ability-projectile.ts": "1d55d68ecb68da55dfcec9972d40af9fca29f2f92efb2c8c6242b4412a20558a",
     "src/simulation/ability-types.ts": "ddffe56e06983345d2bd677466f232bada82236f4fc0fbe837c9ea0f39fe16c5",
     "src/simulation/anomalies/availability.ts": "ef9b07c61873878c909ba026366b19d6936df200d8870c29c7a0e48b63fb2634",
     "src/simulation/anomalies/bonuses.ts": "0d94565002943d87cee29811dc03d1ebbebd28d4dbc4794be80774e86fd053e5",
@@ -163,7 +163,7 @@
     "src/simulation/carousel-types.ts": "055372e4fa7e86b9321c354902ffb4e3a789999e3914b913abca960572e8ebae",
     "src/simulation/carousel-units.ts": "543124b87b5274a7b78431b014281b7f41db8b35fcc78940bde868ffcad7e845",
     "src/simulation/carousel.ts": "173001302eacd2630bed172a71734a66371112498dacd576e873120a2f2eec7e",
-    "src/simulation/cast-windup.ts": "6a46fde0105e4805cea6339ce16f60c8c9abaca4fe341a6506aa37f689c6df71",
+    "src/simulation/cast-windup.ts": "b282ef29a05154b173f2788b15f457679aa6335ef573321bc664bd8eec7e70f9",
     "src/simulation/choice-acquisition.ts": "0cadd1023ff0425aa00da94847237339fc21d10645aea64d5160f1901744c57b",
     "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
     "src/simulation/combat-abilities.ts": "2a485296e0ca8425f19afe9211f47630af196604efa30ae26dbf98ea8efd7dae",
@@ -192,7 +192,7 @@
     "src/simulation/combat-s13-abilities.ts": "78a94856bc8ba862059d044d1e5f52c47a42babaaa4bc81b5663311f09efd835",
     "src/simulation/combat-s13-state.ts": "74355dd524a62a597dcb057f7938e834b2185f778f8f0444a11c22e4b14c8123",
     "src/simulation/combat-s13.ts": "fae5bd5fba07b866ecf4013dbc01fc00fed4caaf522cc513ebd49ea4746ac548",
-    "src/simulation/combat-six-cost.ts": "2fe54a48d07e0965798098e24174d42fc0b41d299bf7515691d560746acc31d3",
+    "src/simulation/combat-six-cost.ts": "04c46180f9f883aaefb99b11750fa521541088f9ba0baa470b0c2deb918fffb8",
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
     "src/simulation/combat-stream-terminal.ts": "4c933b425868e0fb032f01575be01afe116b023220c62c40559abaf42895aca3",
@@ -308,7 +308,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "6816656cf1a55347e9d1dcc7cd83483e036013de2cd8aaf15cf1ffc08ed7dc54",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "09a12868ce06f662f2803c9c8d5d238013e65cc10e66549451f4922d62a20893",
+    "src/simulation/content/identity-constants.ts": "e397ea5f28db66df0d52d4a5456e293f784aff6b4ad6cc85631cae78b1e2e9a6",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -586,7 +586,7 @@
     "src/simulation/s13-augments-p2-strategy.ts": "a38577954f2a3a53617df55963ca01c1db1a8b2ddd4d0c64478c3d0304c68eeb",
     "src/simulation/s13-p3-combat.ts": "9796af159ea92ceb29f22d28261cc916aa8308769f99ac882eec24ac5ed2044a",
     "src/simulation/s13-p3-programs.ts": "5368142348225dfe8d63b5913481192c4bf49d8fc7028b534d93e2e28c467769",
-    "src/simulation/s13-rules.ts": "1cb6e9496314a054b0934e33bdada3fa8d0d5e30b1c6b459005511578868a2b6",
+    "src/simulation/s13-rules.ts": "819ea45f930611424fe2f69f32205082327b3ac07c8ab32c006a36cc1b01adb0",
     "src/simulation/seat-mechanics/choices.ts": "f68964fa36561844dc5524632ef78fb4c86cc22f305579d62fcc08c5ba7d2c60",
     "src/simulation/seat-mechanics/combat-events.ts": "34232bdaf8f46c87e8ec3395ffed10c551a57b8ce2775eae5f72c90e9340e5f1",
     "src/simulation/seat-mechanics/forms.ts": "4d6e378e85e942d5922cfb75d2c09a5d4e242f97af26728aba51b7f69eb2b90a",
@@ -663,13 +663,13 @@
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
   },
-  "contentDigest": "fnv1a32-utf16:36e7e2c1",
+  "contentDigest": "fnv1a32-utf16:57ffb53e",
   "files": {
     "tests/fixtures/v26-neutrals-1424-c19-seed-9-minimal.json": {
       "previousBytes": 32276,
       "currentBytes": 32276,
       "previousSha256": "391b99e10aaafdc17b9ec1498a80726d7503baa482b5383547cba1f3e6ad67fa",
-      "currentSha256": "1ba32e76e94091baf2cddf5556d38af5151dbe9046110df6842396ee0a974879",
+      "currentSha256": "7148be724b234923650b28f094710fbeb84ed46a375f7287bf0f13865be4fcc9",
       "firstDifferentByte": 207
     },
     "tests/fixtures/v26-neutrals-1424-b8-fingerprints.json": {
@@ -683,49 +683,49 @@
       "previousBytes": 180985,
       "currentBytes": 293544,
       "previousSha256": "a2a1dadae43bec9c4b921eef603effb03b6cf6e9892f9f7a9bf8726df041cfd3",
-      "currentSha256": "7f9008366190b9f973ac0f2ea67857682f68f791d356ad457c0f5ca9fddebead",
+      "currentSha256": "2bbbbc864ed4d3ad99d6bb6e1cad142813cae1a8f2ac54f1e36f1d9a3b64a023",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/evenshroud.json": {
       "previousBytes": 181029,
       "currentBytes": 293545,
       "previousSha256": "0045d02b81a54cd16901692e87c59552c31e3aebcf7fbc13d0d318f296414174",
-      "currentSha256": "ca73e8404b9f70d27a8828a95860cdce4d347b27d750144a4d15539599444b62",
+      "currentSha256": "7eb8ed9722a1e287d2f9188109ab343cbcbd5903c390051a564089bc8cb8dd5a",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 181021,
       "currentBytes": 293069,
       "previousSha256": "593b4d6e19f5412a3478057401aa75bc73c320c1a4fd745a0a3335152a5300ff",
-      "currentSha256": "d7bb8983ff6fa18000747ac8a32bbd56a566c38b6b74eab70bad8d812b181110",
+      "currentSha256": "d34e7b9ff9a5b2db2562566e47eb76f3e41967dbed194389f8284acc96ffa805",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
       "previousBytes": 181033,
       "currentBytes": 293553,
       "previousSha256": "73ffe3ed81f5b3e51a7a52c6f9ccd06924334f55339166c851fa1631749d6869",
-      "currentSha256": "850365cc4f498e30ffa2c21381b8cd79520f2f02eed1a882416bddc06d0ece83",
+      "currentSha256": "6c74e49a352db79db5cc2f4a534ba66a61d19213f7c3f5c2ab2588430373f921",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/edge-of-night.json": {
       "previousBytes": 181037,
       "currentBytes": 294080,
       "previousSha256": "8af029aa7ba1ce7296e779a257893f8f8ba2fa9397db8611ebba9aa3c80e438e",
-      "currentSha256": "0119689e604269817ca7f9185de0559cfd6b5d4d83b5076e1df018525fec8b20",
+      "currentSha256": "e36937320fcc639dd4796dcec1ea7e2824f6443b3714e67d8a80e26ff70b95a7",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/manifest.json": {
       "previousBytes": 66919,
       "currentBytes": 70028,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "b7fcf761160bb360264f6cc6e831ff953d48d5f0577151ada2e1407908ffa1cc",
+      "currentSha256": "ef2e7aaf5a272d2c8e99d164c7d30c32293a8e1eb6be574ec6cbf19f7e235d37",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
       "previousBytes": 328556,
       "currentBytes": 335760,
       "previousSha256": "b031eaa686e577b32a517374fdb9452107679a68d42ba23096b165b4123b19fd",
-      "currentSha256": "c70d4efc2be21be93d063efeebd6e72ae88a3ba4549e7a99b36d6af4fd07fa27",
+      "currentSha256": "2990ebacfc3ad11538516bb15eb888f0b7a98f3b171bb3f0f5f94e1d3683ffa4",
       "firstDifferentByte": 42
     }
   },
