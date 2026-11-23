@@ -9,13 +9,15 @@ const hash = (name: string): VfxValue => ({ type: 'hash', hash: nameHash(name), 
 const meta = (name: string, fields: Record<string, VfxValue>) => ({ class: name, root: struct(name, fields) });
 const reference = struct('VfxSystemDefinitionData', {});
 if (reference.type === 'struct') reference.object = { entry: '0x12345678', name: 'synthetic' };
+const hitReference = struct('VfxSystemDefinitionData', {});
+if (hitReference.type === 'struct') hitReference.object = { entry: '0x0f2af66b', name: 'synthetic-hit' };
 const systems = { '12345678': 'systems/test.json' };
 function metadata() {
   return [
-    meta('ResourceResolver', { resourceMap: { type: 'map', entries: [{ key: 'Synthetic_Cast', value: reference }] } }),
+    meta('ResourceResolver', { resourceMap: { type: 'map', entries: [{ key: 'Synthetic_Cast', value: reference }, { key: 'Synthetic_Attack_Hit', value: hitReference }] } }),
     meta('TFTCharacterRecord', { spellNames: list(str('SyntheticSpell')), basicAttack: struct('AttackSlotData', { mAttackName: str('SyntheticBasicAttack') }) }),
     meta('SpellObject', { mScriptName: str('SyntheticSpell'), mSpell: struct('SpellDataResource', { mAnimationName: str('Spell'), mCastEffectKey: hash('Synthetic_Cast'), castFrame: num(6) }) }),
-    meta('SpellObject', { mScriptName: str('SyntheticBasicAttack'), mSpell: struct('SpellDataResource', { mHitEffectKey: hash('TFT_Global_BA_Hit'), castFrame: num(9), mHitBoneName: str('CHEST') }) }),
+    meta('SpellObject', { mScriptName: str('SyntheticBasicAttack'), mSpell: struct('SpellDataResource', { mHitEffectKey: hash('Synthetic_Attack_Hit'), castFrame: num(9), mHitBoneName: str('CHEST') }) }),
     meta('SpellObject', { mScriptName: str('SyntheticUnobservedSubspell'), mSpell: struct('SpellDataResource', { mCastEffectKey: hash('Synthetic_Cast') }) }),
     meta('AnimationGraphData', { mClipDataMap: { type: 'map', entries: [{ key: 'Spell', value: struct('AtomicClipData', {
       mEventDataMap: list(struct('ParticleEventData', { mEffectKey: hash('Synthetic_Cast'), mStartFrame: num(3), mEndFrame: num(12),
@@ -44,10 +46,10 @@ describe('generic converted BIN event timelines', () => {
 
 import { mapLegacyTimeline } from '../src/rendering/three-mode/vfx-ltk/converted-events';
 it('reuses exact existing script-driven display bindings and keeps incomplete actions on fallback', () => {
-  const inventory = [{ id: 'cast-id', name: 'Characters/Test/Particles/TFT13_Test_Cast' }, { id: 'hit-id', name: 'TFT_Global_BA_Hit' }];
-  const bindings = { actionEffects: { test: { cast: ['test_tft13_test_cast'], attack: ['global_tft_global_ba_hit'] } }, playback: {
+  const inventory = [{ id: 'cast-id', name: 'Characters/Test/Particles/TFT13_Test_Cast' }, { id: 'hit-id', name: 'Synthetic_Attack_Hit' }];
+  const bindings = { actionEffects: { test: { cast: ['test_tft13_test_cast'], attack: ['global_synthetic_attack_hit'] } }, playback: {
     test_tft13_test_cast: { anchor: 'source', delay: .2, maxDuration: 1, bone: 'Hand' },
-    global_tft_global_ba_hit: { anchor: 'target', delay: .3, maxDuration: .5 },
+    global_synthetic_attack_hit: { anchor: 'target', delay: .3, maxDuration: .5 },
   } };
   expect(mapLegacyTimeline('test', inventory, bindings).cues).toEqual([
     { system: 'cast-id', action: 'cast', event: 'cast-start', delay: .2, duration: 1, bone: 'Hand' },

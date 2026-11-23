@@ -17,7 +17,6 @@ export const CAST_START_RANKS: Readonly<Record<string, Readonly<Record<string, '
   // Sevika coin: the same coin fountain
   'sevika-coin': { '91985f5e': 'body' },
   // Mel energy: stack glow
-  'mel-energy': { '3eab3582': 'decorative' },
   // Sion: charge-up
   'g23-sion': { '2b8d0d85': 'body' },
   // Sion unbound: two cast bursts
