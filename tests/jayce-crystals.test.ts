@@ -31,7 +31,7 @@ describe("Jayce's crystals", () => {
   const cast = r.out.find(s => s.events.some(e => e.type === 'cast'))!.tick;
   const crystals = r.out.flatMap(s => s.events.filter(e => e.type === 'jayceCrystal') as any[]);
   const hits = r.out.flatMap(s => packets(s.events).filter(p => p.source.ownerId === 'p' && p.source.sourceKind === 'ability').map(p => ({ tick: s.tick, target: p.unitId, raw: p.raw })));
-  it('three crystals land on the three nearest enemies at their landing ticks and stay on those cells', () => {
+  it('a crystal lands on each nearest enemy at its landing tick and stays on that cell', () => {
     const landed = crystals.filter(c => c.phase === 'landed');
     expect(landed.map(c => [c.tick - cast, c.crystal, c.count])).toEqual([0, 1, 2].map(i => [jayceCrystalLandTick(i), i, 3]));
     expect(landed.map(c => `${c.cell.col},${c.cell.row}`)).toEqual(['3,4', '4,3', '5,3']);
@@ -43,7 +43,7 @@ describe("Jayce's crystals", () => {
     expect(hits.filter(h => h.tick - cast < JAYCE_MAIN_HIT_TICKS)).toEqual([]);
     expect(hits.filter(h => h.tick - cast === JAYCE_MAIN_HIT_TICKS)).toEqual([{ tick: cast + JAYCE_MAIN_HIT_TICKS, target: 'a', raw: hits.find(h => h.target === 'a')!.raw }]);
   });
-  it('each explosion hits the enemies within 1 hex of its crystal; the nearest takes none from its own crystal; later explosions on one enemy are halved, not compounded', () => {
+  it('each explosion hits the enemies around its crystal; the nearest takes none from its own crystal; later explosions on one enemy take the falloff once, not compounded', () => {
     const blastAt = (i: number) => cast + jayceCrystalBlastTick(jayceCrystalChainPlace(i, 3));
     const near = (cell: string, id: string) => { const [col, row] = cell.split(',').map(Number); const u = start.units.find(x => x.id === id)!; return hexDistance({ col: col!, row: row! }, u.cell) <= 1; };
     const full = hits.find(h => h.tick === blastAt(0) || h.tick === blastAt(2))!.raw;
@@ -75,16 +75,20 @@ describe("Jayce's crystals in a tight group", () => {
   const cast = r.out.find(s => s.events.some(e => e.type === 'cast'))!.tick;
   const hits = r.out.flatMap(s => packets(s.events).filter(p => p.source.ownerId === 'p' && p.source.sourceKind === 'ability').map(p => ({ at: s.tick - cast, target: p.unitId, raw: p.raw })));
   const blasts = hits.filter(h => h.at > JAYCE_MAIN_HIT_TICKS);
-  const full = blasts.find(h => h.target === 'c')!.raw, half = Math.floor(full / 2);
+  const full = blasts.find(h => h.target === 'c')!.raw, later = Math.floor(full / 2);
   const [aBlast, cBlast, bBlast] = [0, 2, 1].map(i => jayceCrystalBlastTick(jayceCrystalChainPlace(i, 3)));
   it("the nearest enemy takes no explosion from its own crystal, but does from another crystal beside it", () => {
     expect(hits.filter(h => h.target === 'a').map(h => h.at)).toEqual([JAYCE_MAIN_HIT_TICKS, bBlast]);
     expect(blasts.filter(h => h.at === aBlast).map(h => h.target)).toEqual(['b']);
     expect(blasts.find(h => h.target === 'a')!.raw).toBe(full);
   });
-  it('an enemy caught by several explosions takes the first in full and every later one halved, not compounded', () => {
-    expect(blasts.filter(h => h.target === 'b').map(h => [h.at, h.raw])).toEqual([[aBlast, full], [cBlast, half], [bBlast, half]]);
-    expect(blasts.filter(h => h.target === 'c').map(h => [h.at, h.raw])).toEqual([[cBlast, full], [bBlast, half]]);
+  it('an enemy caught by several explosions takes the first in full and every later one with the falloff taken once, not compounded', () => {
+    // The full explosion is the data table's two-star attack damage ratio times Jayce's 100 attack damage; the falloff takes off
+    // the table's chain falloff share (the main hit, likewise, is its nearest-enemy ratio times 100).
+    expect(full).toBe(400);
+    expect(hits.find(h => h.target === 'a' && h.at === JAYCE_MAIN_HIT_TICKS)!.raw).toBe(625);
+    expect(blasts.filter(h => h.target === 'b').map(h => [h.at, h.raw])).toEqual([[aBlast, full], [cBlast, later], [bBlast, later]]);
+    expect(blasts.filter(h => h.target === 'c').map(h => [h.at, h.raw])).toEqual([[cBlast, full], [bBlast, later]]);
   });
 });
 describe("Jayce's crystals at 3 stars", () => {

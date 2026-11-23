@@ -135,8 +135,8 @@ export function melBoltOffset(i: number): number { return Math.round(i * MEL_BOL
 /** Jayce's ranged cast (11-21, authorization ②): crystal i (i = 0 is thrown at the nearest enemy, then by distance) lands
  * jayceCrystalLandTick(i) after the cast and stays there; the main hit on the nearest enemy lands JAYCE_MAIN_HIT_TICKS after it;
  * the crystals then explode one after another in chain order (the nearest's first, then the farthest back toward the nearest),
- * the n-th of the chain jayceCrystalBlastTick(n) after the cast. The first three of each are aligned to the original frame by
- * frame (2 stars throws three); the chain order rule and the spacing past three (3 stars) repeat the last measured gap and
+ * the n-th of the chain jayceCrystalBlastTick(n) after the cast. The listed ticks are aligned to the original frame by frame (two
+ * stars); the chain order rule and the spacing past the listed ones (three stars) repeat the last measured gap and
  * are self-chosen, not original data. */
 export const JAYCE_CRYSTAL_LANDS: readonly number[] = [11, 14, 15], JAYCE_MAIN_HIT_TICKS = 33, JAYCE_CRYSTAL_BLASTS: readonly number[] = [35, 37, 40];
 const extend = (list: readonly number[], i: number) => i < list.length ? list[i]! : list[list.length - 1]! + (i - list.length + 1) * (list[list.length - 1]! - list[list.length - 2]!);
