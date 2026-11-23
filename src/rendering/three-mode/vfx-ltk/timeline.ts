@@ -93,6 +93,11 @@ export interface TimelineCue {
    */
   readonly playOut?: number;
   /**
+   * The cue only gives way (Fable 11-21, Mel's bolt arcs): it starts only in free room, never ending, displacing or waiting
+   * on another run, and while it runs any newcomer may end it. Both are counted in LTK_RUN_STATS.gaveWay, never as drops.
+   */
+  readonly giveWay?: boolean;
+  /**
    * Uniform size of this system about its anchor. Omitted means 1.
    *
    * Multiplies the system's own offsets, particle size and velocity. It does not move the

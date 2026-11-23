@@ -4544,9 +4544,9 @@
     "tests/vfx-ltk-cue-bones.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 448,
+      "currentBytes": 582,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "976f69d4f9ccda1c7b943c9f0379391d703194e4f3a70c14fb2aaf7327d5c63b",
+      "currentSha256": "bd44c83edea927f3730594a65b568fd9da2da4c8b29fd4fc9e8de522f70296e6",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-dropped.test.ts": {
@@ -4624,9 +4624,9 @@
     "tests/vfx-ltk-early-stop-a.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2063,
+      "currentBytes": 2228,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "88ceff68f059145edb8900bebd04d3ae526c4f09824a052fa403478c40f3bf38",
+      "currentSha256": "ffd7d7ef68d8bc1938343967fd7d4d057f0533fae92926ef8765988fa9fd2bb2",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-emission.test.ts": {
@@ -4690,6 +4690,14 @@
       "currentBytes": 3942,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "1e4bf2ec713a597e8538b8045cadb4638908fe91aa055ff5fb8180a5bec56e06",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-give-way.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5012,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b1af178a32d499b85d75f1c7c2b59753fad9bdeb8587bc87bd1630f265b828d7",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-ground-line.test.ts": {
@@ -4785,6 +4793,14 @@
       "currentBytes": 2478,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "faad29488527284df5e9ba87d733ebe5b553a94b77f1e7b303b14ed92c0269f7",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-mel-barrage.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 12285,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8cd1f1fee3b1bdfab44fdc36bbfefa195e447f2f9e7185c51d1842560e26f96d",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-mesh-pool-matrix.test.ts": {
