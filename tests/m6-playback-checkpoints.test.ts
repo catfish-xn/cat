@@ -159,7 +159,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // terminal below are unchanged.
     // #825: the record's contentDigest moves (36e7e2c1 -> 57ffb53e), so the record hash moves again (was 429d39f9…); events and
     // terminal below are unchanged.
-    expect(bytesHash(record)).toBe('b3fbb7f1f94a75169608c36203c9b70ef3be827822b0d5839c07b0880b8db489');
+    // #827: the record's contentDigest moves (57ffb53e -> 33d330e9), so the record hash moves again (was b3fbb7f1…); events and
+    // terminal below are unchanged.
+    expect(bytesHash(record)).toBe('c148afc01c0e38dd2300dc50904f27011729784ad1c90ad05a4d6ff053260a04');
     expect(bytesHash(record.events)).toBe('3d9c7fc139b05e5795d4133ffaeff78a9e7084e14912bc9599fa23e69722fa7a');
     expect(bytesHash(expected.terminal)).toBe('fbf3b60ecf7829825848d88d79ade4df4076b05e2cbbc71a8b5ece3b689ee12e');
     // An external JSON record is cold on each constructor, like browser fixtures.
