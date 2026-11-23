@@ -62,4 +62,6 @@ export const S13_COMBAT_RULES = Object.freeze({
   melBarrage: 'mel-barrage-settle-on-landing-dash-each-normal-cast-away-from-foes-v3',
   // Violet's combo v1 (11-21): two jabs and the uppercut each settle on their own tick (cast-windup.ts); the knock-up starts with the uppercut.
   violetCombo: 'violet-combo-settle-per-hit-v1',
+  // Jinx's rocket v1 (11-21): it leaves and explodes later (cast-windup.ts) and settles where it explodes. Zap and chompers unchanged.
+  jinxRocket: 'jinx-rocket-settle-on-explosion-v1',
 });

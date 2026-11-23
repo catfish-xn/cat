@@ -119,3 +119,7 @@ export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PE
  * tick after the cast (aligned to the original frame by frame; which hit is hers is not fully verified, see
  * docs/S13_RULES_GAP.md 蔚奥莱连击). The uppercut's knock-up starts with it. */
 export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TICKS = 29;
+
+/** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
+ * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
+export const JINX_ROCKET_LAUNCH_TICKS = 27, JINX_ROCKET_FLIGHT_TICKS = 10;

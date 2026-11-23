@@ -123,7 +123,8 @@ describe('production representation preserves runtime semantics', () => {
     // 斯维因吸取节奏 v2 (2026-11-21): 31713f8c → b74b81b0 (S13_COMBAT_RULES.swainDrain).
     // 梅尔施法 v3 (2026-11-21): b74b81b0 → 1ca19aae (S13_COMBAT_RULES.melBarrage).
     // 蔚奥莱连击 v1 (2026-11-21): 1ca19aae → 6130956b (S13_COMBAT_RULES.violetCombo).
-    expect(parsed.content).toBe('fnv1a32-utf16:6130956b');
+    // 金克丝飞弹 v1 (2026-11-21): 6130956b → 946379e4 (S13_COMBAT_RULES.jinxRocket).
+    expect(parsed.content).toBe('fnv1a32-utf16:946379e4');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

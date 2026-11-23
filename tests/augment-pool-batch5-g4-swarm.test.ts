@@ -65,12 +65,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 斯维因吸取节奏 v2 (2026-11-21): contentDigest 31713f8c->b74b81b0 only.
   // 梅尔施法 v3 (2026-11-21): contentDigest b74b81b0->1ca19aae only.
   // 蔚奥莱连击 v1 (2026-11-21): contentDigest 1ca19aae->6130956b only.
-  const back=save.split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 金克丝飞弹 v1 (2026-11-21): contentDigest 6130956b->946379e4 only.
+  const back=save.split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('0864f2a1ad3f4846dd064cd1d0369bc0391baf3a672c9d7e7b9c012bc94fba9f'); // Violet combo v1 1ca19aae -> 6130956b (was 12912e17…, Mel cast v3; 2906a075… Swain drain cadence v2)
+    .toBe('d369b4820a6d3aa190da59a258f5a6dda77b97ccb756f57c94487fed7b899e1a'); // Jinx rocket v1 6130956b -> 946379e4 (was 0864f2a1…, Violet combo v1; 12912e17… Mel cast v3)
   expect(restoreMatch(save)).toEqual(started);
 });
 
