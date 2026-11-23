@@ -1872,9 +1872,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 19475,
+      "currentBytes": 19643,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "61a0215bbe437f8a45c2a97fb4f010aaf52ddb0f20b5f30e5eb44e881717c7f4",
+      "currentSha256": "260939e11436b7f4603c8bf28118cd46dc1ab6daa0e25491fca58fe85198f9dd",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
