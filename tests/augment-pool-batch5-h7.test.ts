@@ -117,7 +117,9 @@ describe('B5-42 Good for Something',()=>{
   it('uses death-time ownership, temporary equipment and chest grants; repeated resurrection deaths are distinct',()=>{
     const s=before;
     const base={combatId:'combat-fixture',tick:1,unitId:'unit-1',definitionId:'irelia',team:'player' as const,ownerSeatId:seatId,originalUnitId:'unit-1',ordinaryHero:true,equipment:[],combatItemGrants:[]};
-    const deaths=Array.from({length:40},(_,eventSeq)=>({...base,eventSeq}));
+    // #795: the roll is keyed by the death's tick and unit, so the repeated deaths of one resurrecting unit are told apart by
+    // their ticks (one unit dies at most once a tick), no longer by eventSeq alone.
+    const deaths=Array.from({length:40},(_,eventSeq)=>({...base,eventSeq,tick:1+eventSeq}));
     const sample=(rows:typeof deaths)=>appendAugmentFact(s,{kind:'deaths',battleId:base.combatId,completeThroughTick:1,deaths:rows});
     const expected=batch5H7GoldPlan(sample(deaths));expect(expected.length).toBeGreaterThan(1);expect(expected.length).toBeLessThan(deaths.length);
     expect(batch5H7GoldPlan(sample([...deaths,...deaths]))).toEqual(expected);

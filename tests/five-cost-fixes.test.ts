@@ -113,7 +113,9 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     const r=advance(battle([hero('malzahar',star,{cell:{col:3,row:3},targetId:'a'}),...enemies],{rngState:42}),1+gate(star));
     expect(damage(r.events).map(d=>d.context.targetId)).toEqual(['a','e1','e2','e4','e5']);
     expect(raw(r.events)).toEqual(Array(5).fill([80,120,1000][star-1]));
-    expect(get(r.state).tasks?.map(t=>t.targetId)).toEqual(['a','e1','e2','e4','e5']);
+    // 11-20 line rule (hexCrossLine, self-chosen axis): from (3,3) to (3,2) the line across 'a' is its row, as before; the
+    // infection now follows the hit order: the target, then by steps from it, ties by id (was by id alone).
+    expect(get(r.state).tasks?.map(t=>t.targetId)).toEqual(['a','e2','e4','e1','e5']);
   });
   it.each([1,2,3] as const)('Malzahar %s star all five stacks survive death and retain their pulse clock',(star)=>{
     const opening=advance(battle([hero('malzahar',star),dummy('e',{hp:1,maxHp:1}),
@@ -130,8 +132,10 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
   });
   it('infection moves again when its new host dies, even if Malzahar has died',()=>{
     // He dies after his 3-star gate has landed (a death before it cancels the gate: cast wind-up batch 4).
+    // 'a' stands at (1,2), next to 'e' but off the gate line (11-20 line rule: from (1,3) across (2,3) the line now covers
+    // (2,2), where 'a' stood before), so only 'e' is infected by the gate, as the case needs.
     const opening=advance(battle([hero('malzahar',3),unit('ally','player',0,7,{cooldownTicks:1000,moveCooldownTicks:1000}),
-      dummy('e',{hp:1,maxHp:1}),dummy('a',{hp:1000,maxHp:1000,cell:{col:2,row:2}}),dummy('b',{cell:{col:6,row:0}})],{rngState:42}),1+gate(3));
+      dummy('e',{hp:1,maxHp:1}),dummy('a',{hp:1000,maxHp:1000,cell:{col:1,row:2}}),dummy('b',{cell:{col:6,row:0}})],{rngState:42}),1+gate(3));
     const state=structuredClone(opening.state),p=get(state) as S13Unit;p.hp=0;p.alive=false;
     const r=advance(state,40);
     expect(get(r.state,'a').alive).toBe(false);

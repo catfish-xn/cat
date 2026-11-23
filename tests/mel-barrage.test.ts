@@ -112,7 +112,7 @@ describe('Mel dash: ties go away from the nearest enemy', () => {
 
 // The barrage timing changes battle results, so its rule identifier is part of the content digest: a save or replay written
 // under the digest just before it (Swain's drain) is turned away as another version, never replayed under the new rule.
-const BEFORE_DIGEST = 'fnv1a32-utf16:eb2d4cee';
+const BEFORE_DIGEST = 'fnv1a32-utf16:b74b81b0';
 describe('Mel barrage: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
     expect(S13_COMBAT_RULES.melBarrage).toBe('mel-barrage-settle-on-landing-dash-each-normal-cast-away-from-foes-v3');
