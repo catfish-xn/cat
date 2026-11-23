@@ -124,7 +124,8 @@ describe('production representation preserves runtime semantics', () => {
     // 梅尔施法 v3 (2026-11-21): b74b81b0 → 1ca19aae (S13_COMBAT_RULES.melBarrage).
     // 蔚奥莱连击 v1 (2026-11-21): 1ca19aae → 6130956b (S13_COMBAT_RULES.violetCombo).
     // 金克丝飞弹 v1 (2026-11-21): 6130956b → 946379e4 (S13_COMBAT_RULES.jinxRocket).
-    expect(parsed.content).toBe('fnv1a32-utf16:946379e4');
+    // 蔚砸地时刻 v2 (2026-11-21): 946379e4 → 36e7e2c1 (S13_COMBAT_RULES.viSlam).
+    expect(parsed.content).toBe('fnv1a32-utf16:36e7e2c1');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

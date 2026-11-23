@@ -131,7 +131,8 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // 梅尔施法 v3: contentDigest b74b81b0 -> 1ca19aae in the record only.
     // 蔚奥莱连击 v1: contentDigest 1ca19aae -> 6130956b in the record only.
     // 金克丝飞弹 v1: contentDigest 6130956b -> 946379e4 in the record only.
-    const newer = JSON.stringify(before628).split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    // 蔚砸地时刻 v2: contentDigest 946379e4 -> 36e7e2c1 in the record only.
+    const newer = JSON.stringify(before628).split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
     expect(bytesHash(JSON.parse(newer))).toBe('aed1abb50ef0355c3c10be7220af546eec1a795b95e380ff5cc35f6e1154d41d');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('0c7864258f8aaea4dfb17643ce3af62ab1e9c9e10c75d02d7f4d8662aafccee6');
@@ -152,7 +153,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // terminal below are unchanged.
     // #809: the record's contentDigest moves (6130956b -> 946379e4), so the record hash moves again (was d67282a6…); events and
     // terminal below are unchanged.
-    expect(bytesHash(record)).toBe('677e13632ff20ba68aa5a4a3d0990e90cbabd3f9f183feb397c0032552eed21c');
+    // #811: the record's contentDigest moves (946379e4 -> 36e7e2c1), so the record hash moves again (was 677e1363…); events and
+    // terminal below are unchanged.
+    expect(bytesHash(record)).toBe('429d39f96488a20fef430b96f6152651cc3f2b052cb63250b224938ad4a0d7f7');
     expect(bytesHash(record.events)).toBe('3d9c7fc139b05e5795d4133ffaeff78a9e7084e14912bc9599fa23e69722fa7a');
     expect(bytesHash(expected.terminal)).toBe('fbf3b60ecf7829825848d88d79ade4df4076b05e2cbbc71a8b5ece3b689ee12e');
     // An external JSON record is cold on each constructor, like browser fixtures.
