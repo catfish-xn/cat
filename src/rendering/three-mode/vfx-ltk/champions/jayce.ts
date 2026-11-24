@@ -18,8 +18,12 @@ export const jayceSkills: Record<string, readonly TimelineCue[]> = {
     { system: '508e8c05', event: 'cast-start', bone: 'Buffbone_Cstm_Weapon_1', delay: 0, duration: .6, stopAfter: .3, fadeOut: true },
     { system: 'e5c0f9d8', event: 'cast-start', bone: 'Buffbone_Cstm_Weapon_1', delay: .3, duration: .5, stopAfter: .2 },
     { system: 'ee2e840c', event: 'projectile', targetLimit: 3, bone: 'BUFFBONE_CSTM_WEAPON_1', delay: .3, duration: .4, travelSeconds: .4 },
-    { system: '1ae6ef1d', event: 'hit', targetLimit: 3, delay: .7, duration: 1 },
   ],
+  // His crystals (rules 11-21, placeholder-renderer.ts jayceCrystal): each lands on its cell and stays there, then explodes
+  // there when the rules set it off (each crystal its own landing and explosion, on the event's cell). The stay ends as its
+  // crystal explodes (JAYCE_CRYSTAL_STAY); its duration is only a cap past that (self-chosen).
+  'jayce-back-crystal-land': [{ system: '28c9be01', action: 'passive', event: 'hit', location: 'board', delay: 0, duration: 3 }],
+  'jayce-back-crystal-blast': [{ system: '1ae6ef1d', action: 'passive', event: 'hit', location: 'board', delay: 0, duration: 1 }],
   'jayce-forge-front': [
     // The forge shield's visual plays its own life (including its closing layer) and ends early only when that ally's shield from
     // his ability ends (CUE_RULE_STOPS abilityShieldEndedOnHolder). The duration is a cap past the system's own end (fitted, not
@@ -33,3 +37,8 @@ export const jayceSkills: Record<string, readonly TimelineCue[]> = {
   ],
 };
 export const jayceSkill = (form: 'front' | 'back') => `jayce-${form}`;
+/** His landed crystal, which stays until its explosion (placeholder-renderer.ts stops it then). */
+export const JAYCE_CRYSTAL_STAY = '28c9be01';
+/** The display branches his crystals play from (placeholder-renderer.ts), repository-built (cue-overrides.ts CUE_EXTRA_SKILLS):
+ * branches of his ranged form's list, so the dropped-system registry counts them with it. */
+export const JAYCE_EVENT_SKILLS = ['jayce-back-crystal-land', 'jayce-back-crystal-blast'] as const;

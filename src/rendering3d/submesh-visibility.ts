@@ -1,4 +1,4 @@
-import type { Material, Mesh, Object3D } from 'three';
+import type { Material, Mesh, Object3D, SkinnedMesh } from 'three';
 import type { SubmeshVisibility } from './contracts';
 
 /** Frames per second of the clip frames that SubmeshVisibility events are written in. */
@@ -50,10 +50,29 @@ export function withoutHeld(visibility: SubmeshVisibility | undefined, held: rea
 /**
  * Timed forms per model: while one is on (rule events say when, see timed-form-events.ts) its submeshes are shown and
  * hidden over whatever clip plays. drmundo: his ultimate body from his first heal to his closing blast (Fable 2026-11-17).
+ * swain: his wings while his ascension lasts (Fable 2026-11-21).
  */
 export const TIMED_FORMS: Readonly<Record<string, { readonly show: readonly string[]; readonly hide: readonly string[] }>> = {
   drmundo: { show: ['BodyUlt'], hide: ['BodyNormal'] },
+  swain: { show: ['wings'], hide: [] },
 };
+
+/**
+ * Submeshes drawn with their texture's alpha as a cut-out, per model. The exported material carries no alpha mode, so
+ * without this the texture's empty texels draw as solid quads around the shape. swain's wings: their texture's alpha is
+ * a two-level feather mask (texels are either empty or opaque), so the cut-off is drawn the same at any value between.
+ */
+export const CUTOUT_SUBMESHES: Readonly<Record<string, readonly string[]>> = { swain: ['wings'] };
+export const CUTOUT_ALPHA = 0.5;
+
+/** Gives the named submeshes' materials an alpha cut-out (the model template's: every lease shares them). */
+export function cutOutSubmeshes(root: Object3D, names: readonly string[] | undefined): void {
+  if (!names?.length) return;
+  for (const meshes of meshesByName(root, new Set(names)).values()) for (const mesh of meshes) {
+    const material = mesh.material as Material;
+    if (material.alphaTest !== CUTOUT_ALPHA) { material.alphaTest = CUTOUT_ALPHA; material.needsUpdate = true; }
+  }
+}
 
 /** Hide the submeshes a model starts without (a model that does not carry them is left as it is). */
 export function hideInitialSubmeshes(root: Object3D, visibility: SubmeshVisibility | undefined): void {
@@ -99,6 +118,17 @@ export class SubmeshSwitch {
    */
   setForm(on: boolean): void { this.form = on && this.formNames && this.formNames.every(name => this.meshes.has(name)) ? this.formDef : undefined; }
   get formOn(): boolean { return this.form !== undefined; }
+  /** Names of the bones that skin the form's shown submeshes (empty for unskinned meshes). */
+  formBones(): Set<string> {
+    const out = new Set<string>();
+    for (const name of this.formDef?.show ?? []) for (const mesh of this.meshes.get(name) ?? []) {
+      const skinned = mesh as SkinnedMesh, index = skinned.geometry?.getAttribute('skinIndex'), weight = skinned.geometry?.getAttribute('skinWeight');
+      if (!skinned.isSkinnedMesh || !index || !weight) continue;
+      for (let i = 0; i < index.count; i++) for (let k = 0; k < 4; k++)
+        if (weight.getComponent(i, k) > 0) { const bone = skinned.skeleton.bones[index.getComponent(i, k)]; if (bone) out.add(bone.name); }
+    }
+    return out;
+  }
   private formDef?: { readonly show: readonly string[]; readonly hide: readonly string[] };
   private formNames?: readonly string[];
   /** Show each submesh as `clip` has it `seconds` into its playback (no clip: the model's default). Clip names compare

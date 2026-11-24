@@ -194,7 +194,8 @@ export function createBatch2VfxBridge(host: Host) {
         const record = melCasts.get(event.sourceId)?.get(event.actionSeq), third = record?.third === true;
         // Each bolt flies the rules' own flight (champions/mel.ts MEL_BOLT_FLIGHT) from where she stands as it leaves: one
         // small arc per bolt of her plain cast.
-        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : 'mel-bolt');
+        // Consecutive plain-cast bolts swing to opposite sides (champions/mel.ts MEL_BOLT_CURVE), by their place in the cast.
+        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : event.ordinal % 2 ? 'mel-bolt-alt' : 'mel-bolt');
         // Its hit when it lands on a target still there (a bolt whose target died in flight lands on nothing). A plain cast's
         // hit plays once per target, as its first bolt lands; its later bolts land with their arcs only (self-chosen: a hit
         // for every bolt would crowd the board: self-chosen, not original, for the on-screen cap; a known-difference candidate, Fable 11-21).
@@ -211,6 +212,11 @@ export function createBatch2VfxBridge(host: Host) {
         // it have died while held), else on the enemy this damage struck.
         host.stopSystems?.(event.sourceId, [VI_HAND_TRAIL]);
         play('vi', event.sourceId, [viTargets.get(event.sourceId) ?? event.targetId], 'vi-slam', 'cast', true);
+      }
+      // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing.
+      if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
+        // The rocket's flash and flight as it leaves; its explosion at the board's centre where it lands.
+        play('jinx', event.sourceId, [event.targetId], event.type === 'abilityProjectileLaunched' ? 'jinx-rocket-fire' : 'jinx-rocket-boom', 'cast', true);
       }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');

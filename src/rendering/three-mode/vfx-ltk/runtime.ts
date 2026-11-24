@@ -1007,8 +1007,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const rowCells = rowStart ? Math.min(spawn.rowCells ?? Infinity, board ? rowReach(rowStart, spawn.rowSide!, board) + (spawn.rowBeyond ?? 0) : spawn.rowCells ?? 0) : 0;
         if (rowStart && !(rowCells > 0.05)) continue;
         // A falling projectile (TimelineCue.fromAbove) starts above where its target stands (its snapshot point once it is
-        // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
-        const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
+        // dead) or above its board point, taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
+        const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? spawn.point ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
         if (spawn.fromId !== undefined && !row.from) continue;
         // A projectile from the primary target's place (TimelineCue.fromPrimary) starts there, like a falling one starts above.
