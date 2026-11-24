@@ -988,6 +988,14 @@
       "currentSha256": "8bc9dfc6dfac95138e70489eaaa08918bbdfcfb72f22a63bf9a77ca92710b48e",
       "firstDifferentByte": 0
     },
+    "tests/feedback-killing-blow.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4327,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "67c81b57f3c6d6ecf4c6c00a63e0bc5bdcd489fe3dfe53ccab2d0a1d05229c0a",
+      "firstDifferentByte": 0
+    },
     "tests/five-cost-fixes.test.ts": {
       "previousBytes": 10037,
       "currentBytes": 11340,
