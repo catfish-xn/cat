@@ -193,6 +193,17 @@ describe('ranged attack wind-up: the attacker cannot act this tick', () => {
       expect(renniHolding(p(st)), 'premise: Renni holds a target').toBe(true);
       return st;
     }],
+    // Never seen in a real game (her holding always overlaps her channel): built by hand to guard the holding check on its own, so
+    // that it is still covered if holding ever stops counting as a channel.
+    ['holding without a channel (built by hand, not reachable in a real game)', () => {
+      const renni = shooter('renni', { attackRange: 1, mana: 1000, maxMana: 1000 });
+      let st = battle([renni, dummy('e', 3, 5), dummy('f', 4, 5)], { rngState: 42 });
+      for (let n = 0; n < 40 && !renniHolding(p(st)); n++) st = stepCombat(st).state;
+      expect(renniHolding(p(st)), 'premise: Renni holds a target').toBe(true);
+      st = structuredClone(st);
+      p(st).statuses = p(st).statuses.filter(x => x.kind !== 'channel');
+      return st;
+    }],
   ] as const)('%s: a wind-up put on it is cancelled and never launches', (_name, make) => {
     const st = structuredClone(make());
     const target = st.units.find(u => u.team === 'enemy' && u.alive)!.id;
