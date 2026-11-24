@@ -4747,6 +4747,14 @@
       "currentSha256": "47c7754a7f47b32d6ed11e037f45499c5e94a03f20fa22afc36818c18da60c39",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-jayce-crystals.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6218,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "220d10b71d73c4decd1021a69034311d3e346914935ba6d5042800d81bcc5573",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

@@ -265,9 +265,11 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
     const key = CRIT_SKILL_HIT.skill(champion);
     if (!champion.includes('-') && !Object.hasOwn(index.skills, key)) (skills ??= { ...index.skills })[key] = [CRIT_SKILL_HIT.cue];
   }
-  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name.
+  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name. A
+  // champion whose lists are all branches (Jayce's front and back forms) counts by any of them.
+  const champions = new Set(Object.keys(index.skills).map(key => key.split('-')[0]!));
   for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
-    if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
+    if (Object.hasOwn(index.skills, key) || !champions.has(key.split('-')[0]!)) continue;
     if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
   }
   // The generic basic-attack hit holds its run only as long as it shows (cue-ranks.ts ATTACK_HIT_SECONDS).
