@@ -482,6 +482,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // bones), never from her and never to the primary itself (11-25): played by the renderer with the primary as its source
     // ('passive', placeholder-renderer.ts), ended with her chain (LEBLANC_CHAIN_FROM_PRIMARY).
     { system: '29d01632', action: 'passive', event: 'link', delay: 0.78, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // RECORDING ONLY (not for merge): the unplayed red beam drawn from her to her primary target, to judge its colour and width.
+    { system: '539a0a47', action: 'cast', event: 'link', delay: 0.78, duration: 5, primary: true, bone: 'C_BUFFBONE_GLB_CHEST_LOC', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 6.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     // Her channel glow and swirling petals at her weapon hand, held until the rules' chain ends (SUSTAIN_CAPS, CUE_END_STOPS
     // 'leblanc-chain'). The skill's body: it never yields (Fable 11-19).
