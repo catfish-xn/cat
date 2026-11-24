@@ -50,7 +50,8 @@ describe('the icon over the bar', () => {
     view.setDebuffs([{ kind: 'rell-shred', texture, layers: RELL_SHRED.layers }]);
     const icons = row(view.object).children as Group[];
     expect(icons).toHaveLength(1);
-    const sprites = icons[0]!.children as Sprite[];
+    const first = icons[0]!;
+    const sprites = first.children as Sprite[];
     expect(sprites.map(sprite => sprite.scale.x)).toEqual(RELL_SHRED.layers.map(layer => layer.size));
     expect(sprites.map(sprite => (sprite.material as SpriteMaterial).opacity)).toEqual(RELL_SHRED.layers.map(layer => layer.opacity));
     expect(sprites.every(sprite => (sprite.material as SpriteMaterial).map === texture)).toBe(true);
@@ -58,10 +59,20 @@ describe('the icon over the bar', () => {
     expect(view.drawn).toBe(true);
     // The same kinds again rebuild nothing.
     view.setDebuffs([{ kind: 'rell-shred', texture, layers: RELL_SHRED.layers }]);
-    expect(row(view.object).children[0]).toBe(icons[0]);
+    expect(row(view.object).children).toHaveLength(1);
+    expect(row(view.object).children[0]).toBe(first);
     view.setDebuffs([]);
     expect(row(view.object).children).toHaveLength(0);
     view.dispose();
+  });
+  it('dispose takes the icons down and releases their materials', () => {
+    const view = overhead(), texture = new Texture();
+    view.setDebuffs([{ kind: 'rell-shred', texture, layers: RELL_SHRED.layers }]);
+    const group = row(view.object), materials = (group.children[0]!.children as Sprite[]).map(sprite => sprite.material as SpriteMaterial);
+    let released = 0; for (const material of materials) material.addEventListener('dispose', () => { released++; });
+    view.dispose();
+    expect(released).toBe(materials.length);
+    expect(group.children).toHaveLength(0);
   });
   it('is small: no wider than the bar\'s item icon', () => {
     for (const def of Object.values(DEBUFF_ICONS)) for (const layer of def.layers) { expect(layer.size).toBeGreaterThan(0); expect(layer.size).toBeLessThanOrEqual(13); }
