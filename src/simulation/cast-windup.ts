@@ -172,3 +172,7 @@ export const SEVIKA_PUNCH_HIT_TICKS = 20;
  * (its speed from the skill data, rounded to ticks; see docs/S13_RULES_GAP.md 卡西奥佩娅主弹). */
 export const CASSIOPEIA_BOLT_LAUNCH_TICKS = 10, CASSIOPEIA_BOLT_TICKS_PER_HEX = 2;
 export const cassiopeiaBoltFlightTicks = (hexes: number): number => Math.max(1, Math.ceil(hexes * CASSIOPEIA_BOLT_TICKS_PER_HEX));
+
+/** Steb's heal (11-24, authorization ②, timing only): it lands STEB_HEAL_TICKS after his cast; his strike stays on the cast
+ * (measured on official footage, not original data; see docs/S13_RULES_GAP.md 斯特卜治疗). */
+export const STEB_HEAL_TICKS = 5;

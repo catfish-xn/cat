@@ -1,5 +1,5 @@
 import { scheduleShot } from './ability-projectile';
-import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, JINX_ROCKET_LAUNCH_TICKS, MORDEKAISER_CLAW_TICKS } from './cast-windup';
+import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, JINX_ROCKET_LAUNCH_TICKS, MORDEKAISER_CLAW_TICKS, STEB_HEAL_TICKS } from './cast-windup';
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
 import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
@@ -45,7 +45,6 @@ function schedule(u:S13Unit,kind:CombatTask['kind'],at:number,target:S13Unit,val
 export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):string[] {
   const v=(k:string)=>variable(u,k),mag=(k:string)=>amount(u,ctx.tick,{ap:v(k)}),ad=(k:string,a?:string)=>amount(u,ctx.tick,{ad:v(k),ap:a?v(a):0});
   const ids:string[]=[],strike=(target:S13Unit,value:number,type:S13Packet['damageType']='magic',area=false)=>{hit(ctx,u,target,value,seq,ids.length,type,area);ids.push(target.id);};
-  const heal=(value:number)=>ctx.heals.push({source:origin(u),targetId:u.id,amount:value});
   const foes=()=>byDistance(u,enemies(u,ctx.units));
   switch(champion(u)) {
     case 'camille':
@@ -98,7 +97,9 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       // Field Medic (P): no heal; HITS strikes of HitBps × Damage on the current target in this cast.
       const hero=heroLive(u);
       if(hero){const each=Math.floor(mag('Damage')*hero.hitBps/10000);for(let i=0;i<hero.hits;i++)strike(t,each);}
-      else{heal(mag('Heal'));strike(t,mag('Damage'));}
+      // His heal (11-24, authorization ②, timing only) lands STEB_HEAL_TICKS after the cast (the amount taken now); the strike stays
+      // on the cast. He takes no heal if he dies first.
+      else{schedule(u,'g23Heal',ctx.tick+STEB_HEAL_TICKS,u,mag('Heal'),seq,0,1);strike(t,mag('Damage'));}
       break;
     }
     case 'vex':strike(t,mag('Damage'));schedule(u,'g22Vex',ctx.tick+Math.round(v('DOTDuration')*20),t,mag('SecondaryDamage'),seq,0,1,t.cell);break;

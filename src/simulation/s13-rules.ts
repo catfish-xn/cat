@@ -75,6 +75,8 @@ export const S13_COMBAT_RULES = Object.freeze({
   rangedAttackWindup: 'ranged-attack-start-then-launch-after-windup-v1',
   // Its cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
   // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
+  // Steb's heal (11-24): it lands STEB_HEAL_TICKS after his cast (cast-windup.ts).
+  stebHeal: 'steb-heal-lands-after-cast-v1',
   // Cassiopeia's main bolt (11-24): it settles where it lands, CASSIOPEIA_BOLT_FLIGHT_TICKS after her cast (cast-windup.ts).
   cassiopeiaBolt: 'cassiopeia-main-bolt-settles-on-landing-v1',
   // Sevika's punch (11-24): it lands SEVIKA_PUNCH_HIT_TICKS after her slot machine stops (cast-windup.ts).

@@ -72,12 +72,13 @@ it('B5-73 solo running combat preserves the exact pre-fix history order and save
   // 远程普攻前摇 v1 (2026-11-21): contentDigest 33d330e9->d6493c11 only.
   // 塞薇卡重拳 v1 (2026-11-24): contentDigest d6493c11->cf1ef035 only.
   // 卡西奥佩娅主弹 v1 (2026-11-24): contentDigest cf1ef035->359c3c11 only.
-  const back=save.split('359c3c11').join('cf1ef035').split('cf1ef035').join('d6493c11').split('d6493c11').join('33d330e9').split('33d330e9').join('57ffb53e').split('57ffb53e').join('36e7e2c1').split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+  // 斯特卜治疗 v1 (2026-11-24): contentDigest 359c3c11->05db2ac4 only.
+  const back=save.split('05db2ac4').join('359c3c11').split('359c3c11').join('cf1ef035').split('cf1ef035').join('d6493c11').split('d6493c11').join('33d330e9').split('33d330e9').join('57ffb53e').split('57ffb53e').join('36e7e2c1').split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
   expect(createHash('sha256').update(back).digest('hex')).toBe('a7947f17fb5930c6ec64a7d9ec3c3f3bc9d055fef9dcb5060ab9ee9de74b19a6');
   expect(createHash('sha256').update(back.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a')).digest('hex'))
     .toBe('338bebf5ffb094279292e65bd834aae611cf16a2c25da97d346b83eae3eb40ed');
   expect(createHash('sha256').update(save).digest('hex'))
-    .toBe('c45e701b3b60ae2e0da67ced6ed83a0744159ffcad3401aa717827a3e8cab864'); // Cassiopeia bolt v1 cf1ef035 -> 359c3c11 (was 759b6a9f…, Sevika punch v1 d6493c11 -> cf1ef035; was 0e00b41a…, ranged attack wind-up v1 33d330e9 -> d6493c11; was 6f02813a… before the 11-24 cancel cases, 16e97e8f… before the forced-target case; a57750a1…, Jayce crystals v1; 478209ec… Mel bolt volley v1)
+    .toBe('8261a3ef819fbf52469534932a11e3622c4868250063519ce9b4ca80e8f3bcf3'); // Steb heal v1 359c3c11 -> 05db2ac4 (was c45e701b…, Cassiopeia bolt v1 cf1ef035 -> 359c3c11; was 759b6a9f…, Sevika punch v1 d6493c11 -> cf1ef035; was 0e00b41a…, ranged attack wind-up v1 33d330e9 -> d6493c11; was 6f02813a… before the 11-24 cancel cases, 16e97e8f… before the forced-target case; a57750a1…, Jayce crystals v1; 478209ec… Mel bolt volley v1)
   expect(restoreMatch(save)).toEqual(started);
 });
 

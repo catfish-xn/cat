@@ -322,9 +322,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 15621,
+      "currentBytes": 15785,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "e867f7c2485fc2ba265a365c6cb034c5e9c276c1a90359c5bb1b7de23e37c6b0",
+      "currentSha256": "2cc192bb49c4f1bec0a039dd5d01beeeaab9251db60dacfd1efc379f94804084",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -1049,9 +1049,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 12008,
+      "currentBytes": 12424,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "68599f87af38921336b89b78bf6afb5a65bb24ad8974d58e0bb80c5b514f017f",
+      "currentSha256": "a6b7d3f65c471867ee7f1d0109efc98a7caabb1fea9e5b0b98a4cf0995e8239e",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1059,7 +1059,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "696b3b078ac1a3f99132a05015107fb3e252e4aa2d21c0a3345c360224f77881",
+      "currentSha256": "3ba058a0737ba42993e1ee51c80bc6e77d68faa92ed1c11f6cf55c898512381a",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
@@ -1215,17 +1215,17 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17784,
+      "currentBytes": 17785,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fe4db49a97fc8da78ed30ad90aedaa6d454c42fbc67d97436044cd64b7552f44",
+      "currentSha256": "377d6a19659cf0ef153b0e3c6de7415d92e26254d84769923b7f1e228e50f6f8",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23787,
+      "currentBytes": 23788,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9bd3f78612bafcd05f5b504cdb88e0c8a2619798c1649892deb2a627681503b5",
+      "currentSha256": "8971b738ee1cad654f1e738c0173ef4631003775cc4cdd8c99eb652397cbc984",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1469,9 +1469,9 @@
     },
     "tests/g2-2-skills.test.ts": {
       "previousBytes": 3718,
-      "currentBytes": 5395,
+      "currentBytes": 5672,
       "previousSha256": "7b64a4592789651488c8c2571fc853c890c5fbb37877d67eb5d765deb7add0b8",
-      "currentSha256": "5e3cf232638f675d6331495d20d41ad912362e6406c1cb4bb46b26d63f11e676",
+      "currentSha256": "2491e1cb62ffef9d23349bacb2d0eb8c922c496461ca5a187be036ff6755becc",
       "firstDifferentByte": 9
     },
     "tests/g2-2-traits.test.ts": {
@@ -1931,9 +1931,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 20573,
+      "currentBytes": 20690,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "5206291d0ceabeb7024446b30fe58f527e0d0e22f5f60e5a9589199dd4746abc",
+      "currentSha256": "f844bd09addd7cef1d215fff23b64abaa54cba1ce3b9fd018fb6814be5bd70f6",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -4067,6 +4067,14 @@
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
       "currentSha256": "ba176bcb1c5ad97bac6d0114e88396a476e33c4522eac079cdbd6f82d90a0372",
       "firstDifferentByte": 216
+    },
+    "tests/steb-heal-timing.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5029,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "972b3a3112c2e58948c89ada2cb7062db87ea320bdbc5769ae283b59019b78d2",
+      "firstDifferentByte": 0
     },
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
