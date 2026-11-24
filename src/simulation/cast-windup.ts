@@ -164,5 +164,5 @@ export function rangedAttackWindupTicks(championId: string, intervalTicks: numbe
 
 /** Sevika's punch (11-24, authorization ②, timing only): the fist lands SEVIKA_PUNCH_HIT_TICKS after her slot machine stops
  * (G23_POLICY.highRoller.slotTicks after the cast); the punch's damage, knock-back, leap, area damage and stun settle on that
- * tick. Aligned to the official 14.24 footage frame by frame (two samples; see docs/S13_RULES_GAP.md 塞薇卡重拳). */
+ * tick. Aligned to original footage frame by frame (one sample; see docs/S13_RULES_GAP.md 塞薇卡重拳). */
 export const SEVIKA_PUNCH_HIT_TICKS = 20;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
 import { nextRandom } from '../src/simulation/rng';
 import { SEVIKA_PUNCH_HIT_TICKS } from '../src/simulation/cast-windup';
 import { battle, freeze, unit } from './combat-helpers';
@@ -96,6 +96,29 @@ describe('Sevika punch lands on the fist hit, after the slot machine stops', () 
     expect(damage(hit.events)).toEqual([780, 400, 338]);
     expect(hit.events.some(e => e.type === 'movement' && (e as { reason?: string }).reason === 'sevika-knockback')).toBe(true);
     expect(hit.events.some(e => e.type === 'movement' && e.unitId === 'p')).toBe(true);
+  });
+  // Between the stop and the hit (fitted, not original: as the slot task already did): a stun on her does not stop the fist;
+  // her death does; a target that died first is replaced by the enemy nearest to her.
+  it('stunned between the stop and the hit: the punch still lands on the hit tick', () => {
+    const stop = advance(punch(), SLOT + 1);
+    const stunned = structuredClone(stop.state), p = stunned.units.find(u => u.id === 'p')! as S13Unit;
+    applyStatus(p, origin(stunned.units.find(u => u.id === 'e')! as S13Unit), 'stun', 0, 30, stunned.tick, [], true);
+    const hit = advance(stunned, SEVIKA_PUNCH_HIT_TICKS);
+    expect(damage(hit.events)).toEqual([780, 400, 338]);
+  });
+  it('dead between the stop and the hit: the punch does not settle', () => {
+    const stop = advance(punch(), SLOT + 1);
+    const dead = { ...stop.state, units: stop.state.units.map(u => u.id === 'p' ? { ...u, hp: 0 } : u) };
+    expect(damage(advance(dead, SEVIKA_PUNCH_HIT_TICKS).events)).toEqual([]);
+  });
+  it('the target dead before the hit: the fist lands on the enemy nearest to her', () => {
+    const stop = advance(punch(), SLOT + 1);
+    // Another enemy stands next to her once the slot machine has stopped; the punched target dies before the fist lands.
+    const other = dummy('f', { cell: { col: 2, row: 3 } }) as typeof stop.state.units[number];
+    const gone = { ...stop.state, units: [...stop.state.units.map(u => u.id === 'e' ? { ...u, hp: 0, alive: false } : u), other] };
+    const hit = advance(gone, SEVIKA_PUNCH_HIT_TICKS);
+    expect(damage(hit.events, 'e')).toEqual([]);
+    expect(damage(hit.events, 'f').slice(0, 2)).toEqual([780, 400]);
   });
 });
 

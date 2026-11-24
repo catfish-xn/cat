@@ -4019,9 +4019,9 @@
     "tests/sevika-high-roller-triple.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9060,
+      "currentBytes": 10764,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0026f3f8040042d1f2d259a10d4faf220962eb7a0edd561afb1f7db22022ba6b",
+      "currentSha256": "3a12821038cbec670151675dec21ce464a50cd120493d404030dfe1b0cada822",
       "firstDifferentByte": 0
     },
     "tests/shared-pool-cache.test.ts": {
