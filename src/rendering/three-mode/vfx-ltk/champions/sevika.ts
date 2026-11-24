@@ -37,16 +37,16 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   'sevika-punch': [
     { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 20 / 30 - PUNCH_SWING, duration: .7, stopAfter: 20 / 30 },
     { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 22 / 30 - PUNCH_SWING, duration: .6, stopAfter: .5, fadeOut: true },
-    { system: '8ccb497d', event: 'hit', primary: true, delay: .8 - PUNCH_SWING, duration: .8 },
-    { system: '95fb90ce', event: 'hit', primary: true, delay: .8 - PUNCH_SWING, duration: .8 },
+    // RECORDING EXPERIMENT ONLY (not for merge): the hit plays the candidate orange-red blast alone.
+    { system: 'aff783f8', event: 'hit', primary: true, delay: .8 - PUNCH_SWING, duration: .8 },
   ],
   // Fallback for rules without the marker: the punch on its landing (her first skill packet on the cast's target after the
   // cast), all at once, none of it on a fixed offset from the cast.
   'sevika-punch-landed': [
     { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 0, duration: .7, stopAfter: 20 / 30 },
     { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 0, duration: .6, stopAfter: .5, fadeOut: true },
-    { system: '8ccb497d', event: 'hit', primary: true, delay: 0, duration: .8 },
-    { system: '95fb90ce', event: 'hit', primary: true, delay: 0, duration: .8 },
+    // RECORDING EXPERIMENT ONLY (not for merge): the hit plays the candidate orange-red blast alone.
+    { system: 'aff783f8', event: 'hit', primary: true, delay: 0, duration: .8 },
   ],
   'sevika-chomp': [
     { system: '7029bc3c', event: 'projectile', bone: 'BUFFBONE_GLB_WEAPON_1', delay: 11 / 30, duration: .3, travelSeconds: .3 },
