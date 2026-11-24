@@ -56,11 +56,12 @@ describe('rule-driven cast choice in the renderer', () => {
     expect(calls.map(c => c.branch)).toEqual(['chompers', undefined]);
   });
 
-  it('Cassiopeia: every cast, whatever its branch, plays the comet and its hit only', () => {
+  it('Cassiopeia: no cast cue on any branch (her comet and its hit come with the rule projectile)', () => {
     const cass = CUE_OVERRIDES.cassiopeia;
     // No cue is branch-bound any more: the third cast's splash draws nothing of its own.
     expect(cass.some(c => c.branch !== undefined)).toBe(false);
-    for (const branch of ['single', 'splash', undefined]) expect(kept(cass, branch).map(c => c.system)).toEqual(['9f19f946', '259c4cbc']);
+    // The comet and its hit are the rule projectile's (CUE_EXTRA_SKILLS cassiopeia-bolt): no cast cue on any branch.
+    for (const branch of ['single', 'splash', undefined]) expect(kept(cass, branch)).toEqual([]);
   });
 
   it('Mel: the third cast is the rule branch `third`; anything else, or no branch, is the plain cast', () => {

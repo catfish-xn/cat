@@ -159,6 +159,15 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   'gangplank-ranged-flight': [
     { system: 'bb62fca2', action: 'passive', event: 'projectile', bone: 'r_hand', targetBone: chest, delay: 0, duration: 0.3, travelSeconds: 0.3 },
   ],
+  // Cassiopeia (rules 'cassiopeia-bolt', batch2-bridge.ts): her comet leaves on the rules' launch and flies their flight
+  // (LtkPlayOptions.flightSeconds), so it lands on the tick her damage does; its hit plays on a landing that hit. The
+  // comet's travelSeconds is only its fallback length.
+  'cassiopeia-bolt': [
+    { system: '9f19f946', action: 'passive', event: 'projectile', delay: 0, duration: 0.7, travelSeconds: 0.4, bone: 'C_buffbone_Glb_Chest_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+  ],
+  'cassiopeia-bolt-hit': [
+    { system: '259c4cbc', action: 'passive', event: 'hit', delay: 0, duration: 1, ownLife: true, bone: 'C_BUFFBONE_GLB_CENTER_LOC' },
+  ],
   'gangplank-ranged-land': [
     { system: '0f2af66b', action: 'passive', event: 'hit', bone: chest, delay: 0, duration: 1.5 },
   ],
@@ -567,15 +576,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.5666666666666667, duration: 1.5 },
   ],
-  // The spell is a hand comet and its hit on the primary target, every cast, when the comet lands. There is no separate
-  // hand-glow system. The exported list's ground hit is left out: in her data it is another spell's missile with no hit
-  // effect, which the export placed as a still hit on the ground. Her ground system is left out too (both in
+  // Her spell's comet and its hit are played from the rules' own projectile (CUE_EXTRA_SKILLS cassiopeia-bolt and
+  // cassiopeia-bolt-hit), so her cast list holds none. There is no separate hand-glow system. The exported list's ground
+  // hit is left out: in her data it is her third cast's splash missile, which the export placed as a still hit on the
+  // ground; it waits for the original to show where it leaves from. Her ground system is left out too (both in
   // tests/fixtures/cue-dropped-systems.ts).
   cassiopeia: [
     { system: '714bd6e8', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6166666666666667, duration: 1.5 },
-    { system: '9f19f946', action: 'cast', event: 'projectile', delay: 0.2, duration: 0.7, travelSeconds: 0.4, bone: 'C_buffbone_Glb_Chest_Loc', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: '259c4cbc', action: 'cast', event: 'hit', delay: 0.6, duration: 1, ownLife: true, bone: 'C_BUFFBONE_GLB_CENTER_LOC', primary: true },
   ],
   // E: run/dash dust on self, fast shuriken, gold hit ~0.3s, mark on primary, blue dash hit ~1.1s (no back-dash motion in harness).
   akali: [

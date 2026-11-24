@@ -134,6 +134,13 @@ export function createBatch2VfxBridge(host: Host) {
         if (event.type === 'attackLanded' && event.hit)
           host.play('gangplank', event.attackerId, [event.targetId], 'passive', { skill: 'gangplank-ranged-land', board: batch2BoardPoint(host.board()) });
       }
+      // Cassiopeia (rules 'cassiopeia-bolt'): her comet leaves on the rules' launch and flies their flight, arrivalTick − tick
+      // at 50 ms a tick; its hit plays on a landing that hit (one whose target died in flight lands on nothing).
+      if (current && (event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'cassiopeia-bolt') {
+        if (event.type === 'abilityProjectileLaunched')
+          host.play('cassiopeia', event.sourceId, [event.targetId], 'passive', { skill: 'cassiopeia-bolt', board: batch2BoardPoint(host.board()), flightSeconds: Math.max(0, event.arrivalTick - event.tick) * 0.05 });
+        else if (event.hit) host.play('cassiopeia', event.sourceId, [event.targetId], 'passive', { skill: 'cassiopeia-bolt-hit', board: batch2BoardPoint(host.board()) });
+      }
       // Catch-up still observes every cast and landing in order, even when its
       // warning/impact is too old to play. State must not depend on action().
       if (event.type === 'cast') {
