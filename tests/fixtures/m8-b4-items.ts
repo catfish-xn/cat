@@ -3,7 +3,7 @@ import { resolveEffects, makeSourcedEffects } from '../../src/simulation/effects
 import { resolveAbility } from '../../src/simulation/combat-abilities';
 import { getUnitStats } from '../../src/simulation/unit-stats';
 import { EMPTY_RUNTIME } from '../../src/simulation/combat-s13-state';
-import { rangedAttackFlightTicks } from '../../src/simulation/cast-windup';
+import { rangedAttackFlightTicks, rangedAttackWindupTicks } from '../../src/simulation/cast-windup';
 import { compileItemCrit } from '../../src/simulation/m8/item-program';
 import { battle, unit } from '../combat-helpers';
 import { packets as packetViews, heals as healViews } from '../helpers/replay2-views';
@@ -20,7 +20,10 @@ export function wearing(id:string|readonly string[],patch:Partial<CombatUnit>={}
 export const enemy=(id='e',col=1,row=3,patch:Partial<CombatUnit>={}):CombatUnit=>unit(id,'enemy',col,row,{ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,armor:0,magicResist:0,mana:0,maxMana:0,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,attackRange:6,runtime:{...EMPTY_RUNTIME},...patch});
 /** Ranged attack landing (rule PR): the wearer is a ranged hero, so her attack's packets land LANDING ticks after it on
  * the default enemy one hex away; tests that read those packets step LANDING ticks further (window only). */
-export const LANDING=rangedAttackFlightTicks(1);
+export const WINDUP=rangedAttackWindupTicks('zyra',20);
+export const LANDING=WINDUP+rangedAttackFlightTicks(1);
+/* Ranged attack wind-up (#791, window only): her attack now starts, launches its shot a wind-up later and lands a flight after
+ * that, so LANDING counts from the attack start (AS 1.0, a 20-tick interval) through the wind-up and the one-hex flight. */
 export function run(p:CombatUnit,ticks=1,others:readonly CombatUnit[]=[enemy()],patch:Partial<CombatState>={}) {
  let state=battle([p,...others],{rngState:42,...patch});const events:CombatEvent[]=[];
  for(let i=0;i<ticks&&state.status==='running';i++){const r=stepCombat(state);state=r.state;events.push(...r.events);}

@@ -1,3 +1,4 @@
+import { createJayceCrystals } from './vfx-ltk/jayce-crystals';
 import { attackCritKeys } from './attack-crits';
 import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
@@ -17,7 +18,7 @@ import { createStarUpFx } from './star-up-fx';
 import { createReferenceBurst, createRenataShield, renataShieldCaster, renataShieldTarget, renataRadius, RENATA_IMPACT_DELAY } from './reference-fx';
 import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_FLIGHT_SECONDS, RENATA_LAUNCH_DELAY } from './renata-missile';
-import { planActionEffects, type EffectPlayback } from './action-effect-plan';
+import { landingPlan, planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import { createRenderQuality, pixelRatioFor, placeQualityButton as placeQuality } from './render-quality';
 import { installShopOriginalSkin } from './shop-original-skin';
@@ -66,15 +67,18 @@ import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights 
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
+import { WINDUP_SECONDS, tracerDelay, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
-import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
+import { attackKey, attackLandings } from './vfx-ltk/attack-landing';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, RUMBLE_MISSILE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
+import { gateEnds } from './vfx-ltk/gate-ends';
+import { cellAt, rowStrikeCells } from './vfx-ltk/rumble-row';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
 /** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
@@ -106,7 +110,7 @@ const DEATH_FALLBACK_SECONDS = 1.2;
 /** Seconds for a piece to glide to a new token position; the 2D tween itself is 0.22 s. */
 const FOLLOW_SECONDS = 0.12;
 const TEAM_COLOR = { player: '#3d8fd1', enemy: '#d1504a' } as const;
-const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal']);
+const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal', 'attackWindup', 'attackWindupCancelled']);
 /** CSS pixels before a press becomes a drag; BoardScene's own threshold is 6. */
 const DRAG_THRESHOLD = 6;
 /** The dragged piece floats this far above the board. */
@@ -710,8 +714,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   // Persistent layers ended by a status or a later hit (sustain-stops.ts).
   const sustainStops = createSustainStops(id => pieces.get(id)?.definitionId);
-  // A timed form (Dr. Mundo's ultimate body) follows its rule events over whatever clip plays (timed-form-events.ts).
-  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId);
+  // A timed form (Dr. Mundo's ultimate body, Swain's wings) follows its rule events over whatever clip plays (timed-form-events.ts).
+  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.form);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.
@@ -739,6 +743,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
+  const jayceCrystals = createJayceCrystals({ play: (...args) => ltk?.play(...args) ?? false, stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
   // Powder's monkey on the board between her letting it go and its explosion (powder-monkey.ts); when each piece last cast.
   const monkeys = createPowderMonkeys(scene, loadLit), castAt = new Map<string, number>();
@@ -1191,7 +1196,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1250,26 +1255,30 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Attack cues move with the swing only when the mixer actually retimed this attack to its release (AttackRelease):
   // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
+  // Attacks winding up (attackWindup, the rules' wind-up 11-19): attacker → its launch tick, whose attack event only adds the shot.
+  const windups = new Map<string, number>();
   const releaseOf = (source: PieceView) => {
     const release = source.lease?.attackRelease, output = source.state.output;
     const played = output.state === 'attack' ? output.playback?.release : undefined;
     return release && played ? { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } : undefined;
   };
-  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, crit: boolean) => {
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, landing: AttackLanding | undefined, crit: boolean) => {
     const release = releaseOf(source);
-    return release || crit ? { variant, ...(release ? { release } : {}), ...(crit ? { crit } : {}) } : variant;
+    return release || landing || crit ? { variant, ...(release ? { release } : {}), ...(landing ? { landing } : {}), ...(crit ? { crit } : {}) } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
-    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }, crit = false) => {
+    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }>; landing?: AttackLanding }, crit = false) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const cast = extra && typeof extra === 'object' && 'type' in extra ? extra
       : extra && typeof extra === 'object' && 'cast' in extra ? extra.cast : undefined;
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
+    // The rules' landing of a ranged attack (attackLaunched): its projectile lands and its hit plays on the arrival tick.
+    const landing = action === 'attack' && extra && typeof extra === 'object' && 'landing' in extra ? extra.landing : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, action === 'attack' && crit)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, landing, action === 'attack' && crit)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, landing, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1280,7 +1289,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
       attackFrom.copy(source.root.position).setY(impactHeight(source) * 1.1); attackTo.copy(target.root.position).setY(impactHeight(target));
       if (ranged) attackFrom.addScaledVector(attackDelta.copy(attackTo).sub(attackFrom).setY(0).normalize(), 14);
-      feel.attack(attackFrom, attackTo, ranged, ranged ? 0.1 : 0.18);
+      // Reduced motion and champions without a timeline land here too: a ranged spark follows the rules' arrival.
+      const tracer = ranged ? tracerDelay(landing) : 0.18;
+      if (tracer !== undefined) feel.attack(attackFrom, attackTo, ranged, tracer);
       return;
     }
     let castPlan: ReturnType<typeof planActionEffects> | null = null;
@@ -1324,7 +1335,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
-    for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
+    const planned = castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback);
+    // The asset fallback (reduced motion, no timeline) times a ranged attack's projectile and hit by the rules' landing too.
+    for (const { id, playback: spec } of landing && action === 'attack' ? landingPlan(planned, landing, MIN_FLIGHT_SECONDS, BEAM_FLIGHT_SECONDS) : planned) {
       if (queued.length >= MAX_QUEUED) return;
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : effectCorrection(id)) });
     }
@@ -1508,6 +1521,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    const landings = attackLandings(events);
     // Basic attacks that crit (CRIT_ATTACK_HIT), melee by their packet, ranged by their launch (attack-crits.ts).
     const crits = attackCritKeys(events);
     // A skill's direct damage that crits flashes the crit system on its target (CRIT_SKILL_HIT). Only CRIT_FLASH_MAX are out at
@@ -1527,6 +1541,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!form.on && view) ltk?.stopSystems(form.id, TIMED_FORM_STOPS[view.definitionId] ?? []);
     };
     for (const form of timedForms.advance(latest)) setForm(form);
+    // Rumble's casts of this batch (display only): his primary target and the units his cast struck, by cast tick.
+    const rumbleCasts = new Map<string, { sourceId: string; primary?: string; struck: string[] }>();
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       ltkTick = tickOf(event) ?? ltkTick;
@@ -1567,6 +1583,31 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (caster?.definitionId === 'powder' && hides !== undefined && currentEffect && !reducedMotion()) monkeys.prepare(event.sourceId, hides);
       }
       if (event.type === 'death') monkeys.drop(event.unitId);
+      // Rumble's missiles: the units his cast strikes on its tick, kept for the drops and row explosions played after the batch.
+      if (currentEffect && !reducedMotion() && event.type === 'cast' && pieces.get(event.sourceId)?.definitionId === 'rumble')
+        rumbleCasts.set(`${event.sourceId}|${event.tick}`, { sourceId: event.sourceId, primary: event.targetIds?.[0], struck: [] });
+      if (event.type === 'packetDamage' && event.hit && (event as { delivery?: string }).delivery === 'ability-direct') {
+        const cast = rumbleCasts.get(`${event.sourceId}|${event.tick}`);
+        // One entry per damage packet: a unit struck by several missiles is listed once for each.
+        if (cast) cast.struck.push(event.targetId);
+      }
+      // Malzahar's gate: its portal at each end of the line of cells his cast covers (CastReceipt.area, from one end to the
+      // other), facing the other end (a one-cell line faces him). Display only; his hits stay with the cast's targets.
+      if (event.type === 'cast' && event.area?.cells.length && grid && currentEffect && !reducedMotion() && pieces.get(event.sourceId)?.definitionId === 'malzahar') {
+        const caster = pieces.get(event.sourceId)?.root.position, board = grid;
+        for (const end of gateEnds(event.area.cells)) {
+          const at = hexCenter(end.cell, board), other = end.facing ? hexCenter(end.facing, board) : caster;
+          ltk?.play('malzahar', event.sourceId, [], 'cast', { skill: 'malzahar-gate', board: [at.x, at.y, at.z], ...(other ? { boardFacing: [other.x, other.y, other.z] as const } : {}) });
+        }
+      }
+      // Jayce's crystals (rules 11-21): each lands on its cell and stays there until the rules set it off, then explodes on
+      // that cell. Each crystal plays as its own board source, so its stay ends with its own explosion (or as the next cast's
+      // crystal of the same place lands); in catch-up the stay is still ended, nothing is started.
+      if (event.type === 'jayceCrystal' && grid) {
+        const at = hexCenter(event.cell, grid);
+        jayceCrystals.crystal(event, [at.x, at.y, at.z], currentEffect && !reducedMotion());
+      }
+      if (event.type === 'death') jayceCrystals.death(event.unitId);
       if (event.type === 'abilityMarker' && grid) {
         const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
         if (event.marker === 'powder-monkey-sent' && currentEffect && !reducedMotion()) {
@@ -1612,7 +1653,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         continue;
       }
       // Observe even attacks covered by a cast's protected ending; the next visible swing needs their spacing.
-      if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
+      // The rules' wind-up (11-19): the swing starts on attackWindup; its attack event (the launch) only adds the shot.
+      if (event.type === 'attackWindup') { windups.set(event.attackerId, event.launchTick); pieces.get(event.attackerId)?.attackCadence.observe(event.tick); }
+      else if (event.type === 'attackWindupCancelled') { windups.delete(event.attackerId); if ((tickOf(event) ?? latest) > latest - EFFECT_TICKS) ltk?.stopAction(event.attackerId, 'attack'); }
+      const launch = event.type === 'attack' && windups.get(event.attackerId) === event.tick;
+      if (launch) windups.delete((event as { attackerId: string }).attackerId);
+      if (event.type === 'attack' && !launch) pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
       // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
@@ -1626,14 +1672,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'cast') {
         const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
-      for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
+      if (event.type === 'attackWindup') { for (const view of pieces.values()) view.state.consume({ type: 'attack', attackerId: event.attackerId } as unknown as AnimationEvent); }
+      else if (!launch) for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
+      if (event.type === 'attackWindup') {
+        face(event.attackerId, event.targetId);
+        if (current && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, event.targetId, [event.targetId],
+          { landing: { seconds: 0, phase: 'windup', windupSeconds: Math.max(0, event.launchTick - event.tick) / 20 } });
+      }
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
         // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
         // she holds (#737), and should one come it draws no swing.
-        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
+        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets,
+          { variant: planned.variant, landing: launch ? { ...(landings.get(attackKey(event.attackerId, event.tick)) ?? { seconds: 0 }), phase: 'launch' }
+            : landings.get(attackKey(event.attackerId, event.tick)) }, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
@@ -1652,6 +1706,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // A real step or death takes over from a lunge at once: the body is back on the root.
         const view = pieces.get((event as { unitId: string }).unitId); if (view) cancelLunge(view);
       }
+    }
+    // Rumble's missiles (CUE_EXTRA_SKILLS rumble-drop / rumble-strike, RUMBLE_MISSILE; fitted display, not original data): an
+    // explosion on the ground of the struck cell of each damage packet, then of the nearest unstruck cells of his primary
+    // target's row, up to his missile count, one after another from the end of the row nearest him, each after the first
+    // preceded by its fall.
+    for (const cast of rumbleCasts.values()) {
+      const board = grid;
+      if (!ltk || !board) break;
+      const cellOf = (id: string | undefined) => { const at = id ? pieces.get(id)?.root.position : undefined; return at ? cellAt(at.x, at.z, board) : undefined; };
+      const hits = cast.struck.map(cellOf).filter((c): c is NonNullable<typeof c> => !!c);
+      const primary = cellOf(cast.primary) ?? hits[0], caster = pieces.get(cast.sourceId)?.root.position;
+      if (!primary) continue;
+      const cells = rowStrikeCells(hits, primary, board.columns).map(cell => ({ cell, at: hexCenter(cell, board) }));
+      if (caster) cells.sort((a, b) => Math.abs(a.at.x - caster.x) - Math.abs(b.at.x - caster.x));
+      cells.forEach(({ at }, k) => {
+        const point = [at.x, at.y, at.z] as const, delay = k * RUMBLE_MISSILE.step;
+        if (k > 0) ltk.play('rumble', cast.sourceId, [], 'cast', { skill: 'rumble-drop', board: point, delay: Math.max(0, delay - RUMBLE_MISSILE.fall) });
+        ltk.play('rumble', cast.sourceId, [], 'cast', { skill: 'rumble-strike', board: point, ...(delay > 0 ? { delay } : {}) });
+      });
     }
     // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
     for (const [id, view] of pieces) if (view.dance !== 'clip') view.mixer?.apply(actionOf(id, view, view.state.output));

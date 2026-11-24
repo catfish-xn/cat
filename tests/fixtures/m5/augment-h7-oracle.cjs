@@ -19,7 +19,8 @@ function h7Gold(state) {
    if(seen.has(id))continue;seen.add(id);
    if(!d.ordinaryHero||d.ownerSeatId!==seat||d.equipment.length||d.combatItemGrants.length)continue;
    let h=2166136261n;
-   const text=JSON.stringify([source,seat,a.choiceId,d.combatId,d.eventSeq]);
+   // 2026-11-21 (#795): the roll is keyed by the death's tick and unit, not its eventSeq (the receipt id keeps the eventSeq).
+   const text=JSON.stringify([source,seat,a.choiceId,d.combatId,d.tick,d.unitId]);
    for(let i=0;i<text.length;i++)h=((h^BigInt(text.charCodeAt(i)))*16777619n)&0xffffffffn;
    const word=((h^BigInt(state.seed))*1664525n+1013904223n)&0xffffffffn;
    if(word<2147483648n)out.push({receiptId:id,source,kind:'gold',amount:1,round:f.round});

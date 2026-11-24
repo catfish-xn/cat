@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME, variable } from '../src/simulation/combat-s13-state';
-import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
+import { rangedAttackFlightTicks, rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 import { battle, unit } from './combat-helpers';
 import { packets } from './helpers/replay2-views';
@@ -163,8 +163,14 @@ function matchCombat(champion: string, opts: { anomaly?: string; mechanics?: { m
   return { ...started, units: started.units.map(u => u.id === 'p0' ? { ...u, cooldownTicks: 0, moveCooldownTicks: 2000, mana: 0 } : { ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 }) };
 }
 const pending = (s: CombatState) => s.units.find(u => u.id === 'p0')!.tasks?.filter(t => t.kind === 'attackLanding') ?? [];
+// Ranged attack wind-up (11-19): the shot launches rangedAttackWindupTicks after the attack starts; step to that launch.
+function toLaunch(start: CombatState): CombatState {
+  let s = stepCombat(start).state;
+  for (let n = 0; n < 20 && !pending(s).length; n++) s = stepCombat(s).state;
+  return s;
+}
 function roundTrip(start: CombatState) {
-  const launched = stepCombat(start).state, shot = pending(launched)[0]!;
+  const launched = toLaunch(start), shot = pending(launched)[0]!;
   expect(shot, 'premise: a shot is in flight').toBeDefined();
   const restored = JSON.parse(JSON.stringify(launched)) as CombatState;
   for (const u of restored.units) { validateMechanisms(u, restored.units, restored.tick, restored.combatId!, false, restored.nextActionSeq!); validateP3State(u, restored.units, restored.tick, restored.nextActionSeq!); }
@@ -182,7 +188,7 @@ describe('ranged attack landing: in-flight save and restore', () => {
   });
   it('on-hit status: Blistering Strikes rides the shot and applies when it lands', () => {
     const start = matchCombat('lux', { mechanics: [{ mechanic: 'blisteringStrikes', values: { durationTicks: 100, burnBpsPerSecond: 100, woundBps: 3300 } }] });
-    const launched = stepCombat(start).state;
+    const launched = toLaunch(start);
     expect(pending(launched)[0]!.landing!.effects.length, 'premise: the statuses wait in the shot').toBe(2);
     expect(launched.units.find(u => u.id === 'e0')!.mechanismState?.statuses.some(g => g.kind === 'burn')).toBe(false);
     const { landed } = roundTrip(start);
@@ -190,7 +196,7 @@ describe('ranged attack landing: in-flight save and restore', () => {
   });
   it('Dragonsoul: the target is registered when the shot lands, not on the attack', () => {
     const start = matchCombat('ezreal', { anomaly: 'dragonsoul' });
-    const launched = stepCombat(start).state;
+    const launched = toLaunch(start);
     expect(launched.units.find(u => u.id === 'p0')!.s13P3?.dragonTargets ?? []).toEqual([]);
     const { landed, events, shot } = roundTrip(start);
     expect(landed.units.find(u => u.id === 'p0')!.s13P3!.dragonTargets).toEqual(['e0']);
@@ -198,7 +204,7 @@ describe('ranged attack landing: in-flight save and restore', () => {
   });
   it('dead target: a restored shot whose target died in flight does nothing', () => {
     const start = matchCombat('ezreal', { anomaly: 'dragonsoul' });
-    const launched = stepCombat(start).state, killed = structuredClone(launched);
+    const launched = toLaunch(start), killed = structuredClone(launched);
     Object.assign(killed.units.find(u => u.id === 'e0')!, { hp: 0 });
     const shot = pending(killed)[0]!;
     let a = killed, b = JSON.parse(JSON.stringify(killed)) as CombatState; const events: CombatEvent[] = [];
@@ -238,8 +244,10 @@ describe('ranged attack landing: attacker-side snapshot', () => {
   // the fight running if the shooter falls.
   function amplifiedShot() {
     const fa = rangedAttackFlightTicks(1);
-    const killed = itemRun(wearing('blue-buff', { baseCritChanceBps: 0, targetId: 'a' }), 1 + fa, [itemEnemy('a', 1, 3, { hp: 100 }), itemEnemy('b', 2, 3), itemEnemy('z', 3, 3), { ...itemEnemy('ally', 6, 7), team: 'player' as const }]).state;
-    const launched = stepCombat({ ...killed, units: killed.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0, targetId: 'b' } : u) }).state;
+    const killed = itemRun(wearing('blue-buff', { baseCritChanceBps: 0, targetId: 'a' }), 1 + rangedAttackWindupTicks('zyra', 20) + fa, [itemEnemy('a', 1, 3, { hp: 100 }), itemEnemy('b', 2, 3), itemEnemy('z', 3, 3), { ...itemEnemy('ally', 6, 7), team: 'player' as const }]).state;
+    // Ranged attack wind-up (11-19): the attack on b starts now and its shot launches rangedAttackWindupTicks later.
+    let launched = stepCombat({ ...killed, units: killed.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0, targetId: 'b' } : u) }).state;
+    for (let n = 0; n < 20 && !launched.units.find(u => u.id === 'p')!.tasks!.some(t => t.kind === 'attackLanding'); n++) launched = stepCombat(launched).state;
     const shot = launched.units.find(u => u.id === 'p')!.tasks!.find(t => t.kind === 'attackLanding')!;
     expect(shot.landing!.packets[0]!.locked!.amplifiers.length, 'premise: the shot carries her amplifiers').toBeGreaterThan(0);
     return { launched, shot };

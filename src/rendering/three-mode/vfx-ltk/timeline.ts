@@ -1,4 +1,4 @@
-/** The chest locator: 14.24 basic attacks hit here (BasicAttack mHitBoneName), and their missiles fly to it. */
+/** The chest locator: basic attacks hit here (the bone their attack data names for a hit), and their missiles fly to it. */
 export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
@@ -25,6 +25,11 @@ export interface TimelineCue {
    * landing. A cue without a target, or whose caster or target is gone, keeps its own times.
    */
   readonly flightTicks?: { readonly perCell: number; readonly min: number };
+  /**
+   * Lasts the rule's flight (LtkPlayOptions.flightSeconds, from abilityProjectileLaunched): duration counts what the cue keeps
+   * after the landing, so a ground band laid at launch clears on the landing frame plus that tail.
+   */
+  readonly spanFlight?: boolean;
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
   /**
@@ -57,6 +62,12 @@ export interface TimelineCue {
    */
   readonly arc?: { readonly gravity: number; readonly targetOffset: number };
   /**
+   * A projectile's flight as a fixed curve instead of a straight line (the engine's fixed-time Hermite spline, as a perStrike
+   * fan's strikes fly): its start and end tangents in the target-facing frame, as shares of the distance. Its ends and its
+   * flight time stay the cue's own. A perStrike fan's own curve takes its place.
+   */
+  readonly curve?: StrikeCurve;
+  /**
    * One row per strike: for a cast whose rules strike several times (its targets list keeps one entry a strike, repeats
    * included; Heimerdinger's rockets), this cue plays once per entry instead of once per distinct target. The k-th of n
    * starts `strikeOffsetTicks(k, n, …)` rule ticks after the cue's delay, and a projectile row with `fan` flies a curve that
@@ -87,6 +98,11 @@ export interface TimelineCue {
    * seconds, instead of being cut there (cue-overrides.ts PLAY_OUT_AT_DEADLINE; per cue, Fable 11-19).
    */
   readonly playOut?: number;
+  /**
+   * The cue only gives way (Fable 11-21, Mel's bolt arcs): it starts only in free room, never ending, displacing or waiting
+   * on another run, and while it runs any newcomer may end it. Both are counted in LTK_RUN_STATS.gaveWay, never as drops.
+   */
+  readonly giveWay?: boolean;
   /**
    * Uniform size of this system about its anchor. Omitted means 1.
    *
@@ -173,6 +189,15 @@ export interface TimelineCue {
    * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
    */
   readonly livingTarget?: boolean;
+}
+/** An attack projectile's flight when no landing event times it (LtkPlayOptions.landing is absent: a dummy target, an older
+ * replay, a ranged unit the rules still settle on the attack tick). Fitted, not original; with the event the rules' arrival
+ * tick decides (runtime.ts landingCues). */
+export const DEFAULT_ATTACK_FLIGHT_SECONDS = 0.3;
+/** An attack's flying projectile written without a flight gets DEFAULT_ATTACK_FLIGHT_SECONDS; every other cue is unchanged. */
+export function withAttackFlight<T extends TimelineCue>(cue: T): T {
+  return (cue.action ?? 'cast') === 'attack' && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds === undefined
+    ? { ...cue, travelSeconds: DEFAULT_ATTACK_FLIGHT_SECONDS } : cue;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

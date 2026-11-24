@@ -273,7 +273,8 @@ function lootExplosionPlan(s) {
    if(!k||!d.ordinaryHero||k.killerSeatId!==seat||d.ownerSeatId===seat)continue;
    assert(Number.isInteger(k.critChanceBps)&&k.critChanceBps>=0&&k.critChanceBps<=10000);
    const ns=['augment-pool-batch5-g7',seat,a.choiceId,r.round,d.combatId,d.eventSeq];
-   let rng=salt(s.seed,ns);const draw=()=>rng=word(rng);
+   // 2026-11-21 (#795): the drop roll is keyed by the death's tick and unit; the receipt ids keep the eventSeq namespace.
+   let rng=salt(s.seed,['augment-pool-batch5-g7',seat,a.choiceId,r.round,d.combatId,d.tick,d.unitId]);const draw=()=>rng=word(rng);
    if(BigInt(draw())*10000n>=BigInt(Math.min(10000,1100+k.critChanceBps))*MOD)continue;
    let ticket=pick(draw(),weights.reduce((a,b)=>a+b,0)),tier=1;
    for(const w of weights){if(ticket<w)break;ticket-=w;tier++;}

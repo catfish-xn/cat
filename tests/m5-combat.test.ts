@@ -321,7 +321,10 @@ describe('M5 independent finite combat rules', () => {
   it('Rageblade and periodic AP/heal mechanics emit their own source provenance', () => {
     const owner = hero('lux', 'p', { hp: 4000, mana: 0, mechanics: [mechanic('p', 'rageblade', { attackSpeedBps: 500 }),
       mechanic('p', 'archangel', { periodTicks: 100, abilityPower: 30 }), mechanic('p', 'dragonClaw', { periodTicks: 40, healMaxHpBps: 250 })] });
-    const attack = stepCombat(battle([owner, dummy()], { rngState: 42 }));
+    // Ranged attack wind-up (#791): step on to the tick her first shot launches (Rageblade stacks on that attack).
+    let step = stepCombat(battle([owner, dummy()], { rngState: 42 })); const events = [...step.events];
+    while (!events.some(e => e.type === 'attackLaunched') && step.state.tick < 40) { step = stepCombat(step.state); events.push(...step.events); }
+    const attack = { events };
     expect(attack.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'rageblade'), before: 0, after: 500 });
     const periodic = stepCombat(battle([{ ...owner, cooldownTicks: 1000 }, dummy()], { tick: 199 }));
     expect(periodic.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'archangel'), before: 100, after: 130 });

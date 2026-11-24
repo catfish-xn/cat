@@ -8,11 +8,11 @@ import { M8_VERSION } from '../src/simulation/m8/version';
 import { readyMatch } from './match-helpers';
 
 // Heimerdinger's focus changes battle results, so its rule identifier is part of the content digest: a save or replay written
-// under the digest just before it is turned away as another version, never replayed under the new rule.
-const BEFORE_FOCUS_DIGEST = 'fnv1a32-utf16:2f642cc0';
+// under the digest just before it (Malzahar's gate) is turned away as another version, never replayed under the new rule.
+const BEFORE_FOCUS_DIGEST = 'fnv1a32-utf16:57428247';
 describe("Heimerdinger's focus: files written before it", () => {
   it('the rule has its own identifier and the digest moved', () => {
-    expect(S13_COMBAT_RULES.heimerFocus).toBe('first-floor-half-of-volley-at-current-target-rest-random');
+    expect(S13_COMBAT_RULES.heimerFocus).toBe('heimer-rockets-focus-current-target-v1');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_FOCUS_DIGEST);
   });
   it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {

@@ -95,6 +95,10 @@ export function heimerRocketLaunchTick(k: number, n: number): number {
  */
 export const MORDEKAISER_CLAW_TICKS: Readonly<Record<1 | 2 | 3, { readonly appear: number; readonly land: number }>> =
   Object.freeze({ 1: { appear: 2, land: 26 }, 2: { appear: 4, land: 27 }, 3: { appear: 4, land: 27 } });
+/** Malzahar's line (11-20, the 14.24 description "a 5-hex line across the target", square to the line from him to it as in the
+ * original footage; the hex axis it takes is self-chosen, board.ts hexCrossLine): this many cells on either side of the target.
+ * docs/S13_RULES_GAP.md (玛尔扎哈技能直线). */
+export const MALZAHAR_LINE_HALF = 2;
 
 /** Heimerdinger's focus (11-20, user-approved; self-chosen, not original data): this share of each volley's rockets, rounded
  * down, goes to his current target; the rest pick at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火). */
@@ -131,8 +135,8 @@ export function melBoltOffset(i: number): number { return Math.round(i * MEL_BOL
 /** Jayce's ranged cast (11-21, authorization ②): crystal i (i = 0 is thrown at the nearest enemy, then by distance) lands
  * jayceCrystalLandTick(i) after the cast and stays there; the main hit on the nearest enemy lands JAYCE_MAIN_HIT_TICKS after it;
  * the crystals then explode one after another in chain order (the nearest's first, then the farthest back toward the nearest),
- * the n-th of the chain jayceCrystalBlastTick(n) after the cast. The first three of each are aligned to the original frame by
- * frame (2 stars throws three); the chain order rule and the spacing past three (3 stars) repeat the last measured gap and
+ * the n-th of the chain jayceCrystalBlastTick(n) after the cast. The listed ticks are aligned to the original frame by frame (two
+ * stars); the chain order rule and the spacing past the listed ones (three stars) repeat the last measured gap and
  * are self-chosen, not original data. */
 export const JAYCE_CRYSTAL_LANDS: readonly number[] = [11, 14, 15], JAYCE_MAIN_HIT_TICKS = 33, JAYCE_CRYSTAL_BLASTS: readonly number[] = [35, 37, 40];
 const extend = (list: readonly number[], i: number) => i < list.length ? list[i]! : list[list.length - 1]! + (i - list.length + 1) * (list[list.length - 1]! - list[list.length - 2]!);
@@ -140,3 +144,20 @@ export function jayceCrystalLandTick(i: number): number { return extend(JAYCE_CR
 /** Where crystal i (of count) comes in the chain: the nearest's first, then the farthest down to the second nearest. */
 export function jayceCrystalChainPlace(i: number, count: number): number { return i === 0 ? 0 : count - i; }
 export function jayceCrystalBlastTick(n: number): number { return extend(JAYCE_CRYSTAL_BLASTS, n); }
+/** Ranged attack wind-up (fitted / self-chosen, not original data; user-approved 11-19): ticks from a ranged hero's attack start (its
+ * animation and cooldown) to the launch of its shot, our animation's fire frame (the attack projectile cue) / 50 ms, rounded, at most
+ * RANGED_ATTACK_WINDUP_MAX (self-chosen: a later fire frame is shown with the swing sped up so it fires on the launch tick). Never
+ * more than half the current attack interval; not scaled by attack speed in this first version. docs/S13_RULES_GAP.md (远程普攻前摇). */
+export const RANGED_ATTACK_WINDUP_MAX = 7;
+export const RANGED_ATTACK_WINDUP_DEFAULT = 5;
+export const RANGED_ATTACK_WINDUP_TICKS: Readonly<Record<string, number>> = Object.freeze({
+  lux: 5, zyra: 7, tristana: 4, urgot: 5, kogmaw: 5, ezreal: 6, nami: 6, corki: 3, caitlyn: 6, leblanc: 5, powder: 5, twitch: 5,
+  zeri: 5, draven: 5, jinx: 6, morgana: 5, vex: 5, ziggs: 7, renata: 5, cassiopeia: 6, mel: 6, jayce: 5,
+  maddie: 5, zoe: 6, heimerdinger: 4, twistedfate: 5, silco: 6, elise: 6, gangplank: 5, swain: 5,
+  // Fire frames later than the maximum take it (Fable 11-19): Malzahar's and Viktor's beam.
+  malzahar: 7, viktor: 7,
+});
+export function rangedAttackWindupTicks(championId: string, intervalTicks: number): number {
+  const ticks = Math.min(RANGED_ATTACK_WINDUP_TICKS[championId] ?? RANGED_ATTACK_WINDUP_DEFAULT, RANGED_ATTACK_WINDUP_MAX);
+  return Math.max(0, Math.min(ticks, Math.floor(intervalTicks / 2)));
+}
