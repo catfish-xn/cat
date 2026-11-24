@@ -284,14 +284,14 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '36c79ae9', action: 'passive', event: 'projectile', bone: 'L_Hand', delay: 0, duration: 0.8, travelSeconds: 0.6, rank: 'body' },
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0.6, duration: 1.2, rank: 'body' },
   ],
-  // Violet's combo (batch2-bridge.ts): each jab's hit on its target as its damage lands, and the uppercut's own hit on the
-  // last one, where the export showed both at one fixed moment after the cast. Her skill data names the jab's hit for her
-  // combo's strikes and lists the uppercut's only among her resources, so which strike carries which is not readable there:
-  // the uppercut plays its own hit alone until the original footage decides (Fable 11-25).
+  // Violet's combo (batch2-bridge.ts): each jab's hit on its target as its damage lands, and on the last one the uppercut's
+  // own hit with the jab's pink hit beside it, where the export showed both at one fixed moment after the cast. The original
+  // footage shows a pink burst at the uppercut before its blue-white vertical sparks (Fable 11-25).
   'violet-jab': [
     { system: '31193cf8', action: 'cast', event: 'hit', delay: 0, duration: 1.5 },
   ],
   'violet-uppercut': [
+    { system: '31193cf8', action: 'cast', event: 'hit', delay: 0, duration: 1.5 },
     { system: '1bcbe1b7', action: 'cast', event: 'hit', delay: 0, duration: 1.5 },
   ],
   'steb-heal': [
