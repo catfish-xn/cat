@@ -22,8 +22,6 @@ import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES, VI_LANDING } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
-import { S13_ABILITY_DATA } from '../../../simulation/content/abilities';
-import { COMBAT_TICK_MS } from '../../../simulation/combat-types';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
@@ -311,16 +309,18 @@ const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
 /** When Akali's mark (bc4a9e0d) lands on her target after the cast: with her shuriken's hit. */
 export const AKALI_MARK_DELAY = 0.3;
 /**
- * How long Akali's mark shows: until the rules' exposure on that target ends (combat-g2-2.ts akali: from the tick after the
- * cast, the ability's Duration), counted from when the mark lands. Read from the ability data, so a change of the rule's time
- * moves the mark with it. The exposure has no other end in the rules (it is not consumed or cleansed; a recast on the same
- * target restarts it, as a recast replaces the mark: SUSTAIN_REFRESH); the target's death takes the mark at once (SUSTAIN_CAPS).
+ * The rules' exposure from Akali's cast (combat-g2-2.ts akali: from the tick after the cast, her ability's Duration in rule
+ * ticks), mirrored here as CAST_WINDUP_TICKS is: importing the ability data from the 3D code pulls it into the render3d chunk
+ * and makes the 2D entry load that chunk eagerly (rendering3d-isolation). tests/vfx-ltk-status-follows-rules.test.ts checks it
+ * against the ability data and a real cast, so a change of the rule's time fails there until this follows it.
  */
-export const AKALI_MARK_SECONDS = (() => {
-  const ticksPerSecond = 1000 / COMBAT_TICK_MS;
-  const longest = Math.max(...S13_ABILITY_DATA['akali-ability']!.variables.Duration!);
-  return (1 + Math.round(longest * ticksPerSecond)) / ticksPerSecond - AKALI_MARK_DELAY;
-})();
+export const AKALI_EXPOSURE = Object.freeze({ fromTick: 1, ticks: 80, ticksPerSecond: 20 } as const);
+/**
+ * How long Akali's mark shows: until the rules' exposure on that target ends, counted from when the mark lands. The exposure
+ * has no other end in the rules (it is not consumed or cleansed; a recast on the same target restarts it, as a recast
+ * replaces the mark: SUSTAIN_REFRESH); the target's death takes the mark at once (SUSTAIN_CAPS).
+ */
+export const AKALI_MARK_SECONDS = (AKALI_EXPOSURE.fromTick + AKALI_EXPOSURE.ticks) / AKALI_EXPOSURE.ticksPerSecond - AKALI_MARK_DELAY;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Elise's front-row cast as exported (batch3/elise.ts, baked into the asset index), with the Cocoon hit 6d6525e8 playing to its
   // system's own end instead of the default: no rule event ends it (11-15).

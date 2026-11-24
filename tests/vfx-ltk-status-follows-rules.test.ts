@@ -3,13 +3,14 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { AKALI_MARK_DELAY, AKALI_MARK_SECONDS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, SUSTAIN_REFRESH } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { AKALI_EXPOSURE, AKALI_MARK_DELAY, AKALI_MARK_SECONDS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, SUSTAIN_REFRESH } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { createControlEndStops } from '../src/rendering/three-mode/vfx-ltk/sustain-stops';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { stepCombat, type CombatUnit, type CombatState } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { COMBAT_TICK_MS } from '../src/simulation/combat-types';
+import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { battle, unit } from './combat-helpers';
 import { num, syntheticSystem } from './vfx-ltk-synthetic';
 
@@ -52,6 +53,10 @@ describe('Akali mark: the rules exposure time, read from the rules', () => {
     hp: 100000, maxHp: 100000, mana: 0, maxMana: 1, attackDamage: 0, cooldownTicks: 1000, moveCooldownTicks: 1000,
     runtime: { ...EMPTY_RUNTIME }, statuses: [], shieldLayers: [], tasks: [] });
 
+  it('mirrors the ability data: every star level, in rule ticks', () => {
+    expect(AKALI_EXPOSURE.ticksPerSecond).toBe(1000 / COMBAT_TICK_MS);
+    for (const seconds of S13_ABILITY_DATA['akali-ability']!.variables.Duration!) expect(Math.round(seconds * AKALI_EXPOSURE.ticksPerSecond)).toBe(AKALI_EXPOSURE.ticks);
+  });
   it('ends on the tick the exposure on her target ends, counted from when the mark lands', () => {
     let state: CombatState = battle([hero('akali'), dummy()], { rngState: 42 }), castTick = -1, until = 0;
     for (let n = 0; n < 200 && state.status === 'running' && !until; n++) {
