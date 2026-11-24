@@ -6,13 +6,17 @@ import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 
 // Explicit cast-start ranks (Fable 11-19): 61 rows reviewed, 33 body and 28 decorative; Smeech's four swipes became one
 // (#765: only his vertical swipe plays with a stab), and Mel's energy stack is no longer played (Fable 11-21), so 57 rows,
-// 30 body and 27 decorative. Labels only.
+// 30 body and 27 decorative. Sevika's punch has a fallback row for rules without its hit-tick marker, ranked as the punch
+// itself (its glove's swing and spring beam are body), so 59 rows, 32 body and 27 decorative. Labels only.
 describe('cast-start ranks', () => {
   const rows = Object.values(CAST_START_RANKS).flatMap(ranks => Object.values(ranks));
-  it('lists 57 rows: 30 body, 27 decorative', () => {
-    expect(rows).toHaveLength(57);
-    expect(rows.filter(rank => rank === 'body')).toHaveLength(30);
+  it('lists 59 rows: 32 body, 27 decorative', () => {
+    expect(rows).toHaveLength(59);
+    expect(rows.filter(rank => rank === 'body')).toHaveLength(32);
     expect(rows.filter(rank => rank === 'decorative')).toHaveLength(27);
+  });
+  it("Sevika's punch and its landing fallback rank alike", () => {
+    expect(CAST_START_RANKS['sevika-punch-landed']).toEqual(CAST_START_RANKS['sevika-punch']);
   });
   it("Ambessa's chain swipe is body; her wind-up and dust are decorative", () => {
     expect(CAST_START_RANKS.ambessa).toEqual({ '754b6c78': 'decorative', a429a900: 'decorative', '6390530e': 'body', '3b4c15e0': 'body' });

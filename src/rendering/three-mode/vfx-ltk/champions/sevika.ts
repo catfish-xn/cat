@@ -11,6 +11,10 @@ const SHIELD_SECONDS = 4;
 const SLOTS = '5ee3f587', SLOT_SECONDS = 2.3;
 /** The rolled spell lands when the right reel stops: G23_POLICY.highRoller.slotTicks (25) × 0.05 s. */
 export const SEVIKA_SLOT_SECONDS = 1.25;
+/** The punch's authored swing start (its glove's first cue) from the cast's own animation start; its cues count from here. */
+const PUNCH_SWING = 20 / 30;
+/** Seconds from the punch's swing start to its impact: the bridge starts the punch this long before the rules' hit tick. */
+export const SEVIKA_PUNCH_IMPACT_LEAD = .8 - PUNCH_SWING;
 const SLOT_LAYERS = { flamethrower: '75cc1285', punch: '5875fa39', thrash: '85a3c691',
   rocket: '5dbfcb42', shield: 'e9258aa9', coin: 'ba45e98d', jackpot: '066fd22b' } as const;
 /** Each spell layer's right-reel emitters (Flamethrower: Alpha_Right_Slot, Punch: _Slot2, Thrash: _Slot3; all: Add_Right_Slot). */
@@ -27,9 +31,18 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: '83de8443', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2 },
     { system: '892df721', event: 'hit', delay: .2, duration: 2, stopAfter: 1.5 },
   ],
-  // The punch plays when the rules' punch lands (batch2-bridge: her first skill packet on the cast's target after the
-  // cast), all at once: the glove's swing and spring beam with the impact, none of them on a fixed offset from the cast.
+  // The punch, timed back from the rules' hit tick (batch2-bridge: the 'sevika-punch-thrown' marker of the slot machine's stop
+  // names it): the glove's swing and spring beam start ahead of the hit as authored, the impact and the flash on it. The
+  // bridge plays it SEVIKA_PUNCH_IMPACT_LEAD before the hit.
   'sevika-punch': [
+    { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 20 / 30 - PUNCH_SWING, duration: .7, stopAfter: 20 / 30 },
+    { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 22 / 30 - PUNCH_SWING, duration: .6, stopAfter: .5, fadeOut: true },
+    { system: '8ccb497d', event: 'hit', primary: true, delay: .8 - PUNCH_SWING, duration: .8 },
+    { system: '95fb90ce', event: 'hit', primary: true, delay: .8 - PUNCH_SWING, duration: .8 },
+  ],
+  // Fallback for rules without the marker: the punch on its landing (her first skill packet on the cast's target after the
+  // cast), all at once, none of it on a fixed offset from the cast.
+  'sevika-punch-landed': [
     { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 0, duration: .7, stopAfter: 20 / 30 },
     { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 0, duration: .6, stopAfter: .5, fadeOut: true },
     { system: '8ccb497d', event: 'hit', primary: true, delay: 0, duration: .8 },

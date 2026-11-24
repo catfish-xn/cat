@@ -5,7 +5,7 @@ import type { LtkPlayOptions } from './runtime';
 import type { TimelineVariant, WorldPoint } from './timeline';
 import { CUE_RULE_STOPS, VI_HAND_TRAIL } from './cue-overrides';
 import { jayceSkill } from './champions/jayce';
-import { SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
+import { SEVIKA_PUNCH_IMPACT_LEAD, SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
 import { melSkill } from './champions/mel';
 
 interface Unit { definitionId: string; form: 'front' | 'back'; starLevel: number; alive: boolean; disposed?: boolean }
@@ -43,9 +43,10 @@ export function createBatch2VfxBridge(host: Host) {
   const viSlamTicks = new Map<string, number>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
-  // Sevikas whose rolled spell is the punch, with the cast's target and tick: the punch plays when her skill's first
-  // direct damage on that target after the cast arrives (the rules' landing), not on a fixed delay from the cast.
-  const punches = new Map<string, { target: string; tick: number }>();
+  // Sevikas whose rolled spell is the punch, with the cast's target and tick. The punch is timed back from the hit tick the
+  // rules name when the slot machine stops (abilityMarker 'sevika-punch-thrown', arrivalTick); rules without that marker
+  // get it on the landing instead (her skill's first direct damage on that target after the cast). `thrown`: the marker came.
+  const punches = new Map<string, { target: string; tick: number; thrown?: boolean }>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
   let variant: TimelineVariant | undefined;
   // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
@@ -189,10 +190,14 @@ export function createBatch2VfxBridge(host: Host) {
         if (rolled === 'punch' && event.targetIds[0]) punches.set(event.sourceId, { target: event.targetIds[0], tick: event.tick });
         else punches.delete(event.sourceId);
       }
+      const marker = event.type === 'abilityMarker' && (event.marker as string) === 'sevika-punch-thrown' ? event : undefined;
+      const thrown = marker ? punches.get(marker.unitId) : undefined;
+      if (thrown) thrown.thrown = true;
       const punch = event.type === 'packetDamage' ? punches.get(event.sourceId) : undefined;
       const punchLands = !!punch && event.type === 'packetDamage' && event.sourceKind === 'ability' && event.delivery === 'ability-direct'
         && event.targetId === punch.target && event.tick > punch.tick;
       if (punchLands) punches.delete((event as { sourceId: string }).sourceId);
+      const landedPlay = punchLands && !punch!.thrown;
       // Each cast of hers starts a fresh slam: a replay that starts over (castcmp's warm pass, a rewind) brings her slam on the
       // same tick again, and must draw it again.
       if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'vi') {
@@ -222,7 +227,10 @@ export function createBatch2VfxBridge(host: Host) {
           if (third && event.ordinal === 0) play('mel', event.sourceId, [event.targetId], 'mel-third-blast', 'cast', true);
         }
       }
-      if (punchLands && event.type === 'packetDamage') play('sevika', event.sourceId, [event.targetId], 'sevika-punch', 'cast', true);
+      // The swing starts SEVIKA_PUNCH_IMPACT_LEAD before the hit tick, the impact on it (at once when the hit is nearer than that).
+      if (marker && thrown) play('sevika', marker.unitId, [thrown.target], 'sevika-punch', 'cast', false, undefined, false,
+        Math.min(2, Math.max(0, (marker.arrivalTick - marker.tick) * .05 - SEVIKA_PUNCH_IMPACT_LEAD)));
+      if (landedPlay && event.type === 'packetDamage') play('sevika', event.sourceId, [event.targetId], 'sevika-punch-landed', 'cast', true);
       if (viSlam) {
         // Her right hand's trail ends as she lands; her landing group plays there, on her grabbed target (its place, should
         // it have died while held), else on the enemy this damage struck.

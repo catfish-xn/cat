@@ -12,6 +12,7 @@ export const CAST_START_RANKS: Readonly<Record<string, Readonly<Record<string, '
   'sevika-flamethrower': { '2ef508db': 'decorative' },
   // Sevika punch: arm whoosh and spring
   'sevika-punch': { '42ceec5b': 'body', '0badab98': 'body' },
+  'sevika-punch-landed': { '42ceec5b': 'body', '0badab98': 'body' },
   // Sevika jackpot: coin fountain
   'sevika-jackpot': { '91985f5e': 'body' },
   // Sevika coin: the same coin fountain
