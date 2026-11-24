@@ -1,8 +1,8 @@
 import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture, type BufferGeometry, type Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility } from './contracts';
-import { HELD_SUBMESHES, TIMED_FORMS, hideInitialSubmeshes, unswitchedClips, withoutHeld } from './submesh-visibility';
+import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility, type TimedFormClips, type TimedFormAnimations } from './contracts';
+import { CUTOUT_SUBMESHES, HELD_SUBMESHES, TIMED_FORMS, cutOutSubmeshes, hideInitialSubmeshes, unswitchedClips, withoutHeld } from './submesh-visibility';
 import { holdRootInPlace, trimClip } from './clip-range';
 /**
  * The rules cap a ranged wind-up at 7 ticks (cast-windup.ts RANGED_ATTACK_WINDUP_MAX, Fable 11-19); a hero whose swing fires later
@@ -20,8 +20,10 @@ export interface ModelLease extends ModelTemplate, CastMetadata {
   animationNames: AnimationNames;
   /** The manifest's submesh visibility; the lease's scene already hides its `initiallyHidden` submeshes. */
   submeshVisibility?: SubmeshVisibility;
-  /** The model's timed form (TIMED_FORMS), when it has one. */
+  /** The model's timed form (TIMED_FORMS), when it has one, and the manifest's clips that enter and leave it. */
   timedForm?: (typeof TIMED_FORMS)[string];
+  timedFormClips?: TimedFormClips;
+  timedFormAnimations?: TimedFormAnimations;
   release(): void;
 }
 interface Entry { promise: Promise<ModelTemplate>; model?: ModelTemplate; refs: number; retired: boolean; placeholder: boolean }
@@ -140,6 +142,7 @@ export class ModelCache {
           const missing = [...new Set(unswitched.flatMap(entry => entry.missing))].join(', ');
           console.warn(`[submesh-visibility] ${id}: ${unswitched.length} clip(s) switch nothing, model lacks ${missing}: ${unswitched.map(entry => entry.clip).join(', ')}`);
         }
+        if (!created.placeholder && Object.hasOwn(CUTOUT_SUBMESHES, id)) cutOutSubmeshes(model.scene, CUTOUT_SUBMESHES[id]);
         created.model = model;
         return model;
       });
@@ -160,7 +163,7 @@ export class ModelCache {
       attackRelease: this.manifest.models[id]?.attackRelease ?? (Object.hasOwn(WINDUP_ATTACK_RELEASE, id) ? WINDUP_ATTACK_RELEASE[id] : undefined),
       statusPose: this.manifest.models[id]?.statusPose,
       submeshVisibility,
-      ...(Object.hasOwn(TIMED_FORMS, id) ? { timedForm: TIMED_FORMS[id] } : {}),
+      ...(Object.hasOwn(TIMED_FORMS, id) ? { timedForm: TIMED_FORMS[id], timedFormClips: this.manifest.models[id]?.timedFormClips, timedFormAnimations: this.manifest.models[id]?.timedFormAnimations } : {}),
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

@@ -190,7 +190,16 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     // #693 (2026-11-16, scene change approved by Fable): at (1,5) the bound unit now kills four enemies in round 23 (Zyra's
     // wind-up changed the fight), crossing Golden Find's threshold a round early. At (3,5) it kills one, below the threshold,
     // on #693 and on wind-up batch 2; tried (0,4) (0,5) (1,4) (2,5) (2,6): three or four kills each.
-    command({ type: 'deploy', unitId: target, target: { kind: 'board', cell: { col: 3, row: 5 } } });
+    // Landing batch (2026-11-20, scene change approved by Fable; premises and assertions unchanged): the batch changed the
+    // round-23 fight, so at (3,5) the bound unit kills five in round 23. Tried every player cell: only (0,6) and (1,6) give one
+    // kill in round 23 and three in round 24 (the rest: two to six in round 23); (1,6) is used. Both still hold with Heimerdinger's
+    // focus and Swain's drain on top.
+    // Ranged attack wind-up (#791, 2026-11-24, scene change approved by Fable): at (1,6) the bound unit no longer kills one in
+    // round 23 and three in round 24. Tried all 28 cells (and, without a fit, other room seeds and other bound units): no cell
+    // gives one and three; (0,7) gives one kill in round 23 and two in round 24, which still crosses the three-kill threshold only
+    // by carrying round 23's kill (as the earliest scene above did). Premises and assertions unchanged; only round 24's kill
+    // count literal follows the scene.
+    command({ type: 'deploy', unitId: target, target: { kind: 'board', cell: { col: 0, row: 7 } } });
     runUntil(room, clock, s => s.round === 23 && s.phase === 'settlement');
     expect(room.state.fault).toBeNull();
     const [binding] = requireAugmentFacts(mine(), 'combat-binding', 23);
@@ -211,7 +220,7 @@ describe('production placeholder Golden Find payout from real bound-unit kills',
     const state = mine();
     const kills = requireAugmentFacts(state, 'deaths', 24).flatMap(f => f.deaths)
       .filter(d => d.team === 'enemy' && d.killer?.ownerId === target);
-    expect(kills).toHaveLength(3);
+    expect(kills).toHaveLength(2); // #791 scene (0,7): was 3 at (1,6)
     expect(killsInEvents(24, target)).toBe(kills.length);
     const before = killsInEvents(23, target), gold = goldenFindGold(before, before + kills.length);
     // Premise: round 24 crosses the threshold, so it pays.

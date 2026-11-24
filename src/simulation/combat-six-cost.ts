@@ -1,3 +1,6 @@
+import { scheduleShot } from './ability-projectile';
+import { melBoltOffset, MEL_BOLTS_PER_TARGET, MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS, MEL_TARGET_STAGGER_TICKS } from './cast-windup';
+import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import type { CombatOrigin, ShieldLayer } from './combat-types';
@@ -55,32 +58,61 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
     ctx.events.push({type:'chaosEnergyChanged',tick:ctx.tick,unitId:u.id,before:s.energy,after:0});s.energy=0;
     return targets.map(t=>t.id);
   }
+  // One read decides the third-cast bolts, whether she dashes, and the branch reported (display output only).
+  const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
+  // 11-21 (Fable, from original footage): every normal cast dashes (her own cell is no candidate); the third cast does not move.
+  // Where she lands is self-chosen, not original data: the free cell within dashRadius with the most allies within 2 hexes
+  // (counted up to 2), then the nearest, then the farthest from its nearest enemy (11-21), then row and column. With no free
+  // cell she stays.
   const free:HexCell[]=[];
-  for(let row=0;row<ctx.board.rows;row++)for(let col=0;col<ctx.board.columns;col++){
-    const cell={col,row};if(hexDistance(u.cell,cell)<=P.mel.dashRadius&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(t.cell,cell)===0))free.push(cell);
+  if(!third)for(let row=0;row<ctx.board.rows;row++)for(let col=0;col<ctx.board.columns;col++){
+    const cell={col,row};if(hexDistance(u.cell,cell)<=P.mel.dashRadius&&hexDistance(u.cell,cell)>0&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(t.cell,cell)===0))free.push(cell);
   }
   const coverage=(cell:HexCell)=>ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(cell,t.cell)<=2).length;
-  free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
-  const destination=free[0];if(destination&&hexDistance(destination,u.cell)>0){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:destination}); recordAerialMovement(ctx, u, destination);u.cell=destination;}
-  const allies=byDistance(u,ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(u.cell,t.cell)<=2)).slice(0,2);
+  const foesNow=enemies(u,ctx.units),clearance=(cell:HexCell)=>foesNow.length?Math.min(...foesNow.map(t=>hexDistance(cell,t.cell))):0;
+  free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||clearance(b)-clearance(a)||a.row-b.row||a.col-b.col);
+  // 11-20 (user-approved, aligned to the original frame by frame): she lands MEL_DASH_LAND_TICKS after the cast (melDash task)
+  // and her bolts leave MEL_RELEASE_TICKS after it; she channels until then. Who is shielded and hit is still decided now, from
+  // the cell she dashes to.
+  const destination=free[0],landing=destination??u.cell;
+  if(destination&&hexDistance(destination,u.cell)>0)u.tasks.push({key:JSON.stringify([u.id,seq,'melDash']),kind:'melDash',source:origin(u),executeAtTick:ctx.tick+MEL_DASH_LAND_TICKS,
+    targetId:null,amount:0,ordinal:0,total:1,cancellable:false,actionSeq:seq,cell:{...destination}});
+  applyStatus(u,origin(u),'channel',0,MEL_RELEASE_TICKS,ctx.tick,ctx.events,true,'',seq);
+  const near=(c:HexCell)=>(t:S13Unit)=>hexDistance(c,t.cell);
+  const allies=ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(landing,t.cell)<=2)
+    .sort((a,b)=>near(landing)(a)-near(landing)(b)||(a.id<b.id?-1:1)).slice(0,2);
   for(const t of [u,...allies])grantShield(t,origin(u),variable(u,'Shield'),ctx.tick+P.mel.shieldTicks,ctx.tick,ctx.events);
-  // One read decides the third-cast bolts and the branch reported (display output only).
-  const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
   if(third){
-    const targets=byDistance(u,enemies(u,ctx.units)).slice(0,5),total=s.storedEnergy+Math.floor(variable(u,'ThirdDamage')*ap(u,ctx.tick,ctx.units)/100);
+    const targets=fromLanding(u,landing,ctx).slice(0,5),total=s.storedEnergy+Math.floor(variable(u,'ThirdDamage')*ap(u,ctx.tick,ctx.units)/100);
     if(targets.length){
       const ids=[...targets].sort((a,b)=>a.id<b.id?-1:1),base=Math.floor(total/targets.length),remainder=total%targets.length;
-      for(const t of targets){const value=base+(ids.indexOf(t)<remainder?1:0);bolts(ctx,u,t,value,seq);}
+      targets.forEach((t,n)=>{const value=base+(ids.indexOf(t)<remainder?1:0);scheduleShot(u,'mel-barrage',ctx.tick+MEL_RELEASE_TICKS,t.id,value,seq,n,targets.length);});
     }
     ctx.events.push({type:'melEnergyChanged',tick:ctx.tick,unitId:u.id,before:s.storedEnergy,after:0});s.storedEnergy=0;s.absorbedRemainder=0;
     return targets.map(t=>t.id);
   }
-  const targets=byDistance(u,enemies(u,ctx.units)).slice(0,3);
-  for(const t of targets)bolts(ctx,u,t,Math.floor(variable(u,'Damage')*ap(u,ctx.tick,ctx.units)/100),seq);
+  const targets=fromLanding(u,landing,ctx).slice(0,3);
+  // Normal cast (11-21): MEL_BOLTS_PER_TARGET bolts per target, each its own projectile that settles where it lands (one packet,
+  // the per-target total split as before); target k starts MEL_TARGET_STAGGER_TICKS × k after the release, its bolts at
+  // melBoltOffset(i) after that. A target that dies takes none of the bolts still flying or still to leave (self-chosen, not
+  // original data).
+  const per=Math.floor(variable(u,'Damage')*ap(u,ctx.tick,ctx.units)/100),count=targets.length*MEL_BOLTS_PER_TARGET;
+  targets.forEach((t,n)=>splitTotal(per,MEL_BOLTS_PER_TARGET).forEach((value,i)=>scheduleShot(u,'mel-bolt',
+    ctx.tick+MEL_RELEASE_TICKS+n*MEL_TARGET_STAGGER_TICKS+melBoltOffset(i),t.id,value,seq,n*MEL_BOLTS_PER_TARGET+i,count)));
   return targets.map(t=>t.id);
 }
-function bolts(ctx:AbilityContext,u:S13Unit,t:S13Unit,total:number,seq:number):void {
-  for(let i=0;i<10;i++)packet(ctx,u,t,Math.floor(total/10)+(i<total%10?1:0),'magic',seq,i);
+/** Enemies nearest the cell she dashes to (byDistance from there). */
+function fromLanding(u:S13Unit,cell:HexCell,ctx:AbilityContext):S13Unit[]{return byDistance({...u,cell} as S13Unit,enemies(u,ctx.units));}
+/** Her third-cast barrage on one target lands as its packets, the total split as before. */
+export function melBolts(ctx:AbilityContext,t:S13Unit,total:number,seq:number,source:CombatOrigin):void {
+  for(let i=0;i<10;i++)ctx.packets.push({source,targetId:t.id,raw:Math.floor(total/10)+(i<total%10?1:0),damageType:'magic',actionSeq:seq,ordinal:i,
+    delivery:'ability-direct',critEligibility:'requires-spell-authorization',area:true,triggeringCastActionSeq:seq});
+}
+/** She lands from her dash: on that cell if it is still free, else she stays where she was. */
+export function landMelDash(ctx:AbilityContext,u:S13Unit,task:import('./combat-types').CombatTask):void {
+  const cell=task.cell!;
+  if(ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(t.cell,cell)===0)||hexDistance(cell,u.cell)===0)return;
+  ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cell});recordAerialMovement(ctx,u,cell);u.cell={...cell};
 }
 export function sixCostAttack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):boolean {
   if(u.definitionId!=='viktor')return false;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, applyStatus, origin, renniHolding, type S13Unit } from '../src/simulation/combat-s13-state';
 import { RANGED_ATTACK_WINDUP_MAX, RANGED_ATTACK_WINDUP_TICKS, rangedAttackFlightTicks, rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 import { battle, unit } from './combat-helpers';
@@ -88,6 +88,54 @@ describe('ranged attack wind-up', () => {
     expect(of(r.out, 'attackWindupCancelled').map(e => e.targetId)).toEqual([first.targetId]);
     expect(of(r.out, 'attackWindup').map(e => e.targetId)).toEqual([other]);
   });
+  it('a target turning unselectable during the wind-up cancels the attack; the next one on a new target winds up in full, never launching that tick', () => {
+    // 11-24 Fable: cancelled like a dead target, then the ordinary target choice and a whole wind-up of its own.
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3), dummy('f', 4, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    Object.assign(mid.units.find(u => u.id === first.targetId)!, { anomalyState: { invisibleUntilTick: mid.tick + 30 } });
+    const r = run(mid, 30), other = first.targetId === 'e' ? 'f' : 'e';
+    const cancelled = of(r.out, 'attackWindupCancelled');
+    expect(cancelled.map(e => e.targetId)).toEqual([first.targetId]);
+    expect(cancelled[0]!.tick).toBe(mid.tick + 1);
+    const next = of(r.out, 'attackWindup')[0]!;
+    expect(next).toMatchObject({ tick: mid.tick + 1, targetId: other, launchTick: mid.tick + 1 + first.launchTick - first.tick });
+    const attacks = of(r.out, 'attack');
+    expect(attacks.filter(e => e.targetId === first.targetId)).toEqual([]);
+    expect(attacks[0]).toMatchObject({ tick: next.launchTick, targetId: other });
+    // No wind-up is ever left behind its launch tick.
+    let st = mid; for (let n = 0; n < 30; n++) { st = stepCombat(st).state; const w = p(st).windup; if (w) expect(w.launchTick).toBeGreaterThan(st.tick); }
+  });
+  it('a taunt forcing the attacker onto another target during the wind-up cancels it; the forced target gets a full wind-up', () => {
+    // 11-24 Fable: the wind-up holds only for the current target, so a forced change cancels it even with the old target still selectable.
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3), dummy('f', 4, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state), other = first.targetId === 'e' ? 'f' : 'e';
+    Object.assign(mid.units.find(u => u.id === 'p')!, { voidSwarmTaunt: other });
+    const r = run(mid, 30);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, first.targetId]]);
+    expect(of(r.out, 'attackWindup')[0]).toMatchObject({ tick: mid.tick + 1, targetId: other, launchTick: mid.tick + 1 + first.launchTick - first.tick });
+    expect(of(r.out, 'attack').filter(e => e.targetId === first.targetId)).toEqual([]);
+  });
+  it('the target stepping out of range during the wind-up cancels it (target unchanged)', () => {
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    Object.assign(mid.units.find(u => u.id === 'e')!, { cell: { col: 3, row: 0 } });
+    const r = run(mid, 1);
+    expect(p(r.state).targetId).toBe('e');
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, 'e']]);
+    expect(p(r.state).windup).toBeUndefined();
+  });
+  it('the attacker starting to channel during the wind-up cancels it (target unchanged)', () => {
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    applyStatus(p(mid), origin(p(mid)), 'channel', 0, 10, mid.tick, [], true);
+    const r = run(mid, 1);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, 'e']]);
+    expect(of(r.out, 'attack')).toEqual([]);
+  });
   it('melee attacks have no wind-up', () => {
     const r = run(battle([shooter('garen', { attackRange: 1 }), dummy('e', 3, 5)], { rngState: 42 }), 30);
     expect(of(r.out, 'attackWindup')).toEqual([]);
@@ -109,6 +157,64 @@ describe('ranged attack wind-up', () => {
   });
 });
 
+// ---- Every source of "the attacker cannot act this tick" cancels a wind-up (Fable 11-24: one row each) ----
+// Stun and channel are reached by a ranged hero mid wind-up: cancelled with its event, no launch that tick, and a full fresh wind-up
+// on the same current target once the state ends. The chained Sion (g23Bound) and Renni holding a target (renniHolding) are only
+// ever melee units, which never wind up; their rows put a wind-up on such a unit directly and check the cancel and that it never
+// launches (a melee unit has no wind-up to restart).
+describe('ranged attack wind-up: the attacker cannot act this tick', () => {
+  const windup = rangedAttackWindupTicks('ezreal', 20);
+  it.each([
+    ['stun', (st: CombatState) => applyStatus(p(st), origin(st.units.find(u => u.id === 'e')! as S13Unit), 'stun', 0, 10, st.tick, [], true)],
+    ['channel', (st: CombatState) => applyStatus(p(st), origin(p(st)), 'channel', 0, 10, st.tick, [], true)],
+  ] as const)('%s: cancelled, no launch that tick, a full wind-up on the same target after it ends', (_name, apply) => {
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    apply(mid);
+    const r = run(mid, 30);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, 'e']]);
+    expect(of(r.out, 'attack').filter(e => e.tick <= first.launchTick)).toEqual([]);
+    const restart = of(r.out, 'attackWindup')[0]!;
+    expect(restart.targetId).toBe('e');
+    expect(restart.tick).toBeGreaterThanOrEqual(mid.tick + 10);
+    expect(restart.launchTick - restart.tick).toBe(windup);
+    expect(of(r.out, 'attack')[0]).toMatchObject({ tick: restart.launchTick, targetId: 'e' });
+  });
+  it.each([
+    ['bound (chained Sion)', () => {
+      const sion = shooter('g23-sion', { attackRange: 1, runtime: { ...EMPTY_RUNTIME, buddyTriggered: false } });
+      return battle([sion, dummy('e', 3, 5)], { rngState: 42 });
+    }],
+    ['holding (Renni)', () => {
+      const renni = shooter('renni', { attackRange: 1, mana: 1000, maxMana: 1000 });
+      let st = battle([renni, dummy('e', 3, 5), dummy('f', 4, 5)], { rngState: 42 });
+      for (let n = 0; n < 40 && !renniHolding(p(st)); n++) st = stepCombat(st).state;
+      expect(renniHolding(p(st)), 'premise: Renni holds a target').toBe(true);
+      return st;
+    }],
+    // Never seen in a real game (her holding always overlaps her channel): built by hand to guard the holding check on its own, so
+    // that it is still covered if holding ever stops counting as a channel.
+    ['holding without a channel (built by hand, not reachable in a real game)', () => {
+      const renni = shooter('renni', { attackRange: 1, mana: 1000, maxMana: 1000 });
+      let st = battle([renni, dummy('e', 3, 5), dummy('f', 4, 5)], { rngState: 42 });
+      for (let n = 0; n < 40 && !renniHolding(p(st)); n++) st = stepCombat(st).state;
+      expect(renniHolding(p(st)), 'premise: Renni holds a target').toBe(true);
+      st = structuredClone(st);
+      p(st).statuses = p(st).statuses.filter(x => x.kind !== 'channel');
+      return st;
+    }],
+  ] as const)('%s: a wind-up put on it is cancelled and never launches', (_name, make) => {
+    const st = structuredClone(make());
+    const target = st.units.find(u => u.team === 'enemy' && u.alive)!.id;
+    Object.assign(p(st), { windup: { targetId: target, launchTick: st.tick + 2 }, targetId: target });
+    const r = run(st, 3);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[st.tick + 1, target]]);
+    expect(of(r.out, 'attack').filter(e => e.tick <= st.tick + 2)).toEqual([]);
+    expect(p(r.state).windup).toBeUndefined();
+  });
+});
+
 // ---- Match save with an attack winding up: restored exactly, a forged wind-up is rejected ----
 import { itemMatch } from './fixtures/m8-b4-match';
 import { stepMatch } from '../src/simulation/match';
@@ -124,15 +230,48 @@ describe('ranged attack wind-up: Match save', () => {
     const s = windingUp(), json = serializeMatch(s);
     expect(serializeMatch(restoreMatch(json))).toBe(json);
   }, 60000);
+  it('Edge of Night: a wind-up whose target turns unselectable is cancelled, and every save of that combat restores', () => {
+    // The 11-24 repro: the enemy Tristana winds up on unit-1 as its Edge of Night stealth begins. Before the fix the wind-up hung past
+    // its launch tick and that save was refused ('attack windup launch').
+    let s = itemMatch('edge-of-night'), cancelled = 0;
+    for (let n = 0; n < 361 && s.phase === 'combat'; n++) {
+      const r = stepMatch(s); s = r.state;
+      cancelled += r.events.filter(e => (e as { type: string }).type === 'attackWindupCancelled' && (e as { targetId?: string }).targetId === 'unit-1').length;
+      if (s.phase !== 'combat') break;
+      for (const u of s.combat!.units) if (u.windup) expect(u.windup.launchTick).toBeGreaterThan(s.combat!.tick);
+      if (s.combat!.units.some(u => u.windup)) expect(serializeMatch(restoreMatch(serializeMatch(s)))).toBe(serializeMatch(s));
+    }
+    expect(cancelled, 'premise: a wind-up on unit-1 is cancelled by its stealth').toBeGreaterThan(0);
+  }, 120000);
   it.each([
     ['an ally target', (u: any, units: any[]) => { u.windup.targetId = units.find((x: any) => x.team === u.team && x.id !== u.id)?.id ?? u.id; }],
     ['a launch in the past', (u: any) => { u.windup.launchTick = 0; }],
+    ['a launch beyond the wind-up maximum', (u: any, _units: any[], tick: number) => { u.windup.launchTick = tick + RANGED_ATTACK_WINDUP_MAX + 1; }],
     ['an extra key', (u: any) => { u.windup.extra = 1; }],
     ['a dead holder', (u: any) => { u.alive = false; u.hp = 0; }],
   ] as const)('rejects a forged wind-up: %s', (_name, edit) => {
     const json = JSON.parse(serializeMatch(windingUp()));
     const holder = json.combat.units.find((u: any) => u.windup);
-    edit(holder, json.combat.units);
+    edit(holder, json.combat.units, json.combat.tick);
     expect(() => restoreMatch(JSON.stringify(json))).toThrow();
   }, 60000);
+});
+
+// The wind-up's rule identifier enters the content digest: files written before it are turned away, never replayed under it.
+import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
+import { CONTENT_DIGEST } from '../src/simulation/content';
+import { readCompatibility, routeSaveFile } from '../src/persistence/compatibility';
+import { admitArchives } from '../src/replay';
+import { M8_VERSION } from '../src/simulation/m8/version';
+import { readyMatch } from './match-helpers';
+describe('ranged attack wind-up: files written before it', () => {
+  const BEFORE = 'fnv1a32-utf16:33d330e9';
+  it('has its own identifier; a save with the earlier digest is rejected and its archive quarantined', () => {
+    expect(S13_COMBAT_RULES.rangedAttackWindup).toBe('ranged-attack-start-then-launch-after-windup-v1');
+    expect(CONTENT_DIGEST).not.toBe(BEFORE);
+    const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
+      runId: 'before-windup', createdAt: '2026-11-19T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE }, battles: [], currentBattle: null };
+    expect(readCompatibility(file)).toMatchObject({ status: 'rejected', canResume: false, canReplay: false, reason: 'digest-mismatch' });
+    expect(admitArchives([file], routeSaveFile).quarantined.map(q => q.runId)).toEqual(['before-windup']);
+  });
 });

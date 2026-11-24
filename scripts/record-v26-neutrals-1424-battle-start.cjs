@@ -21,16 +21,25 @@ async function main() {
   // (2026-11-02 carousel all-components: re-searched from 20261012, 20261013 no longer has a mirror.)
   // First seed from 20261012 whose real round-23 checkpoint has an odd alive
   // roster and at least seven fielded units per survivor (mirror and full-board tests).
-  const seed = 20261016, clock = new ManualClock();
+  // (2026-11-19 ranged attack wind-up: battle results moved, so seed 20261016 reaches round 23 with six seats alive and no
+  // mirror. Re-searched from 20261012: 20261012 faults at round 11 on the integration head too (resolver-error
+  // battle-validation:invalid-snapshot, reported separately), 20261013 has six alive; 20261014 has seven, all with full boards.)
+  const seed = 20261014, clock = new ManualClock();
   const seats = Array.from({ length: 8 }, (_, i) => ({ seatId: i ? `bot-${i}` : 'seat-1', name: `s${i}`, kind: i ? 'bot' : 'human' }));
   const options = clock => ({ ...ROOM_TIMING_DEFAULTS, roomId: 'room-1', seed, clock,
     resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,
     sliceNow: () => 0, assertPoolConservation: true, carousel: CAROUSEL_RULES_BINDING });
   const room = new Room(seats, options(clock)), bots = new BotDriver(room, seed), checkpoints = [];
+  // Room fields outside RoomState that a room restored by assigning `current` needs to behave like the original
+  // (same list and reasons as tests/server/room-checkpoint.ts). Without the preparation start, a restored room
+  // measured the whole match as this preparation and an augment clock check rejected it.
+  const roomPrivate = r => structuredClone({ augmentPreparationStartedAt: r.augmentPreparationStartedAt,
+    augmentPreparationObserved: r.augmentPreparationObserved, phaseDeadline: r.phaseDeadline,
+    battleEquipmentSeq: r.battleEquipmentSeq, previousAugmentBattles: [...r.previousAugmentBattles] });
   const freeze = room.freezeAndResolve.bind(room);
   room.freezeAndResolve = () => {
     if ([3, 9, 23].includes(room.state.round)) {
-      checkpoints.push({ seed, time: clock.now(), state: structuredClone(room.state) });
+      checkpoints.push({ seed, time: clock.now(), state: structuredClone(room.state), roomPrivate: roomPrivate(room) });
       console.log(JSON.stringify({ captured: room.state.round, time: clock.now() }));
     }
     freeze();
@@ -59,6 +68,10 @@ async function main() {
   function replay(cp, synchronous) {
     const c = new ManualClock(cp.time), r = new Room(cp.state.seats, options(c));
     r.current = structuredClone(cp.state);
+    const saved = structuredClone(cp.roomPrivate);
+    Object.assign(r, { augmentPreparationStartedAt: saved.augmentPreparationStartedAt, augmentPreparationObserved: saved.augmentPreparationObserved,
+      phaseDeadline: saved.phaseDeadline, battleEquipmentSeq: saved.battleEquipmentSeq });
+    for (const [seatId, battle] of saved.previousAugmentBattles) r.previousAugmentBattles.set(seatId, battle);
     // Drain the very same initialization generator in one call; scheduler yields
     // carry no state changes. Compare all state/input/frame/ledger bytes below.
     if (synchronous) {

@@ -2,7 +2,7 @@
 import { historyFreeAugments } from './fixtures/history-free-augments';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { describe, expect, it } from 'vitest';
-import { wearing, enemy, run, packets, LANDING } from './fixtures/m8-b4-items';
+import { wearing, enemy, run, packets, LANDING, WINDUP } from './fixtures/m8-b4-items';
 import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { itemMatch } from './fixtures/m8-b4-match';
 import { packets as packetViews } from './helpers/replay2-views';
@@ -54,9 +54,9 @@ describe('B4 audit R1: qualified packets and counter projections', () => {
   // Ranged attack landing: with the Runaan target farther than the main one, each arrow settles on its own landing tick
   // (rangedAttackFlightTicks of its own distance) and each arrow's effects come once, complete.
   it.each(['morellonomicon', 'red-buff', 'last-whisper'])('%s + Runaan at different distances: each arrow lands on its own tick, effects complete', item => {
-    const r = run(wearing([item, 'runaans-hurricane'], { targetId: 'z' }), 1 + rangedAttackFlightTicks(2), [enemy('z', 1, 3), enemy('a', 2, 3)]);
+    const r = run(wearing([item, 'runaans-hurricane'], { targetId: 'z' }), 1 + WINDUP + rangedAttackFlightTicks(2), [enemy('z', 1, 3), enemy('a', 2, 3)]);
     const landed = r.events.filter(e => e.type === 'attackLanded' && e.attackerId === 'p').map(e => e.type === 'attackLanded' && [e.targetId, e.tick]);
-    expect(landed).toEqual([['z', 1 + rangedAttackFlightTicks(1)], ['a', 1 + rangedAttackFlightTicks(2)]]);
+    expect(landed).toEqual([['z', 1 + WINDUP + rangedAttackFlightTicks(1)], ['a', 1 + WINDUP + rangedAttackFlightTicks(2)]]);
     const hits = packets(r.events);
     expect(hits.map(e => e.unitId)).toEqual(['z', 'a']);
     expect(hits.find(e => e.unitId === 'a')!.source.definitionId).toBe('runaans-hurricane');

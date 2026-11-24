@@ -1,3 +1,5 @@
+import { luxShieldTicks } from './ability-projectile';
+import { splitTotal } from './m8/periodic';
 import { recordAerialMovement, startAerialDash } from './augment-pool-batch5-g3-combat';
 import { batch2AutomataBlast } from './augment-pool-batch2-combat';
 import { detonateMenaces, teamup } from './combat-v20-traits';
@@ -7,8 +9,8 @@ import { isAttackProxy } from './anomalies/availability';
 import { planG23Cast, executeG23Task } from './combat-g2-3';
 import { planG22Cast, planG22Attack, executeG22Task } from './combat-g2-2';
 /** G2 finite skill extensions. All state is detached Combat JSON; source coefficients stay in abilities.ts. */
-import { hexDistance } from './board';
-import { MALZAHAR_3STAR_GATE_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
+import { hexCrossLine, hexDistance } from './board';
+import { MALZAHAR_3STAR_GATE_TICKS, MALZAHAR_LINE_HALF, VIOLET_JAB_TICKS, VIOLET_UPPERCUT_TICKS, POWDER_MONKEY_RELEASE_TICKS, POWDER_MONKEY_TICKS_PER_HEX, POWDER_MONKEY_WALK_BASE_TICKS } from './cast-windup';
 import type { CombatTask, ExpansionState } from './combat-types';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, ap, applyStatus, areaEnemies, byDistance, champion, compareText, enemies, grantShield, heroLive, mechanic, origin, path, variable, type S13Unit } from './combat-s13-state';
@@ -120,13 +122,26 @@ export function planG2Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit, 
       ids.push(target.id);
       break;
     }
-    case 'violet':
-      for (let n = 0; n < v('NumStrikes'); n++) strike(target, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), 'physical');
-      strike(target, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), 'physical');
-      applyStatus(target, origin(unit), 'stun', 0, ticks('StunDuration'), ctx.tick, ctx.events, false, '', undefined, true); break; // the uppercut knocks up
+    case 'violet': {
+      // 11-21: two jabs, then the uppercut that knocks up, each on its own tick (VIOLET_JAB_TICKS, VIOLET_UPPERCUT_TICKS; g2Landing,
+      // packets 0, 1, 2). Target and amounts are taken now; a target that dies first takes nothing and no other one is picked. She
+      // channels until the uppercut (no move, attack or cast), like Mel before her release.
+      const total = VIOLET_JAB_TICKS.length + 1;
+      VIOLET_JAB_TICKS.forEach((at, n) => { task(unit, 'g2Landing', ctx.tick + at, target.id, amount(unit, ctx.tick, { ad: v('PercentAttackDamage') }), seq, n, total); ids.push(target.id); });
+      task(unit, 'g2Landing', ctx.tick + VIOLET_UPPERCUT_TICKS, target.id, amount(unit, ctx.tick, { ad: v('PercentIncreasedAttackDamage'), ap: v('APDamage') }), seq, total - 1, total);
+      applyStatus(unit, origin(unit), 'channel', 0, VIOLET_UPPERCUT_TICKS, ctx.tick, ctx.events, true, '', seq); // busy until the uppercut
+      ids.push(target.id); break;
+    }
     case 'malzahar': {
-      // The gate crosses the target row: two hexes on either side, clipped by the board.
-      const targets = areaEnemies(unit, ctx.units).filter(u => u.cell.row === target.cell.row && Math.abs(u.cell.col-target.cell.col)<=2).sort((a,b)=>compareText(a.id,b.id));
+      // A 5-hex line across the target, square to the line from Malzahar to it (11-20, the 14.24 description and original
+      // footage; which hex axis counts as square is self-chosen, board.ts hexCrossLine): the target and MALZAHAR_LINE_HALF cells
+      // either way, clipped by the board. Enemies on it are hit in this order (it splits the infection): the target, then
+      // by steps from it, ties by id.
+      const line = hexCrossLine(ctx.board, unit.cell, target.cell, MALZAHAR_LINE_HALF);
+      ctx.castArea = line.map(l => l.cell); // display only: the gate's cells for the renderer (cast receipt area)
+      const stepOf = (u: S13Unit) => line.find(l => l.cell.col === u.cell.col && l.cell.row === u.cell.row)?.step;
+      const targets = areaEnemies(unit, ctx.units).filter(u => stepOf(u) !== undefined)
+        .sort((a, b) => Math.abs(stepOf(a)!) - Math.abs(stepOf(b)!) || compareText(a.id, b.id));
       // Wind-up batch 4: at 3 stars the gate lands MALZAHAR_3STAR_GATE_TICKS after the cast (g2Landing: damage and shred, targets
       // taken now); 1 and 2 stars land on the cast. The infection lands 20 ticks after the gate either way.
       const wait = unit.starLevel === 3 ? MALZAHAR_3STAR_GATE_TICKS : 0;
@@ -219,14 +234,30 @@ export function executeG2Task(ctx: AbilityContext, unit: S13Unit, t: CombatTask)
     // the caster after the cast does not stop it. A target that died meanwhile takes nothing and no other one is picked.
     const name = champion(unit);
     if (name === 'trundle' && t.ordinal === 0) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
+    // Landing batch (11-20): Lux's shield on herself (ShieldDuration from here).
+    if (name === 'lux') { grantShield(unit, t.source, t.amount, ctx.tick + luxShieldTicks(unit), ctx.tick, ctx.events); return; }
+    if (name === 'darius' && t.ordinal === t.total - 2) { ctx.heals.push({ source: t.source, targetId: unit.id, amount: t.amount }); return; }
+    if (name === 'darius' && t.ordinal === t.total - 1) {
+      // The bleed starts here: a new one replaces the target's earlier one; four parts, 20 ticks apart, same total length.
+      if (!target) return;
+      unit.tasks = unit.tasks.filter(x => x.kind !== 'bleed' || x.targetId !== target.id);
+      for (let n = 0; n < 4; n++) unit.tasks.push({ key: `${unit.id}:${t.actionSeq}:bleed:${n}`, kind: 'bleed', source: t.source, executeAtTick: ctx.tick + (n + 1) * 20,
+        targetId: target.id, amount: splitTotal(t.amount, 4)[n], ordinal: n, total: 4, cancellable: false, actionSeq: t.actionSeq, attachedDot: true });
+      return;
+    }
     if (!target) return;
     if (name === 'trundle') hit(ctx, unit, target, t.amount, t.actionSeq, 0, 'physical', false, t.source); // the bite was packet 0
+    else if (name === 'darius') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'physical', true, t.source); // the spin: packet n
     else if (name === 'tristana') // her shell: packet 0, and its overkill still bounces (combat-s13.ts tristanaBounce)
       ctx.packets.push({ source: t.source, targetId: target.id, raw: t.amount, damageType: 'physical', actionSeq: t.actionSeq, ordinal: 0,
         delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: false, triggeringCastActionSeq: t.actionSeq, bounce: true });
     else if (name === 'malzahar') { // the 3-star gate: damage (packet n) and shred, on a target taken on the cast
       hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', true, t.source);
       effect(ctx, unit, target, status('shred', 2000, Math.round(variable(unit, 'ShredDuration') * 20), { activation: 'immediate' }), t.actionSeq);
+    }
+    else if (name === 'violet') { // jab n, or the uppercut (the last), which knocks up
+      hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'physical', false, t.source);
+      if (t.ordinal === t.total - 1) applyStatus(target, t.source, 'stun', 0, Math.round(variable(unit, 'StunDuration') * 20), ctx.tick, ctx.events, false, '', undefined, true);
     }
     else if (name === 'renata') hit(ctx, unit, target, t.amount, t.actionSeq, t.ordinal, 'magic', t.ordinal > 0, t.source); // her missiles: target, then the blast's neighbours
     else if (name === 'zyra') {

@@ -159,7 +159,10 @@ describe('batch 3 display lifecycle', () => {
     const pulsed = fixture('swain');
     pulsed.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: [] }), true);
     pulsed.controller.event(magic(2, 'ability', 'swain-ability', 'ability-periodic'), true);
-    expect(pulsed.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-pulse', 's', ['t'], undefined);
+    // An ability drain keeps his ascension but draws no burst of its own (Fable 11-20: the burst is for a takedown's extension).
+    pulsed.controller.update(.01);
+    expect(pulsed.runtime.playVariant).toHaveBeenCalledWith('swain', 'swain-ascension', 's', [], 's:swain-ascension');
+    expect(pulsed.runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
     const illaoi = fixture('illaoi');
     illaoi.controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['s'] }), true);
     illaoi.controller.update(.01);
@@ -282,4 +285,63 @@ it('keeps variant windup and living targets when one target is dead, a dead one\
   expect(runtime.playVariant('hero', 'hero-loop', 'self', [], 'loop')).toBe(true);
   runtime.update(9.1, new Camera()); expect(runtime.active).toBe(0);
   runtime.dispose();
+});
+
+// A new combat restarts the rule ticks from 0; the host clears the controller between combats (placeholder-renderer
+// clearEffects). Facts of the second combat must play as in the first (11-20: Swain's ascension and pulses never showed
+// after a castcmp warm pass, nor in any combat after the first).
+describe('batch 3 in a second combat', () => {
+  const abilityMagic = (tick: number) => event({ type: 'packetDamage', tick, sourceId: 's', targetId: 't', damageType: 'magic', sourceKind: 'ability', definitionId: 'swain-ability', delivery: 'ability-direct' });
+  const fight = (controller: ReturnType<typeof createBatch3Vfx>) => {
+    controller.event(event({ type: 'cast', tick: 100, sourceId: 's', targetIds: [] }), true); controller.update(.05);
+    controller.event(abilityMagic(120), true); controller.update(.05);
+  };
+  it('plays Swain\'s ascension in the second combat as in the first', () => {
+    const { controller, runtime } = fixture('swain');
+    const played = () => runtime.playVariant.mock.calls.map(c => c[1]);
+    fight(controller);
+    expect(played()).toEqual(expect.arrayContaining(['swain-ascension']));
+    controller.event(event({ type: 'death', unitId: 'other', tick: 600 }), true); controller.update(.05);
+    controller.clear(); runtime.playVariant.mockClear();
+    fight(controller);
+    expect(played()).toEqual(expect.arrayContaining(['swain-ascension']));
+  });
+  it('shows Silco\'s and Elise\'s summons in the second combat as in the first', () => {
+    const source = unit('silco'), enemy = { ...unit('enemy'), team: 'enemy' };
+    const load = async () => ({ scene: new Group(), animations: [], animationNames: {}, placeholder: false, release: vi.fn() });
+    const runtime = { playVariant: vi.fn(() => true), stopGroup: vi.fn() };
+    const controller = createBatch3Vfx(runtime as unknown as ReturnType<typeof createLtkRuntime>, new Scene(), id => id === 's' ? source : id === 't' ? enemy : undefined, { load });
+    const cast = () => { controller.event(event({ type: 'cast', tick: 1, sourceId: 's', targetIds: ['t'] }), true); controller.update(.01); return controller.proxyCount; };
+    expect(cast()).toBe(4);
+    controller.event(event({ type: 'death', unitId: 'other', tick: 600 }), true); controller.update(.01);
+    controller.clear(); expect(controller.proxyCount).toBe(0);
+    expect(cast()).toBe(4);
+    controller.clear(); source.definitionId = 'elise'; source.form = 'back';
+    expect(cast()).toBe(1);
+    controller.event(event({ type: 'death', unitId: 'other', tick: 600 }), true); controller.update(.01);
+    controller.clear();
+    expect(cast()).toBe(1);
+  });
+});
+
+// Fable 11-20: the original shows no flash or ring between Swain's drains (frame by frame); his drains draw nothing of their
+// own, only their numbers. His burst is for his ascension's extension by a takedown (a rule display event, coming from L2).
+describe('Swain drains', () => {
+  const magic = (tick: number, targetId: string) => event({ type: 'packetDamage', tick, sourceId: 's', targetId, damageType: 'magic', sourceKind: 'ability', definitionId: 'swain-ability', delivery: 'ability-direct' });
+  it('four drains a second on two enemies draw no burst, and keep his ascension', () => {
+    const { controller, runtime, units } = fixture('swain'); units.set('u', { ...unit('enemy'), team: 'enemy' });
+    controller.event(event({ type: 'cast', tick: 100, sourceId: 's', targetIds: [] }), true); controller.update(.05);
+    for (let i = 0; i < 8; i++) { controller.event(magic(105 + 5 * i, 't'), true); controller.event(magic(105 + 5 * i, 'u'), true); controller.update(.25); }
+    expect(runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
+    expect(runtime.stopGroup).not.toHaveBeenCalledWith('s:swain-ascension');
+  });  it('a takedown that extends his ascension draws one burst on Swain himself; a replayed (old) one draws none', () => {
+    const { controller, runtime } = fixture('swain');
+    controller.event(event({ type: 'cast', tick: 100, sourceId: 's', targetIds: [] }), true); controller.update(.05);
+    const extended = (tick: number) => event({ type: 'swainAscensionExtended', tick, unitId: 's', victimId: 't', beforeUntilTick: 260, untilTick: 300 });
+    controller.event(extended(150), false);
+    expect(runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(0);
+    controller.event(extended(151), true);
+    expect(runtime.playVariant).toHaveBeenLastCalledWith('swain', 'swain-pulse', 's', ['s'], undefined);
+    expect(runtime.playVariant.mock.calls.filter(c => c[1] === 'swain-pulse')).toHaveLength(1);
+  });
 });

@@ -1,3 +1,4 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import {readG23Progress,writeG23Progress} from '../src/simulation/g2-3-state';
 import { expect,it } from 'vitest';
 import { G23_CONQUEROR_CHESTS,G23_BLACK_MARKETS,G23_POLICY,g23ConquerorReward } from '../src/simulation/content/g2-3-policy';
@@ -120,7 +121,10 @@ it('radiant source identities execute actual crit authorization, attack mana and
  const lux=initial.units.find(u=>u.id==='lux')!;
  expect(lux.shield).toBe(Math.floor(lux.maxHp*.5));
  expect(lux.spellCrit).toBeDefined();
- const step=stepCombat({...initial,units:initial.units.map(u=>u.id==='lux'?{...u,mana:0}: {...u,cooldownTicks:1000,moveCooldownTicks:1000})});
+ // Ranged attack wind-up (#791, window only): her attack's mana comes on the launch, a wind-up after the start; the others stay idle.
+ const hold=(st:typeof initial)=>({...st,units:st.units.map(u=>u.id==='lux'?u:{...u,cooldownTicks:1000,moveCooldownTicks:1000})});
+ let step=stepCombat(hold({...initial,units:initial.units.map(u=>u.id==='lux'?{...u,mana:0}:u)}));
+ for(let n=0;n<rangedAttackWindupTicks('lux',20);n++)step=stepCombat(hold(step.state));
  expect(step.state.units.find(u=>u.id==='lux')!.mana).toBe(20); // ordinary10 + sourceFlatManaRestore10
  expect(readCombatStats(lux,initial).abilityPower).toBe(230); //100+Shojin35+JG55+Crownguard40
  expect(Object.keys(G23_RADIANT_MAPPING)).toHaveLength(36);

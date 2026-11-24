@@ -48,12 +48,23 @@ export type G23CombatEventData =
   | { readonly type: 'attackWindupCancelled'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
   /** Display only, no rule effect: a flying shot reached targetId; hit false when the target died in flight (the shot did nothing). */
   | { readonly type: 'attackLanded'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly hit: boolean }
+  /** Display only, no rule effect: a takedown of victimId extended Swain's demon form from beforeUntilTick to untilTick (once per victim). */
+  | { readonly type: 'jayceCrystal'; readonly tick: number; readonly unitId: string; readonly phase: 'landed' | 'exploded'; readonly crystal: number; readonly count: number; readonly cell: { readonly col: number; readonly row: number } }
+  | { readonly type: 'swainAscensionExtended'; readonly tick: number; readonly unitId: string; readonly victimId: string; readonly beforeUntilTick: number; readonly untilTick: number }
+  /**
+   * Display only, no rule effect (landing batch, 11-20): one projectile of a skill (skill names it; ordinal of count in the
+   * cast actionSeq) leaves sourceId for targetId on this tick and lands on arrivalTick, where its effect settles.
+   */
+  | { readonly type: 'abilityProjectileLaunched'; readonly tick: number; readonly sourceId: string; readonly targetId: string; readonly arrivalTick: number; readonly skill: import('../ability-projectile').AbilityProjectileSkill; readonly ordinal: number; readonly actionSeq: number; readonly count: number }
+  /** Display only, no rule effect: that projectile reached targetId; hit false when the target died in flight (nothing settles, no retarget). Comes before its damage. */
+  | { readonly type: 'abilityProjectileLanded'; readonly tick: number; readonly sourceId: string; readonly targetId: string; readonly skill: import('../ability-projectile').AbilityProjectileSkill; readonly ordinal: number; readonly actionSeq: number; readonly count: number; readonly hit: boolean }
   /**
    * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
    * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
-   * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended.
+   * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended;
+   * 'mordekaiser-empower': the cast's empowered time ran out; 'swain-ascension': the demon form ran out (takedown extensions included).
    */
-  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace'; readonly targetIds: readonly string[] };
+  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 
@@ -77,7 +88,16 @@ export function removeCombatUnit(state: CombatState, unitId: string, reason: str
     if (unit.targetId !== unitId) return unit;
     const copy = { ...unit, targetId: null }; delete copy.targetEngaged; delete copy.meleeApproach; return copy;
   });
-  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId] }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+  const removed = state.units.find(unit => unit.id === unitId)!;
+  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId],
+    ...(namedAsEffectSource(units, unitId) ? { departedUnits: [...state.departedUnits ?? [], removed] } : {}) }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+}
+
+/** True when a remaining unit's periodic task or status contribution still names unitId as its source. Such a source
+ * is kept in CombatState.departedUnits on removal so the effect runs to its end with its original source. */
+export function namedAsEffectSource(remaining: readonly CombatUnit[], unitId: string): boolean {
+  return remaining.some(unit => unit.mechanismState?.periodicTasks.some(task => task.source.ownerId === unitId)
+    || unit.mechanismState?.statuses.some(group => group.contributions.some(c => c.source.ownerId === unitId)));
 }
 
 export function castOutcomeEvent(tick: number, unitId: string, abilityKey: string, outcome: string, subOutcomes: readonly string[] = []): CombatEvent {

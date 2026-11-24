@@ -110,11 +110,13 @@ describe('batch 2 exact display stages', () => {
     expect(w.spawns.some(c=>c.system==='40140250')).toBe(true);
     const e = mapSkillTimeline(of('chompers'),'j',['a','b','c','d'],point);
     expect(e.spawns.filter(c=>c.system==='9bd80364').map(c=>c.targetId)).toEqual(['a','b','c']);
-    const r = mapSkillTimeline(of('rocket', jinxSkills.jinx.filter(c=>!c.action)),'j',['a','b'],point);
+    // 11-21: the rocket's flight and explosion play from the rules' launch and landing (their own branches, batch2-bridge.ts).
+    const rocketCues = [...jinxSkills['jinx-rocket-fire']!, ...jinxSkills['jinx-rocket-boom']!];
+    const r = mapSkillTimeline(rocketCues,'j',['a','b'],point);
     expect(r.spawns.filter(c=>c.location==='board')).toHaveLength(2);
     expect(r.spawns.find(c=>c.system==='809da1b1')).toMatchObject({point});
     expect(r.spawns.find(c=>c.system==='809da1b1')?.targetId).toBeUndefined();
-    expect(mapSkillTimeline(of('rocket'),'j',['a']).unsupported.map(c=>c.reason)).toContain('missing-point');
+    expect(mapSkillTimeline(rocketCues,'j',['a']).unsupported.map(c=>c.reason)).toContain('missing-point');
   });
   it('distinguishes Mel normal/third cast, throttles energy only within the same tick, and keeps confirmed save independent of a living caster', () => {
     const {bridge:b,play}=bridge('mel');
@@ -125,9 +127,10 @@ describe('batch 2 exact display stages', () => {
     b.action('cast','m',['target'],melCast(2));
     expect(play.mock.calls.map(c=>c[4].skill)).toEqual(['mel','mel','mel-third','mel','mel']);
     play.mockClear();
+    // Her energy gain plays nothing (its stack visual is held off as a known difference, Fable 11-21).
     for (const tick of [1,1,2]) b.event({type:'melEnergyChanged',eventSeq:1,tick,unitId:'m',before:0,after:10},true);
-    expect(play).toHaveBeenCalledTimes(2); b.save('battle'); expect(play.mock.calls[2]?.[4]).toMatchObject({skill:'mel-save',board:point});
-    b.clear(); b.event({type:'melEnergyChanged',eventSeq:1,tick:2,unitId:'m',before:0,after:10},true); expect(play).toHaveBeenCalledTimes(4);
+    expect(play).not.toHaveBeenCalled(); b.save('battle'); expect(play.mock.calls[0]?.[4]).toMatchObject({skill:'mel-save',board:point});
+    b.clear(); b.event({type:'melEnergyChanged',eventSeq:1,tick:2,unitId:'m',before:0,after:10},true); expect(play).toHaveBeenCalledTimes(1);
   });
   it('uses a Warwick self buff at cast and a snapshotted victim only after a devoured receipt', () => {
     expect(mapSkillTimeline(warwickSkills.warwick.filter(c=>!c.action),'w',['w']).unsupported).toEqual([]);
@@ -351,5 +354,34 @@ describe('batch 2 runtime boundaries', () => {
     const library=createVfxLibrary('/root/',{readJson:async url=>url.endsWith('index.json')?{version:1,systems:{a:'a.json',b:'missing.json'},assets:{'synthetic.tex':'a.png'},skills:{jinx:cues}}:url.endsWith('missing.json')?Promise.reject(Error('404')):syntheticSystem(),readTexture:async()=>new Texture()});
     const source={root:new Group(),body:null,alive:true},runtime=createLtkRuntime(library,new Scene(),()=>source);
     await runtime.warm('jinx');expect(runtime.play('jinx','j',[],'cast',{branch:'zap'})).toBe(true);expect(runtime.play('jinx','j',[],'cast',{branch:'chompers'})).toBe(false);runtime.dispose();
+  });
+});
+
+// Fable 11-20: Warwick's frenzy claw strikes play on his attacks while his frenzy runs (the rules' bloodFrenzyChanged),
+// taking turns (自定，非原版); outside it his attacks stay plain.
+describe('Warwick frenzy strikes', () => {
+  const frenzy = (active: boolean, tick: number) => ({ type: 'bloodFrenzyChanged', eventSeq: tick, tick, unitId: 'w', active, permanent: false }) as unknown as DisplayCombatEvent;
+  it('plays his attacks plain, then alternate frenzy variants while his frenzy runs (caught up too), then plain again', () => {
+    const { bridge: b, play } = bridge('warwick');
+    const variants = () => play.mock.calls.map(c => c[4].variant ?? 'plain');
+    b.action('attack', 'w', ['target']);
+    b.event(frenzy(true, 10), false);
+    for (let i = 0; i < 3; i++) b.action('attack', 'w', ['target']);
+    b.action('cast', 'w', [], cast('w'));
+    b.event(frenzy(false, 90), true);
+    b.action('attack', 'w', ['target']);
+    expect(variants()).toEqual(['plain', 'empowered', 'empowered-alt', 'empowered', 'plain', 'plain']);
+    b.event(frenzy(true, 100), true); b.clear(); b.action('attack', 'w', ['target']);
+    expect(variants().at(-1)).toBe('plain');
+  });
+  it('each frenzy variant keeps the swipe and hit, adds one strike, and stays within the twelve-cue gate', async () => {
+    const { warwickSkills } = await import('../src/rendering/three-mode/vfx-ltk/champions/warwick');
+    const list = warwickSkills.warwick!;
+    const of = (variant?: string) => list.filter(c => c.action === 'attack' && c.variant === variant).map(c => c.system);
+    expect(of()).toEqual(['6b46d17d', '9371a532']);
+    expect(of('empowered')).toEqual(['6b46d17d', '9371a532', '0e816dad']);
+    expect(of('empowered-alt')).toEqual(['6b46d17d', '9371a532', '5bc6c713']);
+    expect(list.length).toBeLessThanOrEqual(12);
+    expect(list.some(c => c.system === '60ed55cd')).toBe(false);
   });
 });

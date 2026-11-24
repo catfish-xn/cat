@@ -1,13 +1,17 @@
 // node dev/castcmp/board-load.cjs <out.json> --board a,b,... [--foes c,d,...] [--star 3] [--port 5311] [--assetPort 5419] [--warm 1] [--gl gpu|swift]
+//   [--quiet-ms 30000] (the longest wait for the warm measures and loads to settle)
 // One whole real combat (up to 8 against 8, src/simulation) on the 3D renderer, for the host-body overlay load: per second of
 // combat, the wall time of its ~62 frames (GPU synced each second), the overlays on screen, and the cap counters of
 // vfx-ltk (runtime.ts ATTACHED_LAYER_STATS; absent on builds before it, which then report frame time only), and the measured
 // pass's admission counters (runtime.ts LTK_RUN_STATS: peak systems running, starts and drops by system; batch1-events.ts
 // CAITLYN_SHOT_STATS: Caitlyn's shots and centre fallbacks).
-// A warm pass plays the combat once first so effect files and shaders are loaded; the measured pass replays it from tick 0.
+// A warm pass plays the combat once first so effect files and shaders are loaded; once every warm measure is in and the loads
+// have settled, the measured pass replays it from tick 0 out of a fresh combat (harness fresh()), as board-shot.cjs does.
+// Compare only runs whose report has quiet true, warmPending 0 (or null on builds without the warm-up counter) and notReady 0
+// (casts refused while an effect was still loading, counted from the measured pass only).
 // Frame times are only comparable between builds on the same machine and --gl; SwiftShader is not a player's GPU.
 const { chromium } = require('playwright');
-const { launchOptions, timer } = require('./common.cjs');
+const { launchOptions, timer, waitQuiet } = require('./common.cjs');
 const path = require('path'), fs = require('fs');
 const args = process.argv.slice(2); const out = path.resolve(args[0]);
 const opt = k => { const i = args.indexOf('--' + k); return i >= 0 ? args[i + 1] : undefined; };
@@ -42,14 +46,21 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
     mark('warm pass ' + (w + 1));
   }
   const afterWarm = await stats();
-  await page.evaluate(() => window.__h.reset()); await sync();
+  // Same start on every run, as board-shot.cjs (11-19: Windows #769 reruns had rounds where effects barely started, 0–12
+  // systems at once): wait until every champion warm has measured its systems and the loads have settled, then start a fresh
+  // combat so nothing the warm pass left running, nor its seed counts, carries into the measured pass.
+  // waitQuiet (common.cjs) waits for the warm measures too, and reads null on builds without LTK_WARMING; a build without the
+  // harness's fresh() starts from reset() as before.
+  const quiet = await waitQuiet(page, { maxMs: Number(opt('quiet-ms') ?? 30000) }), warming = quiet.pending;
+  mark(`warm measured (pending ${warming}), quiet ${quiet.ok ? 'ok' : 'TIMED OUT'} after ${quiet.waitedMs} ms`);
+  await page.evaluate(() => (window.__h.fresh ?? window.__h.reset)()); await sync();
   // Admission counters (runtime.ts LTK_RUN_STATS) and Caitlyn's shot fallbacks (batch1-events.ts CAITLYN_SHOT_STATS) for the
   // measured pass only; absent on builds before them.
   const admission = (reset = false) => page.evaluate(async clear => {
     const runtime = await import('/src/rendering/three-mode/vfx-ltk/runtime.ts').catch(() => null);
     const events = await import('/src/rendering/three-mode/vfx-ltk/batch1-events.ts').catch(() => null);
     const run = runtime?.LTK_RUN_STATS, shots = events?.CAITLYN_SHOT_STATS;
-    if (clear) { if (run) Object.assign(run, { peakRunning: 0, started: {}, dropped: {} }); if (shots) Object.assign(shots, { shots: 0, fallback: 0 }); }
+    if (clear) { if (run) Object.assign(run, { peakRunning: 0, started: {}, dropped: {}, placeStarted: {}, placeDropped: {}, yielded: {}, yieldTimes: [], refused: {}, skipped: {}, gaveWay: {} }); if (shots) Object.assign(shots, { shots: 0, fallback: 0 }); }
     return { run: run ? JSON.parse(JSON.stringify(run)) : null, caitlynShots: shots ? { ...shots } : null };
   }, reset);
   await admission(true);
@@ -63,7 +74,7 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   const frame = perSecond.map(r => r.frameMs).sort((a, b) => a - b);
   const final = await stats();
   const counters = await admission();
-  const report = { board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
+  const report = { warmPending: warming, quiet: quiet.ok, notReady: counters.run?.refused?.['not-ready'] ?? null, board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
     frameMs: { mean: +(frame.reduce((a, b) => a + b, 0) / frame.length).toFixed(1), median: frame[frame.length >> 1], p95: frame[Math.floor(frame.length * 0.95)], max: frame[frame.length - 1] },
     afterWarm, final, admission: counters, perSecond, warnings: [...new Set(warnings)], errors };
   fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify(report, null, 2));

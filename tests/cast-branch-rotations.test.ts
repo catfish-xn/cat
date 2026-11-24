@@ -28,7 +28,13 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // are identical; the first difference is Jinx's first attack at tick 1 (its damage now lands at tick 9, four hexes at two
 // ticks per hex; the attack mana stays at tick 1), and the fight runs 294 -> 303 ticks. With landing switched off the digest
 // is 49e1d29a… again, so nothing but the landing rule moved.
-const MIXED_DIGEST = '66c3a9e462bb536683b06ae66d060bcb8407d0a6e6dd144f2f314c621a36cc5c';
+    // Mel's barrage timing (11-20: her dash lands, bolts leave and settle later) changes this mixed combat (was 66c3a9e4…).
+// Mel dashes on every normal cast and never on the third (11-21), which changes this mixed combat (was a50c5309…).
+// Mel's normal cast fires a volley of bolts per target, each settling on arrival (11-21), which changes this mixed combat (was
+// 8491e0a6…, Vi's slam; 67e0c368… Mel's dash away from foes).
+// Ranged attack wind-up (#791): the ranged heroes' shots launch after their wind-up, which moves this combat again (was
+// db0a5dbf…, Mel's bolt volley).
+const MIXED_DIGEST = '2685a48695d6cb0ea47d4b59d8d41db797fb99ea0d5af235227c090015ffd580';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

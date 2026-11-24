@@ -9,13 +9,19 @@ import { withAttackFlight, type TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CUE_EXTRA_SKILLS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut } from './cue-overrides';
+import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM, CAST_START_RANKS } from './cue-ranks';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
 import { readMeshBuffer } from './assets/meshBuffer';
 import { meshEmission } from './assets/emission';
 import type { EmissionSampler, EmissionSurfaces, EmitterSurfaces } from './engine/simulation/emissionSurface';
+
+/** An emitter's colour modulation with its alpha scaled (cue-overrides.ts EMITTER_ALPHA). */
+function fainter(modulation: readonly [number, number, number, number], factor: number): readonly [number, number, number, number] {
+  return [modulation[0], modulation[1], modulation[2], modulation[3] * factor];
+}
 
 export type LoadFailure = 'missing' | 'invalid' | 'unsupported' | 'closed';
 export class VfxLoadError extends Error {
@@ -86,6 +92,8 @@ export interface PreparedVfx {
   endFade?: ReadonlySet<string>;
   /** A projectile that plays out when it lands instead of being removed at its cue's end, and how it ends (cue-overrides.ts PLAY_OUT_SYSTEMS). */
   playOut?: PlayOut;
+  /** A projectile whose lingering particles finish on their own when it lands (cue-overrides.ts LINGER_PLAY_OUT). */
+  lingerPlayOut?: true;
 }
 const record = (value: unknown): value is Record<string, unknown> => value !== null && typeof value === 'object' && !Array.isArray(value);
 const finite = (v: unknown) => typeof v === 'number' && Number.isFinite(v);
@@ -143,6 +151,28 @@ export function validateSystem(value: unknown): asserts value is VfxSystem {
   if (!record(value.root) || value.root.type !== 'struct') throw new VfxLoadError('invalid', 'system-root');
 }
 
+/** The cue variants a skill list may name (TimelineCue.variant). */
+const TIMELINE_VARIANTS = ['empowered', 'empowered-alt', 'self', 'single'] as const;
+/** The most cues of one skill list that can play together. */
+export const SKILL_CUES_TOGETHER = 12;
+/**
+ * Whether no play of a skill list draws more than SKILL_CUES_TOGETHER cues (Fable 11-21). Rows of different variants
+ * never play together: a play selects the rows of its own variant only (play()). So under each variant, and with none,
+ * what can play is that variant's rows plus the plain rows of every action that variant has no rows for (LeBlanc's
+ * empowered attacks beside her plain cast); each such set is counted on its own.
+ */
+export function skillCuesTogether(cues: readonly { action?: string; variant?: string }[]): boolean {
+  for (const variant of [undefined, ...new Set(cues.map(cue => cue.variant).filter(v => v !== undefined))])
+    if (skillCuesPlayable(cues, variant).length > SKILL_CUES_TOGETHER) return false;
+  return true;
+}
+/** What can play under `variant` (none: the plain rows): its rows, plus the plain rows of every action it has none for. */
+export function skillCuesPlayable<T extends { action?: string; variant?: string }>(cues: readonly T[], variant: string | undefined): T[] {
+  const actionOf = (cue: { action?: string }) => cue.action ?? 'cast';
+  const own = new Set(cues.filter(cue => cue.variant === variant).map(actionOf));
+  return cues.filter(cue => cue.variant === variant || (cue.variant === undefined && !own.has(actionOf(cue))));
+}
+
 export function parseIndex(raw: unknown): VfxIndex {
   if (!record(raw) || raw.version !== 1 || !record(raw.systems) || !record(raw.assets) || !record(raw.skills)) throw new VfxLoadError('invalid', 'index');
   if (Object.keys(raw.systems).length > 128 || Object.keys(raw.assets).length > 2048) throw new VfxLoadError('invalid', 'index-limit');
@@ -150,7 +180,9 @@ export function parseIndex(raw: unknown): VfxIndex {
     if (typeof path !== 'string') throw new VfxLoadError('invalid', 'index-path'); vfxUrl('', path);
   }
   for (const [champion, cues] of Object.entries(raw.skills)) {
-    if (!/^[a-z][a-z0-9-]{0,63}$/.test(champion) || !Array.isArray(cues) || cues.length === 0 || cues.length > 12) throw new VfxLoadError('invalid', 'skill');
+    // At most SKILL_CUES_TOGETHER cues per variant (skillCuesTogether), so no list is longer than one per variant class.
+    if (!/^[a-z][a-z0-9-]{0,63}$/.test(champion) || !Array.isArray(cues) || cues.length === 0
+      || cues.length > SKILL_CUES_TOGETHER * (TIMELINE_VARIANTS.length + 1)) throw new VfxLoadError('invalid', 'skill');
     for (const cue of cues) {
       if (!record(cue) || typeof cue.system !== 'string' || !Object.hasOwn(raw.systems, cue.system)
         || !['cast-start', 'hit', 'projectile', 'link'].includes(String(cue.event)) || !finite(cue.delay) || Number(cue.delay) < 0 || Number(cue.delay) > 10
@@ -164,14 +196,23 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.livingTarget !== undefined && (typeof cue.livingTarget !== 'boolean' || (cue.event !== 'hit' && cue.event !== 'projectile')))
         || (cue.stationary !== undefined && (typeof cue.stationary !== 'boolean' || cue.event !== 'projectile'))
         || (cue.selfFlight !== undefined && (typeof cue.selfFlight !== 'boolean' || cue.event !== 'projectile'))
+        || (cue.playOut !== undefined && (typeof cue.playOut !== 'number' || !(cue.playOut > 0) || cue.playOut > 2))
+        || (cue.giveWay !== undefined && typeof cue.giveWay !== 'boolean')
+        || (cue.curve !== undefined && (cue.event !== 'projectile' || typeof cue.curve !== 'object' || cue.curve === null
+          || ![(cue.curve as { control1?: unknown }).control1, (cue.curve as { control2?: unknown }).control2].every(v => Array.isArray(v) && v.length === 3
+            && v.every(x => finite(x) && Math.abs(Number(x)) <= 4))))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
-        || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !['empowered', 'self', 'single'].includes(cue.variant)))
+        || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !(TIMELINE_VARIANTS as readonly string[]).includes(cue.variant)))
         || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
         || (cue.stopAfter !== undefined && (!finite(cue.stopAfter) || Number(cue.stopAfter) < 0 || Number(cue.stopAfter) > Number(cue.duration)))
         || (cue.fadeOut !== undefined && (typeof cue.fadeOut !== 'boolean' || cue.stopAfter === undefined))
-        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || cue.event !== 'cast-start'))
+        || (cue.refresh !== undefined && (typeof cue.refresh !== 'boolean' || (cue.event !== 'cast-start' && cue.event !== 'hit')))
         || (cue.main !== undefined && typeof cue.main !== 'boolean')
-        || (cue.rank !== undefined && cue.rank !== 'body')
+        || (cue.rank !== undefined && cue.rank !== 'body' && cue.rank !== 'critical' && cue.rank !== 'decorative')
+        || (cue.brightness !== undefined && (!finite(cue.brightness) || Number(cue.brightness) <= 0 || Number(cue.brightness) > 4))
+        || (cue.perStrike !== undefined && (typeof cue.perStrike !== 'object' || cue.perStrike === null || cue.event === 'cast-start'
+          || !finite((cue.perStrike as { staggerTicks?: unknown }).staggerTicks) || !finite((cue.perStrike as { spreadTicks?: unknown }).spreadTicks)))
+        || (cue.mergeTicks !== undefined && (!finite(cue.mergeTicks) || Number(cue.mergeTicks) < 1 || (cue.perStrike === undefined && cue.everyReceipt !== true)))
         || (cue.together !== undefined && !(typeof cue.together === 'string' && /^[a-z][a-z0-9-]{0,15}$/.test(cue.together)))
         || ((cue.rowToEnd !== undefined || cue.rowSpeed !== undefined || cue.rowBeyond !== undefined) && (cue.rowSide === undefined || (cue.rowToEnd !== undefined && typeof cue.rowToEnd !== 'boolean')
           || (cue.rowBeyond !== undefined && !(cue.rowToEnd === true && finite(cue.rowBeyond) && Number(cue.rowBeyond) >= 0 && Number(cue.rowBeyond) <= 1))
@@ -192,6 +233,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         throw new VfxLoadError('invalid', 'timeline-cue');
       }
     }
+    if (!skillCuesTogether(cues as readonly { action?: string; variant?: string }[])) throw new VfxLoadError('invalid', 'skill');
   }
   if (raw.champions !== undefined) {
     if (!record(raw.champions) || Object.keys(raw.champions).length > 128) throw new VfxLoadError('invalid', 'champions');
@@ -223,9 +265,16 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
     const branched = withCueBranches(champion, (skills ?? index.skills)[champion]);
     if (branched) (skills ??= { ...index.skills })[champion] = branched;
   }
-  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name.
+  // A skill crit's flash (CRIT_SKILL_HIT) joins every champion list whose package has its system.
+  if (Object.hasOwn(index.systems, CRIT_SKILL_HIT.cue.system)) for (const champion of Object.keys(index.skills)) {
+    const key = CRIT_SKILL_HIT.skill(champion);
+    if (!champion.includes('-') && !Object.hasOwn(index.skills, key)) (skills ??= { ...index.skills })[key] = [CRIT_SKILL_HIT.cue];
+  }
+  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name. A
+  // champion whose lists are all branches (Jayce's front and back forms) counts by any of them.
+  const champions = new Set(Object.keys(index.skills).map(key => key.split('-')[0]!));
   for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
-    if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
+    if (Object.hasOwn(index.skills, key) || !champions.has(key.split('-')[0]!)) continue;
     if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
   }
   // An attack projectile without its own flight takes the default one (DEFAULT_ATTACK_FLIGHT_SECONDS): the landing event
@@ -233,6 +282,33 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
   const lists = skills ?? index.skills;
   for (const [key, cues] of Object.entries(lists)) {
     if (cues?.some(cue => withAttackFlight(cue) !== cue)) (skills ??= { ...index.skills })[key] = cues.map(withAttackFlight);
+  }
+  // The generic basic-attack hit holds its run only as long as it shows (cue-ranks.ts ATTACK_HIT_SECONDS).
+  for (const [key, cues] of Object.entries(skills ?? index.skills)) {
+    if (!cues?.some(cue => cue.system === ATTACK_HIT_SYSTEM && cue.action === 'attack' && cue.event === 'hit' && cue.duration > ATTACK_HIT_SECONDS)) continue;
+    (skills ??= { ...index.skills })[key] = cues.map(cue => cue.system === ATTACK_HIT_SYSTEM && cue.action === 'attack' && cue.event === 'hit' && cue.duration > ATTACK_HIT_SECONDS ? { ...cue, duration: ATTACK_HIT_SECONDS } : cue);
+  }
+  // Explicit cast-start ranks (cue-ranks.ts): a label on each listed cast-start of each listed branch.
+  for (const [key, ranks] of Object.entries(CAST_START_RANKS)) {
+    const cues = (skills ?? index.skills)[key];
+    if (!cues?.some(cue => cue.event === 'cast-start' && Object.hasOwn(ranks, cue.system))) continue;
+    (skills ??= { ...index.skills })[key] = cues.map(cue => cue.event === 'cast-start' && Object.hasOwn(ranks, cue.system) ? { ...cue, rank: ranks[cue.system] } : cue);
+  }
+  // Persistent layers held until their rule event (SUSTAIN_CAPS): the cue runs up to its cap, with no stop of its own; a
+  // refreshed one replaces its last play on that target (SUSTAIN_REFRESH), a ranked one takes its rank (SUSTAIN_RANKS).
+  const current = skills ?? index.skills;
+  // A system held in one skill only (SUSTAIN_SKILL_CAPS) is held, and refreshed, in that skill alone.
+  for (const [key, cues] of Object.entries(current)) {
+    const only = Object.hasOwn(SUSTAIN_SKILL_CAPS, key) ? SUSTAIN_SKILL_CAPS[key]! : undefined;
+    const cap = (system: string) => Object.hasOwn(SUSTAIN_CAPS, system) ? SUSTAIN_CAPS[system] : only && Object.hasOwn(only, system) ? only[system] : undefined;
+    if (!cues?.some(cue => cap(cue.system) !== undefined)) continue;
+    (skills ??= { ...index.skills })[key] = cues.map(cue => {
+      const seconds = cap(cue.system);
+      if (seconds === undefined) return cue;
+      const { stopAfter: _stop, ...rest } = cue;
+      return { ...rest, duration: seconds, ...(SUSTAIN_REFRESH.has(cue.system) || !Object.hasOwn(SUSTAIN_CAPS, cue.system) ? { refresh: true } : {}),
+        ...(Object.hasOwn(SUSTAIN_RANKS, cue.system) ? { rank: SUSTAIN_RANKS[cue.system] } : {}) };
+    });
   }
   return skills ? { ...index, skills } : index;
 }
@@ -274,9 +350,11 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
       const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
-      const model = disabled || whole || heldOn ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
+      const faint = EMITTER_ALPHA[id];
+      const model = disabled || whole || heldOn || faint ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
         : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null }
-        : heldOn?.includes(e.name ?? '') ? { ...e, lifetime: null } : e) } : parsed;
+        : heldOn?.includes(e.name ?? '') ? { ...e, lifetime: null }
+        : faint?.[e.name ?? ''] !== undefined ? { ...e, modulation: fainter(e.modulation, faint[e.name ?? '']!) } : e) } : parsed;
       const listed = drawnEmitters(model, true);
       // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.
@@ -382,7 +460,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
         system.set(e.index, { mesh: sampler, surface: system.get(e.index)?.surface ?? null });
       }
       if (notes.length) console.warn(`vfx-ltk:${id}:${notes.join(',')}`);
-      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}), ...(TRAIL_END_FADE[id] ? { endFade: new Set(TRAIL_END_FADE[id]) } : {}), ...(PLAY_OUT_SYSTEMS[id] ? { playOut: PLAY_OUT_SYSTEMS[id] } : {}) }; prepared.set(id, result); return result;
+      const result = { model, drawn, samplers, meshes: geometry, poses, surfaces, empty, ...(notes.length ? { notes } : {}), ...(TRAIL_END_FADE[id] ? { endFade: new Set(TRAIL_END_FADE[id]) } : {}), ...(PLAY_OUT_SYSTEMS[id] ? { playOut: PLAY_OUT_SYSTEMS[id] } : {}), ...(LINGER_PLAY_OUT.has(id) ? { lingerPlayOut: true as const } : {}) }; prepared.set(id, result); return result;
     })().catch(error => {
       if (error instanceof VfxLoadError) throw error;
       throw new VfxLoadError('missing', error instanceof Error ? error.message : String(error));

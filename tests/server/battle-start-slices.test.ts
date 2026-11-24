@@ -8,8 +8,9 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import { CAROUSEL_RULES_BINDING } from '../../src/server/room/carousel';
 import { readLootView } from '../../src/simulation/match';
 import type { BattleInput, RoomState } from '../../src/server/room/types';
+import { captureRoomPrivate, restoreRoomPrivate, type RoomPrivate } from './room-checkpoint';
 
-interface Checkpoint { time: number; seed: number; state: RoomState; expected: { initialHash: string; firstHash: string } }
+interface Checkpoint { time: number; seed: number; state: RoomState; roomPrivate: RoomPrivate; expected: { initialHash: string; firstHash: string } }
 // Recorded from public Room progression by scripts/record-v26-neutrals-1424-battle-start.cjs
 // at the v26 integration (baseline e9384c02); recorder checks sliced versus synchronous tick0/1 bytes.
 const checkpoints = (JSON.parse(readFileSync(new URL('./fixtures/battle-start.json', import.meta.url), 'utf8')) as { checkpoints: Checkpoint[] }).checkpoints;
@@ -27,6 +28,9 @@ function fixture(round: number, sliceNow = budgetClock(), sliceMs = 20) {
     clock, resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs,
     sliceNow, assertPoolConservation: true, carousel: CAROUSEL_RULES_BINDING });
   seam(room).current = structuredClone(cp.state);
+  // Room fields outside RoomState (preparation clock start, ...): required, so a re-recording cannot drop them.
+  expect(cp.roomPrivate).toBeDefined();
+  restoreRoomPrivate(room, cp.roomPrivate); expect(captureRoomPrivate(room)).toEqual(cp.roomPrivate);
   return { room, clock, cp };
 }
 function finishOpening(room: Room, clock: ManualClock) {
@@ -44,6 +48,10 @@ function fingerprint(room: Room) {
 }
 
 describe('battle opening slices', () => {
+  it('every checkpoint carries the room fields outside RoomState', () => {
+    for (const cp of checkpoints) expect(Object.keys(cp.roomPrivate ?? {}).sort()).toEqual(
+      ['augmentPreparationObserved', 'augmentPreparationStartedAt', 'battleEquipmentSeq', 'phaseDeadline', 'previousAugmentBattles']);
+  });
   it('a fresh public room opens with the deterministic budget in at most 100 continuations', () => {
     const counts: number[] = [];
     for (let run = 0; run < 2; run++) {
@@ -192,7 +200,10 @@ describe('battle opening slices', () => {
         // #739: the 4-6 board counts are only a record of the scene; ranged basic attacks settling on landing change the route
         // from the first battles on (battle-start.json re-recorded with landing off is byte-identical to the previous file),
         // so seat 5 now fields 7 (was 9). The assertion below is about slices, not about these counts.
-        .toEqual([8, 8, 8, 7, 7, 8, 8]); // was [8, 8, 8, 7, 9, 8, 8] before #739; v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-rec; seat 5 fields 9 (was 8) in the wind-up batch 2 re-recordording; the fifth live seat fields 8 (was 9) after the 14.24b unit values re-recording (2026-11-12)
+        // Landing batch (battle-start.json re-recorded on a3d6db81): seat 4 now fields 8 (was 7).
+        // #797 (Swain's drain four times a second; battle-start.json re-recorded at its epoch): the route changes again.
+        // #808 (Violet's combo settles per hit; battle-start.json re-recorded at its epoch): the route changes again.
+        .toEqual([7, 8, 8, 7, 8, 8, 8]); // [8, 8, 9, 7, 8, 8, 7] before #808; [8, 8, 8, 8, 7, 8, 8] before #797; [8, 8, 8, 7, 7, 8, 8] before the landing batch; was [8, 8, 8, 7, 9, 8, 8] before #739; v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-rec; seat 5 fields 9 (was 8) in the wind-up batch 2 re-recordording; the fifth live seat fields 8 (was 9) after the 14.24b unit values re-recording (2026-11-12)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

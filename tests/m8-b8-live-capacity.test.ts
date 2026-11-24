@@ -23,7 +23,9 @@ vi.setConfig({ testTimeout: 20_000 });
 // Reveal/final ticks61/122 are exact checkpoints of this natural combat (v24's final tick was86).
 // v26 re-pin (route drift above): reveal/final ticks 91/152 (were 61/122).
 let prepared=fillBench(await publicPrefix('3-7',3155,'cannon',['bulky-buddies-i']),['akali']);
-const reserve=bench(prepared).find(u=>u.definitionId==='irelia'&&u.starLevel===1)!;
+// #791 (ranged attack wind-up, 2026-11-24; Fable: same seed, scene change): the route reaches 3-7 with 14G and no one-star Irelia on
+// the bench; the 1G one-star Lux is the reserve sold instead (same 1G sale), and the 3-7 gold literal follows the route.
+const reserve=bench(prepared).find(u=>u.definitionId==='lux'&&u.starLevel===1)!;
 expect(getUnitSellPrice(reserve)).toBe(1);
 prepared=accepted(api.sellUnit(prepared,reserve.id));
 prepared=accepted(api.rerollShop(prepared));
@@ -31,7 +33,9 @@ prepared=accepted(api.rerollShop(prepared));
 // (was Pandora's Items II + Blistering Strikes) and reaches 3-7 with 12G after fillBench (the sale/refresh/purchase leave 9G).
 // The refreshed shop no longer holds Vander (leona, nunu, smeech, leona, rell); buy the first 2G Leona instead, a new
 // one-star copy that merges with nothing, so the nine-reserve, lone-Akali premise is unchanged.
-const replacement=prepared.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId==='leona');
+// #791 (2026-11-24): the refreshed shop holds no Leona (zeri, amumu, violet, blitzcrank, zeri); buy the first 2G Zeri, a new
+// one-star copy that merges with nothing (no Zeri on board or bench), so the nine-reserve, lone-Akali premise is unchanged.
+const replacement=prepared.shop.slots.findIndex(o=>o.status==='available'&&o.definitionId==='zeri');
 expect(replacement).toBeGreaterThanOrEqual(0);
 prepared=accepted(api.buyUnit(prepared,replacement,prepared.shop.generation));
 const live=battle(prepared),waiting=live.ended;
@@ -60,14 +64,15 @@ describe('B8 live full-bench settlement and exact command resumption',()=>{
  it('earns a non-merging hero at nine capacity without receipt or unit ID consumption',()=>{
   expect(openingEncounter(prepared.seed)).toBe('none');
   expect(prepared.augments.map(a=>a.definitionId)).toEqual(['noxian-guillotine','lone-hero']);
-  expect(prepared.gold).toBe(9);expect(bench(prepared)).toHaveLength(9);
+  expect(prepared.gold).toBe(11);expect(bench(prepared)).toHaveLength(9); // #791: 14G at 3-7 (was 12G), 14+1-2-2 = 11 (was 9)
   expect(plan(prepared).encounterPlan.drops.map(d=>d.payload)).toEqual(independentLootPlan(prepared.seed,17).rounds.at(-1)!.encounterPlan.drops.map(d=>d.payload));
   expect(plan(prepared).encounterPlan.drops.filter(d=>d.payload.kind==='item')).toHaveLength(4);
   expect(plan(prepared).encounterPlan.drops.filter(d=>d.payload.kind==='unit')).toHaveLength(1);
   expect(prepared.preparation.units.some(u=>u.team==='player'&&u.definitionId==='akali')).toBe(false);
   expect(hero.payload).toEqual({kind:'unit',definitionId:'akali',quantity:1});
   expect(waiting.phase).toBe('settlement');expect(waiting.pendingChoice).toBeNull();
-  expect(live.revealed!.combat!.tick).toBe(91);expect(waiting.combat!.tick).toBe(152);
+  // #791 re-pin (2026-11-24): reveal still 91; the final tick moves to 176 (was 152).
+  expect(live.revealed!.combat!.tick).toBe(91);expect(waiting.combat!.tick).toBe(176);
   expect(waiting.m8.loot.direct.find(d=>d.dropId===hero.dropId)).toEqual({dropId:hero.dropId,status:'pending-capacity',receiptId:null});
   expect(waiting.m8.loot.receipts.some(r=>r.dropId===hero.dropId)).toBe(false);
   expect(waiting.nextUnitSerial).toBe(prepared.nextUnitSerial);expect(waiting.preparation).toEqual(prepared.preparation);

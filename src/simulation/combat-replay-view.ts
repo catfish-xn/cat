@@ -134,7 +134,8 @@ function animationEvent(event: LedgerCombatEvent) {
       ...pick(event.receipt, ['actionSeq', 'completed', 'actualManaSpent', 'refundedMana']),
       targetIds: [...event.receipt.targetIds], completionCell: cellView(event.receipt.completionCell),
       ...(event.receipt.castIndex !== undefined ? { castIndex: event.receipt.castIndex } : {}),
-      ...(event.receipt.branch ? { branch: pick(event.receipt.branch, ['castIndex', 'branch']) } : {}) };
+      ...(event.receipt.branch ? { branch: pick(event.receipt.branch, ['castIndex', 'branch']) } : {}),
+      ...(event.receipt.area ? { area: { cells: event.receipt.area.cells.map(c => pick(c, ['col', 'row'])) } } : {}) };
     case 'shieldLayerChanged': return { ...envelope, type: event.type, reason: event.reason,
       ...pick(event.layer, ['key', 'targetId', 'remaining']) };
     case 'statusChanged': return { ...envelope, type: event.type, reason: event.reason,
@@ -157,6 +158,10 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'attackWindup': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'launchTick']) };
     case 'attackWindupCancelled': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'attackLanded': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'hit']) };
+    case 'jayceCrystal': return { ...envelope, ...pick(event, ['type', 'unitId', 'phase', 'crystal', 'count', 'cell']) };
+    case 'swainAscensionExtended': return { ...envelope, ...pick(event, ['type', 'unitId', 'victimId', 'beforeUntilTick', 'untilTick']) };
+    case 'abilityProjectileLaunched': return { ...envelope, ...pick(event, ['type', 'sourceId', 'targetId', 'arrivalTick', 'skill', 'ordinal', 'actionSeq', 'count']) };
+    case 'abilityProjectileLanded': return { ...envelope, ...pick(event, ['type', 'sourceId', 'targetId', 'skill', 'ordinal', 'actionSeq', 'count', 'hit']) };
     case 'abilityEffectEnded': return { ...envelope, ...pick(event, ['type', 'unitId', 'effect']), targetIds: [...event.targetIds] };
   }
 }

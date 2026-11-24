@@ -20,7 +20,9 @@ function prepare(seed:number){
  expect(state.augments.map(a=>a.definitionId)).toEqual(['superstars-ii']);
  const owner=state.preparation.units.find(u=>u.team==='player')!;
  expect(owner.definitionId).toBe('darius');expect(owner.starLevel).toBe(1);
- state=accepted(deployMatchUnit(state,owner.id,{kind:'board',cell:{col:3,row:4}}));
+ // Landing batch (11-20, scene change; assertions unchanged): Darius's spin now lands after his cast, and at (3,4) the original
+ // wins only one Gambler roll; tried every player cell: 18 of 28 hold; (1,6), with five of its six neighbours holding, is used.
+ state=accepted(deployMatchUnit(state,owner.id,{kind:'board',cell:{col:1,row:6}}));
  expect(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='board').map(u=>u.id)).toEqual([owner.id]);
  for(const [slot,definitionId] of items.entries()){
   const grant=grantMechanicItem(state,{receiptId:`trench-gold-${slot}`,source:'test',definitionId});if(!grant.ok)throw Error(grant.reason);

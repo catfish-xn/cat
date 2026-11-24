@@ -1,3 +1,5 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
+import { MEL_RELEASE_TICKS } from '../src/simulation/cast-windup';
 import { describe, it, expect } from 'vitest';
 import { createMatch, claimOrb } from '../src/simulation/match';
 import { getUnitStats } from '../src/simulation/unit-stats';
@@ -49,6 +51,7 @@ const unit=(c:CombatState,id:string)=>c.units.find(u=>u.id===id)! as S13Unit;
 const idle=(c:CombatState,actors:string[]=[])=>({...c,units:c.units.map(u=>actors.includes(u.id)?u:{...u,cooldownTicks:1200,moveCooldownTicks:1200,mana:0,maxMana:0})});
 const facts=(round=4,stage=2,survivors=['a','b'],eligible=true,kind:'pvp'|'pve'='pvp'):G23BattleFacts=>({battleId:'battle-'+round,round,roundKind:kind,result:'loss',conquerorTier:0,conquestTakedowns:[],chemBaronTier:0,alliedDeaths:0,rumbleStar:0,highRollerGold:0,family:{stage,eligible,openingIds:['a','b'],survivorIds:survivors}});
 
+function stepThroughWindup(c:CombatState,intervalTicks:number){let r=stepCombat(c);const events=[...r.events];for(let n=0;n<rangedAttackWindupTicks('viktor',intervalTicks);n++){r=stepCombat(r.state);events.push(...r.events);}return {state:r.state,events};}
 describe('v19 six costs',()=>{
   it.each([['warwick',2100,[110,165,248],70,9000,1,60,100],['viktor',1600,[100,150,225],40,5500,4,0,100],['mel',1800,[80,120,180],60,8000,3,0,40]] as const)('independent base/star table: %s',(id,hp,ad,resist,speed,range,mana,maxMana)=>{
     expect(UNIT_DEFINITIONS[id]).toMatchObject({id,cost:6,baseAttackSpeedBps:speed,attackRange:range,initialMana:mana,maxMana});
@@ -88,7 +91,8 @@ describe('v19 six costs',()=>{
     let s=army(['viktor']);s={...s,items:[{id:'item-1',definitionId:'sword',location:{kind:'unit',unitId:'viktor',slot:0}},{id:'item-2',definitionId:'bow',location:{kind:'unit',unitId:'viktor',slot:1}},{id:'item-3',definitionId:'tear',location:{kind:'unit',unitId:'viktor',slot:2}}]};
     let c=idle(start(s).state,['viktor']);const v=unit(c,'viktor');
     expect(ad(v)).toBe(100);expect(interval(v,0)).toBe(37);expect(ap(v,0)).toBe(135);expect(v.mana).toBe(3);
-    const r=stepCombat(c);expect(unit(r.state,'viktor').mana).toBe(4);
+    // Ranged attack wind-up (#791, window only): Viktor's ray goes off a wind-up after his attack starts.
+    const r=stepThroughWindup(c,interval(v,0));expect(unit(r.state,'viktor').mana).toBe(4);
     expect(r.events.filter(e=>e.type==='packetDamage').map(e=>e.type==='packetDamage'&&e.outcome.context.damageType)).toEqual(['magic','true']);
     c={...r.state,units:r.state.units.map(u=>u.id==='viktor'?{...u,cooldownTicks:0,mana:8,sixCost:{...u.sixCost!,energy:8}}:{...u,hp:100000,maxHp:100000})};
     const cast=stepCombat(c);expect(unit(cast.state,'viktor').mana).toBe(0);expect(cast.events.some(e=>e.type==='cast')).toBe(true);
@@ -98,7 +102,7 @@ describe('v19 six costs',()=>{
     let c=idle(start(army(['viktor'])).state,['viktor']);
     c={...c,units:c.units.map(u=>u.id==='viktor'?{...u,targetId:'enemy',mechanics:[...u.mechanics??[],{source:origin(u),mechanic:'quickstriker',values:{minBps:3000,maxBps:6000,shield:0,durationTicks:1}}]}:{...u,hp:500,maxHp:1000})};
     expect(ap(unit(c,'viktor'),0,c.units)).toBe(145);expect(interval(unit(c,'viktor'),0,c.units)).toBe(37);
-    const r=stepCombat(c),hit=r.events.find(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='viktor'&&e.outcome.context.damageType==='magic');
+    const r=stepThroughWindup(c,37),hit=r.events.find(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='viktor'&&e.outcome.context.damageType==='magic');
     expect(hit?.type==='packetDamage'&&hit.outcome.raw).toBe(72);
   });
   it('Warwick uses strict <15%, one devour per tick, bypasses shields, rewards only after actual death, heals and gains mana',()=>{
@@ -118,7 +122,11 @@ describe('v19 six costs',()=>{
   });
   it('Mel absorbs only her own shield, keeps integer half remainder, and third cast conserves total across fewer than 5 enemies and ten packets',()=>{
     let c=idle(start(army(['mel','lux'])).state,['mel']);c={...c,units:c.units.map(u=>u.id==='mel'?{...u,mana:40,runtime:{...u.runtime!,castCount:2},sixCost:{...sixState(unit(c,'mel')),storedEnergy:11}}:{...u,hp:100000,maxHp:100000})};
-    const r=stepCombat(c),packets=r.events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='mel');
+    // 11-20 Mel timing: her bolts leave MEL_RELEASE_TICKS after the cast and settle where they land, so the ten packets come
+    // later; the shield and the energy reset stay on the cast step (r).
+    const r=stepCombat(c);let later=r.state;const events=[...r.events];
+    for(let n=0;n<MEL_RELEASE_TICKS+40&&later.status==='running';n++){const step=stepCombat(later);later=step.state;events.push(...step.events);}
+    const packets=events.filter(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId==='mel'&&e.outcome.context.source.sourceKind==='ability');
     expect(packets).toHaveLength(10);expect(packets.reduce((n,e)=>n+(e.type==='packetDamage'?e.outcome.raw:0),0)).toBe(1401);
     expect(unit(r.state,'mel').sixCost?.storedEnergy).toBe(0);
     const mel=unit(r.state,'mel'),layer=mel.shieldLayers[0];expect(layer.expiresAtTick-r.state.tick).toBe(80);

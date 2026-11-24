@@ -1,5 +1,7 @@
+import { SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
+import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
-import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, jayceCrystalChainPlace, jayceCrystalLandTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
 import { isAttackProxy } from './anomalies/availability';
@@ -178,7 +180,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       for(const center of targets){strike(center,mag('MagicDamage'));for(const x of foes().filter(x=>x.id!==center.id&&hexDistance(center.cell,x.cell)<=1))strike(x,mag('SecondaryDamage'),'magic',true);}break;
     }
     case 'swain':{
-      heal(mag('Heal'));g23State(u).ascension={untilTick:ctx.tick+Math.round(v('Duration')*20),nextPulseTick:ctx.tick+20,actionSeq:seq,takedowns:[]};break;
+      heal(mag('Heal'));g23State(u).ascension={untilTick:ctx.tick+Math.round(v('Duration')*20),nextPulseTick:ctx.tick+SWAIN_PULSE_TICKS,actionSeq:seq,takedowns:[],pulse:0};break;
     }
     case 'swain-ranged':
       strike(t,mag('MagicDamage'));
@@ -209,7 +211,28 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'jayce-ranged':{
       const forge=reviveG23Forge(ctx,u)??u;
-      const targets=foes();for(let i=0;i<v('NumOfCrystals');i++)strike(targets[i%targets.length],physical(i===0?'ClosestEnemyPercentAD':'PercentAttackDamage'),'physical');
+      // 11-21 (authorization ②): one crystal per nearest enemy (round robin from the nearest when there are fewer) lands on its
+      // cell and stays; the main hit lands on the nearest, then the crystals explode one after another in chain order around their
+      // cells (cast-windup.ts). Where the tooltip is silent the reading is self-chosen, not original data: the nearest takes no
+      // explosion of its own crystal; an enemy's later explosions this cast take the chain falloff once, not compounded. Who is hit and how much
+      // are taken now, from where everyone stands; a target that dies first takes nothing.
+      const targets=foes(),count=v('NumOfCrystals'),nearest=targets[0];
+      if(nearest){
+        const hitsSoFar=new Map<string,number>(),blast=physical('PercentAttackDamage'),hits:[S13Unit,number,number][]=[];
+        // Crystals in chain order, so "first explosion" follows the order they go off.
+        for(const i of Array.from({length:count},(_,k)=>k).sort((a,b)=>jayceCrystalChainPlace(a,count)-jayceCrystalChainPlace(b,count))){
+          const aim=targets[i%targets.length]!,cell={...aim.cell};
+          const at=jayceCrystalBlastTick(jayceCrystalChainPlace(i,count));
+          for(const [kind,when] of [['g23CrystalLand',jayceCrystalLandTick(i)],['g23CrystalBlast',at]] as const)
+            u.tasks.push({key:JSON.stringify([u.id,seq,kind,i]),kind,source:origin(u),executeAtTick:ctx.tick+when,targetId:aim.id,amount:0,actionSeq:seq,ordinal:i,total:count,cancellable:false,cell});
+          for(const x of foes().filter(x=>hexDistance(cell,x.cell)<=1&&!(x.id===nearest.id&&aim.id===nearest.id)).sort((a,b)=>compareText(a.id,b.id))){
+            const before=hitsSoFar.get(x.id)??0;hitsSoFar.set(x.id,before+1);hits.push([x,at,before?Math.floor(blast*(1-v('FalloffDamagePct'))):blast]);
+          }
+        }
+        // Packet 0 is the main hit, then the explosions in order.
+        later(ctx,u,nearest,'g23Physical',JAYCE_MAIN_HIT_TICKS,physical('ClosestEnemyPercentAD'),seq,0,hits.length+1);ids.push(nearest.id);
+        hits.forEach(([x,at,raw],k)=>later(ctx,u,x,'g23Physical',at,raw,seq,k+1,hits.length+1));
+      }
       for(const ally of byDistance(forge,ctx.units.filter(x=>x.alive&&x.hp>0&&!isAttackProxy(x)&&x.team===u.team&&!x.definitionId.startsWith('g23-forge'))).slice(0,v('NumAlliesAS')))
         applyStatus(ally,origin(u),'attackSpeed',Math.round(v('AttackSpeed')*10000),Math.round(v('ASDuration')*20),ctx.tick,ctx.events,true);break;
     }
@@ -260,6 +283,10 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
    const next=smeechTarget(ctx,u);if(!next)return;
    leapG23(ctx,u,next);smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
   }
+  // Jayce's crystals (display only): one lands, or one explodes, at its cell.
+  if(task.kind==='g23CrystalLand'||task.kind==='g23CrystalBlast'){
+   ctx.events.push({type:'jayceCrystal',tick:ctx.tick,unitId:u.id,phase:task.kind==='g23CrystalLand'?'landed':'exploded',crystal:task.ordinal,count:task.total,cell:{...task.cell!}});return;
+  }
   // Renni's lift: the stun starts now on her target, if it still lives (display: she lifts it, carryChanged).
   if(task.kind==='g23RenniLift'){
    const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
@@ -286,10 +313,15 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
 /** Timed Swain pulses sample current adjacency; takedown extensions remain in the snapshot. */
 export function advanceG23Skills(ctx:AbilityContext):void{
  for(const u of ctx.units.filter(u=>u.alive&&u.hp>0)){
-  const a=u.g23?.ascension;if(!a||ctx.tick>a.untilTick||ctx.tick<a.nextPulseTick)continue;
-  a.nextPulseTick+=20;
-  ctx.heals.push({source:origin(u),targetId:u.id,amount:amount(u,ctx.tick,{ap:variable(u,'HealPerSecond')})});
-  for(const t of enemies(u,ctx.units).filter(t=>hexDistance(u.cell,t.cell)<=1))hit(ctx,u,t,amount(u,ctx.tick,{ap:variable(u,'DamagePerSecond')}),a.actionSeq,10000+ctx.tick,'magic',true);
+  const a=u.g23?.ascension;
+  // Display only: the demon form is over on the first tick past untilTick (takedowns may have moved it later).
+  if(a&&ctx.tick===a.untilTick+1)ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'swain-ascension',targetIds:[]});
+  if(!a||ctx.tick>a.untilTick||ctx.tick<a.nextPulseTick)continue;
+  // 11-20 (user-approved): SWAIN_PULSE_TICKS apart, each pulse a 1/SWAIN_PULSES_PER_SECOND part of the per-second heal and
+  // damage (splitTotal: the parts of each second add up to the per-second value); adjacency is taken every pulse.
+  const part=a.pulse%SWAIN_PULSES_PER_SECOND;a.pulse++;a.nextPulseTick+=SWAIN_PULSE_TICKS;
+  ctx.heals.push({source:origin(u),targetId:u.id,amount:splitTotal(amount(u,ctx.tick,{ap:variable(u,'HealPerSecond')}),SWAIN_PULSES_PER_SECOND)[part]!});
+  for(const t of enemies(u,ctx.units).filter(t=>hexDistance(u.cell,t.cell)<=1))hit(ctx,u,t,splitTotal(amount(u,ctx.tick,{ap:variable(u,'DamagePerSecond')}),SWAIN_PULSES_PER_SECOND)[part]!,a.actionSeq,10000+ctx.tick,'magic',true);
  }
 }
 export function recordG23SkillDamage(ctx:AbilityContext,u:S13Unit|undefined,t:S13Unit,actual:number,packet:S13Packet):void{
@@ -303,7 +335,9 @@ export function recordG23SkillDamage(ctx:AbilityContext,u:S13Unit|undefined,t:S1
 export function extendG23Swain(ctx:AbilityContext,victimId:string,contributors:readonly string[]):void{
  for(const u of ctx.units.filter(u=>u.hp>0&&contributors.includes(u.id))){
   const a=u.g23?.ascension;
-  if(a&&a.untilTick>=ctx.tick&&!a.takedowns.includes(victimId)){a.takedowns.push(victimId);a.untilTick+=Math.round(variable(u,'BonusDuration')*20);}
+  if(a&&a.untilTick>=ctx.tick&&!a.takedowns.includes(victimId)){const before=a.untilTick;a.takedowns.push(victimId);a.untilTick+=Math.round(variable(u,'BonusDuration')*20);
+   // Display only: the takedown extended the demon form (once per victim).
+   ctx.events.push({type:'swainAscensionExtended',tick:ctx.tick,unitId:u.id,victimId,beforeUntilTick:before,untilTick:a.untilTick});}
  }
 }
 
