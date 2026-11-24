@@ -6,7 +6,7 @@ import { readGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Pure Node build utility.
 import { encodePng } from '../scripts/assets3d/texture.mjs';
 // @ts-expect-error Offline Node script.
-import { appendClips, assertBaseKept, TIMED_FORM_GRAPH_KEYS } from '../scripts/assets3d/clip-append.mjs';
+import { appendClips, assertBaseKept, TIMED_FORM_ACTION_KEYS, TIMED_FORM_GRAPH_KEYS } from '../scripts/assets3d/clip-append.mjs';
 
 /** A two-submesh SKN (Body, Prop; one triangle each) on a one-joint rig, in the layout inspectSkn reads. */
 function fixtures() {
@@ -47,6 +47,9 @@ function anm() {
 describe('clip append', () => {
   it('names each timed form\'s entry and exit clip by graph key hash', () => {
     expect(TIMED_FORM_GRAPH_KEYS).toEqual({ swain: { enter: '0x70eb0dad', exit: '0xe1ad931b' } });
+    expect(TIMED_FORM_ACTION_KEYS).toEqual({ swain: { idle: '0x9dd9dc06', move: '0x2acd4eca', attack: '0x56b1e924', attackAlt: '0x59b1eddd' } });
+    for (const keys of [...Object.values(TIMED_FORM_GRAPH_KEYS), ...Object.values(TIMED_FORM_ACTION_KEYS)])
+      for (const key of Object.values(keys as Record<string, string>)) expect(key).toMatch(/^0x[0-9a-f]{8}$/);
   });
   it('appends the donor\'s clips after the base, keeps every base entry and byte, and retargets channels by node name', async () => {
     const f = fixtures();

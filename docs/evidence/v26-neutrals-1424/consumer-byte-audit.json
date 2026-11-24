@@ -100,9 +100,9 @@
     "tests/assets3d-clip-append.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6097,
+      "currentBytes": 6486,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c28bfe78c32bf0d7dbc00b77e59516d90dbddedb4119a203f94ddad493282621",
+      "currentSha256": "0d425a02f60bb0e597d1ae7330c233344ba7e725748d356a2fcf601453c8f8df",
       "firstDifferentByte": 0
     },
     "tests/assets3d-convert.test.ts": {
