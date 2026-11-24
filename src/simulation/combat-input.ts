@@ -40,7 +40,9 @@ export type CombatStrategyInputs = Pick<MatchBase, 'round' | 'preparation' | 'it
   | 'augments' | 'anomalyBinding' | 'persistentGrowth' | 'augmentProgress' > & {readonly g23?:import('./g2-3-match-progress').G23MatchProgress;readonly visibleExperimentCells?:readonly import('./board').HexCell[]} & { readonly roundResults?: readonly RoundResult[]; readonly playerHp?: number }
   /** Online two-sided only: the frozen snapshot's priorPvpWins; solo inputs never set it and read roundResults. */
   & { readonly ghostFriendsGrowth?: import('./augment-pool-batch5-g2').GhostFriendsGrowth; readonly augmentCopyKills?:readonly AugmentCopyKills[]; readonly augmentHistoryGrowth?: readonly import('./augment-history-types').AugmentGrowth[] }
-  & { readonly cabalGrowth?: CabalGrowth; readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[]; readonly sniperOpening?: Readonly<Record<string, number>>; readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions };
+  & { readonly cabalGrowth?: CabalGrowth; readonly h6Growth?:readonly import('./augment-history-types').AugmentGrowth[]; readonly sniperOpening?: Readonly<Record<string, number>>; readonly d14Combat?:D14CombatCertificate; readonly priorPvpWins?: number; readonly bankGold?:number; readonly itemSummonPositions?:import('./g2-4b-voidspawn').ItemSummonPositions }
+  /** Recording tools only (dev/castcmp --foe-items): the enemies' items instead of the round's. A match never sets it. */
+  & { readonly recordingEnemyItems?: readonly import('./round-enemies').EnemyItem[] };
 export interface CombatInputBasis {
   /** Actual holdings at Start, only when capacity differs from the combat projection. */
   readonly resourcePreparation?: import('./game').GameState;
@@ -102,7 +104,9 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const historyGrowth = 'resourceProvenance' in state && 'augmentHistory' in state ? combatHistoryGrowth(state as import('./match-types').MatchState,preparation.units.filter(u=>u.team==='player').map(u=>u.id),!!('combatInputBasis' in state && state.combatInputBasis)) : ('augmentHistoryGrowth' in state ? state.augmentHistoryGrowth : undefined);
   const copyKills='resourceProvenance' in state?r2FrozenCopyKills(state as import('./match-types').MatchState):('augmentCopyKills' in state?state.augmentCopyKills:undefined);
   return { ...(ghost?{ghostFriendsGrowth:ghost}:{}),...(copyKills?.length?{augmentCopyKills:copyKills}:{}),...(cabalGrowth?{cabalGrowth}:{}), ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
-    ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}) };
+    ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}),
+    // Recording inputs only: a match (resourceProvenance) never carries enemy items of its own, whatever its object holds.
+    ...(!('resourceProvenance' in state)&&'recordingEnemyItems' in state&&state.recordingEnemyItems!==undefined?{recordingEnemyItems:state.recordingEnemyItems}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
