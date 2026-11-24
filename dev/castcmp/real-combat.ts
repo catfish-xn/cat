@@ -27,9 +27,12 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
    * partner), by default one row ahead of `me` and one column to the right. */
   ally2?: string; ally2star?: number; ally2Cell?: Cell;
   /** v-capture --items me=a+b,ally=c: completed or component items on `me`, `ally` and `ally2` (up to 3 each, slots in the
-   * order given). Recording setup only; without it nobody carries items. parseItems reads it. Foes: not yet (the one-sided
-   * combat takes the enemy's items from the round's projection, round-enemies.ts, not from this list). */
+   * order given). Recording setup only; without it nobody carries items. parseItems reads it. Foes: --foe-items. */
   items?: ItemSetup;
+  /** v-capture --foe-items foe=a+b,foe2=c: items on the foes (`foe` … `foe4`, up to 3 each, slots in the order given), recording
+   * setup only. Parsed and checked (parseFoeItems), then given to the combat as the rules' recording-only enemy items
+   * (CombatStrategyInputs.recordingEnemyItems, realFoeItems), which also check them by name. */
+  foeItems?: FoeItemSetup;
   /** v-capture --as-scale X (0.2–1): the caster's attack speed times X, recording only (parseAsScale). Lines using it are not
    * acceptance clips (jobs-check says so) and their frames carry a corner tag. Without it nothing changes. */
   asScale?: number }
@@ -55,6 +58,39 @@ export function parseItems(text: string | null | undefined): { items: ItemSetup 
     items[holder as ItemHolder] = ids;
   }
   return { items };
+}
+/** Item ids per foe, in slot order (v-capture --foe-items). */
+export type FoeItemSetup = Partial<Record<FoeHolder, string[]>>;
+export type FoeHolder = 'foe' | 'foe2' | 'foe3' | 'foe4';
+const FOE_HOLDERS: readonly FoeHolder[] = ['foe', 'foe2', 'foe3', 'foe4'];
+/** --foe-items reaches the combat: the rules' recording-only enemy items (CombatStrategyInputs.recordingEnemyItems). */
+export const FOE_ITEMS_APPLIED = true;
+/** "foe=a+b,foe2=c" (v-capture --foe-items) as items per foe, or a reason it cannot be: unknown foe or item, a foe named twice,
+ * more than 3 items on one foe, an empty list. */
+export function parseFoeItems(text: string | null | undefined): { items: FoeItemSetup } | { why: string } {
+  if (!text) return { why: '--foe-items is empty' };
+  const items: FoeItemSetup = {};
+  for (const part of text.split(',')) {
+    const [holder, list, extra] = part.split('=');
+    if (extra !== undefined || !list) return { why: `--foe-items wants foe=item+item, got ${part}` };
+    if (!FOE_HOLDERS.includes(holder as FoeHolder)) return { why: `--foe-items: ${holder} is not one of ${FOE_HOLDERS.join(', ')}` };
+    if (items[holder as FoeHolder]) return { why: `--foe-items names ${holder} twice` };
+    const ids = list.split('+');
+    if (ids.length > 3) return { why: `--foe-items: ${holder} has ${ids.length} items, at most 3` };
+    const unknown = ids.filter(id => !Object.hasOwn(ITEM_DEFINITIONS, id));
+    if (unknown.length) return { why: `--foe-items: unknown item ${unknown.join(', ')}` };
+    items[holder as FoeHolder] = ids;
+  }
+  return { items };
+}
+/** The foes' items as the rules' enemy items read them (round-enemies.ts EnemyItem): unit id, definition, slot. */
+export function realFoeItems(s: RealSetup): { unitId: string; definitionId: string; slot: number }[] {
+  return FOE_HOLDERS.flatMap(holder => (s.foeItems?.[holder] ?? []).map((definitionId, slot) => ({ unitId: holder, definitionId, slot })));
+}
+/** "foe=a+b foe2=c" for captions and logs, or null without foe items. */
+export function foeItemsLabel(items: FoeItemSetup | null | undefined): string | null {
+  const parts = FOE_HOLDERS.filter(h => items?.[h]?.length).map(h => `${h}=${items![h]!.join('+')}`);
+  return parts.length ? parts.join(' ') : null;
 }
 /** The recording's items as the game holds them (strategy-types.ts ItemInstance): on their unit, slot by slot. */
 export function realItems(s: RealSetup): any[] {
@@ -156,6 +192,7 @@ export function layoutProblem(s: RealSetup, units: any[]): string | null {
   if (s.allyCell && !s.ally) return '--ally-cell needs --ally';
   if ((s.ally2Cell || s.ally2star !== undefined) && !s.ally2) return '--ally2-cell / --ally2star need --ally2';
   for (const holder of ['ally', 'ally2'] as const) if (s.items?.[holder]?.length && !s[holder]) return `--items ${holder}=... needs --${holder}`;
+  for (const [n, holder] of FOE_HOLDERS.entries()) if (s.foeItems?.[holder]?.length && s.nfoes < n + 1) return `--foe-items ${holder}=... needs --nfoes ${n + 1} or more`;
   // The rules pick a form swapper's form by its row (seat-mechanics/forms.ts: the side's front two rows melee, back two ranged),
   // never by --form, which only picks what the renderer draws: the two must agree.
   const meRow = (s.meCell ?? ME_CELL).row;
@@ -195,10 +232,12 @@ export function asScaleLabel(asScale: number | undefined): string | null {
 }
 /** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
  * createCombatWithEvents; Viktor's chaos energy, opening mana and shields are set there). Plain createCombat skips them. */
-export function startRealCombat(units: any[], items: any[] = [], asScale = 1): { state: any; events: any[] } {
+export function startRealCombat(units: any[], items: any[] = [], asScale = 1, foeItems: readonly { unitId: string; definitionId: string; slot: number }[] = []): { state: any; events: any[] } {
   const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
+  // --foe-items: the foes' items, through the rules' recording-only field (which checks them by name). Without it the
+  // snapshot is built exactly as before.
   const started = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items, temporaryEquipment: [],
-    augments: [], persistentGrowth: [], augmentProgress: [] } as any), 'castcmp', 42);
+    augments: [], persistentGrowth: [], augmentProgress: [], ...(foeItems.length ? { recordingEnemyItems: foeItems } : {}) } as any), 'castcmp', 42);
   // Self-check: a replay that skipped combat start would silently change who casts and when.
   if (!(started.state as any).startEffectsApplied) throw new Error('real combat: combat-start hooks not applied');
   // --as-scale (recording only): the caster's base attack speed times asScale, after combat start. At 1 nothing is touched.
@@ -214,8 +253,9 @@ export function startRealCombat(units: any[], items: any[] = [], asScale = 1): {
  * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). N counts
  * ticks, not events: a tick with several matching events (a pulse striking two foes at once) counts once. `onTick` sees every tick's state and display events (tick 0 carries the
  * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
-export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR, items: any[] = [], asScale = 1) {
-  const started = startRealCombat(units, items, asScale);
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR, items: any[] = [], asScale = 1,
+  foeItems: readonly { unitId: string; definitionId: string; slot: number }[] = []) {
+  const started = startRealCombat(units, items, asScale, foeItems);
   let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {

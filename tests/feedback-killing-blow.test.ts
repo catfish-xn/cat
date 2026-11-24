@@ -78,4 +78,18 @@ describe('a killing blow\'s number shows where its target fell', () => {
     floats.render(1010, new Map());
     expect(shown()).toEqual([]);
   });
+  it('a killing packet shows its full amount (the HP it took plus its overkill), not just the target\'s last HP', () => {
+    const { floats, shown } = setup();
+    floats.render(0, new Map([['foe', at(200)]]));
+    floats.push([{ ...(packet(30, 'foe', 30, true) as object), overkill: 500 } as unknown as SceneCombatEvent, death(30, 'foe')], 400);
+    floats.render(410, new Map());
+    expect(shown()).toEqual(['530']);
+  });
+  it('overkill on a packet that is not the killing one changes nothing; a killing packet without it shows the HP it took', () => {
+    const { floats, shown } = setup();
+    floats.render(0, new Map([['foe', at(200)], ['foe2', at(300)]]));
+    floats.push([{ ...(packet(30, 'foe', 40) as object), overkill: 300 } as unknown as SceneCombatEvent, packet(30, 'foe2', 24, true), death(30, 'foe2')], 400);
+    floats.render(410, new Map([['foe', at(200)]]));
+    expect(shown().sort()).toEqual(['24', '40']);
+  });
 });

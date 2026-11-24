@@ -72,3 +72,5 @@ node dev/castcmp/v-capture.cjs camille out/cast-camille --dist 1 --star 3
   - **警告**：护盾、治疗、灼烧、额外伤害、无法选中、减益标签、暴击类的装备，jobs-check 会警告，但不会拦下。暴击三件可以用在暴击专题的录制里，要在任务行里写明。
   - **节奏类**：改出手或攒蓝节奏的装备不警告，但标题条会注明。其中朔极之矛和蓝霸符可以让非坦克英雄更早放出技能。
 - `--ally2 X --ally2star N --ally2-cell R,C`：我方再加一个单位，用于"坦克加搭档"这类摆法。默认站在施法者前一排、右边一列，星级默认 2。
+
+`--foe-items foe=a+b,foe2=c`（仅 `--real`）：给敌方单位（foe … foe4，每个最多 3 件）配装备，走规则里只供录制用的敌方装备入口；规则会按名拒绝写错的装备、非敌方单位、重复槽位。和 `--items` 一样写进 gate.json / render-meta.json 和关键帧说明。
