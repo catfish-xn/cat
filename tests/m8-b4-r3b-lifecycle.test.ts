@@ -65,8 +65,10 @@ describe('B4 R3b: compiled consumption partition survives the complete shield li
   });
 
   it('consumed source with an active shield rejects deletion of its receipt in both restore entries', () => {
-    const s = triggerFirst(itemMatch('bloodthirster'));
-    expect(holder(s).shieldLayers).toHaveLength(1);
+    let s = triggerFirst(itemMatch('bloodthirster'));
+    // Ranged attack wind-up (#791, window only): Irelia's own cast shield is now spent (0 left) but still listed until it expires
+    // when the Bloodthirster fires; step the unchanged combat on until that spent layer drops, the Bloodthirster shield still up.
+    for (let i = 0; i < 100 && s.phase === 'combat' && holder(s).shieldLayers!.some(l => l.source.definitionId !== 'bloodthirster' && l.remaining === 0); i++) s = stepMatch(s).state;
     rejectMutation(s, u => { (u.mechanismState as any).runtimes = []; }, /incomplete survival consumption/);
   });
 
