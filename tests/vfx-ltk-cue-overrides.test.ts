@@ -282,7 +282,7 @@ describe('reviewed vfx-ltk cue overrides', () => {
     expect(elise.elise.find(cue => cue.system === 'a0484f04')?.bone).toBe('R_Buffbone_CSTM_Hand_Loc');
     expect(elise['elise-front'].find(cue => cue.system === '92ff3d2c')?.bone).toBe('Buffbone_Glb_Channel_Loc');
     expect(CUE_OVERRIDES.cassiopeia.find(cue => cue.system === '714bd6e8')?.bone).toBe('L_Hand');
-    expect(CUE_OVERRIDES.cassiopeia.find(cue => cue.system === '9f19f946')?.bone).toBe('C_buffbone_Glb_Chest_Loc');
+    expect(CUE_EXTRA_SKILLS['cassiopeia-bolt']!.find(cue => cue.system === '9f19f946')?.bone).toBe('C_buffbone_Glb_Chest_Loc');
     expect(CUE_OVERRIDES.corki.find(cue => cue.system === 'ee7fccd1')?.bone).toBe('R_missile_b');
     expect(CUE_OVERRIDES.corki.find(cue => cue.system === '022fe9ec')?.bone).toBe('L_missile');
     expect(CUE_OVERRIDES.gangplank.find(cue => cue.system === '80ab2d1b')?.bone).toBe('r_hand');
