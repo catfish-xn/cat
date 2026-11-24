@@ -137,7 +137,22 @@ const TRISTANA_SHELL_TRAVEL = 0.4;
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
+/**
+ * Rumble's missiles (Fable 11-24). His rules settle every missile's damage on the cast's own tick; the explosions show on the
+ * ground of his row's cells (rumble-row.ts) from that tick, one after another along the row from the end nearest him, `step`
+ * seconds apart, and each after the first is preceded by its missile falling onto its cell for `fall` seconds (the asset's
+ * missile falls: its sparks are shot downward and its rocket spins about the vertical). Display values, fitted, not
+ * original data: `step` from the 14.24 footage at 60 fps (the row's explosions follow each other a few frames apart), `fall`
+ * and `from` (cells above the cell) chosen so a drop never lands after its explosion; the first has none, as it shows on the
+ * damage's own tick.
+ */
+export const RUMBLE_MISSILE = { step: 0.05, fall: 0.05, from: [0, 3, 0] as const } as const;
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Rumble's missiles (RUMBLE_MISSILE; placeholder-renderer.ts): on each cell of his row the renderer picks (rumble-row.ts
+  // rowStrikeCells), its explosion on the ground and, before each but the first, its missile's short fall onto that cell.
+  'rumble-drop': [{ system: '721e9fbc', action: 'cast', event: 'projectile', location: 'board', delay: 0, duration: RUMBLE_MISSILE.fall + 0.15,
+    travelSeconds: RUMBLE_MISSILE.fall, stopAfter: RUMBLE_MISSILE.fall, fadeOut: true, fromAbove: RUMBLE_MISSILE.from }],
+  'rumble-strike': [{ system: '89fc6454', action: 'cast', event: 'cast-start', location: 'board', delay: 0, duration: 1 }],
   // Gangplank's ranged-form attack (batch2-bridge.ts), drawn from the rules' attackLaunched / attackLanded: the shot leaves
   // his right hand on the launch and flies the rule's own flight (LtkPlayOptions.flightSeconds), so it lands on the tick his
   // damage does; its hit plays on a landing that hit. The travelSeconds here is only a stand-in the rule's flight replaces.
@@ -364,6 +379,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // it played one comet and one burst on the cast target at 1 s, while the rule drops TotalShots shots over RaidDuration,
   // each on a random enemy centre. Each shot now plays its own comet and burst where its damage lands (CUE_EXTRA_SKILLS
   // caitlyn-shot, driven by the shot's packetDamage events in batch1-events.ts).
+  // Rumble's cast as exported, without its flight and explosion: both now come from his struck units and row cells
+  // (CUE_EXTRA_SKILLS rumble-drop / rumble-strike, played by the renderer).
+  rumble: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.36666666666666664, duration: 1.5 },
+    { system: '59e2ab23', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'BUFFBONE_CSTM_IGNITE' },
+    { system: '5b8e7f02', action: 'cast', event: 'cast-start', delay: 0.1, duration: 1.2, bone: 'BUFFBONE_CSTM_IGNITE' },
+    { system: '7562ce09', action: 'cast', event: 'cast-start', delay: 0.2, duration: 0.7, bone: 'BUFFBONE_CSTM_ROCKET' },
+  ],
   caitlyn: [
     { system: '4ddee85c', action: 'attack', event: 'projectile', bone: 'Rifle_TopBarrel2', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5833333333333333, duration: 1.5 },
