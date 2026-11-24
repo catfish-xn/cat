@@ -155,6 +155,8 @@ function animationEvent(event: LedgerCombatEvent) {
     case 'abilityMarker': return { ...envelope, ...pick(event, ['type', 'unitId', 'marker', 'arrivalTick']), cell: cellView(event.cell) };
     case 'carryChanged': return { ...envelope, ...pick(event, ['type', 'holderId', 'targetId', 'carried']) };
     case 'attackLaunched': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'arrivalTick', 'projectile']) };
+    case 'attackWindup': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'launchTick']) };
+    case 'attackWindupCancelled': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId']) };
     case 'attackLanded': return { ...envelope, ...pick(event, ['type', 'attackerId', 'targetId', 'hit']) };
     case 'jayceCrystal': return { ...envelope, ...pick(event, ['type', 'unitId', 'phase', 'crystal', 'count', 'cell']) };
     case 'swainAscensionExtended': return { ...envelope, ...pick(event, ['type', 'unitId', 'victimId', 'beforeUntilTick', 'untilTick']) };

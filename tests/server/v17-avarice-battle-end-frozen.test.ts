@@ -22,10 +22,11 @@ describe('v17 avarice: gold changes at the end of a battle', () => {
       // with all three offsets before the deadline.
       // Cast wind-up batch 4 (Renni's timing; three Renni fight here) lengthens it by one tick, to 555; still inside 4-6.
       // #739 (ranged basic attacks settle when the shot lands) lengthens it by 8 ticks, to 563; all three offsets still inside 4-6.
+      // #791 (ranged attack wind-up) shortens that same s0/s5 battle to 403 ticks; all three offsets still inside 4-6.
       const { room, clock, seat, frozen, end, startedAt } = yield* atBattleRoute(env, 's0');
       expect(frozen.battle.a.seatId).toBe('s0');
       expect(frozen.battle.b.seatId).toBe('s5');
-      expect(end).toBe(563);
+      expect(end).toBe(403);
       expect(room.state.roundName).toBe('4-6');
       expect(room.state.phase).toBe('battle');
       const sampleAt = liveTickAt(startedAt, end + offset);

@@ -1,3 +1,4 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import {
@@ -36,7 +37,8 @@ describe('T2 true two-sided combat', () => {
     const result = run(a,b);
     expect(result.winnerSeatId).toBe('A');
     // Ranged attack landing (pure-result re-pin): the sixth attack (tick 146) kills when its shot lands, its flight later.
-    expect(result.terminal.tick).toBe(146 + MADDIE_FLIGHT);
+    // Ranged attack wind-up (#791, window literal): each attack's shot leaves a wind-up after it starts.
+    expect(result.terminal.tick).toBe(146 + rangedAttackWindupTicks('maddie', 29) + MADDIE_FLIGHT);
     expect(result.a.survivors).toEqual([{unitId:'unit-1',definitionId:'maddie',starLevel:3,hp:1294}]);
     expect(result.b.survivors).toEqual([]);
     expect(result.terminal.rngDraws).toBe(12);

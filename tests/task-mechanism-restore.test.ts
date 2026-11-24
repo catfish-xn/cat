@@ -73,10 +73,17 @@ it.each([
   // v24: public Watcher/Sentinel Crests leave this Black Rose board without an active crest trait.
   // P0 retention moved the old kills at 255/225. v26 melee pathing moves the
   // contribution case to tick 410; public position vectors retain curse and +0/+15 checks.
-  { contribution: false, seed: 1, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
+  // Ranged attack wind-up (#791, scene change): seed 1 no longer gives the lone Sion kill from any Morgana cell (Cassiopeia (0,4),
+  // Vladimir (3,4) unchanged). Searched seeds 0..19 over the other 26 Morgana cells: seed 3, Morgana (4,5) is the first; Sion
+  // kills enemy-r8-1 at tick 242.
+  { contribution: false, seed: 3, cells: [{ col: 4, row: 5 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 242, targetId: 'enemy-r8-1' },
   // Ranged attack landing (#739): Morgana (6,7) no longer gives the contribution kill; Morgana (5,7) keeps the same
   // Sion kill of enemy-r4-2 at tick 410 (same seed and Cassiopeia/Vladimir cells).
-  { contribution: true, seed: 5, cells: [{ col: 5, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 410, targetId: 'enemy-r4-2' },
+  // Ranged attack wind-up (#791, scene change): Morgana (5,7) no longer gives it; on the same seed and Cassiopeia/Vladimir cells,
+  // Morgana (6,7) does, Sion kills the same enemy-r4-2 at tick 420 (searched all Morgana cells, seeds 0..19).
+  // Cassiopeia's main bolt settles where it lands (11-24, scene change): seed 5 at (6,7) no longer gives it. Searched seeds from 0
+  // over all Morgana cells (same Cassiopeia/Vladimir cells): seed 1, Morgana (3,5) is the first; Sion kills enemy-r4-2 at tick 333.
+  { contribution: true, seed: 1, cells: [{ col: 3, row: 5 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 333, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => withB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest'], () => {
   // Script only the draw; the augment equality is a fixture self-check. All commands,
   // summon kills, contribution facts and restore checks remain real.
@@ -149,13 +156,13 @@ it.each([
   }
 }), 30000);
 
-function morganaCurseSave(twoOwners = false): MatchState {
+function morganaCurseSave(twoOwners = false, cell?: { col: number; row: number }): MatchState {
   let state = cursePreparation();
   state = accepted(grantMechanicUnit(state, { receiptId: 'curse-morgana', source: 'test', definitionId: 'morgana' }));
   if (twoOwners) state = accepted(grantMechanicUnit(state, { receiptId: 'second-morgana', source: 'test', definitionId: 'morgana' }));
   const owners = state.preparation.units.filter(u => u.definitionId === 'morgana' && u.team === 'player');
   for (const [i, owner] of owners.entries())
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: i * 6, row: 4 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: cell ?? { col: i * 6, row: 4 } }));
   state = accepted(startMatchCombat(state));
   expect(state.combat!.units.some(u => u.definitionId === 'g23-sion')).toBe(false);
   while (state.phase === 'combat') {
@@ -184,9 +191,11 @@ it('rejects altered or invented target reave facts beside the legal seed 3151248
   const state = morganaCurseSave();
   // v22 mana rules bring Morgana's first curse forward from 89 to 70; v26 melee pathing to 60.
   // Ranged attack landing (window only): the save moves one tick on, past Morgana's shot in flight on tick 60.
-  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(61);
+  // Ranged attack wind-up (#791, pure-result re-pin): her first curse comes at 65 (was 60), so the save is at 66 (was 61) and the
+  // reave runs to 265 (was 260).
+  expect(state.round).toBe(4); expect(state.combat!.tick).toBe(66);
   const target = state.combat!.units.find(u => u.id === 'enemy-r4-1')!;
-  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 260 });
+  expect(target.g22).toMatchObject({ reaveBps: 5000, reaveUntilTick: 265 });
   const owner = state.combat!.units.find(u => u.definitionId === 'morgana')!;
   expect(owner.tasks).toHaveLength(10);
   for (const patch of [{ reaveBps: 0 }, { reaveUntilTick: 60 }, { reaveBps: 0, reaveUntilTick: 0 }]) {
@@ -197,12 +206,14 @@ it('rejects altered or invented target reave facts beside the legal seed 3151248
   const bad = structuredClone(state), untouched = bad.combat!.units.find(u => u.team === target.team && u.id !== target.id)!;
   expect(untouched.g22?.reaveBps ?? 0).toBe(0);
   Object.assign(untouched, { g22: { initialized: false, wanted: [], wantedDeaths: 0, mordeUntilTick: 0,
-    reaveBps: 5000, reaveUntilTick: 260, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
+    reaveBps: 5000, reaveUntilTick: 265, rebelTriggered: false, exposureFromTick: 0, exposureUntilTick: 0, exposureBps: 0 } });
   expectRejectedAtAllEntrances(bad, 'curse reave binding facts');
 });
 
 it('restores the legal target reave and retains Irelia shielding at tick 104', () => {
-  const state = morganaCurseSave(), restored = restoreMatch(serializeMatch(state));
+  // Ranged attack wind-up (#791, scene change): from (0,4) Morgana now dies at 103 and the fight ends before Irelia shields.
+  // Searched all 28 player cells: from (1,4) the save (66), reave (265) and Irelia's 200 shield at 104 are all as before.
+  const state = morganaCurseSave(false, { col: 1, row: 4 }), restored = restoreMatch(serializeMatch(state));
   expect(restoreMatch(state)).toEqual(state); expect(restored).toEqual(state);
   const live = stepTo(state, 104), resumed = stepTo(restored, 104);
   expect(resumed).toEqual(live);
