@@ -409,9 +409,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   scar: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.2990000089009603, duration: 1.5 },
     { system: 'bef025dc', action: 'cast', event: 'projectile', delay: 0.1, duration: 0.9, travelSeconds: 0.25, bone: 'L_Hand', targetBone: chest, targetLimit: 3 },
-    // The hit on each target plays until its own particles have all but gone (its ground ring and wraps outlast the default
-    // cut): played to where the asset's own visible weight falls to almost nothing (拟合，非原版数值, 11-24).
-    { system: 'd07052bc', action: 'cast', event: 'hit', delay: 0.4, duration: 2.23, bone: chest, targetLimit: 3 },
+    { system: 'd07052bc', action: 'cast', event: 'hit', delay: 0.4, duration: 0.55, bone: chest, targetLimit: 3 },
     { system: 'f4a6240a', action: 'cast', event: 'cast-start', delay: 1.1, duration: 1.1, bone: chest },
   ],
   // His cast: the hand glow and trail, his grasp played whole along the struck line (its pit and walls held off in

@@ -4750,9 +4750,9 @@
     "tests/vfx-ltk-hit-cue-own-fade.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1680,
+      "currentBytes": 1270,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9788aeecc2686894baf22c5ed67d6c960691475b60c43a52bdac7f45186a415f",
+      "currentSha256": "82b5b7ca2b104deeb3deb4328ddb29fb2e2135e32ac855f4397e2862277f13b0",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-importance.test.ts": {
