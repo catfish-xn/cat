@@ -1,3 +1,4 @@
+import { VIOLET_UPPERCUT_TICKS } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { stepCombat, type CombatUnit } from '../src/simulation/combat';
@@ -20,7 +21,8 @@ describe('v23 independent review: control timing and action gates', () => {
   it.each([['vi', 'target', 30, false], ['vi', 'row', VI_ROW_KNOCKUP_TICKS, true], ['violet', 'target', 5, true], ['sett', 'target', 30, false]] as const)(
     '%s → %s lasts exactly %i ticks (knockup=%s)', (name, targetId, duration, knockup) => {
       // Vi's stuns land at her slam, VI_SLAM_TICKS after the cast (user 2026-11-11); her target is held (a knock-up) before it.
-      const offset = name === 'vi' ? VI_SLAM_TICKS : 0;
+      // Violet's knock-up lands with her uppercut, VIOLET_UPPERCUT_TICKS after the cast (11-21).
+      const offset = name === 'vi' ? VI_SLAM_TICKS : name === 'violet' ? VIOLET_UPPERCUT_TICKS : 0;
       let state = freeze(battle([hero('p', name, 'player', 1, 3, { mana: 100 }), hero('target', 'garen', 'enemy', 2), hero('row', 'garen', 'enemy', 3)]));
       for (let n = 0; n <= offset; n++) state = stepCombat(state).state;
       const t = state.units.find(u => u.id === targetId)!;

@@ -145,7 +145,7 @@ import { admitArchives } from '../src/replay';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { readyMatch } from './match-helpers';
 describe('ranged attack wind-up: files written before it', () => {
-  const BEFORE = 'fnv1a32-utf16:6983672c';
+  const BEFORE = 'fnv1a32-utf16:33d330e9';
   it('has its own identifier; a save with the earlier digest is rejected and its archive quarantined', () => {
     expect(S13_COMBAT_RULES.rangedAttackWindup).toBe('ranged-attack-start-then-launch-after-windup-v1');
     expect(CONTENT_DIGEST).not.toBe(BEFORE);

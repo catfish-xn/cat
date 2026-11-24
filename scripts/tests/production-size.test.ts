@@ -118,8 +118,17 @@ describe('production representation preserves runtime semantics', () => {
     // 远程普攻命中才结算、存档/回放格式 9→10 (2026-11-19, #739): d94c78f1 → cf212873 (content-digest.ts covers M8_VERSION).
     // 技能落地结算批 (2026-11-20): cf212873 → 2f642cc0 (S13_COMBAT_RULES.skillLanding).
     // 死亡判定随机键 (2026-11-21): 2f642cc0 → 6983672c (S13_COMBAT_RULES.deathRollKeys).
-    // 远程普攻前摇 v1 (2026-11-21): 6983672c → 08b690ea (S13_COMBAT_RULES.rangedAttackWindup).
-    expect(parsed.content).toBe('fnv1a32-utf16:08b690ea');
+    // 玛尔扎哈门线 v1 (2026-11-21): 6983672c → 57428247 (S13_COMBAT_RULES.malzaharGate).
+    // 黑默丁格火箭集火 v1 (2026-11-21): 57428247 → 31713f8c (S13_COMBAT_RULES.heimerFocus).
+    // 斯维因吸取节奏 v2 (2026-11-21): 31713f8c → b74b81b0 (S13_COMBAT_RULES.swainDrain).
+    // 梅尔施法 v3 (2026-11-21): b74b81b0 → 1ca19aae (S13_COMBAT_RULES.melBarrage).
+    // 蔚奥莱连击 v1 (2026-11-21): 1ca19aae → 6130956b (S13_COMBAT_RULES.violetCombo).
+    // 金克丝飞弹 v1 (2026-11-21): 6130956b → 946379e4 (S13_COMBAT_RULES.jinxRocket).
+    // 蔚砸地时刻 v2 (2026-11-21): 946379e4 → 36e7e2c1 (S13_COMBAT_RULES.viSlam).
+    // 梅尔连发 v1 (2026-11-21): 36e7e2c1 → 57ffb53e (S13_COMBAT_RULES.melBolts).
+    // 杰斯水晶连锁 v1 (2026-11-21): 57ffb53e → 33d330e9 (S13_COMBAT_RULES.jayceCrystals).
+    // 远程普攻前摇 v1 (2026-11-21): 33d330e9 → 45289b91 (S13_COMBAT_RULES.rangedAttackWindup).
+    expect(parsed.content).toBe('fnv1a32-utf16:45289b91');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

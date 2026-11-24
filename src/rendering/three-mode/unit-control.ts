@@ -58,7 +58,7 @@ export const CONTROL_3D = {
  * apply the damage and the stun. Rise and slam in seconds; the hold fills the rest. `viSlamTicks` copies the rules'
  * VI_SLAM_TICKS (a 3D module must not import the rules); tests/rendering3d-vi-grab.test.ts keeps the two equal.
  */
-export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSlamTicks: 12 } as const;
+export const GRAB_3D = { riseSeconds: 0.2, slamSeconds: 0.08, peakShare: 2, viSlamTicks: 17 } as const;
 /**
  * Held up by another unit (presentation only; the rules keep the unit on its cell): the body goes up to the holder's grip
  * point (a bone, CARRY_BONES) in `riseSeconds`, follows it while held, and comes back down onto its own spot in

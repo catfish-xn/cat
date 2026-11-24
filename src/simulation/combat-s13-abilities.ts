@@ -1,3 +1,4 @@
+import { landMelDash } from './combat-six-cost';
 import { executeSkillShot, launchShot, scheduleShot } from './ability-projectile';
 import { DARIUS_SPIN_TICKS, LUX_SELF_SHIELD_TICKS, LUX_SHIELD_FLIGHT_TICKS } from './cast-windup';
 import { castMadChemist, isMadChemist } from './augment-pool-batch5-r4';
@@ -40,6 +41,8 @@ export interface AbilityContext {
   castReceipts?: import('./m8/contracts').CastReceipt[];
   /** Set by an ability's own branch choice while its cast resolves; copied onto that cast's receipt as output only. */
   castBranch?: string;
+  /** Set by a cast that draws an area (Malzahar's gate): copied to the cast receipt's area. */
+  castArea?: readonly HexCell[];
   manaRequests?: import('./m8/contracts').ManaRequest[];
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
@@ -248,6 +251,7 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
   if(task.kind==='v20Teamup'){executeV20Teamup(ctx,unit,task);return;}
   if (task.kind.startsWith('g2')) { executeG2Task(ctx, unit, task); return; }
   if (task.kind === 'skillShot') { executeSkillShot(ctx, unit, task); return; }
+  if (task.kind === 'melDash') { landMelDash(ctx, unit, task); return; }
   if (task.kind === 'tristanaBounce' && !task.inherited) throw new RangeError('Missing inherited Tristana receipt');
   const opponents = enemies(unit, ctx.units), target = (task.attachedDot || task.inherited ? areaEnemies(unit, ctx.units) : opponents).find(u => u.id === task.targetId);
   const emit = (u: S13Unit, value: number, type: 'physical' | 'magic' = 'physical', ordinal = task.ordinal) => {

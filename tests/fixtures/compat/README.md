@@ -97,6 +97,42 @@ SHA-256: `65b0a55d862a47254941e29386f36f5a23bb4422eb4da0c329ddfa7067d80b76`.
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `81cda1aa2103d88fa9f1dd4a05d01a670d69cbaf379c5929a0226c05c3262aa4`.
 
-2026-11-21 远程普攻前摇 v1: identity-only refresh, `contentDigest` (×2) `6983672c` → `08b690ea` (`S13_COMBAT_RULES.rangedAttackWindup`);
+2026-11-21 玛尔扎哈门线 v1: identity-only refresh, `contentDigest` (×2) `6983672c` → `57428247` (`S13_COMBAT_RULES.malzaharGate`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
-skipped as above; the export equals the old file with that one substitution. SHA-256: `e9c9b1bae7d09fcbe9df066de465afb3795011ffe437ca5805cbca4c1f75bac4`.
+skipped as above; the export equals the old file with that one substitution. SHA-256: `bea914e1e7464436978a0c0bdf8f79526b6091e88470f73ceb0a1d3386a02344`.
+
+2026-11-21 黑默丁格火箭集火 v1: identity-only refresh, `contentDigest` (×2) `57428247` → `31713f8c` (`S13_COMBAT_RULES.heimerFocus`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `0f5eaf021d9a71a91d2ca4e0898779b6867fd66c2d13d0dd5c316685f34ad0ee`.
+
+2026-11-21 斯维因吸取节奏 v2: identity-only refresh, `contentDigest` (×2) `31713f8c` → `b74b81b0` (`S13_COMBAT_RULES.swainDrain`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `31bb6479bddf6154650f07a876a5cea84ecc5026affe0abc236cc4630e49aa6f`.
+
+2026-11-21 梅尔施法 v3: identity-only refresh, `contentDigest` (×2) `b74b81b0` → `1ca19aae` (`S13_COMBAT_RULES.melBarrage`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `9a79ad7b0951446b60cfa8d40f33d945597dc16fe9214a9f2303345adbeccbad`.
+
+2026-11-21 蔚奥莱连击 v1: identity-only refresh, `contentDigest` (×2) `1ca19aae` → `6130956b` (`S13_COMBAT_RULES.violetCombo`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `1c671200e937fc4c9314adae73ce9cad90c46da75fb1e4b08563a4e8935fde1a`.
+
+2026-11-21 金克丝飞弹 v1: identity-only refresh, `contentDigest` (×2) `6130956b` → `946379e4` (`S13_COMBAT_RULES.jinxRocket`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `0c5dc2edf45e135360dda9d628ee319d95f91bb0ef74f37b5a38cd0474125f10`.
+
+2026-11-21 蔚砸地时刻 v2: identity-only refresh, `contentDigest` (×2) `946379e4` → `36e7e2c1` (`S13_COMBAT_RULES.viSlam`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `da6aae59bf6c4ed67b6edad1dda82e1a851b0742ecd8ae6e94c41e3a634da9a2`.
+
+2026-11-21 梅尔连发 v1: identity-only refresh, `contentDigest` (×2) `36e7e2c1` → `57ffb53e` (`S13_COMBAT_RULES.melBolts`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `34d246b6d8112dcd3e3226f3c5657a28f5ba4708b125a01756af4649122a2f50`.
+
+2026-11-21 杰斯水晶连锁 v1: identity-only refresh, `contentDigest` (×2) `57ffb53e` → `33d330e9` (`S13_COMBAT_RULES.jayceCrystals`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `de2e71ca291be0bfaace09696c993cf73540528b5b1d1875589e30f16de61054`.
+
+2026-11-21 远程普攻前摇 v1: identity-only refresh, `contentDigest` (×2) `33d330e9` → `45289b91` (`S13_COMBAT_RULES.rangedAttackWindup`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `2f148a9bf7952119b25caabb69785004fe72ddb5e464ad9fe86de70a8541fe49`.
