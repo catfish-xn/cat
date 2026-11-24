@@ -269,7 +269,16 @@ export function runRealCombat(units: any[], afterTicks: number, onTick: (state: 
 
 /** What the recorded window [castIndex - lead (LEAD_TICKS unless asked, leadTicksFor), + windowMs] holds: the first cast
  * of `me`, its targets, whether they are alive at the end of the window, and every other unit's cast inside it. */
-export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS, anchor: Anchor = CAST_ANCHOR) {
+/**
+ * --after-end-ms N (recording only, default 0): the window may run N ms past the combat's last tick. The rules are not advanced
+ * there; the board holds its last state and the effects already started play on, as the game shows them until the next
+ * round. A window past the end is refused without it.
+ */
+export function parseAfterEndMs(text: string | null | undefined): { afterEndMs: number } | { why: string } {
+  if (text === null || text === undefined) return { afterEndMs: 0 };
+  return /^[0-9]+$/.test(text) && Number(text) <= 5000 ? { afterEndMs: Number(text) } : { why: `--after-end-ms must be a whole number of ms from 0 to 5000, got ${text}` };
+}
+export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS, anchor: Anchor = CAST_ANCHOR, afterEndMs = 0) {
   const from = Math.max(0, castIndex - lead), to = from + Math.ceil(windowMs / 50);
   // The anchor's own occurrence: a cast names its targets; an attack hit or another event its one target, if any.
   const cast = (events[castIndex] ?? []).find(e => anchorMatches(anchor, e));
@@ -280,7 +289,10 @@ export function auditWindow(events: readonly (readonly any[])[], alive: readonly
   const otherCasts: { id: string; tick: number }[] = [];
   for (let t = from; t <= Math.min(to, events.length - 1); t++) for (const e of events[t] ?? []) if (e.type === 'cast' && e.sourceId !== 'me') otherCasts.push({ id: e.sourceId, tick: t });
   const myCasts = events.slice(from, to + 1).flat().filter(e => e.type === 'cast' && e.sourceId === 'me').length;
-  return { castTick: castIndex, from, to, replayEnds: alive.length - 1, coversWindow: alive.length - 1 >= to, targets, anchorInWindow,
+  const replayEnds = alive.length - 1, afterEndTicks = Math.max(0, to - replayEnds);
+  return { castTick: castIndex, from, to, replayEnds, coversWindow: replayEnds + Math.ceil(afterEndMs / 50) >= to, afterEndTicks, afterEndMs,
+    // A window run past the combat's end (--after-end-ms) is about how it ends: its targets may well have fallen there.
+    pastEnd: afterEndMs > 0 && afterEndTicks > 0, targets, anchorInWindow,
     targetsAliveAtEnd: Object.fromEntries(targets.map(id => [id, !!alive[end]?.[id]])), otherCasts, myCasts };
 }
 

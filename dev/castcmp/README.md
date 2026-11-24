@@ -74,3 +74,5 @@ node dev/castcmp/v-capture.cjs camille out/cast-camille --dist 1 --star 3
 - `--ally2 X --ally2star N --ally2-cell R,C`：我方再加一个单位，用于"坦克加搭档"这类摆法。默认站在施法者前一排、右边一列，星级默认 2。
 
 `--foe-items foe=a+b,foe2=c`（仅 `--real`）：给敌方单位（foe … foe4，每个最多 3 件）配装备，走规则里只供录制用的敌方装备入口；规则会按名拒绝写错的装备、非敌方单位、重复槽位。和 `--items` 一样写进 gate.json / render-meta.json 和关键帧说明。
+
+`--after-end-ms N`（仅 `--real`，0–5000）：录制窗口可以越过战斗最后一拍再录 N 毫秒。这段时间规则不再推进，棋盘停在最后状态，已起播的特效照常播完，和游戏里战斗结束后到下一回合前看到的一样。不带这个参数时，窗口越过战斗结束会被判不通过。带了以后，窗口越过结束时目标已死不算不通过，因为录的就是收尾那一下。

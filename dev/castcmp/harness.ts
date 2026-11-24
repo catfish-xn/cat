@@ -238,6 +238,10 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   const asScaleText = params.get('asscale'), parsedAsScale = asScaleText !== null ? rc.parseAsScale(asScaleText) : null;
   if (parsedAsScale && 'why' in parsedAsScale) throw new Error(parsedAsScale.why);
   const asScale = parsedAsScale ? parsedAsScale.asScale : 1, asTag = rc.asScaleLabel(asScale);
+  // ?afterend=MS (v-capture --after-end-ms MS): the window may run MS past the combat's last tick (rules held, effects play on).
+  const parsedAfterEnd = rc.parseAfterEndMs(params.get('afterend'));
+  if ('why' in parsedAfterEnd) throw new Error(parsedAfterEnd.why);
+  const afterEndMs = parsedAfterEnd.afterEndMs;
   if (asTag) {
     const tag = document.createElement('div'); tag.textContent = asTag; tag.dataset.castcmp = 'as-scale';
     Object.assign(tag.style, { position: 'fixed', right: '12px', top: '12px', zIndex: '1000', padding: '4px 10px', background: '#8a0000', color: '#fff',
@@ -265,7 +269,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   }, start.castNumber ?? 1, anchor, rc.realItems(setup), asScale, rc.realFoeItems(setup));
   if (run.castIndex < 0) throw new Error(`real combat: ${unit} never had its ${rc.anchorName(anchor)}${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
   const lead = rc.leadTicksFor(run.castIndex, window);
-  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, catchUp: (from: number) => rc.catchUpBatch(events, from), audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
+  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, catchUp: (from: number) => rc.catchUpBatch(events, from), audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor, afterEndMs) };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
 async function createBoardReplay(mine: string[], theirs: string[], star: number) {
