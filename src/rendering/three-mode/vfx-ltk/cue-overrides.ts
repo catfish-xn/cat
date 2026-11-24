@@ -894,6 +894,14 @@ export const UNPINNED_BEAM_SYSTEMS: Readonly<Record<string, string>> = {
  * Emitters of a system left undrawn, by emitter name: an emitter meant to flash once at the cast that glares for the
  * whole of a stretched cue, or one measured to draw wrong on the board and held back until it is checked.
  */
+/**
+ * Attached-mesh emitters that name a static mesh of their own (loader.ts attachedMeshOfItsOwn), drawn as that mesh instead
+ * of being left undrawn, by system. A whitelist (Fable 11-24, after a scan of every exported system): only Renata's crit
+ * missile body is drawn. Sevika's punch-hit bubble, the other such case, stays muted (MUTED_EMITTERS).
+ */
+export const ATTACHED_OWN_MESH_DRAWN: Readonly<Record<string, readonly string[]>> = {
+  d7729373: ['Alpha_Bullet', 'Add_Bullet'],
+};
 export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // Nunu R_Cas runs for the 3 s channel (authored far shorter). Its two white ground flashes kept a radial glare in the middle
   // of the pool the whole time; in 14.24 the channel is a dim green mist and only the blast (R_full_explo) flares

@@ -4471,6 +4471,14 @@
       "currentSha256": "581b33054dbaabe02846713297989af5deaffbb9431ca53e274dde1692d4ceeb",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-attached-own-mesh.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3129,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8bf916afeafc4a32df9b8a4d2ed1f46aff011a2fdf07db52a2a4256729c9c169",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-attack-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
