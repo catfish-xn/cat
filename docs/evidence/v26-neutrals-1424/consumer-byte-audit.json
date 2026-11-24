@@ -677,9 +677,9 @@
     },
     "tests/bracer-multikill-stacks.test.ts": {
       "previousBytes": 36176,
-      "currentBytes": 44165,
+      "currentBytes": 44495,
       "previousSha256": "d97f04bd2c19cd029244e6036ebab3a487dca4ecbe140936af56c9f0047f1c88",
-      "currentSha256": "28c2bff5d365a484ed38f1b0ce4399a9d5d3c4000fd4e16ffdd6e8b505fbb9a2",
+      "currentSha256": "65fab84c5bc8e3b9dedc00e5ddd4b8f5d7da909ccc7aefcdc01c569f05a1ab97",
       "firstDifferentByte": 9
     },
     "tests/c19-missed-pulse.test.ts": {
@@ -1479,6 +1479,13 @@
       "currentSha256": "7dc6b518dbdb117f2d9a511120d5a28659e195712ae228273f43fc02350bb75d",
       "firstDifferentByte": 6336
     },
+    "tests/g2-3-identity.test.ts": {
+      "previousBytes": 13137,
+      "currentBytes": 13248,
+      "previousSha256": "1b9e01481d6c8e71778c3a3f94ab16d894ce63c56ea75d96dcca1784582f7e6a",
+      "currentSha256": "141a10e7264f06e55756a1f0cdc2ed7159a43e30fe709291312ccb39b6d164cf",
+      "firstDifferentByte": 6132
+    },
     "tests/g2-3-jayce-forge-allies.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2042,9 +2049,9 @@
     },
     "tests/m8-b4-tear.test.ts": {
       "previousBytes": 6092,
-      "currentBytes": 8117,
+      "currentBytes": 9197,
       "previousSha256": "b571e426d7ead9c5e19409fce5b4a968a7128533ceaccb6cdc7299dc35d770f2",
-      "currentSha256": "c09c4a003dab727cd4253b033dbd2d203eb2ecb502419109b29d9d4d24bb5bee",
+      "currentSha256": "c31a3a7e6dbc7da2c3e2082337a8150265780f87eecced78553330968da18201",
       "firstDifferentByte": 9
     },
     "tests/m8-b5-equipment-history.test.ts": {
@@ -3501,10 +3508,10 @@
     },
     "tests/server/batch5-g5-pipeline-room.test.ts": {
       "previousBytes": 14719,
-      "currentBytes": 16172,
+      "currentBytes": 17372,
       "previousSha256": "d4abd6cef2586bac97af647d3f3d2f5b3f701a1c7daf1ca35f723f606f725949",
-      "currentSha256": "60a6f0625dde04c172f10247d0b20dc907df577195145e79b62394e0386b3995",
-      "firstDifferentByte": 3967
+      "currentSha256": "4521371ebaaa70ac687b9aa8709eb359e8d36628760b0ea8504ce1d5134caf7f",
+      "firstDifferentByte": 691
     },
     "tests/server/batch5-g6-anger-issues.test.ts": {
       "previousBytes": 7949,
@@ -3764,9 +3771,9 @@
     "tests/server/menaces-expiry-room.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9565,
+      "currentBytes": 9918,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0e3c0553d0d0adadeb2ea44c46f3b8cf243a14b27b6aab60cf5bbed00c6b37dd",
+      "currentSha256": "e833c038467307cb0e782cd93ef8d94e505184606f1b6b64a4408cddfc90b90b",
       "firstDifferentByte": 0
     },
     "tests/server/net/v17-avarice-reconnect.test.ts": {
@@ -3786,9 +3793,9 @@
     "tests/server/orb-ledger-partial-forge-restore.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7635,
+      "currentBytes": 7885,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8460300f339abf0a9e8cf8f852c8231dde8ee2277098dd8da3f98fd0a37ac62e",
+      "currentSha256": "4dfd0de1d01390f300f17c5694271c94a600dcbc9bc2a8269af9663a92817cfe",
       "firstDifferentByte": 0
     },
     "tests/server/pairing-room.test.ts": {
