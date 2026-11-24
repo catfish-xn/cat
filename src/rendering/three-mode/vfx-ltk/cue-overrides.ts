@@ -395,6 +395,16 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '4ecddce4', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Scope_Loc', delay: 0, duration: 0.5 },
     { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
   ],
+  // Ekko's list as exported, but his passive's burst 970252f2 plays until its own particles have all but gone (its petals,
+  // sparks and glow outlasted the exported second): played to where the asset's own visible weight falls to almost nothing
+  // (拟合，非原版数值, 11-24).
+  ekko: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'Spine', delay: 0.26666666666666666, duration: 1.5 },
+    { system: '006b32b1', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '5af49b76', action: 'cast', event: 'hit', delay: 0, duration: 0.5 },
+    { system: '970252f2', action: 'cast', event: 'hit', delay: 0.6, duration: 1.57 },
+    { system: 'dda9e01c', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
+  ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
   scar: [
     { system: '0f2af66b', action: 'attack', event: 'hit', delay: 0.2990000089009603, duration: 1.5 },

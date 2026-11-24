@@ -4763,6 +4763,14 @@
       "currentSha256": "8f7dfd2e631c324556b9edeb5bf3a8f0da85be17fa7fa44222637c96b1854540",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-hit-cue-own-fade.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1270,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "82b5b7ca2b104deeb3deb4328ddb29fb2e2135e32ac855f4397e2862277f13b0",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-importance.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
