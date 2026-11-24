@@ -212,6 +212,11 @@ export function createBatch2VfxBridge(host: Host) {
         host.stopSystems?.(event.sourceId, [VI_HAND_TRAIL]);
         play('vi', event.sourceId, [viTargets.get(event.sourceId) ?? event.targetId], 'vi-slam', 'cast', true);
       }
+      // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing.
+      if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
+        // The rocket's flash and flight as it leaves; its explosion at the board's centre where it lands.
+        play('jinx', event.sourceId, [event.targetId], event.type === 'abilityProjectileLaunched' ? 'jinx-rocket-fire' : 'jinx-rocket-boom', 'cast', true);
+      }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
       // Mel's energy gain plays nothing: its stack visual drew a flat disc at her feet on our board. Held off as a known
