@@ -136,3 +136,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-21 远程普攻前摇 v1（含 11-24 取消情形）: identity-only refresh, `contentDigest` (×2) `33d330e9` → `d6493c11` (`S13_COMBAT_RULES.rangedAttackWindup`, `rangedAttackWindupCancel`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `8e0f13ee07f7749d9f1ae700c4ae4179b425ae4dee26cb6bf2a8e69c887c4658`.
+
+2026-11-24 塞薇卡重拳 v1: identity-only refresh, `contentDigest` (×2) `d6493c11` → `cf1ef035` (`S13_COMBAT_RULES.sevikaPunch`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `ec148800c96619fdfe0b7c74291a2776ace23ed2484eebfea2762bc1cc80b7a7`.
