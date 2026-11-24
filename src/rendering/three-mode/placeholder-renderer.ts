@@ -70,7 +70,7 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, RUMBLE_MISSILE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -1551,6 +1551,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
       batch3?.event(event, currentEffect);
+      // LeBlanc's chain: from her primary target (the first one her cast names) to each other enemy it binds (cue-overrides.ts
+      // LEBLANC_CHAIN_FROM_PRIMARY); never from her, never to the primary itself.
+      if (currentEffect && !reducedMotion() && event.type === 'cast' && event.completed !== false && pieces.get(event.sourceId)?.definitionId === 'leblanc') {
+        const [primary, ...others] = [...new Set(event.targetIds)];
+        if (primary && others.length) ltk?.play('leblanc', primary, others, 'passive');
+      }
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       // Renata's own E_Shield when it is ready; the procedural bubble otherwise.
@@ -1626,6 +1632,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
       // Before the animation gate: these events move no unit, so ANIMATION_EVENTS does not list them.
       if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
+      if (event.type === 'abilityEffectEnded' && event.effect === LEBLANC_CHAIN_FROM_PRIMARY.effect)
+        for (const id of event.targetIds ?? []) ltk?.stopSystems(id, [LEBLANC_CHAIN_FROM_PRIMARY.system]);
       // Rule events that already end a state: the visuals listed for them end with it (cue-overrides.ts CUE_RULE_STOPS).
       if (event.type === 'bloodFrenzyChanged' && !event.active) ltk?.stopSystems(event.unitId, CUE_RULE_STOPS.frenzyEnded.systems);
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
