@@ -194,7 +194,8 @@ export function createBatch2VfxBridge(host: Host) {
         const record = melCasts.get(event.sourceId)?.get(event.actionSeq), third = record?.third === true;
         // Each bolt flies the rules' own flight (champions/mel.ts MEL_BOLT_FLIGHT) from where she stands as it leaves: one
         // small arc per bolt of her plain cast.
-        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : 'mel-bolt');
+        // Consecutive plain-cast bolts swing to opposite sides (champions/mel.ts MEL_BOLT_CURVE), by their place in the cast.
+        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : event.ordinal % 2 ? 'mel-bolt-alt' : 'mel-bolt');
         // Its hit when it lands on a target still there (a bolt whose target died in flight lands on nothing). A plain cast's
         // hit plays once per target, as its first bolt lands; its later bolts land with their arcs only (self-chosen: a hit
         // for every bolt would crowd the board: self-chosen, not original, for the on-screen cap; a known-difference candidate, Fable 11-21).

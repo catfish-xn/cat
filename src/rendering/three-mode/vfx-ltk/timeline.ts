@@ -62,6 +62,12 @@ export interface TimelineCue {
    */
   readonly arc?: { readonly gravity: number; readonly targetOffset: number };
   /**
+   * A projectile's flight as a fixed curve instead of a straight line (the engine's fixed-time Hermite spline, as a perStrike
+   * fan's strikes fly): its start and end tangents in the target-facing frame, as shares of the distance. Its ends and its
+   * flight time stay the cue's own. A perStrike fan's own curve takes its place.
+   */
+  readonly curve?: StrikeCurve;
+  /**
    * One row per strike: for a cast whose rules strike several times (its targets list keeps one entry a strike, repeats
    * included; Heimerdinger's rockets), this cue plays once per entry instead of once per distinct target. The k-th of n
    * starts `strikeOffsetTicks(k, n, …)` rule ticks after the cue's delay, and a projectile row with `fan` flies a curve that

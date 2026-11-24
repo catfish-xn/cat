@@ -198,6 +198,9 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.selfFlight !== undefined && (typeof cue.selfFlight !== 'boolean' || cue.event !== 'projectile'))
         || (cue.playOut !== undefined && (typeof cue.playOut !== 'number' || !(cue.playOut > 0) || cue.playOut > 2))
         || (cue.giveWay !== undefined && typeof cue.giveWay !== 'boolean')
+        || (cue.curve !== undefined && (cue.event !== 'projectile' || typeof cue.curve !== 'object' || cue.curve === null
+          || ![(cue.curve as { control1?: unknown }).control1, (cue.curve as { control2?: unknown }).control2].every(v => Array.isArray(v) && v.length === 3
+            && v.every(x => finite(x) && Math.abs(Number(x)) <= 4))))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !(TIMELINE_VARIANTS as readonly string[]).includes(cue.variant)))
         || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
