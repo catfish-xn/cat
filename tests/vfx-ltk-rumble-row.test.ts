@@ -39,7 +39,7 @@ describe('Rumble row strikes', () => {
     expect(RUMBLE_MISSILE.step).toBe(0.05);
     expect(RUMBLE_MISSILE.fall).toBeLessThanOrEqual(RUMBLE_MISSILE.step);
     for (let k = 1; k < RUMBLE_STRIKES; k++) expect(Math.max(0, k * RUMBLE_MISSILE.step - RUMBLE_MISSILE.fall) + drop!.travelSeconds!).toBeCloseTo(k * RUMBLE_MISSILE.step, 9);
-    // The whole row shows within its five explosions' stagger: a fifth of a second.
+    // The whole row shows within its five explosions' stagger: a fifth of a second (fitted, not original data).
     expect((RUMBLE_STRIKES - 1) * RUMBLE_MISSILE.step).toBeCloseTo(0.2, 9);
     // His own row keeps the muzzle and rocket layers only: the fall and explosion are the two skills above.
     expect(CUE_OVERRIDES.rumble!.map(cue => cue.system)).toEqual(['0f2af66b', '59e2ab23', '5b8e7f02', '7562ce09']);
