@@ -2043,9 +2043,9 @@
     },
     "tests/m8-b4-r3b-lifecycle.test.ts": {
       "previousBytes": 7029,
-      "currentBytes": 7420,
+      "currentBytes": 7472,
       "previousSha256": "4333ae2e6c759d9c4109e04d4e40b544bfdbf90e93a18f8df7d7bf99c6917986",
-      "currentSha256": "1c7e9a6095d28cc94d49ed2c093312d52f489043aed2bcc4d4f92a85eb61af48",
+      "currentSha256": "def88b29bd265b421efff82fd990d487235aee28a226d61d1e70129e028197bb",
       "firstDifferentByte": 4310
     },
     "tests/m8-b4-rod.test.ts": {
@@ -2702,9 +2702,9 @@
     "tests/ranged-attack-windup.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 14973,
+      "currentBytes": 16372,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dcab06d5c50749bfa594b7f9b928a105693dc9858b9c36e58bc418d219b28d81",
+      "currentSha256": "71291f21edb0a52ca8a2bb3cbd4931986e9dac65c44dfaf6d33e9e2fc678404a",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {
