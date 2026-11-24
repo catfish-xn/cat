@@ -185,6 +185,8 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
   const enemyProjection = readRoundEnemyProjection(state.round,openingEncounterId(state));
   // Mechanic receipts are validated below; until then a corrupt container grants no crown slot (only stricter).
   requireValue(!Object.hasOwn(raw,'g23'),'obsolete G23 state');
+  // Enemy items named by a recording tool (CombatStrategyInputs.recordingEnemyItems) are never part of a save.
+  requireValue(!Object.hasOwn(raw,'recordingEnemyItems'),'recording-enemy-items');
   mechanicCheck(() => validateG23RewardSources(state), 'G23 reward authority');
   let teamSizeBonus = 0;
   try { teamSizeBonus = crownTeamSizeBonus(readG23Progress(state)); } catch { teamSizeBonus = 0; }
