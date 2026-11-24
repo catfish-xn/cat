@@ -24,6 +24,23 @@ import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/**
+ * Hit cues that run until their system has all but faded out by its own curves (fitted, not original data): the time,
+ * from the system's start, after which what is left of it stays under a twentieth of its peak (a Linux scan of the
+ * system played uncut, static anchor), capped at HIT_TAIL_MAX_SECONDS. The default cue time cut each of these while its
+ * layers were still clearly lit. They have no rule event of their own to end on.
+ */
+export const HIT_TAIL_MAX_SECONDS = 4;
+export const HIT_TAIL_SECONDS: Readonly<Record<'bc4a9e0d' | '9d413df0' | 'a5373796' | 'fb4ea008', number>> = Object.freeze({
+  // Akali's mark over her target and its ground light: lit far longer than the cap; its rule exposure is a state of its own.
+  bc4a9e0d: HIT_TAIL_MAX_SECONDS,
+  // Zyra's vine burst on each enemy struck: its smoke.
+  '9d413df0': 1,
+  // Darius's spin hit: its blood spray.
+  a5373796: 0.88,
+  // Tristana's blast on the ground: its wake and wake dust.
+  fb4ea008: 0.97,
+});
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
 export const MALZAHAR_GATE_DELAY = 0.2;
 /**
@@ -181,8 +198,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '7ce6b652', action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(0.5) },
     { system: '7ce6b652', action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, others: true, targetLimit: 2, optional: true, scale: kept(0.5) },
     { system: 'b888a24f', action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, bone: ground, primary: true, scale: kept(1.6) },
-    { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.4, bone: chest, primary: true, scale: hugged(1) },
-    { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: 0.6, bone: chest, others: true, scale: hugged(1) },
+    // The burst on each struck enemy runs until it has all but faded out by the system's own curves (HIT_TAIL_SECONDS); its
+    // smoke was cut while still thick before.
+    { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: HIT_TAIL_SECONDS['9d413df0'], bone: chest, primary: true, scale: hugged(1) },
+    { system: '9d413df0', action: 'passive', event: 'hit', delay: 0, duration: HIT_TAIL_SECONDS['9d413df0'], bone: chest, others: true, scale: hugged(1) },
   ],
   // Draven (batch1-events.ts): an empowered axe that lands bounces off the enemy it hit and comes down into his hand in a
   // high arc. Travel and arc are our own (自定，非原版); decoration, never taking a slot from a skill; it goes at once when either
@@ -372,7 +391,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '7d4c2d45', action: 'cast', event: 'cast-start', bone: 'Buffbone_Glb_Weapon_1', delay: CAST_WINDUP_TICKS.tristana / 20 - TRISTANA_SHELL_TRAVEL - 0.05, duration: 0.5 },
     { system: '98c2c347', action: 'cast', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', targetBone: chest, delay: CAST_WINDUP_TICKS.tristana / 20 - TRISTANA_SHELL_TRAVEL, duration: TRISTANA_SHELL_TRAVEL + 0.2, travelSeconds: TRISTANA_SHELL_TRAVEL, primary: true },
     { system: '5930ca7b', action: 'cast', event: 'hit', bone: chest, delay: CAST_WINDUP_TICKS.tristana / 20, duration: 0.8, primary: true },
-    { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: CAST_WINDUP_TICKS.tristana / 20, duration: 0.7, primary: true },
+    { system: 'fb4ea008', action: 'cast', event: 'hit', bone: ground, delay: CAST_WINDUP_TICKS.tristana / 20, duration: HIT_TAIL_SECONDS.fb4ea008, primary: true },
   ],
   // R (Air Raid): the exported list without the comet (R_Bombardment_Mis) and its burst (R_Bombardment_Impact). The export
   // kept the comet as a cast-start with no bone, so it stood on Caitlyn's feet (11-03 castcmp review; #622 keyframes), and
@@ -585,7 +604,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd900f5b3', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '76f80db8', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.35, travelSeconds: 0.15, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '838f31e4', action: 'cast', event: 'hit', delay: 0.28, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: 0.3, duration: HIT_TAIL_SECONDS.bc4a9e0d, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
@@ -658,7 +677,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     // Its five emitters already wait most of a second before their first particle; a 0.6 s cue delay on top pushed the blade
     // ring to the very end of the cue (11-08 audit). The original shows it with the swing and fades it soon after.
     { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'Buffbone_Glb_Ground_Loc' },
-    { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
+    { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: HIT_TAIL_SECONDS.a5373796, optional: true },
     { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
   // Leona: the asset index bakes an older list, the same systems with her end burst cut short and no burst at the cast;
