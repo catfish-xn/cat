@@ -2702,9 +2702,9 @@
     "tests/ranged-attack-windup.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 16372,
+      "currentBytes": 19458,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "71291f21edb0a52ca8a2bb3cbd4931986e9dac65c44dfaf6d33e9e2fc678404a",
+      "currentSha256": "555c4dd0a5c82be9e977685252da9de5fdb25cf26a726560be2f180f85e36a67",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {
