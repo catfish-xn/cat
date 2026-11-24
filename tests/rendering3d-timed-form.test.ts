@@ -258,9 +258,33 @@ describe('timed form actions', () => {
     expect(mixer.resolvePlayback('cast')?.clips).toEqual(['spell']);
     mixer.dispose();
   });
+  it('a snapshot without the form\'s fields (no timedFormClips, no timedFormAnimations) keeps the model\'s own actions', () => {
+    // Snapshots exported before the form's clips (test server, 0c59, e39e): the form only shows and hides its submeshes.
+    const root = skinned();
+    const clips = [...['rest', 'walk', 'swing', 'spell'].map(clip)];
+    const mixer = new UnitAnimationMixer(root, clips, { idle: 'rest', move: 'walk', attack: 'swing', cast: 'spell' },
+      { timedForm: { show: ['Alt'], hide: [] }, submeshVisibility: { initiallyHidden: ['Alt'] } });
+    const running = () => [...(mixer as unknown as { mixer: { _actions: { isRunning(): boolean; getClip(): { name: string } }[] } }).mixer._actions]
+      .filter(a => a.isRunning()).map(a => a.getClip().name);
+    mixer.apply({ state: 'idle', previous: 'idle', blendSeconds: 0, loop: true, revision: 1 }); mixer.update(0.05);
+    expect(() => mixer.setTimedForm(true)).not.toThrow();
+    expect(mixer.resolvePlayback('cast')?.clips).toEqual(['spell']);
+    mixer.update(0.5);
+    expect(visible(root)).toEqual(['Alt', 'Base']);
+    expect(running()).toEqual(['rest']);
+    expect(mixer.resolvePlayback('attack')?.clips).toEqual(['swing']);
+    mixer.apply({ state: 'move', previous: 'idle', blendSeconds: 0, loop: true, revision: 2 }); mixer.update(0.1);
+    expect(running()).toContain('walk');
+    mixer.setTimedForm(false); mixer.update(0.1);
+    expect(visible(root)).toEqual(['Base']);
+    expect(mixer.resolvePlayback('cast')?.clips).toEqual(['spell']);
+    mixer.dispose();
+  });
   it('the manifest contract takes timedFormAnimations and refuses unknown keys or empty names', () => {
     const manifest = (timedFormAnimations: unknown) => ({ schemaVersion: 1, models: { x: { path: 'models/x/model.glb', timedFormAnimations } } });
     expect(() => assertManifest(manifest({ idle: 'a', move: 'b', attack: 'c', attackAlt: 'd', enter: 'e' }))).not.toThrow();
+    // An entry without the field (older snapshots) is valid too.
+    expect(() => assertManifest({ schemaVersion: 1, models: { x: { path: 'models/x/model.glb' } } })).not.toThrow();
     for (const bad of [[], { run: 'a' }, { idle: '' }, { idle: 3 }]) expect(() => assertManifest(manifest(bad))).toThrow('invalid-timed-form-animations');
   });
 });
