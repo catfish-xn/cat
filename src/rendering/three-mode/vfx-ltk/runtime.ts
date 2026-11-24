@@ -880,6 +880,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
       for (const run of running) if (run.target === targetId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
+    /**
+     * As stopSystemsOn, for a unit's own cast-starts of these systems (no target: a state it put on itself, Lux's self-cast
+     * bubble). Its cues on other units are untouched.
+     */
+    stopSystemsOnSelf(unitId: string, systems: readonly string[]) {
+      for (let at = waiting.length - 1; at >= 0; at--) { const spawn = waiting[at].spawn; if (spawn.sourceId === unitId && spawn.targetId === undefined && systems.includes(spawn.system)) waiting.splice(at, 1); }
+      for (const run of running) if (run.source === unitId && run.target === undefined && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
+    },
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
     stopAction(sourceId: string, action: TimelineAction) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && (waiting[at].spawn.action ?? 'cast') === action) waiting.splice(at, 1);

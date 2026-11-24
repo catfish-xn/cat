@@ -22,6 +22,8 @@ import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES, VI_LANDING } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
+import { S13_ABILITY_DATA } from '../../../simulation/content/abilities';
+import { COMBAT_TICK_MS } from '../../../simulation/combat-types';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
@@ -306,6 +308,19 @@ const ZIGGS_BOMB = (() => {
 })();
 /** When the flask lands on the ally's head: what it brings starts then. */
 const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
+/** When Akali's mark (bc4a9e0d) lands on her target after the cast: with her shuriken's hit. */
+export const AKALI_MARK_DELAY = 0.3;
+/**
+ * How long Akali's mark shows: until the rules' exposure on that target ends (combat-g2-2.ts akali: from the tick after the
+ * cast, the ability's Duration), counted from when the mark lands. Read from the ability data, so a change of the rule's time
+ * moves the mark with it. The exposure has no other end in the rules (it is not consumed or cleansed; a recast on the same
+ * target restarts it, as a recast replaces the mark: SUSTAIN_REFRESH); the target's death takes the mark at once (SUSTAIN_CAPS).
+ */
+export const AKALI_MARK_SECONDS = (() => {
+  const ticksPerSecond = 1000 / COMBAT_TICK_MS;
+  const longest = Math.max(...S13_ABILITY_DATA['akali-ability']!.variables.Duration!);
+  return (1 + Math.round(longest * ticksPerSecond)) / ticksPerSecond - AKALI_MARK_DELAY;
+})();
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Elise's front-row cast as exported (batch3/elise.ts, baked into the asset index), with the Cocoon hit 6d6525e8 playing to its
   // system's own end instead of the default: no rule event ends it (11-15).
@@ -585,7 +600,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd900f5b3', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '76f80db8', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.35, travelSeconds: 0.15, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '838f31e4', action: 'cast', event: 'hit', delay: 0.28, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    // Her mark on the primary target, held until the rules' exposure on it ends (SUSTAIN_CAPS: AKALI_MARK_SECONDS).
+    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: AKALI_MARK_DELAY, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
@@ -668,7 +684,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
   // It wraps her body, so it shrinks with the body (fx-size.ts measuredOnBody).
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
+  // Its end fades from its stop (fadeOut) instead of cutting there, as the other shields that end with their layer do: a broken
+  // shield ends it earlier (CUE_RULE_STOPS abilityShieldEndedOnHolder).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), fadeOut: true, ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
   // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
   // plays from the cast and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS), played at that
@@ -1115,7 +1133,13 @@ export const CUE_RULE_STOPS = {
   abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0', '2f1f3b60'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
-  abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] }, on: 'target' },
+  abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'],
+    // Lux's bubble on the ally she shields and Renata's shield on each ally her missiles shield: gone when that layer breaks
+    // or runs out (11-24).
+    'lux-ability': ['44c9516a'], 'renata-ability': ['fdf79734'] }, on: 'target' },
+  // The same for a shield a caster's cast put on itself, drawn as its own cast-start (no target): Lux's self-cast bubble goes
+  // when her own layer ends (the runtime's stopSystemsOnSelf). Her bubbles on allies are not touched.
+  abilityShieldEndedOnSelf: { systems: { 'lux-ability': ['44c9516a'] }, on: 'self' },
   // Viktor's board-wide warning goes when his slam lands (the ability's later direct magic hit, batch2-bridge.ts).
   viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
   // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
@@ -1126,6 +1150,9 @@ export const CUE_RULE_STOPS = {
   // (`<jayce>:g23-forge`, batch2-bridge.ts) and goes when the buff his cast gave ends on an ally (sustain-stops.ts ties each
   // buffed ally to its forge). Another stat buff on that ally ending first ends it too (the display event names no source).
   allyStatusEnded: { systems: { 'stat-buff': ['afb2ec69'] }, on: 'source' },
+  // Elise's cocoon on a target goes when that target is no longer stunned (its control in the board frame ends: the rules'
+  // stun state, whatever else stunned it too; sustain-stops.ts createControlEndStops). Her spider form is not touched (11-24).
+  stunEnded: { systems: ['6d6525e8'], on: 'target' },
   // Vex's opening area holds until her delayed second hit lands on that target (the next direct ability hit after the first).
   vexSecondHit: { systems: ['8682c9ee', 'eb9da1d5'], on: 'target' },
 } as const;
@@ -1152,6 +1179,8 @@ export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   // Ekko's mark on a target: the shred stays for the whole combat in the rules, so it shows 2 s after each hit, refreshed by
   // the next (自定，非原版, Fable 11-19 GAP): held until death it would keep a slot per target hit, all fight long.
   '5af49b76': 2,
+  // Akali's mark: exactly the rules' exposure time (AKALI_MARK_SECONDS), which nothing ends early; death ends it at once.
+  'bc4a9e0d': AKALI_MARK_SECONDS,
   '8682c9ee': 1.8, // Vex opening area → her delayed second hit
   'eb9da1d5': 1.8,
 };
