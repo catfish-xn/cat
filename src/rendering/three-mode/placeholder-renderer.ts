@@ -712,8 +712,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   // Persistent layers ended by a status or a later hit (sustain-stops.ts).
   const sustainStops = createSustainStops(id => pieces.get(id)?.definitionId);
-  // A timed form (Dr. Mundo's ultimate body) follows its rule events over whatever clip plays (timed-form-events.ts).
-  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId);
+  // A timed form (Dr. Mundo's ultimate body, Swain's wings) follows its rule events over whatever clip plays (timed-form-events.ts).
+  const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.form);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
   // Optional converted LTK systems share the existing asset root, preloader and renderer.
   // The unit a caster looks at, else its nearest live drawn foe on the board: where a cast on itself turns its effect.

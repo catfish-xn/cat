@@ -3088,12 +3088,20 @@
       "currentSha256": "3b16646569504809a294ee5df8f952230d5b31bef5cc3afefc426c59d5151740",
       "firstDifferentByte": 142
     },
+    "tests/rendering3d-timed-form-renderer.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7731,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "8f7b5f69c64d454c545598b1809098b5cd0aefecdae8699de7e8a4ab5c00295a",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-timed-form.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6272,
+      "currentBytes": 20554,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f935a200afa84aa5311106ac4bdd53a3b75b8c27c42e78fac2d279108138786a",
+      "currentSha256": "4cb5642725fea1e17e57989b1431edf32d1adb7af48620850daf443738955667",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-trait-props.test.ts": {
