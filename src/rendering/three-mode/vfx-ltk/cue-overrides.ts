@@ -309,10 +309,10 @@ const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
 /** When Akali's mark (bc4a9e0d) lands on her target after the cast: with her shuriken's hit. */
 export const AKALI_MARK_DELAY = 0.3;
 /**
- * The rules' exposure from Akali's cast (combat-g2-2.ts akali: from the tick after the cast, her ability's Duration in rule
- * ticks), mirrored here as CAST_WINDUP_TICKS is: importing the ability data from the 3D code pulls it into the render3d chunk
- * and makes the 2D entry load that chunk eagerly (rendering3d-isolation). tests/vfx-ltk-status-follows-rules.test.ts checks it
- * against the ability data and a real cast, so a change of the rule's time fails there until this follows it.
+ * Akali's exposure as the rules time it (from the tick after her cast, for her ability's Duration in rule ticks), mirrored here
+ * as CAST_WINDUP_TICKS is: importing the ability data from the 3D code pulls it into the render3d chunk and makes the 2D entry
+ * load that chunk eagerly (rendering3d-isolation). Kept in step with the rules' constant, enforced by
+ * tests/vfx-ltk-status-follows-rules.test.ts.
  */
 export const AKALI_EXPOSURE = Object.freeze({ fromTick: 1, ticks: 80, ticksPerSecond: 20 } as const);
 /**
