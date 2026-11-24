@@ -60,5 +60,4 @@ const triage = (...ids: string[]): Readonly<Record<string, DroppedSystem>> =>
 export const SPELL_UNPLAYED_SYSTEMS: Readonly<Record<string, Readonly<Record<string, DroppedSystem>>>> = {
   caitlyn: triage('247720fe', '480f2392', '92c52047', 'b5a9a996'),
   jayce: triage('9eba4332'),
-  renata: triage('d7729373'),
 };
