@@ -6,7 +6,7 @@ import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { CUE_EXTRA_SKILLS, CUE_RULE_STOPS, STUN_END_FADE_SECONDS, SUSTAIN_CAPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
-import { num, syntheticSystem } from './vfx-ltk-synthetic';
+import { constant, num, syntheticSystem } from './vfx-ltk-synthetic';
 
 // 11-24, second batch: Sevika's roulette shield goes when her shield layer ends; Zyra's root cluster on her rooted target
 // stays while that target is stunned and eases out when the stun ends (as Elise's cocoon now does too).
@@ -36,11 +36,14 @@ describe('which rule state ends them', () => {
 });
 
 describe('the runtime: a state that ends early ends its display, one that holds keeps it', () => {
-  // Synthetic systems only (made-up numbers), each emitting far longer than any cue here.
-  const long = () => syntheticSystem({ lifetime: num(30) });
+  // Synthetic systems only (made-up numbers): each emits, and each particle lives, far longer than any cue here, so only the
+  // cue's end, a stop or a fade ends a run.
+  const long = () => syntheticSystem({ lifetime: num(30), particleLifetime: constant(num(30)), rate: constant(num(1)) });
   const skills: Record<string, TimelineCue[]> = {
     shield: [{ system: SEVIKA_SHIELD, action: 'cast', event: 'cast-start', delay: 0, duration: 4 }],
     root: [{ system: ZYRA_ROOT, action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, primary: true }],
+    // The same root, landing later (a row still waiting when the stun ends).
+    'root-later': [{ system: ZYRA_ROOT, action: 'passive', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, primary: true }],
   };
   async function setup() {
     const systems = [SEVIKA_SHIELD, ZYRA_ROOT];
@@ -67,22 +70,32 @@ describe('the runtime: a state that ends early ends its display, one that holds 
     expect(kept.runtime.active).toBe(1);
   });
 
-  it('Zyra: the root stays past its old end while the target is still stunned, and eases out once the stun ends', async () => {
+  it('Zyra: the root stays while the target is stunned, another unit\'s stun ending leaves it, its own ending eases it out', async () => {
     const { runtime, step } = await setup();
     runtime.play('root', 'zyra', ['foe'], 'passive');
-    // Held (SUSTAIN_CAPS): still there after the old 1.4 s end.
-    step(1.6); expect(runtime.active).toBe(1);
-    // Another unit's stun ending touches nothing.
-    runtime.fadeSystemsOn('other', [ZYRA_ROOT], STUN_END_FADE_SECONDS); step(0.1); expect(runtime.active).toBe(1);
+    step(1); expect(runtime.active).toBe(1);
+    // Another unit's stun ending touches nothing, for longer than the fade.
+    runtime.fadeSystemsOn('other', [ZYRA_ROOT], STUN_END_FADE_SECONDS); step(STUN_END_FADE_SECONDS + 0.05); expect(runtime.active).toBe(1);
+    // Its own target's stun ends: gone within the fade, well before its cap.
     runtime.fadeSystemsOn('foe', [ZYRA_ROOT], STUN_END_FADE_SECONDS);
     step(STUN_END_FADE_SECONDS / 2); expect(runtime.active).toBe(1);
     step(STUN_END_FADE_SECONDS); expect(runtime.active).toBe(0);
   });
 
+  it('Zyra: a root still waiting to land when the stun ends never shows', async () => {
+    const { runtime, step } = await setup();
+    runtime.play('root-later', 'zyra', ['foe'], 'passive'); step(0.1);
+    expect(runtime.active).toBe(0);
+    runtime.fadeSystemsOn('foe', [ZYRA_ROOT], STUN_END_FADE_SECONDS);
+    step(1); expect(runtime.active).toBe(0);
+  });
+
   it('Zyra: with no stun end it still goes by its cap', async () => {
     const { runtime, step } = await setup();
     runtime.play('root', 'zyra', ['foe'], 'passive');
-    step(SUSTAIN_CAPS[ZYRA_ROOT]! + 0.1);
+    // Held past its old end (it faded from 0.8 s and was gone at 1.4 s).
+    step(1.6); expect(runtime.active).toBe(1);
+    step(SUSTAIN_CAPS[ZYRA_ROOT]! - 1.6 + 0.1);
     expect(runtime.active).toBe(0);
   });
 });
