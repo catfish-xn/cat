@@ -68,4 +68,14 @@ describe('a killing blow\'s number shows where its target fell', () => {
     floats.render(320, new Map());
     expect(shown()).toEqual([]);
   });
+  it('reset forgets who fell and where: after it, a fallen unit hit with no anchor shows no number', () => {
+    const { floats, shown } = setup();
+    floats.render(0, new Map([['foe', at(200)]]));
+    floats.push([death(3, 'foe')], 100);
+    floats.render(110, new Map());
+    floats.reset();
+    floats.push([packet(20, 'foe', 70)], 1000);
+    floats.render(1010, new Map());
+    expect(shown()).toEqual([]);
+  });
 });
