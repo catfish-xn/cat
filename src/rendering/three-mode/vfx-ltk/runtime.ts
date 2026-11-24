@@ -875,6 +875,14 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
       for (const run of running) if (run.source === sourceId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
+    /**
+     * As stopSystems, easing those runs out over `seconds` instead: every layer of the run fades together by the same factor
+     * and keeps its colour (a stop ends each layer at its own pace, so the longest-lived layer is left alone on screen).
+     */
+    fadeSystems(sourceId: string, systems: readonly string[], seconds: number) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.source === sourceId && systems.includes(run.system) && !run.stopped) { run.fx.fade(seconds); run.fading = true; }
+    },
     /** As stopSystems, for the runs of these systems on one unit (whoever cast them): the rule's effect on that unit ended. */
     stopSystemsOn(targetId: string, systems: readonly string[]) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);

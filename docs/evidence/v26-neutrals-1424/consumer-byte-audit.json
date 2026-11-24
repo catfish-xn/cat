@@ -5067,9 +5067,9 @@
     "tests/vfx-ltk-status-follows-rules-2.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6461,
+      "currentBytes": 7672,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "46581dcba20144e2ab5aa777a10846d7204ebf58305605b02d4dd17ea42d3252",
+      "currentSha256": "1d9d7083162d46d49866cee78dd664f76a16b754363af29b011ffe80dd11c46f",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-status-follows-rules.test.ts": {

@@ -311,6 +311,8 @@ const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
  * fade of our own (自定，非原版), so the layer leaves with the stun instead of being cut.
  */
 export const STUN_END_FADE_SECONDS = 0.25;
+/** How long a shield's layers (CUE_RULE_STOPS abilityShieldEndedFade) take to ease out when its layer ends: our own (自定，非原版). */
+export const SHIELD_END_FADE_SECONDS = 0.25;
 /** When Akali's mark (bc4a9e0d) lands on her target after the cast: with her shuriken's hit. */
 export const AKALI_MARK_DELAY = 0.3;
 /**
@@ -1145,9 +1147,10 @@ export const CUE_RULE_STOPS = {
   frenzyEnded: { systems: ['8c054bed'], on: 'source' },
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
-  // Sevika's roulette shield too: gone when her shield layer breaks or runs out (11-24).
-  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0', '2f1f3b60'],
-    'sevika-ability': ['518dee63'] }, on: 'source' },
+  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0', '2f1f3b60'] }, on: 'source' },
+  // The same, eased out over SHIELD_END_FADE_SECONDS rather than stopped: Sevika's roulette shield, whose layers live for very
+  // different times, so a stop left its pink rings alone on screen for a moment after the rest had gone (11-25).
+  abilityShieldEndedFade: { systems: { 'sevika-ability': ['518dee63'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
   abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'],
