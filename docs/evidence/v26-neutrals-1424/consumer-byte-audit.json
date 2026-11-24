@@ -4716,6 +4716,14 @@
       "currentSha256": "1e4bf2ec713a597e8538b8045cadb4638908fe91aa055ff5fb8180a5bec56e06",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-garen-cast.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1847,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2bdadf9b490a1789c7ca869d86456378a1d5b603b19d6ab4ac8e09ab3d60aec2",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-give-way.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

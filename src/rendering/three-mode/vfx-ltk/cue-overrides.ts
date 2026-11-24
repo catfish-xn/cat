@@ -31,6 +31,15 @@ export const MALZAHAR_GATE_DELAY = 0.2;
  * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
  */
 export const PLAY_OUT_AT_DEADLINE = 0.5;
+/**
+ * Skill systems that may take more root places than ROOT_PARTICLES_MOST, by system: the most this one run may take. Only for
+ * a system measured past that cap whose later emitters the cap visibly starves (11-24: Garen's landing burst 5bbccb8c measures
+ * about half again past it, and its spark and fire waves, part of its white flash, lost much of their particles). Our own
+ * cap (自定，非原版), measured on the asset.
+ */
+export const ROOT_ROOM_MOST: Readonly<Record<string, number>> = {
+  '5bbccb8c': 640,
+};
 /** Vi's landing group (s13-timelines.ts): played when the rules' slam lands (CUE_EXTRA_SKILLS 'vi-slam', batch2-bridge.ts). */
 export const VI_SLAM_SYSTEMS: readonly string[] = ['18e22631', 'd27b3044', '66c600e8', '84b969e0'];
 /** Vi's right hand's trail: from her cast until the slam lands, where batch2-bridge.ts stops it. */
@@ -333,8 +342,13 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // R: shield on Garen, then one sky beam and one impact on his own ground. Not one copy per target.
   // The landing burst is authored far wider than the original's drawn burst (castcmp-1103); 0.45 keeps it on his feet.
+  // 11-24: his package's cast burst (cbccc667: the energy rising off him and a glow at his feet) and its falling sword
+  // (97c28077: the golden blade dropping from above onto his ground, with its glow) were never cued. Both play from the
+  // cast; the sword's own fall reaches the ground about when the landing burst starts (拟合/自定，非原版).
   garen: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3333333333333333, duration: 1.5 },
+    { system: 'cbccc667', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: ground },
+    { system: '97c28077', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: ground },
     { system: 'ea21ae27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: chest },
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
     { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground, scale: kept(0.45) },

@@ -4,7 +4,7 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { CRIT_ATTACK_HIT, SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { CRIT_ATTACK_HIT, ROOT_ROOM_MOST, SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
 import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
@@ -649,10 +649,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
         if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
         // A system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and reserves
-        // what it holds there, a skill's up to ROOT_PARTICLES_MOST and a plain attack's up to ROOT_PARTICLES_ATTACK_MOST. A
+        // what it holds there, a skill's up to ROOT_PARTICLES_MOST (or its own ROOT_ROOM_MOST) and a plain attack's up to ROOT_PARTICLES_ATTACK_MOST. A
         // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
-        const most = skill ? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
+        const most = skill ? ROOT_ROOM_MOST[id] ?? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
         const flying = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds);
         const travel = flying?.travelSeconds, scale = flying ? (flying.scale ?? 1) * cueSize(flying) : 1;
         const seconds = Math.min(longest.duration, 10);
