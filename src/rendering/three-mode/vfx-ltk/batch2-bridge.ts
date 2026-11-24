@@ -190,7 +190,7 @@ export function createBatch2VfxBridge(host: Host) {
         if (rolled === 'punch' && event.targetIds[0]) punches.set(event.sourceId, { target: event.targetIds[0], tick: event.tick });
         else punches.delete(event.sourceId);
       }
-      const marker = event.type === 'abilityMarker' && (event.marker as string) === 'sevika-punch-thrown' ? event : undefined;
+      const marker = event.type === 'abilityMarker' && event.marker === 'sevika-punch-thrown' ? event : undefined;
       const thrown = marker ? punches.get(marker.unitId) : undefined;
       if (thrown) thrown.thrown = true;
       const punch = event.type === 'packetDamage' ? punches.get(event.sourceId) : undefined;

@@ -10,6 +10,7 @@ import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { readEmissionMesh } from '../src/rendering/three-mode/vfx-ltk/assets/emissionMesh';
 import { Rng } from '../src/rendering/three-mode/vfx-ltk/engine/utils/Rng';
 import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
+import { SEVIKA_PUNCH_HIT_TICKS } from '../src/simulation/cast-windup';
 import { SEVIKA_PUNCH_IMPACT_LEAD, SEVIKA_SLOT_SECONDS, sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { G23_POLICY } from '../src/simulation/content/g2-3-policy';
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
@@ -98,18 +99,19 @@ describe('batch 2 exact display stages', () => {
     const thrown = (tick: number, arrivalTick: number, unitId = 's') => ({ type: 'abilityMarker', tick, eventSeq: tick, unitId, marker: 'sevika-punch-thrown', cell: { col: 2, row: 3 }, arrivalTick }) as unknown as DisplayCombatEvent;
     b.begin([c,outcome]); b.event(c,true); b.action('cast','s',['target'],c);
     expect(play).toHaveBeenCalledTimes(2);
-    // Stop at 35, hit at 51: the punch starts so its impact lands on tick 51.
-    b.begin([thrown(35,51)]); b.event(thrown(35,51),true);
+    // The rules' marker: the hit SEVIKA_PUNCH_HIT_TICKS after the stop. The punch starts so its impact lands on that tick.
+    const hitTick = 35 + SEVIKA_PUNCH_HIT_TICKS;
+    b.begin([thrown(35,hitTick)]); b.event(thrown(35,hitTick),true);
     expect(play).toHaveBeenCalledTimes(3);
     expect(play.mock.calls[2]).toMatchObject(['sevika','s',['target'],'cast',{skill:'sevika-punch',cancelWithSource:true}]);
     const delay = play.mock.calls[2][4].delay!;
-    expect(delay).toBeCloseTo(16 * .05 - SEVIKA_PUNCH_IMPACT_LEAD, 9);
+    expect(delay).toBeCloseTo(SEVIKA_PUNCH_HIT_TICKS * .05 - SEVIKA_PUNCH_IMPACT_LEAD, 9);
     const cues = sevikaSkills['sevika-punch'], at = (system: string) => delay + cues.find(cue => cue.system === system)!.delay;
-    for (const impact of ['8ccb497d','95fb90ce']) expect(at(impact)).toBeCloseTo(16 * .05, 9);
+    for (const impact of ['8ccb497d','95fb90ce']) expect(at(impact)).toBeCloseTo(SEVIKA_PUNCH_HIT_TICKS * .05, 9);
     expect(at('42ceec5b')).toBeLessThan(at('0badab98'));
     expect(at('0badab98')).toBeLessThan(at('8ccb497d'));
     // The hit's own damage plays no second punch.
-    const hit: DisplayCombatEvent = { ...stormDamage(51), sourceId:'s', damageType:'physical', definitionId:'sevika-ability' };
+    const hit: DisplayCombatEvent = { ...stormDamage(hitTick), sourceId:'s', damageType:'physical', definitionId:'sevika-ability' };
     b.begin([hit]); b.event(hit,true); expect(play).toHaveBeenCalledTimes(3);
     // A hit nearer than the swing: everything at once (no negative delay); a marker of another unit, or one without a punch cast, plays nothing.
     const d = bridge('sevika'); d.bridge.begin([c,outcome]); d.bridge.event(c,true); d.bridge.event(thrown(35,36),true);
