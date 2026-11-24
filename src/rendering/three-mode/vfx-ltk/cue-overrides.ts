@@ -284,6 +284,15 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '36c79ae9', action: 'passive', event: 'projectile', bone: 'L_Hand', delay: 0, duration: 0.8, travelSeconds: 0.6, rank: 'body' },
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0.6, duration: 1.2, rank: 'body' },
   ],
+  // Violet's combo (batch2-bridge.ts): each jab's hit on its target as its damage lands, and the uppercut's on the last hit,
+  // where the export showed both at one fixed moment after the cast.
+  'violet-jab': [
+    { system: '31193cf8', action: 'cast', event: 'hit', delay: 0, duration: 1.5 },
+  ],
+  'violet-uppercut': [
+    { system: '1bcbe1b7', action: 'cast', event: 'hit', delay: 0, duration: 1.5 },
+    { system: '31193cf8', action: 'cast', event: 'hit', delay: 0, duration: 1.5 },
+  ],
   'steb-heal': [
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0, duration: 1.2 },
   ],
@@ -314,6 +323,11 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // system 3d2697ac (its smoke and red flash, with the crow 9ad716c2 that system carries) rather than the bare crow, and
   // to the primary target only for now; the nearby targets get none until the look is judged (Fable 11-21).
   'swain-back': swainBatch3['swain-back']!.map(cue => cue.system === '9ad716c2' ? { ...cue, system: '3d2697ac', primary: true } : cue),
+  // Violet's cast keeps her basic attack's hit only; her combo's hits play from their damage (CUE_EXTRA_SKILLS violet-jab /
+  // violet-uppercut), not on one fixed moment after the cast.
+  violet: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_Buffbone_Glb_Chest_Loc', delay: 0.2, duration: 1.5 },
+  ],
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [

@@ -7,6 +7,7 @@ import { CUE_RULE_STOPS, VI_HAND_TRAIL } from './cue-overrides';
 import { jayceSkill } from './champions/jayce';
 import { SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
 import { melSkill } from './champions/mel';
+import { VIOLET_JAB_TICKS } from '../../../simulation/cast-windup';
 
 interface Unit { definitionId: string; form: 'front' | 'back'; starLevel: number; alive: boolean; disposed?: boolean }
 type Cast = Extract<DisplayCombatEvent, { type: 'cast' }>;
@@ -41,6 +42,9 @@ export function createBatch2VfxBridge(host: Host) {
   // Vi casters' grabbed target (the cast's first target), for her slam; and the tick each slam was drawn on (one per tick).
   const viTargets = new Map<string, string>();
   const viSlamTicks = new Map<string, number>();
+  // Violets in a combo: the cast's target and tick, and how many of its hits have landed. Each hit plays as its own damage
+  // lands (the rules settle the jabs, then the uppercut, each on its own tick); the jabs come first (VIOLET_JAB_TICKS).
+  const violets = new Map<string, { target: string; tick: number; landed: number }>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
@@ -98,6 +102,8 @@ export function createBatch2VfxBridge(host: Host) {
         if (handled) for (const slot of sevikaSlotSkills(outcome!.castVariant!.move, outcome!.outcome)) play(champion, source, targets, slot);
         return handled;
       }
+      // Violet's combo plays from its hits' own damage (event()); her cast itself draws nothing of it.
+      if (champion === 'violet' && action === 'cast') return true;
       if (champion === 'jayce') {
         const handled = play(champion, source, targets, jayceSkill(unit.form), action);
         if (action === 'cast' && cast) {
@@ -178,6 +184,14 @@ export function createBatch2VfxBridge(host: Host) {
       if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
         if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
       }
+      // Violet's combo: observed in catch-up too, so a later hit still knows its cast and its place in the combo.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'violet' && event.targetIds[0])
+        violets.set(event.sourceId, { target: event.targetIds[0], tick: event.tick, landed: 0 });
+      const combo = event.type === 'packetDamage' ? violets.get(event.sourceId) : undefined;
+      const comboHit = !!combo && event.type === 'packetDamage' && event.sourceKind === 'ability' && event.delivery === 'ability-direct'
+        && event.targetId === combo.target && event.tick > combo.tick;
+      const uppercut = comboHit && ++combo!.landed > VIOLET_JAB_TICKS.length;
+      if (uppercut) violets.delete((event as { sourceId: string }).sourceId);
       // Each cast of hers starts a fresh slam: a replay that starts over (castcmp's warm pass, a rewind) brings her slam on the
       // same tick again, and must draw it again.
       if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'vi') {
@@ -207,6 +221,7 @@ export function createBatch2VfxBridge(host: Host) {
           if (third && event.ordinal === 0) play('mel', event.sourceId, [event.targetId], 'mel-third-blast', 'cast', true);
         }
       }
+      if (comboHit && event.type === 'packetDamage') play('violet', event.sourceId, [event.targetId], uppercut ? 'violet-uppercut' : 'violet-jab', 'cast', true);
       if (viSlam) {
         // Her right hand's trail ends as she lands; her landing group plays there, on her grabbed target (its place, should
         // it have died while held), else on the enemy this damage struck.
@@ -233,7 +248,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); violets.clear(); },
   };
   return bridge;
 }
