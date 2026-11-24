@@ -77,3 +77,16 @@ describe('Maddie\'s shots follow their damage', () => {
     expect(off).toEqual([]);
   });
 });
+
+// Her basic attack follows the rules' shot like the other ranged heroes (#749): no fixed flight in her override; the wind-up's
+// launch plays only her shot, leaving now and landing (with its hit) on the arrival.
+import { landingCues } from '../src/rendering/three-mode/vfx-ltk/runtime';
+describe('Maddie basic attack: rules landing', () => {
+  it('her attack projectile has no fixed travelSeconds and lands on the arrival', () => {
+    const attack = CUE_OVERRIDES.maddie!.filter(c => c.action === 'attack');
+    expect(attack.find(c => c.event === 'projectile')!.travelSeconds).toBeUndefined();
+    const launch = landingCues(attack, { seconds: 0.4, phase: 'launch' });
+    expect(launch.map(c => [c.event, c.delay])).toEqual([['projectile', 0], ['hit', 0.4]]);
+    expect(launch.find(c => c.event === 'projectile')!.travelSeconds).toBe(0.4);
+  });
+});

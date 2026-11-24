@@ -1,7 +1,7 @@
 /** Offline mapping of resolved BIN spell/animation events; no gameplay rules or asset payloads. */
 import type { VfxValue } from './bindings';
 import { nameHash } from './binHash';
-import type { TimelineCue } from './timeline';
+import { DEFAULT_ATTACK_FLIGHT_SECONDS, type TimelineCue } from './timeline';
 import { S13_TIMELINES } from './s13-timelines';
 import { planActionEffects, type EffectPlayback } from '../action-effect-plan';
 import { SKILL_FX_TABLE } from '../skill-fx-table';
@@ -88,11 +88,13 @@ export function mapConvertedEvents(champion: string, metadata: readonly Converte
     const unique = new Map<string, TimelineCue>(); let outsideBudget = false;
     for (const event of selected) {
       const delay = event.frame / 30; // Explicit presentation convention, not the combat tick.
-      const travel = event.event === 'projectile' ? 0.3 : 0;
+      // An attack's projectile flies until the rules' arrival tick (runtime.ts landingCues; DEFAULT_ATTACK_FLIGHT_SECONDS
+      // without the landing event, filled in by withCueOverrides). A cast projectile keeps its fixed flight.
+      const flight = action === 'attack' ? DEFAULT_ATTACK_FLIGHT_SECONDS : 0.3;
       const cue: TimelineCue = { system: event.system!, action, event: event.event, bone: event.bone,
-        delay: delay + (event.event === 'hit' && selected.some(e => e.event === 'projectile') ? 0.3 : 0),
+        delay: delay + (event.event === 'hit' && selected.some(e => e.event === 'projectile') ? flight : 0),
         duration: event.endFrame !== undefined ? Math.min(10, Math.max(0.5, (event.endFrame - event.frame) / 30 + 1)) : 1.5,
-        ...(travel ? { travelSeconds: travel, targetBone: event.targetBone } : {}),
+        ...(event.event === 'projectile' ? { ...(action === 'cast' ? { travelSeconds: flight } : {}), targetBone: event.targetBone } : {}),
         ...(event.endFrame !== undefined ? { stopAfter: (event.endFrame - event.frame) / 30 } : {}) };
       if (cue.delay < 0 || cue.delay > 10 || (cue.stopAfter ?? 0) > cue.duration) { outsideBudget = true; continue; }
       unique.set(JSON.stringify(cue), cue);
