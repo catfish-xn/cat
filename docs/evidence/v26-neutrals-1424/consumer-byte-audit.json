@@ -4979,9 +4979,9 @@
     "tests/vfx-ltk-rumble-row.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3612,
+      "currentBytes": 3640,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a8fd06b269c02d889a295beb1e47e03b5266b8c05927ab9e65a965f5b8bd08f2",
+      "currentSha256": "90a27378bb726770afe958e2b5c37f5c431f6c33c2ce9f4e44817915afeb7793",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-seed.test.ts": {
