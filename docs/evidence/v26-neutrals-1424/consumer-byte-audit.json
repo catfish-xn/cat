@@ -1050,9 +1050,9 @@
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3933,
+      "currentBytes": 4143,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4325b96859db42368f3695f9a078d24df71856b325fbd96780bd7ecc0404012b",
+      "currentSha256": "077f170d862e75f4cd7815ae562323752bdb3fb44b9773c847dfedc96e1d2bc0",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
@@ -2655,6 +2655,14 @@
       "currentBytes": 26589,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "e20c17249c02ce67c60ec3df99bbe29f2e5076f4a4210f15c11e7d43807a36eb",
+      "firstDifferentByte": 0
+    },
+    "tests/rell-shred-icon.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4903,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6cc0b34bd5c3aa4b014a989093b8d92c7a46ced6d23c376cc05e0d7cf6d5e249",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {

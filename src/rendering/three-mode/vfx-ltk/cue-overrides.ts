@@ -22,6 +22,7 @@ import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES, VI_LANDING } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
+import { rell as rellBatch3 } from './batch3/rell';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
@@ -314,6 +315,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // system 3d2697ac (its smoke and red flash, with the crow 9ad716c2 that system carries) rather than the bare crow, and
   // to the primary target only for now; the nearby targets get none until the look is judged (Fable 11-21).
   'swain-back': swainBatch3['swain-back']!.map(cue => cue.system === '9ad716c2' ? { ...cue, system: '3d2697ac', primary: true } : cue),
+  // Rell's cast as exported, without her defence-steal icon system 5fe3dc8a: that icon now stays over each unit her stab hits
+  // for the whole fight as a still overhead icon (debuff-icons.ts RELL_SHRED), not as this short particle play (11-24).
+  rell: rellBatch3.rell!.filter(cue => cue.system !== '5fe3dc8a'),
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
