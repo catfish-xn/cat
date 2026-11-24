@@ -22,10 +22,11 @@ export const TIMED_FORM_GRAPH_KEYS = Object.freeze({ swain: Object.freeze({ ente
  * Per unit, the graph keys (as hashes) of the actions its timed form plays instead of the unit's own, in the graph of the
  * form's own character (--form-character, read from --form-source). The form character draws the unit's own mesh and
  * skeleton (checked); its clips are appended to the unit's model like the entry and exit clips.
- * swain: idle, move, attack and the second attack of his ascended form (Fable 2026-11-24).
+ * swain: idle, move, attack and the second attack of his ascended form (Fable 2026-11-24), and `enter`, the form's own
+ * whole-body entry, which unfolds his wings from folded to spread (Fable 2026-11-24).
  */
 export const TIMED_FORM_ACTION_KEYS = Object.freeze({
-  swain: Object.freeze({ idle: '0x9dd9dc06', move: '0x2acd4eca', attack: '0x56b1e924', attackAlt: '0x59b1eddd' }),
+  swain: Object.freeze({ idle: '0x9dd9dc06', move: '0x2acd4eca', attack: '0x56b1e924', attackAlt: '0x59b1eddd', enter: '0xfd5939c8' }),
 });
 
 import { binField, binIs as binIsType } from './bin.mjs';
