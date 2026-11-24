@@ -28,6 +28,9 @@ export const TIMED_FORM_ACTION_KEYS = Object.freeze({
   swain: Object.freeze({ idle: '0x9dd9dc06', move: '0x2acd4eca', attack: '0x56b1e924', attackAlt: '0x59b1eddd' }),
 });
 
+import { binField, binIs as binIsType } from './bin.mjs';
+import { canonicalAsset as canonical } from './bin-bindings.mjs';
+
 const GLB_MAGIC = 0x46546c67, JSON_CHUNK = 0x4e4f534a, BIN_CHUNK = 0x004e4942;
 const pad4 = n => (4 - n % 4) % 4;
 
@@ -151,6 +154,35 @@ export async function clipAgreement(base, donorGlb, name) {
   return { ...worst, translationShare: worst.translation / reach, reach };
 }
 
+/** The names in `names` that `base` (a GLB) does not carry yet, in order. */
+export function clipsToAppend(base, names) {
+  const present = new Set((parseGlb(base).json.animations ?? []).map(a => a.name));
+  return names.filter(n => !present.has(n));
+}
+
+/**
+ * The form character's clip for each of `actionKeys` (action → graph key hash), as source paths: parsed `unitSkin` and
+ * `formSkin` (skin bins) must name the same skeleton and mesh, and every key must name an atomic clip of `formGraph`.
+ */
+export function resolveFormActions({ unitSkin, formSkin, formGraph, actionKeys, id = '' }) {
+  const meshOf = doc => {
+    const props = doc?.entries?.map(e => binField(e, 'skinMeshProperties')).find(Boolean);
+    const paths = props && [binField(props, 'skeleton'), binField(props, 'simpleSkin')];
+    return paths?.every(p => typeof p === 'string') ? paths.map(p => canonical(p)) : null;
+  };
+  const own = meshOf(unitSkin), form = meshOf(formSkin);
+  if (!own || !form || own[0] !== form[0] || own[1] !== form[1]) throw new Error(`clip-append-form-rig-differs:${id}`);
+  const clips = binField(formGraph, 'mClipDataMap'), out = {};
+  for (const [action, key] of Object.entries(actionKeys)) {
+    const wanted = Number.parseInt(key, 16) >>> 0;
+    const found = clips?.entries?.find(([k]) => ((k?.hash ?? k) >>> 0) === wanted)?.[1];
+    const path = found && binIsType(found, 'AtomicClipData') ? binField(binField(found, 'mAnimationResourceData'), 'mAnimationFilePath') : undefined;
+    if (typeof path !== 'string') throw new Error(`clip-append-form-graph-key:${id}:${key}`);
+    out[action] = path;
+  }
+  return out;
+}
+
 /**
  * The step: per unit with TIMED_FORM_GRAPH_KEYS, resolves the graph keys to source clips, converts them (with one clip
  * the base already has, as the agreement check), appends them to the base root's model and records `timedFormClips`.
@@ -167,6 +199,7 @@ export async function buildClipAppend({ from, source = 'assets3d-local/trial/loc
   const { safeInputPath, writeOutputFileAtomic } = await import('./safe-path.mjs');
   const { contracts } = await import('./runtime.mjs');
   if (!from || !units?.length) throw new Error('usage: --from <root> --units <id,...> [--source <cache>] [--out <dir>]');
+  if (!formSource !== !formCharacter) throw new Error('usage: --form-source and --form-character go together');
   const hash = b => createHash('sha256').update(b).digest('hex'), json = v => `${JSON.stringify(v, null, 2)}\n`;
   const root = resolve(from), cache = resolve(source), raw = join(cache, 'extracted');
   const read = async (r, p) => readFile(await safeInputPath(r, resolve(r, p)));
@@ -209,21 +242,12 @@ export async function buildClipAppend({ from, source = 'assets3d-local/trial/loc
       { name: checkName, bytes: await verified(`${config.base}/${checkFile}`) }];
     // The form's own actions, from its character's graph (a raw extraction: each file's sha256 goes in the report).
     const actionKeys = Object.hasOwn(TIMED_FORM_ACTION_KEYS, id) ? TIMED_FORM_ACTION_KEYS[id] : null, formActions = {}, formFiles = {};
-    if (actionKeys && formSource && formCharacter) {
+    if (actionKeys && formSource) {
       const formRoot = resolve(formSource), formRead = async path => {
         const bytes = await read(formRoot, path.toLowerCase()); formFiles[path.toLowerCase()] = hash(bytes); return bytes; };
-      const formSkin = parseBin(await formRead(`data/characters/${formCharacter}/skins/skin0.bin`));
-      const meshOf = doc => { const props = doc.entries.map(e => field(e, 'skinMeshProperties')).find(Boolean);
-        return props && [field(props, 'skeleton'), field(props, 'simpleSkin')].map(p => typeof p === 'string' ? canonicalAsset(p) : null); };
-      const own = meshOf(docs[0]), form = meshOf(formSkin);
-      if (!own || !form || own[0] !== form[0] || own[1] !== form[1]) throw new Error(`clip-append-form-rig-differs:${id}`);
-      const formGraph = parseBin(await formRead(`data/characters/${formCharacter}/animations/skin0.bin`)).entries.find(e => field(e, 'mClipDataMap'));
-      const formClips = field(formGraph, 'mClipDataMap');
-      for (const [action, key] of Object.entries(actionKeys)) {
-        const wanted = Number.parseInt(key, 16) >>> 0;
-        const found = formClips?.entries.find(([k]) => ((k?.hash ?? k) >>> 0) === wanted)?.[1];
-        if (!found || !binIs(found, 'AtomicClipData')) throw new Error(`clip-append-form-graph-key:${id}:${key}`);
-        const path = field(field(found, 'mAnimationResourceData'), 'mAnimationFilePath');
+      const paths = resolveFormActions({ unitSkin: docs[0], formSkin: parseBin(await formRead(`data/characters/${formCharacter}/skins/skin0.bin`)),
+        formGraph: parseBin(await formRead(`data/characters/${formCharacter}/animations/skin0.bin`)).entries.find(e => field(e, 'mClipDataMap')), actionKeys, id });
+      for (const [action, path] of Object.entries(paths)) {
         formActions[action] = name(path);
         if (!sources.some(s => s.name === formActions[action])) sources.push({ name: formActions[action], bytes: await formRead(path) });
       }
@@ -235,14 +259,14 @@ export async function buildClipAppend({ from, source = 'assets3d-local/trial/loc
     if (!(agreement.rotation <= tolerance && agreement.scale <= tolerance && agreement.translationShare <= tolerance))
       throw new Error(`clip-append-conversion-disagrees:${id}:${JSON.stringify(agreement)}`);
     // Clips the base already carries (an earlier run's entry and exit) stay as they are.
-    const present = new Set((parseGlb(before).json.animations ?? []).map(a => a.name));
-    const wanted = sources.filter(s => s.name !== checkName).map(s => s.name), appended = wanted.filter(n => !present.has(n));
+    const wanted = sources.filter(s => s.name !== checkName).map(s => s.name), appended = clipsToAppend(before, wanted);
     const after = appended.length ? await appendClips(before, donor, appended) : before;
     changed.set(entry.path, after);
     manifest.models[id] = { ...entry, timedFormClips: { enter: sources[0].name, exit: sources[1].name },
       ...(Object.keys(formActions).length ? { timedFormAnimations: formActions } : {}) };
-    report.units[id] = { appended, kept: wanted.filter(n => present.has(n)), checkClip: checkName, agreement, before: hash(before), after: hash(after), path: entry.path,
+    report.units[id] = { appended, checkClip: checkName, agreement, before: hash(before), after: hash(after), path: entry.path,
       ...(Object.keys(formFiles).length ? { formFiles } : {}) };
+    report.units[id].kept = wanted.filter(n => !appended.includes(n));
   }
   const { assertManifest } = await contracts(); assertManifest(manifest);
   const overlay = join(out, 'overlay');
