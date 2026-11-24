@@ -716,9 +716,9 @@
     "tests/cassiopeia-bolt-landing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 6461,
+      "currentBytes": 7940,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "10424fab0f5cf9f2368e66680ea565aa55c9747042469340f5294d6cbebd13d2",
+      "currentSha256": "37dda3e108d828fcfeb3dba54b685af3135c52fc00b4d3e93e1da5dea2f45dc8",
       "firstDifferentByte": 0
     },
     "tests/cast-branch-renderer.test.ts": {
