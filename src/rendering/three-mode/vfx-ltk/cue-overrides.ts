@@ -874,13 +874,17 @@ export interface PlayOut {
  * original's: `keepHit` champions keep the plain hit on a crit. Skill crits are not bound here yet.
  */
 export const CRIT_ATTACK_HIT: Readonly<{ hit: string; crit: string; keepHit: ReadonlySet<string>;
-  /** A champion's own crit variants: `swap` replaces its attack systems on a crit, `flash` is its crit flash cue when its hit is its own. */
-  own: Readonly<Record<string, { readonly swap?: Readonly<Record<string, string>>; readonly flash?: TimelineCue }>> }> = {
+  /** A champion's own crit variants: `swap` replaces its attack systems on a crit (a system, or a system and the bone it
+   * leaves from), `flash` is its crit flash cue when its hit is its own. */
+  own: Readonly<Record<string, { readonly swap?: Readonly<Record<string, string | { readonly system: string; readonly bone: string }>>; readonly flash?: TimelineCue }>> }> = {
   hit: '0f2af66b', crit: '2436e086', keepHit: new Set(['cassiopeia', 'renata', 'swain', 'zeri']),
   own: {
     // Warwick: his hit is his own slash, so the crit flash plays on the target beside it at the slash's moment. His own crit
     // swipe (BA_Swipe_crit 94adb056 in place of 6b46d17d) waits for the original's footage (Fable 11-17): not swapped here.
     warwick: { flash: { system: '2436e086', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.2, duration: 1 } },
+    // Renata: a crit flies her crit missile in place of her plain one, from the bone her crit leaves from (her spell data),
+    // with the plain shot's timing; her hit stays (keepHit). Fable 11-21.
+    renata: { swap: { '06e90178': { system: 'd7729373', bone: 'Shield' } } },
   },
 };
 /**

@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { CRIT_ATTACK_HIT, CRIT_SKILL_HIT } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
-import { createLtkRuntime, CRIT_FLASH_MAX, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { createLtkRuntime, critAttack, CRIT_FLASH_MAX, LTK_RUN_STATS } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
 // A basic attack that crits plays the shared crit flash in place of the shared hit (CRIT_ATTACK_HIT), at the same bone and
@@ -14,11 +14,13 @@ const attack: TimelineCue[] = [
   { system: HIT, action: 'attack', event: 'hit', delay: 0.5, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
 ];
 const skills: Record<string, TimelineCue[]> = { gunner: attack, zeri: attack, mage: [{ system: 'shot', action: 'cast', event: 'hit', delay: 0, duration: 0.5 }],
+  renata: [{ system: '06e90178', action: 'attack', event: 'projectile', bone: 'Muzzle', delay: 0.2, duration: 0.6, travelSeconds: 0.3 },
+    { system: HIT, action: 'attack', event: 'hit', delay: 0.5, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' }],
   warwick: [{ system: '6b46d17d', action: 'attack', event: 'cast-start', delay: 0, duration: 0.4 }, { system: 'slash', action: 'attack', event: 'hit', delay: 0.2, duration: 0.5 }] };
 
 async function setup() {
   const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
-    ? { version: 1, systems: { shot: 'systems/shot.json', slash: 'systems/slash.json', '6b46d17d': 'systems/swipe.json', '94adb056': 'systems/swipe-crit.json', [HIT]: 'systems/hit.json', [CRIT]: 'systems/crit.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills }
+    ? { version: 1, systems: { shot: 'systems/shot.json', slash: 'systems/slash.json', '6b46d17d': 'systems/swipe.json', '94adb056': 'systems/swipe-crit.json', '06e90178': 'systems/renata-shot.json', d7729373: 'systems/renata-crit-shot.json', [HIT]: 'systems/hit.json', [CRIT]: 'systems/crit.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills }
     : syntheticSystem(),
   readTexture: async () => new Texture() });
   const units = new Map<string, { root: Group; body: null; alive: boolean }>();
@@ -87,5 +89,18 @@ describe('vfx-ltk crit flash', () => {
     expect(started('6b46d17d')).toBe(2); expect(started('94adb056')).toBe(0); expect(started(CRIT)).toBe(1);
     runtime.dispose();
   });
+  it('Renata crits with her crit missile from its own bone, the plain shot\'s timing kept; her hit stays; a plain attack is unchanged', async () => {
+    const swapped = critAttack('renata', skills.renata!, true, () => true);
+    expect(swapped[0]).toEqual({ ...skills.renata![0], system: 'd7729373', bone: 'Shield' });
+    expect(swapped[1]).toEqual(skills.renata![1]);
+    // Not loaded yet: the plain shot plays.
+    expect(critAttack('renata', skills.renata!, true, id => id !== 'd7729373')[0]).toEqual(skills.renata![0]);
+    const { runtime, step, started } = await setup();
+    expect(runtime.play('renata', 'r', ['t'], 'attack', { crit: true })).toBe(true);
+    expect(runtime.play('renata', 'r2', ['t'], 'attack')).toBe(true);
+    step(0.6);
+    expect(started('d7729373')).toBe(1); expect(started('06e90178')).toBe(1);
+    expect(started(HIT)).toBe(2); expect(started(CRIT)).toBe(0);
+    runtime.dispose();
+  });
 });
-
