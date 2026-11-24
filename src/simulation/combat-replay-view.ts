@@ -122,7 +122,10 @@ function animationEvent(event: LedgerCombatEvent) {
       sourceKind: event.outcome.context.source.sourceKind,
       definitionId: event.outcome.context.source.definitionId,
       delivery: event.outcome.context.delivery,
-      ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']) };
+      ...pick(event.outcome, ['hit', 'hpDamage', 'absorbed', 'critical', 'killingPacket']),
+      // The killing packet's part past the target's remaining HP (display only: the killing blow's number shows the whole
+      // hit). Present only on a killing packet that has some, so every other packet reads as before.
+      ...(event.outcome.killingPacket && event.outcome.overkill > 0 ? { overkill: event.outcome.overkill } : {}) };
     case 'heal': return { ...envelope, type: event.type, ...pick(event.outcome, ['targetId', 'actual']),
       shares: event.outcome.shares.map(share => ({ sourceId: share.source.ownerId,
         sourceKind: share.source.sourceKind, definitionId: share.source.definitionId,
