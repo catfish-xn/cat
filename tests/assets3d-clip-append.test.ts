@@ -6,7 +6,9 @@ import { readGlb } from '../scripts/assets3d/glb.mjs';
 // @ts-expect-error Pure Node build utility.
 import { encodePng } from '../scripts/assets3d/texture.mjs';
 // @ts-expect-error Offline Node script.
-import { appendClips, assertBaseKept, TIMED_FORM_GRAPH_KEYS } from '../scripts/assets3d/clip-append.mjs';
+import { appendClips, assertBaseKept, buildClipAppend, clipsToAppend, resolveFormActions, TIMED_FORM_ACTION_KEYS, TIMED_FORM_GRAPH_KEYS } from '../scripts/assets3d/clip-append.mjs';
+// @ts-expect-error Pure Node build utility.
+import { fnv1a } from '../scripts/assets3d/bin.mjs';
 
 /** A two-submesh SKN (Body, Prop; one triangle each) on a one-joint rig, in the layout inspectSkn reads. */
 function fixtures() {
@@ -47,6 +49,9 @@ function anm() {
 describe('clip append', () => {
   it('names each timed form\'s entry and exit clip by graph key hash', () => {
     expect(TIMED_FORM_GRAPH_KEYS).toEqual({ swain: { enter: '0x70eb0dad', exit: '0xe1ad931b' } });
+    expect(TIMED_FORM_ACTION_KEYS).toEqual({ swain: { idle: '0x9dd9dc06', move: '0x2acd4eca', attack: '0x56b1e924', attackAlt: '0x59b1eddd' } });
+    for (const keys of [...Object.values(TIMED_FORM_GRAPH_KEYS), ...Object.values(TIMED_FORM_ACTION_KEYS)])
+      for (const key of Object.values(keys as Record<string, string>)) expect(key).toMatch(/^0x[0-9a-f]{8}$/);
   });
   it('appends the donor\'s clips after the base, keeps every base entry and byte, and retargets channels by node name', async () => {
     const f = fixtures();
@@ -82,5 +87,40 @@ describe('clip append', () => {
     const seen: Buffer[] = [];
     await expect(appendClips(base, donor, ['x_enter'], { verify: (b: Buffer, o: Buffer) => { seen.push(b, o); throw new Error('refused'); } })).rejects.toThrow('refused');
     expect(seen[0]).toBe(base); expect(seen[1]!.equals(out)).toBe(true);
+  });
+
+  // Parsed skin bins (parseBin's shape) naming a skeleton and a mesh, and a parsed animation graph of atomic clips.
+  const skin = (skl: string, skn: string) => ({ entries: [{ hash: 1, type: fnv1a('SkinCharacterDataProperties'), fields: [
+    { hash: fnv1a('skinMeshProperties'), value: { fields: [{ hash: fnv1a('skeleton'), value: skl }, { hash: fnv1a('simpleSkin'), value: skn }] } }] }] });
+  const graphOf = (clips: Record<string, string>) => ({ fields: [{ hash: fnv1a('mClipDataMap'), value: { entries: Object.entries(clips).map(([key, path]) => [
+    { hash: Number.parseInt(key, 16) >>> 0 }, { type: fnv1a('AtomicClipData'), fields: [{ hash: fnv1a('mAnimationResourceData'), value: { fields: [{ hash: fnv1a('mAnimationFilePath'), value: path }] } }] }]) } }] });
+  const unitSkin = skin('ASSETS/Characters/X/Skins/Base/X.skl', 'ASSETS/Characters/X/Skins/Base/X.skn');
+  it('resolves the form\'s actions through its own graph when it draws the unit\'s own skeleton and mesh', () => {
+    const formGraph = graphOf({ '0x00000011': 'ASSETS/Characters/Y/Animations/Y_Idle.anm', '0x00000022': 'ASSETS/Characters/Y/Animations/Y_Run.anm' });
+    // Same rig: the paths compare canonically (case and the set suffix do not matter).
+    const formSkin = skin('assets/characters/x/skins/base/x.skl', 'ASSETS/Characters/X/Skins/Base/X.skn');
+    expect(resolveFormActions({ unitSkin, formSkin, formGraph, actionKeys: { idle: '0x00000011', move: '0x00000022' }, id: 'x' }))
+      .toEqual({ idle: 'ASSETS/Characters/Y/Animations/Y_Idle.anm', move: 'ASSETS/Characters/Y/Animations/Y_Run.anm' });
+  });
+  it('refuses a form character with another skeleton or mesh, and a graph key its graph lacks', () => {
+    const formGraph = graphOf({ '0x00000011': 'ASSETS/Characters/Y/Animations/Y_Idle.anm' });
+    for (const formSkin of [skin('ASSETS/Characters/Z/Z.skl', 'ASSETS/Characters/X/Skins/Base/X.skn'), skin('ASSETS/Characters/X/Skins/Base/X.skl', 'ASSETS/Characters/Z/Z.skn'), { entries: [] }])
+      expect(() => resolveFormActions({ unitSkin, formSkin, formGraph, actionKeys: { idle: '0x00000011' }, id: 'x' })).toThrow('clip-append-form-rig-differs:x');
+    expect(() => resolveFormActions({ unitSkin, formSkin: unitSkin, formGraph, actionKeys: { idle: '0x00000011', move: '0x00000099' }, id: 'x' }))
+      .toThrow('clip-append-form-graph-key:x:0x00000099');
+  });
+  it('appends only the clips the base does not carry yet', async () => {
+    const f = fixtures();
+    const base = makeModel(f.mesh, f.rig, [{ name: 'x_idle', bytes: anm() }], { Body: f.body, Prop: f.prop }).glb;
+    const donor = makeModel(f.mesh, f.rig, [{ name: 'x_enter', bytes: anm() }, { name: 'x_form', bytes: anm() }], { Body: f.body, Prop: f.prop }).glb;
+    const once: Buffer = await appendClips(base, donor, clipsToAppend(base, ['x_enter']));
+    expect(clipsToAppend(once, ['x_enter', 'x_form'])).toEqual(['x_form']);
+    const twice: Buffer = await appendClips(once, donor, clipsToAppend(once, ['x_enter', 'x_form']));
+    expect(readGlb(twice).document.animations.map((c: { name: string }) => c.name)).toEqual(['x_idle', 'x_enter', 'x_form']);
+    expect(clipsToAppend(twice, ['x_enter', 'x_form'])).toEqual([]);
+  });
+  it('refuses a form source without a form character, and the reverse', async () => {
+    await expect(buildClipAppend({ from: 'x', units: ['swain'], formSource: 'y' })).rejects.toThrow('usage: --form-source and --form-character go together');
+    await expect(buildClipAppend({ from: 'x', units: ['swain'], formCharacter: 'y' })).rejects.toThrow('usage: --form-source and --form-character go together');
   });
 });
