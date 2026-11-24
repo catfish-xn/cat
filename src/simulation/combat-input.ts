@@ -105,7 +105,8 @@ export function readCombatStrategyInputs(state: CombatStrategyInputs | MatchBase
   const copyKills='resourceProvenance' in state?r2FrozenCopyKills(state as import('./match-types').MatchState):('augmentCopyKills' in state?state.augmentCopyKills:undefined);
   return { ...(ghost?{ghostFriendsGrowth:ghost}:{}),...(copyKills?.length?{augmentCopyKills:copyKills}:{}),...(cabalGrowth?{cabalGrowth}:{}), ...(sniperOpening ? { sniperOpening } : {}), ...(h6Growth?{h6Growth}:{}),...(historyGrowth?.length?{augmentHistoryGrowth:historyGrowth}:{}),...(d14?{d14Combat:d14}:{}),...(itemSummonPositions?{itemSummonPositions}:{}),round, preparation, items, temporaryEquipment, augments, anomalyBinding:absent?null:anomalyBinding, persistentGrowth:absent?persistentGrowth.filter(g=>g.unitId!==('d14' in state?state.d14?.unitId:undefined)):persistentGrowth, augmentProgress, roundResults,...(bankGold===undefined?{}:{bankGold}),...(visibleExperimentCells?{visibleExperimentCells}:{}),...(g23===undefined?{}:{g23}),...(playerHp===undefined?{}:{playerHp}),
     ...('priorPvpWins' in state&&state.priorPvpWins!==undefined?{priorPvpWins:state.priorPvpWins}:{}),
-    ...('recordingEnemyItems' in state&&state.recordingEnemyItems!==undefined?{recordingEnemyItems:state.recordingEnemyItems}:{}) };
+    // Recording inputs only: a match (resourceProvenance) never carries enemy items of its own, whatever its object holds.
+    ...(!('resourceProvenance' in state)&&'recordingEnemyItems' in state&&state.recordingEnemyItems!==undefined?{recordingEnemyItems:state.recordingEnemyItems}:{}) };
 }
 /** Called once at successful Start, before Combat or any settlement can mutate resources. */
 export function freezeCombatInput(state: MatchBase, battleSeed: number, provenancePrefixLength: number): CombatInputBasis {
