@@ -31,9 +31,7 @@ const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
  * layers were still clearly lit. They have no rule event of their own to end on.
  */
 export const HIT_TAIL_MAX_SECONDS = 4;
-export const HIT_TAIL_SECONDS: Readonly<Record<'bc4a9e0d' | '9d413df0' | 'a5373796' | 'fb4ea008', number>> = Object.freeze({
-  // Akali's mark over her target and its ground light: lit far longer than the cap; its rule exposure is a state of its own.
-  bc4a9e0d: HIT_TAIL_MAX_SECONDS,
+export const HIT_TAIL_SECONDS: Readonly<Record<'9d413df0' | 'a5373796' | 'fb4ea008', number>> = Object.freeze({
   // Zyra's vine burst on each enemy struck: its smoke.
   '9d413df0': 1,
   // Darius's spin hit: its blood spray.
@@ -604,7 +602,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd900f5b3', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '76f80db8', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.35, travelSeconds: 0.15, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '838f31e4', action: 'cast', event: 'hit', delay: 0.28, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: 0.3, duration: HIT_TAIL_SECONDS.bc4a9e0d, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],

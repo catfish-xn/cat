@@ -5,8 +5,8 @@ import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, HIT_TAIL_MAX_SECONDS, HIT_TAIL_SECONDS
 // capped; nothing else about them, or about the other cues of their lists, changes.
 // zyra-vines is a display branch (CUE_EXTRA_SKILLS); the others are champions' own lists.
 const listOf = (name: string) => CUE_OVERRIDES[name] ?? CUE_EXTRA_SKILLS[name];
+// Akali's mark over her target (bc4a9e0d) is not one of them: it shows a rule state and is to end with it.
 const LISTS: Record<keyof typeof HIT_TAIL_SECONDS, { list: string; count: number }> = {
-  bc4a9e0d: { list: 'akali', count: 1 },
   '9d413df0': { list: 'zyra-vines', count: 2 },
   a5373796: { list: 'darius', count: 1 },
   fb4ea008: { list: 'tristana', count: 1 },
@@ -34,6 +34,10 @@ describe('hit cues played to their fade', () => {
       }
     });
   }
+  it("leaves Akali's mark at its own cue time", () => {
+    expect(Object.hasOwn(HIT_TAIL_SECONDS, 'bc4a9e0d')).toBe(false);
+    expect(CUE_OVERRIDES.akali!.find(cue => cue.system === 'bc4a9e0d')!.duration).toBe(1);
+  });
   it('zyra-vines keeps one burst on the primary target and one on the others', () => {
     const vines = CUE_EXTRA_SKILLS['zyra-vines']!.filter(cue => cue.system === '9d413df0');
     expect(vines.filter(cue => cue.primary)).toHaveLength(1);
