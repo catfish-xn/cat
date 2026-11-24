@@ -30,6 +30,11 @@ export interface RealSetup { unit: string; star: number; form: string | null; fo
    * order given). Recording setup only; without it nobody carries items. parseItems reads it. Foes: not yet (the one-sided
    * combat takes the enemy's items from the round's projection, round-enemies.ts, not from this list). */
   items?: ItemSetup;
+  /** v-capture --foe-items foe=a+b,foe2=c: items on the foes (`foe` … `foe4`, up to 3 each, slots in the order given), recording
+   * setup only. Parsed and checked (parseFoeItems) but NOT applied yet: the one-sided combat takes the enemy's items from the
+   * round's projection, and taking these in its place needs a recording-only field in the rules' strategy inputs, not added
+   * yet. Until then jobs-check fails such a line and v-capture refuses it, so no recording silently lacks the items. */
+  foeItems?: FoeItemSetup;
   /** v-capture --as-scale X (0.2–1): the caster's attack speed times X, recording only (parseAsScale). Lines using it are not
    * acceptance clips (jobs-check says so) and their frames carry a corner tag. Without it nothing changes. */
   asScale?: number }
@@ -55,6 +60,39 @@ export function parseItems(text: string | null | undefined): { items: ItemSetup 
     items[holder as ItemHolder] = ids;
   }
   return { items };
+}
+/** Item ids per foe, in slot order (v-capture --foe-items). */
+export type FoeItemSetup = Partial<Record<FoeHolder, string[]>>;
+export type FoeHolder = 'foe' | 'foe2' | 'foe3' | 'foe4';
+const FOE_HOLDERS: readonly FoeHolder[] = ['foe', 'foe2', 'foe3', 'foe4'];
+/** --foe-items is parsed and checked, but not applied to the combat yet (RealSetup.foeItems). */
+export const FOE_ITEMS_APPLIED = false;
+/** "foe=a+b,foe2=c" (v-capture --foe-items) as items per foe, or a reason it cannot be: unknown foe or item, a foe named twice,
+ * more than 3 items on one foe, an empty list. */
+export function parseFoeItems(text: string | null | undefined): { items: FoeItemSetup } | { why: string } {
+  if (!text) return { why: '--foe-items is empty' };
+  const items: FoeItemSetup = {};
+  for (const part of text.split(',')) {
+    const [holder, list, extra] = part.split('=');
+    if (extra !== undefined || !list) return { why: `--foe-items wants foe=item+item, got ${part}` };
+    if (!FOE_HOLDERS.includes(holder as FoeHolder)) return { why: `--foe-items: ${holder} is not one of ${FOE_HOLDERS.join(', ')}` };
+    if (items[holder as FoeHolder]) return { why: `--foe-items names ${holder} twice` };
+    const ids = list.split('+');
+    if (ids.length > 3) return { why: `--foe-items: ${holder} has ${ids.length} items, at most 3` };
+    const unknown = ids.filter(id => !Object.hasOwn(ITEM_DEFINITIONS, id));
+    if (unknown.length) return { why: `--foe-items: unknown item ${unknown.join(', ')}` };
+    items[holder as FoeHolder] = ids;
+  }
+  return { items };
+}
+/** The foes' items as the rules' enemy items read them (round-enemies.ts EnemyItem): unit id, definition, slot. */
+export function realFoeItems(s: RealSetup): { unitId: string; definitionId: string; slot: number }[] {
+  return FOE_HOLDERS.flatMap(holder => (s.foeItems?.[holder] ?? []).map((definitionId, slot) => ({ unitId: holder, definitionId, slot })));
+}
+/** "foe=a+b foe2=c" for captions and logs, or null without foe items. */
+export function foeItemsLabel(items: FoeItemSetup | null | undefined): string | null {
+  const parts = FOE_HOLDERS.filter(h => items?.[h]?.length).map(h => `${h}=${items![h]!.join('+')}`);
+  return parts.length ? parts.join(' ') : null;
 }
 /** The recording's items as the game holds them (strategy-types.ts ItemInstance): on their unit, slot by slot. */
 export function realItems(s: RealSetup): any[] {
@@ -156,6 +194,7 @@ export function layoutProblem(s: RealSetup, units: any[]): string | null {
   if (s.allyCell && !s.ally) return '--ally-cell needs --ally';
   if ((s.ally2Cell || s.ally2star !== undefined) && !s.ally2) return '--ally2-cell / --ally2star need --ally2';
   for (const holder of ['ally', 'ally2'] as const) if (s.items?.[holder]?.length && !s[holder]) return `--items ${holder}=... needs --${holder}`;
+  for (const [n, holder] of FOE_HOLDERS.entries()) if (s.foeItems?.[holder]?.length && s.nfoes < n + 1) return `--foe-items ${holder}=... needs --nfoes ${n + 1} or more`;
   // The rules pick a form swapper's form by its row (seat-mechanics/forms.ts: the side's front two rows melee, back two ranged),
   // never by --form, which only picks what the renderer draws: the two must agree.
   const meRow = (s.meCell ?? ME_CELL).row;

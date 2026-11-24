@@ -19,6 +19,8 @@
 //   [--items me=a+b,ally=c,ally2=d]: --real only; items on the caster's side (up to 3 per unit, ids from the item catalog;
 //     nobody carries items without it; items on foes are not supported yet). Written to gate.json / render-meta.json and the
 //     keyframes caption; jobs-check warns about items not advised for acceptance rows (item-advice.cjs).
+//   [--foe-items foe=a+b,foe2=c]: --real only; items on the foes (foe … foe4, up to 3 each). Parsed and checked, but NOT applied
+//     yet (real-combat.ts RealSetup.foeItems): until the rules take them, v-capture refuses such a line.
 //   [--as-scale X]: --real only; the caster's attack speed times X (0.2–1), recording only: frames carry a red corner tag
 //     "录制专用：攻速×X" and jobs-check marks the line 非验收片 (internal evidence, never an acceptance clip).
 //   [--me-cell R,C]: --real only; the caster on this cell instead of row 5, column 3 (rows 4-7; a form swapper's ranged form
@@ -79,6 +81,8 @@ async function unbind(page, tick, rebind) {
   const customStart = opt('from-start') === '1' || opt('lead-ms') !== undefined || opt('cast-index') !== undefined || opt('anchor') !== undefined;
   if (customStart && !opt('real')) throw new Error('--from-start / --lead-ms / --cast-index / --anchor are for --real only: a dummy cast has no combat before it');
   if (['me-cell', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell'].some(k => opt(k) !== undefined) && !opt('real')) throw new Error('--ally / --ally-cell / --foe-cell / --foe2 / --foe2star / --foe2-cell are for --real only');
+  // --foe-items: not applied to the combat yet (real-combat.ts FOE_ITEMS_APPLIED), so no recording silently lacks the items.
+  if (opt('foe-items') !== undefined) throw new Error('--foe-items is parsed but not applied yet (needs the rules\' recording-only enemy items field)');
   if (['ally2', 'ally2star', 'ally2-cell', 'items', 'as-scale'].some(k => opt(k) !== undefined) && !opt('real')) throw new Error('--ally2 / --ally2star / --ally2-cell / --items / --as-scale are for --real only');
   // --items as given, per unit (the page checks the ids: real-combat.ts parseItems).
   const items = opt('items') !== undefined ? Object.fromEntries(opt('items').split(',').map(p => { const [h, l = ''] = p.split('='); return [h, l.split('+')]; })) : null;
