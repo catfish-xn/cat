@@ -92,8 +92,9 @@ it('a melee-only battle replays byte-for-byte as before ranged attack landing', 
   const source = compileBattle(snapshotForBattle(army(['garen', 'darius', 'vi', 'sett']), 'A'), snapshotForBattle(army(['illaoi', 'trundle', 'vander', 'akali']), 'B'), 42, { battleId: 'melee-only' });
   // Landing batch (11-20): Darius's spin now lands DARIUS_SPIN_TICKS after his cast, so this battle changed with it
   // (was 3c864002…, recorded on e9f33376 before ranged attack landing). Vi's slam at the original's time (11-21) changes it again
-  // (was 457d404d…). Attacks carry the display-only critical (11-21), which moves the bytes again (was 934b2cb1…).
-  expect(sha(toCombatReplay(resolveTwoSidedBattle(source, 901)))).toBe('5090fcc9015c0031dafb8fb995764b239f7507f0ceb617cfa6d99983c74ecbb9');
+  // (was 457d404d…). The replay view now carries a killing packet's overkill (display only) (was 934b2cb1…), and attacks carry
+  // the display-only critical (11-21), which moves the bytes again (was d65ce6bf…, overkill only; 5090fcc9…, critical only).
+  expect(sha(toCombatReplay(resolveTwoSidedBattle(source, 901)))).toBe('40fa6b50c740e9ee8d7d299562173fe4f050e27996fc2813d6b94159e16a39ee');
 });
 
 it('ranged synchronous / 1- and 7-tick slices / replay preserve complete bytes', () => {
