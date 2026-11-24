@@ -22,6 +22,7 @@ import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES, VI_LANDING } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
+import { silco as silcoBatch3 } from './batch3/silco';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
@@ -314,6 +315,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // system 3d2697ac (its smoke and red flash, with the crow 9ad716c2 that system carries) rather than the bare crow, and
   // to the primary target only for now; the nearby targets get none until the look is judged (Fable 11-21).
   'swain-back': swainBatch3['swain-back']!.map(cue => cue.system === '9ad716c2' ? { ...cue, system: '3d2697ac', primary: true } : cue),
+  // Silco's cast as exported (batch3/silco.ts, baked into the asset index), with the canister's burst 2276fa35 playing to
+  // its system's own end (ownLife) instead of the default second: the default faded it out from three quarters of a second
+  // and cut it at one, so its magenta bubbles and ground glow (and the purple splash's tail) went early. No rule event ends it.
+  silco: silcoBatch3.silco!.map(cue => cue.system === '2276fa35' ? { ...cue, ownLife: true } : cue),
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [

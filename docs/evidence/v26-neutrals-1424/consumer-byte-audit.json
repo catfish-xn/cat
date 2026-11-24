@@ -5016,6 +5016,14 @@
       "currentSha256": "accf54642ab97fb7dac5a5994ebac777cd0ddaf193cd63b35163d3a80e5744d7",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-silco-canister-hit.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2047,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "6c43b5092c9a4f224fcd0bef7691ce4788e8191baf7f8ee0aa7aacf9b2792373",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-singed-cast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
