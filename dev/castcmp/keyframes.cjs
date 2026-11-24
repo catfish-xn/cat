@@ -108,6 +108,8 @@ async function encode(base, name) {
     // --items (v-capture): what each unit of the caster's side carried, per column when they differ.
     // Items that change attack or mana timing (item-advice.cjs TEMPO_ITEMS) are named as such.
     ...(sets.some(s => s.gate?.items) ? [`items ${[...new Set(sets.map(s => s.gate?.items ? Object.entries(s.gate.items).map(([h, l]) => `${h}=${l.join('+')}`).join(' ') : 'none'))].join(' | ')}${(() => { const t = [...new Set(sets.flatMap(s => itemAdvice(s.gate?.items).tempo))]; return t.length ? `  改了出手/攒蓝节奏: ${t.join(', ')}` : ''; })()}`] : []),
+    // --foe-items (v-capture): what the foes carried, per column when they differ.
+    ...(sets.some(s => s.gate?.foeItems) ? [`foe items ${[...new Set(sets.map(s => s.gate?.foeItems ? Object.entries(s.gate.foeItems).map(([h, l]) => `${h}=${l.join('+')}`).join(' ') : 'none'))].join(' | ')}`] : []),
     ...(overhead ? [`overhead drift from t=0 max |dx| / |dy|: before ${overhead.before?.dx ?? '?'}px@${overhead.before?.t ?? '?'}ms / ${overhead.dyBefore?.dx ?? '?'}px  after ${overhead.after?.dx ?? '?'}px@${overhead.after?.t ?? '?'}ms / ${overhead.dyAfter?.dx ?? '?'}px`] : []),
     `vs ${g.foe ? `${g.foe.n}x ${g.foe.model} ${g.foe.star}*` : '?'}  caster ${g.star ?? '?'}*  dist ${g.dist ?? '?'}  ${g.real ? 'real combat' : g.pinFoe ? `pinned dummy ${g.pinFoe} hex${g.pinFoe2 ? ` + ${g.pinFoe2} hex in line` : ''} (假人, not real combat)` : 'dummies (not real combat)'}${g.hideUnits ? '  units hidden (单位已隐藏)' : ''}  gate ${sets.map(s => `${s.key}:${s.gate ? (s.gate.ok ? 'pass' : 'FAIL') : 'none'}`).join(' ')}`,
   ];

@@ -793,6 +793,14 @@
       "currentSha256": "11ac73b6fc34ca2a1b227541224e0abfc6f14941cc4e14afde4a74f917ff42a2",
       "firstDifferentByte": 0
     },
+    "tests/castcmp-foe-items.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2563,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a14b50143e7df7ab30c39d77300563a30b63c945e75cd4708550eef3f67d4565",
+      "firstDifferentByte": 0
+    },
     "tests/castcmp-frames.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
