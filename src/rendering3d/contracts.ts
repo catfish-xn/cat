@@ -57,7 +57,7 @@ export type ActionEffects = Record<string, Partial<Record<ActionState, readonly 
 export interface SubmeshVisibilityEvent { frame: number; show: readonly string[]; hide: readonly string[] }
 export interface TimedFormClips { enter?: string; exit?: string }
 /** The clips a model plays instead of its own while its timed form is on (written by scripts/assets3d/clip-append.mjs). */
-export interface TimedFormAnimations { idle?: string; move?: string; attack?: string; attackAlt?: string }
+export interface TimedFormAnimations { idle?: string; move?: string; attack?: string; attackAlt?: string; enter?: string }
 export interface SubmeshVisibility { initiallyHidden?: readonly string[]; events?: Record<string, readonly SubmeshVisibilityEvent[]> }
 export interface AssetManifest {
   schemaVersion: 1;
@@ -86,7 +86,10 @@ export interface AssetManifest {
      * timed form (rendering3d TIMED_FORMS); the renderer plays each on the bones that move the form's submeshes.
      */
     timedFormClips?: TimedFormClips;
-    /** `timedFormAnimations` (optional): idle, move and attack clips (attacks alternating with attackAlt) while the form is on. */
+    /**
+     * `timedFormAnimations` (optional): idle, move and attack clips (attacks alternating with attackAlt) while the form is on,
+     * and `enter`, the form's own whole-body entry, played by the cast that turns it on.
+     */
     timedFormAnimations?: TimedFormAnimations;
   } & CastMetadata>;
   effects?: Record<string, { path: string }>;
@@ -219,7 +222,7 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.formAnimations !== undefined) assertFormAnimations(entry.formAnimations);
     if (entry.timedFormAnimations !== undefined) {
       const clips = entry.timedFormAnimations as unknown;
-      if (!isPlainObject(clips) || Object.entries(clips).some(([k, v]) => !['idle', 'move', 'attack', 'attackAlt'].includes(k) || typeof v !== 'string' || !v.trim()))
+      if (!isPlainObject(clips) || Object.entries(clips).some(([k, v]) => !['idle', 'move', 'attack', 'attackAlt', 'enter'].includes(k) || typeof v !== 'string' || !v.trim()))
         throw new Error('invalid-timed-form-animations');
     }
     if (entry.timedFormClips !== undefined) {

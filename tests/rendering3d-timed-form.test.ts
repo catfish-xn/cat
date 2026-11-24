@@ -221,9 +221,46 @@ describe('timed form actions', () => {
     expect(mixer.resolvePlayback('attack')?.clips).toEqual(['swing']);
     mixer.dispose();
   });
+  it('the cast that turns the form on plays the form\'s own entry, then its idle; a recast while on keeps the idle', () => {
+    const root = skinned();
+    const clips = [...['rest', 'spell', 'f_rest', 'f_enter'].map(clip), moving('grow', 'arm', 9)];
+    const mixer = new UnitAnimationMixer(root, clips, { idle: 'rest', cast: 'spell' },
+      { timedForm: { show: ['Alt'], hide: [] }, submeshVisibility: { initiallyHidden: ['Alt'] }, timedFormClips: { enter: 'grow', exit: 'grow' },
+        timedFormAnimations: { idle: 'f_rest', enter: 'f_enter' } });
+    const running = () => [...(mixer as unknown as { mixer: { _actions: { isRunning(): boolean; getClip(): { name: string } }[] } }).mixer._actions]
+      .filter(a => a.isRunning()).map(a => a.getClip().name);
+    mixer.apply({ state: 'idle', previous: 'idle', blendSeconds: 0, loop: true, revision: 1 }); mixer.update(0.05);
+    expect(mixer.resolvePlayback('cast')?.clips).toEqual(['spell']);
+    // The renderer turns the form on from the cast event, then resolves that cast's clip, before the next update.
+    mixer.setTimedForm(true);
+    expect(mixer.resolvePlayback('cast')).toEqual({ clips: ['f_enter'], durationSeconds: 1 });
+    // Not the overlay entry on the form's bones: the whole-body entry carries the wings.
+    expect(running()).not.toContain('grow:form');
+    mixer.apply({ state: 'cast', previous: 'idle', blendSeconds: 0, loop: false, revision: 2, playback: { clips: ['f_enter'], durationSeconds: 1 } });
+    mixer.update(0.5);
+    expect(running()).toContain('f_enter');
+    mixer.apply({ state: 'idle', previous: 'cast', blendSeconds: 0, loop: true, revision: 3 }); mixer.update(0.5);
+    expect(running()).toEqual(['f_rest']);
+    expect(mixer.resolvePlayback('cast')).toBeNull();
+    // An entry not cast before the next update is dropped; after the form ends, casts play the model's own clip.
+    mixer.setTimedForm(false, true); mixer.setTimedForm(true); mixer.update(0.05);
+    expect(mixer.resolvePlayback('cast')).toBeNull();
+    mixer.setTimedForm(false, true);
+    expect(mixer.resolvePlayback('cast')?.clips).toEqual(['spell']);
+    mixer.dispose();
+  });
+  it('a model without the form\'s own entry clip plays the cast\'s own clip', () => {
+    const root = model('Base', 'Alt');
+    const mixer = new UnitAnimationMixer(root, ['rest', 'spell', 'f_rest'].map(clip), { idle: 'rest', cast: 'spell' },
+      { timedForm: { show: ['Alt'], hide: [] }, submeshVisibility: { initiallyHidden: ['Alt'] }, timedFormAnimations: { idle: 'f_rest', enter: 'missing' } });
+    mixer.apply({ state: 'idle', previous: 'idle', blendSeconds: 0, loop: true, revision: 1 });
+    mixer.setTimedForm(true);
+    expect(mixer.resolvePlayback('cast')?.clips).toEqual(['spell']);
+    mixer.dispose();
+  });
   it('the manifest contract takes timedFormAnimations and refuses unknown keys or empty names', () => {
     const manifest = (timedFormAnimations: unknown) => ({ schemaVersion: 1, models: { x: { path: 'models/x/model.glb', timedFormAnimations } } });
-    expect(() => assertManifest(manifest({ idle: 'a', move: 'b', attack: 'c', attackAlt: 'd' }))).not.toThrow();
+    expect(() => assertManifest(manifest({ idle: 'a', move: 'b', attack: 'c', attackAlt: 'd', enter: 'e' }))).not.toThrow();
     for (const bad of [[], { run: 'a' }, { idle: '' }, { idle: 3 }]) expect(() => assertManifest(manifest(bad))).toThrow('invalid-timed-form-animations');
   });
 });

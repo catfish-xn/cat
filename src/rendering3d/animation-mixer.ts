@@ -140,6 +140,11 @@ export class UnitAnimationMixer {
   private formClips = new Map<string, AnimationClip | null>();
   /** Attacks played while the timed form is on: they alternate between its attack and attackAlt clips. */
   private formAttacks = 0;
+  /**
+   * The timed form just turned on and the model carries the form's own entry (timedFormAnimations.enter): the cast that
+   * turned it on (the next cast resolved before the next update) plays that whole clip instead of its own.
+   */
+  private formEntering = false;
   constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility; timedForm?: (typeof TIMED_FORMS)[string]; timedFormClips?: TimedFormClips; timedFormAnimations?: TimedFormAnimations } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
@@ -204,6 +209,11 @@ export class UnitAnimationMixer {
       this.form = form;
       this.revision = -1;
     }
+  }
+  /** The timed form's own entry while the form is on (manifest timedFormAnimations.enter), when the model carries it. */
+  private timedFormEnter(): string | undefined {
+    const name = this.submeshes?.formOn ? this.metadata.timedFormAnimations?.enter : undefined;
+    return name && (this.clips.get(name)?.duration ?? 0) > 0 ? name : undefined;
   }
   /** The timed form's clip for `state` while the form is on (manifest timedFormAnimations), when the model carries it. */
   private timedFormName(state: ActionState): string | undefined {
@@ -285,6 +295,13 @@ export class UnitAnimationMixer {
       return clip && Number.isFinite(clip.duration) && clip.duration > 0 ? { clips: [this.names.spawn!], durationSeconds: clip.duration } : null;
     }
     if (state === 'cast' && this.names.cast === null) return null;
+    const enter = state === 'cast' ? this.timedFormEnter() : undefined;
+    if (enter) {
+      const entering = this.formEntering; this.formEntering = false;
+      // The cast that turned the form on plays its entry, then the form's idle. A recast while the form is on plays no
+      // clip, so the form's idle goes on (fitted, Fable 2026-11-24).
+      return entering ? { clips: [enter], durationSeconds: this.clips.get(enter)!.duration } : null;
+    }
     const form = context.form ?? this.form;
     const timedAttack = state === 'attack' ? this.timedFormName('attack') : undefined;
     if (timedAttack) this.formAttacks++;
@@ -364,16 +381,19 @@ export class UnitAnimationMixer {
   /**
    * Turn the model's timed form (TIMED_FORMS) on or off; it shows over every clip until turned off. With the manifest's
    * timedFormClips, turning it on plays the entry clip on the form's bones (over whatever the body plays), and turning it
-   * off plays the exit clip there first and hides the form when that ends. `immediate` (a new combat or a rewind) turns
-   * it off at once, with no clip.
+   * off plays the exit clip there first and hides the form when that ends. With the form's own whole-body entry
+   * (timedFormAnimations.enter), turning it on leaves the entry to the cast that turned it on (resolvePlayback) instead.
+   * `immediate` (a new combat or a rewind) turns it off at once, with no clip.
    */
   setTimedForm(on: boolean, immediate = false): void {
     if (!this.submeshes) return;
     this.stopFormClip();
+    this.formEntering = false;
     const was = this.submeshes.formOn;
     if (on) {
       this.submeshes.setForm(true);
-      if (!immediate) this.startFormClip(this.metadata.timedFormClips?.enter, false);
+      if (!immediate && !was && this.timedFormEnter()) this.formEntering = true;
+      else if (!immediate) this.startFormClip(this.metadata.timedFormClips?.enter, false);
     } else if (immediate || !this.submeshes.formOn || !this.startFormClip(this.metadata.timedFormClips?.exit, true)) this.submeshes.setForm(false);
     if (was !== this.submeshes.formOn) this.formChanged();
     this.switchSubmeshes();
@@ -480,6 +500,7 @@ export class UnitAnimationMixer {
   }
   update(seconds: number): void {
     if (!Number.isFinite(seconds) || seconds < 0) throw new Error('invalid-delta');
+    this.formEntering = false;
     this.updatePose(seconds);
     this.updateFormClip(seconds);
     if (this.releaseLeft > 0) {
