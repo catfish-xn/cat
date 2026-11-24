@@ -19,7 +19,9 @@ describe('Cassiopeia bolt hit effect', () => {
     expect(hit[0]!.delay).toBeCloseTo(comet.delay + comet.travelSeconds!, 9);
     expect(cues.length).toBeLessThanOrEqual(12);
   });
-  it('leaves the unplayed ground system out', () => {
+  it('leaves the unplayed ground system and the other spell\'s missile out', () => {
     expect(CUE_OVERRIDES.cassiopeia!.some(cue => cue.system === 'c83f1f21')).toBe(false);
+    // In her data b124a9c5 is another spell's missile with no hit effect; it is not played as a still ground hit.
+    expect(CUE_OVERRIDES.cassiopeia!.some(cue => cue.system === 'b124a9c5')).toBe(false);
   });
 });

@@ -39,7 +39,8 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
     '7d0f4b1e': { status: 'dropped', reason: 'nothing flies from him on his cast in the original footage (11-21 review): his gate appears on the ground (PR #801)' },
   },
   cassiopeia: {
-    c83f1f21: { status: 'pending', reason: 'purpose not verified: the asset is a large red light column that matches none of the original footage we have (11-21 per-layer render); not played until its use is found' },
+    c83f1f21: { status: 'dropped', reason: 'not in the live-server 2-star original footage (11-24 review): no ground area, no light columns there' },
+    b124a9c5: { status: 'dropped', reason: 'another spell\'s missile in her data, with no hit effect; the export placed it as a still hit on the ground (11-24 asset check)' },
   },
   scar: {
     '95d62c6a': { status: 'dropped', reason: 'not seen in the original cast footage (11-21 review): left out' },
