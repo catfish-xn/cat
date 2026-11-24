@@ -7,7 +7,7 @@
     "tests/fixtures/b8-public-equipment.ts": "f16636be18edd9f68f85526e231324bc21f698cf2d462c2d355d288aeb2ea0d1",
     "tests/fixtures/m5/oracle.g2.cjs": "10355e45c2068a37c60dcbcf32dd91abca980670d7af5318e8a62b9e559df58b"
   },
-  "fixtureBytes": 50951,
-  "fixtureSha256": "130dbc0019d3924fb92953b97fff69098e0103c143fcff9c0bd7f06f4e775c2e",
-  "seed": 30095
+  "fixtureBytes": 55159,
+  "fixtureSha256": "bd3e05cf49bf2ff2a2c961f987515d98b71e8f3c6db5abccc4227d3ab0a25557",
+  "seed": 22441
 }

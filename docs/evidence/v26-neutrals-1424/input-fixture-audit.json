@@ -8,9 +8,9 @@
     "scripts/loot-replay-digest.ts": "cdfa7aae2cfde8f071a87ff9898cdfef80802f1900af6d4608ebe3996a2070d0",
     "scripts/m5-route-hash.cjs": "bdc279df8a1a3953638c1df7e347681aee3b6ffa32b75ba3434d81b0951ec1cf",
     "scripts/offline-process-output.cjs": "79c6aa7f224d905b59fe257597996da54324e02fedc1b044ac78a389f06a2705",
-    "scripts/record-v26-neutrals-1424-battle-start.cjs": "dd6965305276ff8aa002e2c088752daeb137321effb828b45e6a9f905aa3bf94",
+    "scripts/record-v26-neutrals-1424-battle-start.cjs": "67f58b456ef793cb4cef4ea0cbc66f99fcf64689ed60f230f607fbcc76df7019",
     "scripts/record-v26-neutrals-1424-inputs.cjs": "a5ba229b14c0ef4689a7ef4f8e7ed7d3988341a63637f8efddb7d3f21b974291",
-    "scripts/record-v26-neutrals-1424-live-reveal.cjs": "500f2fdd518d8d4df8f51d4b67242bd125f57ef43287525113713cd8a4c3e381",
+    "scripts/record-v26-neutrals-1424-live-reveal.cjs": "69195ec6ca9ea539fef0c51ef20b44ef4d231f6735126d6940d58b06af47288c",
     "scripts/record-v26-neutrals-1424-release.cjs": "2231b41a60126bb5943b4543cc3ab1f13c24b5a60eb55fdbffcec7ce20659d08",
     "scripts/record-v26-neutrals-1424-transfer.cjs": "62948d5cb84d2209d89087fe19b510ff316fd39f3b74f4a14c1f341fcf758ca9",
     "scripts/v26-neutrals-1424-fixture-audit.cjs": "72c6468d2315799a6944b813ca69f768ae301394fe04fbe008eb5137042c90ab",
@@ -163,7 +163,7 @@
     "src/simulation/carousel-types.ts": "055372e4fa7e86b9321c354902ffb4e3a789999e3914b913abca960572e8ebae",
     "src/simulation/carousel-units.ts": "543124b87b5274a7b78431b014281b7f41db8b35fcc78940bde868ffcad7e845",
     "src/simulation/carousel.ts": "173001302eacd2630bed172a71734a66371112498dacd576e873120a2f2eec7e",
-    "src/simulation/cast-windup.ts": "c69adc9dcc6980e54bfcfce9672ec5492e626f0fe84a210845738805a37724be",
+    "src/simulation/cast-windup.ts": "6231e6bd62934c20c32147c74bf86aae99a18bc431d596d6ac36816cce7b5f54",
     "src/simulation/choice-acquisition.ts": "0cadd1023ff0425aa00da94847237339fc21d10645aea64d5160f1901744c57b",
     "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
     "src/simulation/combat-abilities.ts": "2a485296e0ca8425f19afe9211f47630af196604efa30ae26dbf98ea8efd7dae",
@@ -177,21 +177,21 @@
     "src/simulation/combat-g2-2.ts": "cdc8fde6662d809a9e84ca3bced94b52e50f7ab548c41310b16fc40e707cf30b",
     "src/simulation/combat-g2-3-junker.ts": "09e21c43eafa52219e0c1022ab15e8dfe92a2b8d8fd524ffbd8020578bc97241",
     "src/simulation/combat-g2-3-summons.ts": "674da09bfb74f3cf835acf4a53837c22ca753993d840595fdaea60039d4af57d",
-    "src/simulation/combat-g2-3.ts": "0285b53f4e5d75e69c995c369f85b0dceb9fd736ea540e686c120d20036c2480",
+    "src/simulation/combat-g2-3.ts": "deeb7067d635f6dddf85cc90d90f03a5efe072e8e86ef9768f82756b1340602b",
     "src/simulation/combat-g2-4b-trench.ts": "88b303a594cac374d5fb9ed10f20adcddad7e632006933cf0b63c812b007d659",
     "src/simulation/combat-g2-4b.ts": "dd3028d2977f1d31ab0a4064740ffde11cf51bbbeedb33bf24a20d0b66dc32b7",
     "src/simulation/combat-g2.ts": "e9a82e0724772b72c5782e7deef104e857cdae4d1909cc12bfb30d4e811409c3",
     "src/simulation/combat-initialization.ts": "335003b45209b6aeb93266abe7e988f7a3c5f7a45687281146372a6bdfca0a9f",
     "src/simulation/combat-input.ts": "4f8dfe2eb7a7c75f07d1c66377591dda13c1580b353c371fdfe592fc1f52ad51",
     "src/simulation/combat-ledger.ts": "71a2e894d3abe537bfc55b43464fb6cd356c1ac649503ea7de45e8c8b4f90d74",
-    "src/simulation/combat-movement.ts": "1ceab03ca6d39bbf31e82a5fdbee2e7898f06763409ab6366d9f240f4908a54a",
+    "src/simulation/combat-movement.ts": "41c3672b88c2e47b560964a0fa1c5a310478ca2a1cd24af767bb19ec849dfa0e",
     "src/simulation/combat-opening-crabs.ts": "c1d00a0a86a411c35a744f45587a89dd350dddfd5ee8d801247ab1e15c8c793f",
     "src/simulation/combat-overtime.ts": "d0fc70ea91bb542106b2a0f15d107dfb2b1d65dc036594311d006133dc1e3660",
-    "src/simulation/combat-replay-view.ts": "1331a60400c5736a603c0d117ab146040e4309cb366449d4bb5bb8d9547e0cf0",
+    "src/simulation/combat-replay-view.ts": "0b6d61b9ccf899c0fae292826852ef2deda360288663d9ff06e5935907abf5d4",
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
     "src/simulation/combat-s13-abilities.ts": "78a94856bc8ba862059d044d1e5f52c47a42babaaa4bc81b5663311f09efd835",
     "src/simulation/combat-s13-state.ts": "74355dd524a62a597dcb057f7938e834b2185f778f8f0444a11c22e4b14c8123",
-    "src/simulation/combat-s13.ts": "fae5bd5fba07b866ecf4013dbc01fc00fed4caaf522cc513ebd49ea4746ac548",
+    "src/simulation/combat-s13.ts": "ae6cbcb04ec5c76919387ac199b7a744cbe869b9b17cdc3ed2c5e6585c12fe54",
     "src/simulation/combat-six-cost.ts": "04c46180f9f883aaefb99b11750fa521541088f9ba0baa470b0c2deb918fffb8",
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
@@ -199,7 +199,7 @@
     "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
     "src/simulation/combat-targeting.ts": "88392e74ecad17c1f8813ad581edaa52aea41c003c35701c0558471731723b3d",
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
-    "src/simulation/combat-types.ts": "8f9b3cc25dc89350044c90408dcbfe50296ea8d8031fbda8531d0cb8b0feb42f",
+    "src/simulation/combat-types.ts": "08dcc5df3ce4802338517e3a6cfa7a45deefaa49d878078db7f1a56a893c1d77",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
     "src/simulation/combat-v20-traits.ts": "b1427e6b7d1e21ab11d602a1b965332d23c86748ed2cfb056b93e352d8317c98",
     "src/simulation/combat.ts": "812792cf31746e20006da6c8efd1b9db814c92b2ab7e22f58dd09c12e47bd559",
@@ -308,7 +308,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "6816656cf1a55347e9d1dcc7cd83483e036013de2cd8aaf15cf1ffc08ed7dc54",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "55f51e47cf7b2cb7b246431cf929e6eabb092064fd8e4e9b61e56118edd839f7",
+    "src/simulation/content/identity-constants.ts": "dc636423f01ad2cfe4735f1f325fe30616b454f0efb72518d6e8c1da61852c01",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -573,7 +573,7 @@
     "src/simulation/restore-checks/shop-history-check.ts": "14c510304e6a0f1afc02d4fcd3d8ed4d033ff50f5efad090603d25b6c52dc229",
     "src/simulation/restore-checks/survivor-gold-check.ts": "61589552846c8d4b118713274a137b390fc8d91fa094cf418bf6049447a7827c",
     "src/simulation/restore-checks/tomb-raider-check.ts": "b1d6cee0b32a9d6eba79f6905491ae0f71180f20eb17888f5d49b77333443387",
-    "src/simulation/restore-combat-replay.ts": "1d44c575ed571948aacae0c16b38b78c3685f1247224e332162e92325c755d25",
+    "src/simulation/restore-combat-replay.ts": "e1a8855d82ba5c844be57c473c98a5f3329a15e68940e5fcb31b8ee940975d9c",
     "src/simulation/rewards.ts": "42ed20b01f6abc5897f2b546acc8c7ab93a8722d65701e5ea9978652e0e8c5dd",
     "src/simulation/rng.ts": "adb06e124b9f314aa4404e7108cc8aa4496e70f2289d8dab7c4aa116012a200e",
     "src/simulation/round-economy.ts": "6c72758b47694f283bf746cd9c684ada382be3889c7da7cb3de7da94368b8356",
@@ -586,9 +586,9 @@
     "src/simulation/s13-augments-p2-strategy.ts": "a38577954f2a3a53617df55963ca01c1db1a8b2ddd4d0c64478c3d0304c68eeb",
     "src/simulation/s13-p3-combat.ts": "9796af159ea92ceb29f22d28261cc916aa8308769f99ac882eec24ac5ed2044a",
     "src/simulation/s13-p3-programs.ts": "5368142348225dfe8d63b5913481192c4bf49d8fc7028b534d93e2e28c467769",
-    "src/simulation/s13-rules.ts": "0598c6f197d7f8cd60f23dea8d103285043b4e8f91b72d202aa770a910e016ab",
+    "src/simulation/s13-rules.ts": "1570b7dbe76da4549c51279abc02fecccab60f69feb2fed872f3463efec39254",
     "src/simulation/seat-mechanics/choices.ts": "f68964fa36561844dc5524632ef78fb4c86cc22f305579d62fcc08c5ba7d2c60",
-    "src/simulation/seat-mechanics/combat-events.ts": "f380667b49edb13dd57830d7e6374f1d88d2b476911a3650dc2115fe6c297bf2",
+    "src/simulation/seat-mechanics/combat-events.ts": "6134e32bcde3e47dc7ba70f3cc5954b18dfb19674cbebe0495d740ed45099ea0",
     "src/simulation/seat-mechanics/forms.ts": "4d6e378e85e942d5922cfb75d2c09a5d4e242f97af26728aba51b7f69eb2b90a",
     "src/simulation/seat-mechanics/grants.ts": "bd52f4a2c36074b81ebd80b2d4006b8decae95a20a23f369ab1d0c0d1f5fc48e",
     "src/simulation/seat-mechanics/index.ts": "ef94f045bdaf1944daed9329d2297514c3bc56f005c348c8480fa3d44dfa610b",
@@ -596,7 +596,7 @@
     "src/simulation/seat-mechanics/replay-units.ts": "9e73e8cf4a7f2d21e5a10e62674a31771b0ea90e10fe9817726337109b3035fb",
     "src/simulation/seat-mechanics/state.ts": "313391d455f813f223797bccc92360a0dc4ae1be0c87ad838dbda0ed0b14427e",
     "src/simulation/seat-mechanics/types.ts": "ab5406abf6544fb533c49eb7ee30ac6a2fb17bb79819ff4ac702c8a502cd0c6f",
-    "src/simulation/serialization-structure.ts": "851bea47a6671e24c65e56509cf11b70b400b567498ba6b5013d30d74e15d114",
+    "src/simulation/serialization-structure.ts": "eeeb647bd68136ecde91ddcf6ded3536d3550f927b85a23f029fc20f3e62a36b",
     "src/simulation/serialization.ts": "2a80600b71ef2d1a228c3798986f0c2d140f4899a2f8fcacde9c6d1539af316a",
     "src/simulation/setup-work.ts": "e7832d5d78d5f5b477de28ccf63ac2521870b45c1bde10a93fe012ee24e81ef9",
     "src/simulation/shared-pool-ledger.ts": "3e06e304056d7b42f3bbc6dd9445d4972014fad60d4e111185cceee99c8722df",
@@ -663,69 +663,69 @@
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
   },
-  "contentDigest": "fnv1a32-utf16:33d330e9",
+  "contentDigest": "fnv1a32-utf16:d6493c11",
   "files": {
     "tests/fixtures/v26-neutrals-1424-c19-seed-9-minimal.json": {
       "previousBytes": 32276,
       "currentBytes": 32276,
       "previousSha256": "391b99e10aaafdc17b9ec1498a80726d7503baa482b5383547cba1f3e6ad67fa",
-      "currentSha256": "d1387a68bf301e781d5d60da0d8ceb782e0c4c63fd50041aa4b63ea8db11da0d",
+      "currentSha256": "edee2ac1679f5a6bc0715c90f2e2fd08c731cecd9e37ad809d11eb0f8921c032",
       "firstDifferentByte": 207
     },
     "tests/fixtures/v26-neutrals-1424-b8-fingerprints.json": {
       "previousBytes": 474,
       "currentBytes": 474,
       "previousSha256": "20fc86ce164415c0c1d7fe5018cf5c088717c8d35cf30f84047efe3e72936f06",
-      "currentSha256": "db6dc0a0f36adbda689b50f30d4ef235251a53f54cfff92eb2892d8aaf399639",
+      "currentSha256": "0383dfebf5d239bac1ba79d43b055ae8c5baa15591e13607d94d751ddf0a2438",
       "firstDifferentByte": 173
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark.json": {
       "previousBytes": 180985,
-      "currentBytes": 293544,
+      "currentBytes": 293303,
       "previousSha256": "a2a1dadae43bec9c4b921eef603effb03b6cf6e9892f9f7a9bf8726df041cfd3",
-      "currentSha256": "01b28b6c683cd4a0880511ac42c717ea23dd57ca7643b4eaaa900ea4383fb40a",
+      "currentSha256": "dd2b74c8812e1e62e22365c7014a4ab16dd6d6bd030ff160f5b6c0a63fa02cfe",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/evenshroud.json": {
       "previousBytes": 181029,
-      "currentBytes": 293545,
+      "currentBytes": 293304,
       "previousSha256": "0045d02b81a54cd16901692e87c59552c31e3aebcf7fbc13d0d318f296414174",
-      "currentSha256": "e76b48bcd7e3d420b5ccb017c2969c0c532253a21b51845480217596e96bb9c9",
+      "currentSha256": "5aa36cb3cb7442de99f71396dd89d2d3975d4acf456ea1bc5f8d98b84583a975",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/ionic-spark--evenshroud.json": {
       "previousBytes": 181021,
-      "currentBytes": 293069,
+      "currentBytes": 293148,
       "previousSha256": "593b4d6e19f5412a3478057401aa75bc73c320c1a4fd745a0a3335152a5300ff",
-      "currentSha256": "6457284ea12ffad8bde99aae495bf2bd5938bf7de917072448c9156dd1ae0bcf",
+      "currentSha256": "b75dbeae8e702eb72f55ed224a04cbb2876ab1a190b4a8f7a3384502779853c8",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/quicksilver.json": {
       "previousBytes": 181033,
-      "currentBytes": 293553,
+      "currentBytes": 293312,
       "previousSha256": "73ffe3ed81f5b3e51a7a52c6f9ccd06924334f55339166c851fa1631749d6869",
-      "currentSha256": "2e6c6077feba3ec11f123171c2564292ec01b7f96eb05817b693559262e689a2",
+      "currentSha256": "069b3aa972f7eeb78f102755019a0a099b923cc86dc30deb5663a7d9917aa4b1",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/edge-of-night.json": {
       "previousBytes": 181037,
-      "currentBytes": 294080,
+      "currentBytes": 293977,
       "previousSha256": "8af029aa7ba1ce7296e779a257893f8f8ba2fa9397db8611ebba9aa3c80e438e",
-      "currentSha256": "577b344d6fb1d1604c9650ec2fbf71eb7f399b91388c70a057f7924af1797b95",
+      "currentSha256": "a9decf9bb48904b43ef6e3b59675de91715a99a7be3cb9a9f0b03c25b6e10b98",
       "firstDifferentByte": 112
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/manifest.json": {
       "previousBytes": 66919,
       "currentBytes": 70028,
       "previousSha256": "befb5f0ec11c561dd1231936cb2f640cb9a5250b06a59679e4a4ab70beccaacb",
-      "currentSha256": "3f6fa8b84579c38f2cee7a7408bf98549cb6670c15687ff5eb92f70fbc9ab6a0",
+      "currentSha256": "5a3807b04b685ae58b12c79f7fec75498c0d344d74c16793b60f2a73251d325c",
       "firstDifferentByte": 137
     },
     "tests/fixtures/v26-neutrals-1424-herald-raw/trajectory.json": {
       "previousBytes": 328556,
-      "currentBytes": 335760,
+      "currentBytes": 335740,
       "previousSha256": "b031eaa686e577b32a517374fdb9452107679a68d42ba23096b165b4123b19fd",
-      "currentSha256": "0643c3728d0d893a12894e61adf4ce3c99a42a029e7b69774f927138696fde35",
+      "currentSha256": "742feb410ffc49d7a40bff86518eda64b0e3ebda7b6387cdfb1cd4e4bb55864e",
       "firstDifferentByte": 42
     }
   },
@@ -740,9 +740,9 @@
           "col": 4,
           "row": 7
         },
-        "terminalTick": 345,
+        "terminalTick": 301,
         "ezreal": null,
-        "garen": 15,
+        "garen": 13,
         "accepted": false
       },
       {
@@ -750,9 +750,9 @@
           "col": 4,
           "row": 6
         },
-        "terminalTick": 345,
+        "terminalTick": 300,
         "ezreal": null,
-        "garen": 15,
+        "garen": 13,
         "accepted": false
       },
       {
@@ -760,9 +760,9 @@
           "col": 3,
           "row": 7
         },
-        "terminalTick": 345,
+        "terminalTick": 301,
         "ezreal": null,
-        "garen": 15,
+        "garen": 13,
         "accepted": false
       },
       {
@@ -770,9 +770,9 @@
           "col": 5,
           "row": 7
         },
-        "terminalTick": 345,
+        "terminalTick": 301,
         "ezreal": null,
-        "garen": 15,
+        "garen": 13,
         "accepted": false
       },
       {
@@ -780,21 +780,91 @@
           "col": 4,
           "row": 5
         },
-        "terminalTick": 344,
+        "terminalTick": 288,
+        "ezreal": 12,
+        "garen": 11,
+        "accepted": false
+      },
+      {
+        "cell": {
+          "col": 3,
+          "row": 6
+        },
+        "terminalTick": 300,
+        "ezreal": null,
+        "garen": 13,
+        "accepted": false
+      },
+      {
+        "cell": {
+          "col": 5,
+          "row": 6
+        },
+        "terminalTick": 300,
+        "ezreal": null,
+        "garen": 13,
+        "accepted": false
+      },
+      {
+        "cell": {
+          "col": 2,
+          "row": 7
+        },
+        "terminalTick": 301,
+        "ezreal": null,
+        "garen": 13,
+        "accepted": false
+      },
+      {
+        "cell": {
+          "col": 6,
+          "row": 7
+        },
+        "terminalTick": 325,
+        "ezreal": null,
+        "garen": 13,
+        "accepted": false
+      },
+      {
+        "cell": {
+          "col": 4,
+          "row": 4
+        },
+        "terminalTick": 272,
+        "ezreal": 4,
+        "garen": 11,
+        "accepted": false
+      },
+      {
+        "cell": {
+          "col": 3,
+          "row": 5
+        },
+        "terminalTick": 264,
+        "ezreal": 8,
+        "garen": 11,
+        "accepted": false
+      },
+      {
+        "cell": {
+          "col": 5,
+          "row": 5
+        },
+        "terminalTick": 350,
         "ezreal": 6,
         "garen": 15,
         "accepted": true
       }
     ],
-    "terminalTick": 344,
+    "terminalTick": 350,
     "result": "enemyWin",
     "deaths": {
-      "unit-42": 161,
-      "unit-48": 344
+      "unit-42": 169,
+      "unit-48": 350
     },
-    "terminalHash": "4ebc045ff091278f2daaa58e7af47f9a777a42c19d1db5f75e2de2ae1c41702d",
-    "eventsHash": "d99bd96fbc30073489631f05e8b84023af56754058b00fedf92953836ad4f2b8",
-    "truePulseHash": "7005a823e5ef4159a24a324bac0233af5a130428f0089f6052cfccc3a60a3902",
+    "terminalHash": "848451d234882f28b90a3d008bd538ad65ad48b5a7d9af044df61ed6ef3a3e61",
+    "eventsHash": "4df6c0b9eead6695c69dc74b5376653a77620489d7752b818054f749f8ebc8e7",
+    "truePulseHash": "c2987727c55abba762205284ed3f927de1b392b6b7a6c65ac2b342bfd504f859",
     "independentBurnIntervalChecks": true
   }
 }
