@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, applyStatus, origin, renniHolding, type S13Unit } from '../src/simulation/combat-s13-state';
 import { RANGED_ATTACK_WINDUP_MAX, RANGED_ATTACK_WINDUP_TICKS, rangedAttackFlightTicks, rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 import { battle, unit } from './combat-helpers';
@@ -154,6 +154,53 @@ describe('ranged attack wind-up', () => {
     expect(p(mid).windup).toEqual({ targetId: first.targetId, launchTick: first.launchTick });
     let a = mid, b = JSON.parse(JSON.stringify(mid)) as CombatState;
     for (let n = 0; n < 20; n++) { const x = stepCombat(a), y = stepCombat(b); expect(y).toEqual(x); a = x.state; b = y.state; }
+  });
+});
+
+// ---- Every source of "the attacker cannot act this tick" cancels a wind-up (Fable 11-24: one row each) ----
+// Stun and channel are reached by a ranged hero mid wind-up: cancelled with its event, no launch that tick, and a full fresh wind-up
+// on the same current target once the state ends. The chained Sion (g23Bound) and Renni holding a target (renniHolding) are only
+// ever melee units, which never wind up; their rows put a wind-up on such a unit directly and check the cancel and that it never
+// launches (a melee unit has no wind-up to restart).
+describe('ranged attack wind-up: the attacker cannot act this tick', () => {
+  const windup = rangedAttackWindupTicks('ezreal', 20);
+  it.each([
+    ['stun', (st: CombatState) => applyStatus(p(st), origin(st.units.find(u => u.id === 'e')! as S13Unit), 'stun', 0, 10, st.tick, [], true)],
+    ['channel', (st: CombatState) => applyStatus(p(st), origin(p(st)), 'channel', 0, 10, st.tick, [], true)],
+  ] as const)('%s: cancelled, no launch that tick, a full wind-up on the same target after it ends', (_name, apply) => {
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    apply(mid);
+    const r = run(mid, 30);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, 'e']]);
+    expect(of(r.out, 'attack').filter(e => e.tick <= first.launchTick)).toEqual([]);
+    const restart = of(r.out, 'attackWindup')[0]!;
+    expect(restart.targetId).toBe('e');
+    expect(restart.tick).toBeGreaterThanOrEqual(mid.tick + 10);
+    expect(restart.launchTick - restart.tick).toBe(windup);
+    expect(of(r.out, 'attack')[0]).toMatchObject({ tick: restart.launchTick, targetId: 'e' });
+  });
+  it.each([
+    ['bound (chained Sion)', () => {
+      const sion = shooter('g23-sion', { attackRange: 1, runtime: { ...EMPTY_RUNTIME, buddyTriggered: false } });
+      return battle([sion, dummy('e', 3, 5)], { rngState: 42 });
+    }],
+    ['holding (Renni)', () => {
+      const renni = shooter('renni', { attackRange: 1, mana: 1000, maxMana: 1000 });
+      let st = battle([renni, dummy('e', 3, 5), dummy('f', 4, 5)], { rngState: 42 });
+      for (let n = 0; n < 40 && !renniHolding(p(st)); n++) st = stepCombat(st).state;
+      expect(renniHolding(p(st)), 'premise: Renni holds a target').toBe(true);
+      return st;
+    }],
+  ] as const)('%s: a wind-up put on it is cancelled and never launches', (_name, make) => {
+    const st = structuredClone(make());
+    const target = st.units.find(u => u.team === 'enemy' && u.alive)!.id;
+    Object.assign(p(st), { windup: { targetId: target, launchTick: st.tick + 2 }, targetId: target });
+    const r = run(st, 3);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[st.tick + 1, target]]);
+    expect(of(r.out, 'attack').filter(e => e.tick <= st.tick + 2)).toEqual([]);
+    expect(p(r.state).windup).toBeUndefined();
   });
 });
 
