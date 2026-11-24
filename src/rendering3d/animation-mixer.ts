@@ -1,6 +1,6 @@
 import { AnimationClip, AnimationMixer, LoopOnce, LoopRepeat, PropertyBinding, type AnimationAction, type KeyframeTrack, type Object3D } from 'three';
 import type { ActionOutput, ActionPlayback } from './animation-state';
-import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations, type SubmeshVisibility, type TimedFormClips } from './contracts';
+import { attackReleaseSeconds, type StatusPose, type ActionState, type AnimationNames, type CastMetadata, type CastSequence, type FormAnimations, type SubmeshVisibility, type TimedFormClips, type TimedFormAnimations } from './contracts';
 import { SUBMESH_EVENT_FPS, SubmeshSwitch, type TIMED_FORMS } from './submesh-visibility';
 
 export interface CastSelection { starLevel?: number; hero?: boolean; form?: 'front' | 'back'; branch?: string; attackIntervalSeconds?: number }
@@ -101,6 +101,8 @@ function heldTiming(raw: readonly number[], playback: ActionPlayback, hasOut: bo
 const FORM_CLIP_WEIGHT = 1e4;
 /** Seconds the entry clip's bones take to hand back to the body's clip after it ends. */
 const FORM_CLIP_FADE = 0.2;
+/** Seconds an idle or move loop takes to change to the other form's loop when the timed form shows or hides. */
+const FORM_LOOP_BLEND = 0.2;
 
 export class UnitAnimationMixer {
   readonly mixer: AnimationMixer;
@@ -136,7 +138,9 @@ export class UnitAnimationMixer {
    */
   private formClip?: { action: AnimationAction; left: number; share: number; exit: boolean };
   private formClips = new Map<string, AnimationClip | null>();
-  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility; timedForm?: (typeof TIMED_FORMS)[string]; timedFormClips?: TimedFormClips } = {}) {
+  /** Attacks played while the timed form is on: they alternate between its attack and attackAlt clips. */
+  private formAttacks = 0;
+  constructor(private root: Object3D, clips: readonly AnimationClip[], private names: AnimationNames = {}, private metadata: CastMetadata & { formAnimations?: FormAnimations; submeshVisibility?: SubmeshVisibility; timedForm?: (typeof TIMED_FORMS)[string]; timedFormClips?: TimedFormClips; timedFormAnimations?: TimedFormAnimations } = {}) {
     this.mixer = new AnimationMixer(root);
     this.clips = new Map(clips.map(clip => [clip.name, clip]));
     this.submeshes = SubmeshSwitch.create(root, metadata.submeshVisibility, metadata.timedForm);
@@ -201,7 +205,17 @@ export class UnitAnimationMixer {
       this.revision = -1;
     }
   }
+  /** The timed form's clip for `state` while the form is on (manifest timedFormAnimations), when the model carries it. */
+  private timedFormName(state: ActionState): string | undefined {
+    const set = this.metadata.timedFormAnimations;
+    if (!set || !this.submeshes?.formOn) return undefined;
+    const name = state === 'idle' ? set.idle : state === 'move' ? set.move
+      : state === 'attack' ? (set.attackAlt && this.formAttacks % 2 === 1 ? set.attackAlt : set.attack) : undefined;
+    return name && this.clips.has(name) ? name : undefined;
+  }
   private nameFor(state: ActionState, form = this.form): string {
+    const timed = this.timedFormName(state);
+    if (timed) return timed;
     const formClip = form && (state === 'idle' || state === 'move' || state === 'attack')
       ? this.metadata.formAnimations?.[form]?.[state]
       : undefined;
@@ -272,7 +286,9 @@ export class UnitAnimationMixer {
     }
     if (state === 'cast' && this.names.cast === null) return null;
     const form = context.form ?? this.form;
-    const formAttack = state === 'attack' && form ? this.metadata.formAnimations?.[form]?.attack : undefined;
+    const timedAttack = state === 'attack' ? this.timedFormName('attack') : undefined;
+    if (timedAttack) this.formAttacks++;
+    const formAttack = state === 'attack' ? timedAttack ?? (form ? this.metadata.formAnimations?.[form]?.attack : undefined) : undefined;
     const sequence = state === 'cast'
       ? selectCastSequence(this.metadata, castIndex, context)
       : state === 'attack' && !(formAttack && this.clips.has(formAttack))
@@ -281,7 +297,7 @@ export class UnitAnimationMixer {
     // A clip list rotates by the rule's cast number (Ekko's three spell clips); unreported (0) plays the first.
     const main = sequence && (Array.isArray(sequence.main) ? sequence.main[Math.max(0, castIndex - 1) % sequence.main.length] : sequence.main as string);
     const names = sequence ? [sequence.in, sequence.hold, main, sequence.out].filter((v): v is string => !!v)
-      : [this.nameFor(state, context.form)];
+      : [timedAttack ?? this.nameFor(state, context.form)];
     const clips = names.map(name => this.clips.get(name));
     if (clips.some(c => !c || !Number.isFinite(c.duration) || c.duration <= 0)) return null;
     const layers = sequence?.layers?.map(name => this.clips.get(name)).filter((c): c is AnimationClip => !!c && Number.isFinite(c.duration) && c.duration > 0) ?? [];
@@ -354,11 +370,20 @@ export class UnitAnimationMixer {
   setTimedForm(on: boolean, immediate = false): void {
     if (!this.submeshes) return;
     this.stopFormClip();
+    const was = this.submeshes.formOn;
     if (on) {
       this.submeshes.setForm(true);
       if (!immediate) this.startFormClip(this.metadata.timedFormClips?.enter, false);
     } else if (immediate || !this.submeshes.formOn || !this.startFormClip(this.metadata.timedFormClips?.exit, true)) this.submeshes.setForm(false);
+    if (was !== this.submeshes.formOn) this.formChanged();
     this.switchSubmeshes();
+  }
+  /** The form showed or hid: an idle or move loop changes to the clip of the form it is now in (attacks and casts play out). */
+  private formChanged(): void {
+    if (!this.submeshes?.formOn) this.formAttacks = 0;
+    if (this.baseState !== 'idle' && this.baseState !== 'move') return;
+    const clip = this.clips.get(this.nameFor(this.baseState));
+    if (clip && this.active?.getClip() !== clip) this.play(clip, true, FORM_LOOP_BLEND);
   }
   /** The named clip cut to the tracks of the bones that skin the form's submeshes (null when it has none of them). */
   private formTracks(name: string): AnimationClip | null {
@@ -387,7 +412,7 @@ export class UnitAnimationMixer {
     const clip = this.formClip;
     if (!clip) return;
     if (clip.left > 0) { clip.left -= seconds; if (clip.left > 0) return; }
-    if (clip.exit) { this.stopFormClip(); this.submeshes?.setForm(false); this.switchSubmeshes(); return; }
+    if (clip.exit) { this.stopFormClip(); this.submeshes?.setForm(false); this.formChanged(); this.switchSubmeshes(); return; }
     // The entry clip ends in the form's spread pose: hand its bones back to the body's clip over FORM_CLIP_FADE.
     clip.share = Math.max(0, clip.share - seconds / FORM_CLIP_FADE);
     if (clip.share <= 0) { this.stopFormClip(); return; }

@@ -1,7 +1,7 @@
 import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture, type BufferGeometry, type Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility, type TimedFormClips } from './contracts';
+import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility, type TimedFormClips, type TimedFormAnimations } from './contracts';
 import { CUTOUT_SUBMESHES, HELD_SUBMESHES, TIMED_FORMS, cutOutSubmeshes, hideInitialSubmeshes, unswitchedClips, withoutHeld } from './submesh-visibility';
 import { holdRootInPlace, trimClip } from './clip-range';
 import { IN_PLACE_CLIPS, ROOT_BONE } from './in-place-clips';
@@ -15,6 +15,7 @@ export interface ModelLease extends ModelTemplate, CastMetadata {
   /** The model's timed form (TIMED_FORMS), when it has one, and the manifest's clips that enter and leave it. */
   timedForm?: (typeof TIMED_FORMS)[string];
   timedFormClips?: TimedFormClips;
+  timedFormAnimations?: TimedFormAnimations;
   release(): void;
 }
 interface Entry { promise: Promise<ModelTemplate>; model?: ModelTemplate; refs: number; retired: boolean; placeholder: boolean }
@@ -154,7 +155,7 @@ export class ModelCache {
       attackRelease: this.manifest.models[id]?.attackRelease,
       statusPose: this.manifest.models[id]?.statusPose,
       submeshVisibility,
-      ...(Object.hasOwn(TIMED_FORMS, id) ? { timedForm: TIMED_FORMS[id], timedFormClips: this.manifest.models[id]?.timedFormClips } : {}),
+      ...(Object.hasOwn(TIMED_FORMS, id) ? { timedForm: TIMED_FORMS[id], timedFormClips: this.manifest.models[id]?.timedFormClips, timedFormAnimations: this.manifest.models[id]?.timedFormAnimations } : {}),
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

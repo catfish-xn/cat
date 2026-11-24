@@ -5,6 +5,7 @@ import { CUTOUT_ALPHA, CUTOUT_SUBMESHES, TIMED_FORMS, cutOutSubmeshes } from '..
 import { createTimedFormEvents } from '../src/rendering/three-mode/timed-form-events';
 import { DRMUNDO_BLAST_AFTER_PULSE_TICKS as DRMUNDO_BLAST_3D, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { DRMUNDO_BLAST_AFTER_PULSE_TICKS } from '../src/simulation/cast-windup';
+import { assertManifest } from '../src/rendering3d/contracts';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 
 let seq = 0;
@@ -195,5 +196,34 @@ describe('timed form entry and exit clips', () => {
     expect(visible(root)).toEqual(['Base']);
     run(400);
     mixer.dispose();
+  });
+});
+
+describe('timed form actions', () => {
+  it('plays the form\'s idle, move and alternating attacks while it is on, and the model\'s own clips after', () => {
+    const root = model('Base', 'Alt');
+    const clips = ['rest', 'walk', 'swing', 'f_rest', 'f_walk', 'f_swing', 'f_swing2'].map(clip);
+    const mixer = new UnitAnimationMixer(root, clips, { idle: 'rest', move: 'walk', attack: 'swing' },
+      { timedForm: { show: ['Alt'], hide: [] }, submeshVisibility: { initiallyHidden: ['Alt'] }, timedFormAnimations: { idle: 'f_rest', move: 'f_walk', attack: 'f_swing', attackAlt: 'f_swing2' } });
+    const playing = () => [...(mixer as unknown as { mixer: { _actions: { isRunning(): boolean; getClip(): { name: string }; getEffectiveWeight(): number }[] } }).mixer._actions]
+      .filter(a => a.isRunning() && a.getEffectiveWeight() > 0.5).map(a => a.getClip().name);
+    let rev = 0;
+    const go = (state: 'idle' | 'move' | 'attack') => { mixer.apply({ state, previous: 'idle', blendSeconds: 0, loop: state !== 'attack', revision: ++rev }); mixer.update(0.05); };
+    go('idle'); expect(playing()).toEqual(['rest']);
+    mixer.setTimedForm(true); mixer.update(0.5);
+    expect(playing()).toEqual(['f_rest']);
+    go('move'); expect(playing()).toEqual(['f_walk']);
+    expect(mixer.resolvePlayback('attack')?.clips).toEqual(['f_swing']);
+    expect(mixer.resolvePlayback('attack')?.clips).toEqual(['f_swing2']);
+    expect(mixer.resolvePlayback('attack')?.clips).toEqual(['f_swing']);
+    go('idle'); mixer.setTimedForm(false, true); mixer.update(0.5);
+    expect(playing()).toEqual(['rest']);
+    expect(mixer.resolvePlayback('attack')?.clips).toEqual(['swing']);
+    mixer.dispose();
+  });
+  it('the manifest contract takes timedFormAnimations and refuses unknown keys or empty names', () => {
+    const manifest = (timedFormAnimations: unknown) => ({ schemaVersion: 1, models: { x: { path: 'models/x/model.glb', timedFormAnimations } } });
+    expect(() => assertManifest(manifest({ idle: 'a', move: 'b', attack: 'c', attackAlt: 'd' }))).not.toThrow();
+    for (const bad of [[], { run: 'a' }, { idle: '' }, { idle: 3 }]) expect(() => assertManifest(manifest(bad))).toThrow('invalid-timed-form-animations');
   });
 });

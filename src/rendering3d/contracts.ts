@@ -56,6 +56,8 @@ export function attackReleaseSeconds(release: AttackRelease | undefined, interva
 export type ActionEffects = Record<string, Partial<Record<ActionState, readonly string[]>>>;
 export interface SubmeshVisibilityEvent { frame: number; show: readonly string[]; hide: readonly string[] }
 export interface TimedFormClips { enter?: string; exit?: string }
+/** The clips a model plays instead of its own while its timed form is on (written by scripts/assets3d/clip-append.mjs). */
+export interface TimedFormAnimations { idle?: string; move?: string; attack?: string; attackAlt?: string }
 export interface SubmeshVisibility { initiallyHidden?: readonly string[]; events?: Record<string, readonly SubmeshVisibilityEvent[]> }
 export interface AssetManifest {
   schemaVersion: 1;
@@ -84,6 +86,8 @@ export interface AssetManifest {
      * timed form (rendering3d TIMED_FORMS); the renderer plays each on the bones that move the form's submeshes.
      */
     timedFormClips?: TimedFormClips;
+    /** `timedFormAnimations` (optional): idle, move and attack clips (attacks alternating with attackAlt) while the form is on. */
+    timedFormAnimations?: TimedFormAnimations;
   } & CastMetadata>;
   effects?: Record<string, { path: string }>;
   /** Explicit playback selection; name-based build-report suggestions are separate. */
@@ -213,6 +217,11 @@ export function assertManifest(value: unknown): asserts value is AssetManifest {
     if (entry.animations && Object.entries(entry.animations).some(([key, name]) =>
       !(MODEL_ACTIONS as readonly string[]).includes(key) || !(key === 'cast' && name === null) && (typeof name !== 'string' || !name))) throw new Error('invalid-animation-map');
     if (entry.formAnimations !== undefined) assertFormAnimations(entry.formAnimations);
+    if (entry.timedFormAnimations !== undefined) {
+      const clips = entry.timedFormAnimations as unknown;
+      if (!isPlainObject(clips) || Object.entries(clips).some(([k, v]) => !['idle', 'move', 'attack', 'attackAlt'].includes(k) || typeof v !== 'string' || !v.trim()))
+        throw new Error('invalid-timed-form-animations');
+    }
     if (entry.timedFormClips !== undefined) {
       const clips = entry.timedFormClips as unknown;
       if (!isPlainObject(clips) || Object.entries(clips).some(([k, v]) => !['enter', 'exit'].includes(k) || typeof v !== 'string' || !v.trim()))
