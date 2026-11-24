@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch1VfxEvents } from '../src/rendering/three-mode/vfx-ltk/batch1-events';
-import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_EXTRA_SKILLS, CUE_OVERRIDES, STEB_HEAL_RING_DELAY } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { STEB_HEAL_TICKS } from '../src/simulation/cast-windup';
 import { withCueOverrides, type VfxIndex } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM } from '../src/rendering/three-mode/vfx-ltk/cue-ranks';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
@@ -114,5 +115,18 @@ describe('Steb heal visuals follow his heal events, never his cast\'s enemy', ()
   it('display priority (Fable 11-14, not original data): the share missile and its ring are body, his own heal ring critical', () => {
     for (const cue of CUE_EXTRA_SKILLS['steb-share']!) expect(effectImportance(cue), cue.system).toBe('body');
     for (const cue of CUE_EXTRA_SKILLS['steb-heal']!) expect(effectImportance(cue), cue.system).toBe('critical');
+  });
+  it('his strike flashes on the cast\'s own tick; his heal ring and glow follow his heal event, which the rules land after the cast', () => {
+    expect(CUE_OVERRIDES.steb!.find(cue => cue.system === '8b302521')).toMatchObject({ action: 'cast', event: 'hit', delay: 0 });
+    expect(CUE_EXTRA_SKILLS['steb-heal']).toEqual([expect.objectContaining({ system: 'cf50856e', event: 'hit', delay: STEB_HEAL_RING_DELAY })]);
+    const units = realUnits({ unit: 'steb', star: 1, form: null, foe: 'amumu', dist: 2, nfoes: 2, foestar: 2, ally: 'amumu', allystar: 1, allyCell: { row: 4, col: 3 } });
+    const events: DisplayCombatEvent[] = [];
+    runRealCombat(units, 20, (_state, shown) => { events.push(...shown as DisplayCombatEvent[]); });
+    const defs = Object.fromEntries(units.map(u => [u.id, u.definitionId as string]));
+    const planner = createBatch1VfxEvents(id => defs[id]);
+    const tickOf = (e: DisplayCombatEvent) => (e as { tick?: number }).tick;
+    const castTick = tickOf(events.find(e => e.type === 'cast' && (e as { sourceId: string }).sourceId === 'me')!)!;
+    const ringTicks = events.flatMap(e => planner.batch([e]).flatMap(plan => plan.extra).some(fx => fx.skill === 'steb-heal') ? [tickOf(e)!] : []);
+    expect(ringTicks[0]).toBe(castTick + STEB_HEAL_TICKS);
   });
 });

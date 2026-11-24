@@ -133,6 +133,8 @@ export const DRMUNDO_BLAST_AFTER_PULSE_TICKS = 5;
 export const CAMILLE_KICK_TICKS = 5;
 /** Tristana's shell flight in seconds (fitted, not original data). */
 const TRISTANA_SHELL_TRAVEL = 0.4;
+/** Seconds from Steb's heal event to his own heal ring and glow (fitted to official footage, not original data). */
+export const STEB_HEAL_RING_DELAY = 4 / 30;
 /**
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
@@ -284,8 +286,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     { system: '36c79ae9', action: 'passive', event: 'projectile', bone: 'L_Hand', delay: 0, duration: 0.8, travelSeconds: 0.6, rank: 'body' },
     { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0.6, duration: 1.2, rank: 'body' },
   ],
+  // His own heal ring and body glow start from his heal event (the rules land it STEB_HEAL_TICKS after his cast), a little
+  // after the heal itself (STEB_HEAL_RING_DELAY, fitted to official footage, not original data).
   'steb-heal': [
-    { system: 'cf50856e', action: 'passive', event: 'hit', delay: 0, duration: 1.2 },
+    { system: 'cf50856e', action: 'passive', event: 'hit', delay: STEB_HEAL_RING_DELAY, duration: 1.2 },
   ],
   // Irelia's swipe where her shield ends (batch1-events.ts). It reaches the front row, as in the original; at the 0.44 base
   // it drew 2.9 cells and at the arena scale 1.9 (pr572-report 11-09 14:35), so it keeps the older size.
@@ -318,7 +322,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3333333333333333, duration: 1.5 },
-    { system: '8b302521', action: 'cast', event: 'hit', delay: 0.6, duration: 0.8 },
+    // The strike's flash on the cast's own tick, where the rules settle his strike (official footage: it lands with his
+    // mana bar emptying); before, it waited a fixed offset from the cast.
+    { system: '8b302521', action: 'cast', event: 'hit', delay: 0, duration: 0.8 },
   ],
   // Q: missile, then one ground ring on the primary target, then the burst. R1 marker stays out.
   // The shadow zone and its edge are authored well over the original's drawn size; 0.68 brings them back.

@@ -5123,9 +5123,9 @@
     "tests/vfx-ltk-steb-heal.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10155,
+      "currentBytes": 11529,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "b50c8981850668160603b6dfd97b03c6f6be20edb538e62ab6bba1dabdffb026",
+      "currentSha256": "37dd24ef79e96b8f2a3d4344451efc2d1ce39239c803c243a258708ee4f37eaa",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-stop-first-emission.test.ts": {
