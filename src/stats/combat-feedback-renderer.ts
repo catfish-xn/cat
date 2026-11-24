@@ -84,10 +84,14 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
   let floats: Float[] = [], disposed = false;
+  // A unit that died keeps its numbers where it last stood: its piece is hidden the frame it dies (BoardScene syncCombat),
+  // before this frame's events reach push, so without this its killing blow's number never showed (11-24). Only a death
+  // does this; a unit hidden for any other reason still shows nothing.
+  const fallen = new Set<string>(), gone = new Set<string>(), lastAnchor = new Map<string, FeedbackAnchor>();
   // Detached nodes do not change the active DOM/order or keep expired text on the board. At most ALL are retained.
   const pool: Label[] = [];
   function release(item: Label): void { item.label.remove(); pool.push({ label: item.label, styles: item.styles }); }
-  function reset(): void { for (const item of floats) release(item); floats = []; }
+  function reset(): void { for (const item of floats) release(item); floats = []; fallen.clear(); gone.clear(); lastAnchor.clear(); }
   const look = (kind: FloatKind, cls: FloatClass, burn: boolean) => {
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
@@ -145,6 +149,8 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         }
         // Only damage and heals float, as in the original; a status (stun, knock-up, shred, sunder, burn…) shows no word.
         else if (event.type === 'heal') add(event.tick, event.targetId, 'heal', event.actual, at);
+        if (event.type === 'death') fallen.add(event.unitId);
+        else if (event.type === 'packetDamage' && event.killingPacket) fallen.add(event.targetId);
       }
     },
     render(now, anchors, obstacles = [], bars = new Map()) {
@@ -155,9 +161,14 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       floats = active;
       // Text and visibility writes finish before any geometry read. A label whose text did not change
       // keeps its measured half-width, so a steady frame reads the container once and then only writes positions.
+      // Where each unit stands now; a fallen unit with no piece left stands where it was last seen. A fallen unit seen again
+      // after its piece was gone (a new combat, a revive) is no longer fallen.
+      for (const [id, anchor] of anchors) { lastAnchor.set(id, anchor); if (gone.has(id)) { fallen.delete(id); gone.delete(id); } }
+      for (const id of fallen) if (!anchors.has(id)) gone.add(id);
+      const anchorOf = (id: string) => anchors.get(id) ?? (fallen.has(id) ? lastAnchor.get(id) : undefined);
       const visible: { item: Float; anchor: FeedbackAnchor }[] = [];
       for (const item of floats) {
-        const anchor = anchors.get(item.unitId); hidden(item.label, !anchor); if (!anchor) continue;
+        const anchor = anchorOf(item.unitId); hidden(item.label, !anchor); if (!anchor) continue;
         const text = `${item.kind === 'heal' ? '+' : ''}${item.amount}`;
         if (item.label.textContent !== text) { item.label.textContent = text; item.measured = Number.NaN; }
         visible.push({ item, anchor });
