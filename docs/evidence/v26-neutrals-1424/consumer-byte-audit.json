@@ -999,9 +999,9 @@
     "tests/feedback-killing-blow.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4745,
+      "currentBytes": 5682,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "70501754836677cec329c2760566af8ee01707bb70c0633aa3bf501ddb77ed23",
+      "currentSha256": "351ce4b0d3edbb647968c1333dc5c5883d8b3f934a3d186af60d5dd1ce1f2fed",
       "firstDifferentByte": 0
     },
     "tests/five-cost-fixes.test.ts": {
