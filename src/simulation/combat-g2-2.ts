@@ -16,11 +16,11 @@ import { lineContains, lineDirections } from './combat-skill-lines';
 /** User-approved 10-24 from the S13 third-party data table: Vi's row shockwave knocks up for 0.5 s (was 0.25 s). */
 export const VI_ROW_KNOCKUP_TICKS = 10;
 /**
- * User-approved 2026-11-11 (original 3-star footage: the damage lands shortly after the shield):
- * Vi grabs her target and slams 12 ticks (0.6 s, our fitted value, not original data) after the cast. The target is held (a knock-up) until the slam; damage,
- * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚).
+ * Vi grabs her target and slams VI_SLAM_TICKS after the cast (user-approved 2026-11-11; 11-21, authorization ②: aligned to the
+ * original frame by frame from two independent clips, was a fitted value). The target is held (a knock-up) until the slam; damage,
+ * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚, 蔚砸地时刻).
  */
-export const VI_SLAM_TICKS = 12;
+export const VI_SLAM_TICKS = 17;
 /**
  * User-approved 2026-11-15 (original footage: the damage number shows when the kick lands, not on the cast):
  * Camille's kick lands 5 ticks (0.25 s) after the cast. It follows the rising kick of our cast animation

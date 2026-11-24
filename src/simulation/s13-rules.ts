@@ -49,15 +49,26 @@ export const S13_COMBAT_RULES = Object.freeze({
   ricochet: 'primary-lethal-only-once-per-action-no-redirect-no-recursion',
   // Landing batch (11-20, timing only): these skills settle where they land, with abilityProjectileLaunched/Landed events.
   skillLanding: 'darius-spin-lux-shield-maddie-shot-heimer-rocket-morde-claw-settle-on-landing-events-launched-landed',
-  // Heimerdinger's focus (11-20, self-chosen share): the first half of each volley, rounded down, at his current target.
-  heimerFocus: 'first-floor-half-of-volley-at-current-target-rest-random',
+  // Death-keyed rolls (Good for Something, Loot Explosion; 2026-11-20): keyed by the death's tick and unit, not its eventSeq.
+  deathRollKeys: 'death-roll-key-tick-unit-v1',
+  // Malzahar's gate v1 (11-20): a line across his target (14.24 description), square to him -> target (footage); axis pick self-chosen.
+  malzaharGate: 'malzahar-gate-line-across-target-square-to-caster-v1',
+  // Heimerdinger's focus v1 (11-20, self-chosen share HEIMER_FOCUS_SHARE_BPS): the first part of each volley at his current target.
+  heimerFocus: 'heimer-rockets-focus-current-target-v1',
   // Swain's demon form drain, cadence v2 (11-20): pulses every SWAIN_PULSE_TICKS (cast-windup.ts), each a part of the per-second values (splitTotal).
   swainDrain: 'swain-drain-pulse-cadence-v2',
   // Mel's cast v2 (11-21): bolts settle where they land, her dash lands and her bolts leave later (MEL_DASH_LAND_TICKS,
-  // MEL_RELEASE_TICKS in cast-windup.ts); every normal cast dashes, the third does not move.
-  melBarrage: 'mel-barrage-settle-on-landing-dash-each-normal-cast-v2',
+  // MEL_RELEASE_TICKS in cast-windup.ts); every normal cast dashes, the third does not move; v3: ties go away from the nearest foe.
+  melBarrage: 'mel-barrage-settle-on-landing-dash-each-normal-cast-away-from-foes-v3',
   // Violet's combo v1 (11-21): two jabs and the uppercut each settle on their own tick (cast-windup.ts); the knock-up starts with the uppercut.
   violetCombo: 'violet-combo-settle-per-hit-v1',
   // Jinx's rocket v1 (11-21): it leaves and explodes later (cast-windup.ts) and settles where it explodes. Zap and chompers unchanged.
   jinxRocket: 'jinx-rocket-settle-on-explosion-v1',
+  // Vi's slam v2 (11-21): it lands VI_SLAM_TICKS after the cast, aligned to the original (v1 was a fitted wait); the row shockwave stays on the slam.
+  viSlam: 'vi-slam-aligned-to-original-v2',
+  // Mel's normal-cast bolts v1 (11-21): a volley of bolts per target (MEL_BOLTS_PER_TARGET), each its own projectile, staggered by
+  // target and spread over a span.
+  melBolts: 'mel-normal-cast-bolt-volley-per-target-staggered-v1',
+  // Jayce's ranged cast v1 (11-21): his crystals land, stay and explode one after another around their cells (cast-windup.ts).
+  jayceCrystals: 'jayce-crystals-land-then-chain-explode-v1',
 });

@@ -1,5 +1,6 @@
 import { scheduleShot } from './ability-projectile';
-import { MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS } from './cast-windup';
+import { melBoltOffset, MEL_BOLTS_PER_TARGET, MEL_DASH_LAND_TICKS, MEL_RELEASE_TICKS, MEL_TARGET_STAGGER_TICKS } from './cast-windup';
+import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import type { CombatOrigin, ShieldLayer } from './combat-types';
@@ -61,13 +62,15 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
   const third=u.runtime.castCount%3===0;ctx.castBranch=third?'third':'normal';
   // 11-21 (Fable, from original footage): every normal cast dashes (her own cell is no candidate); the third cast does not move.
   // Where she lands is self-chosen, not original data: the free cell within dashRadius with the most allies within 2 hexes
-  // (counted up to 2), then the nearest, then row and column. With no free cell she stays.
+  // (counted up to 2), then the nearest, then the farthest from its nearest enemy (11-21), then row and column. With no free
+  // cell she stays.
   const free:HexCell[]=[];
   if(!third)for(let row=0;row<ctx.board.rows;row++)for(let col=0;col<ctx.board.columns;col++){
     const cell={col,row};if(hexDistance(u.cell,cell)<=P.mel.dashRadius&&hexDistance(u.cell,cell)>0&&!ctx.units.some(t=>t.id!==u.id&&occupiesCell(t,ctx.tick)&&hexDistance(t.cell,cell)===0))free.push(cell);
   }
   const coverage=(cell:HexCell)=>ctx.units.filter(t=>t.id!==u.id&&t.team===u.team&&t.alive&&t.hp>0&&!isAbsent(t,ctx.tick)&&!isAttackProxy(t)&&hexDistance(cell,t.cell)<=2).length;
-  free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
+  const foesNow=enemies(u,ctx.units),clearance=(cell:HexCell)=>foesNow.length?Math.min(...foesNow.map(t=>hexDistance(cell,t.cell))):0;
+  free.sort((a,b)=>Math.min(2,coverage(b))-Math.min(2,coverage(a))||hexDistance(u.cell,a)-hexDistance(u.cell,b)||clearance(b)-clearance(a)||a.row-b.row||a.col-b.col);
   // 11-20 (user-approved, aligned to the original frame by frame): she lands MEL_DASH_LAND_TICKS after the cast (melDash task)
   // and her bolts leave MEL_RELEASE_TICKS after it; she channels until then. Who is shielded and hit is still decided now, from
   // the cell she dashes to.
@@ -89,12 +92,18 @@ export function sixCostCast(ctx:AbilityContext,u:S13Unit,_target:S13Unit,seq:num
     return targets.map(t=>t.id);
   }
   const targets=fromLanding(u,landing,ctx).slice(0,3);
-  targets.forEach((t,n)=>scheduleShot(u,'mel-barrage',ctx.tick+MEL_RELEASE_TICKS,t.id,Math.floor(variable(u,'Damage')*ap(u,ctx.tick,ctx.units)/100),seq,n,targets.length));
+  // Normal cast (11-21): MEL_BOLTS_PER_TARGET bolts per target, each its own projectile that settles where it lands (one packet,
+  // the per-target total split as before); target k starts MEL_TARGET_STAGGER_TICKS × k after the release, its bolts at
+  // melBoltOffset(i) after that. A target that dies takes none of the bolts still flying or still to leave (self-chosen, not
+  // original data).
+  const per=Math.floor(variable(u,'Damage')*ap(u,ctx.tick,ctx.units)/100),count=targets.length*MEL_BOLTS_PER_TARGET;
+  targets.forEach((t,n)=>splitTotal(per,MEL_BOLTS_PER_TARGET).forEach((value,i)=>scheduleShot(u,'mel-bolt',
+    ctx.tick+MEL_RELEASE_TICKS+n*MEL_TARGET_STAGGER_TICKS+melBoltOffset(i),t.id,value,seq,n*MEL_BOLTS_PER_TARGET+i,count)));
   return targets.map(t=>t.id);
 }
 /** Enemies nearest the cell she dashes to (byDistance from there). */
 function fromLanding(u:S13Unit,cell:HexCell,ctx:AbilityContext):S13Unit[]{return byDistance({...u,cell} as S13Unit,enemies(u,ctx.units));}
-/** Her barrage on one target lands as ten bolts (packets 0..9), the total split as before. */
+/** Her third-cast barrage on one target lands as its packets, the total split as before. */
 export function melBolts(ctx:AbilityContext,t:S13Unit,total:number,seq:number,source:CombatOrigin):void {
   for(let i=0;i<10;i++)ctx.packets.push({source,targetId:t.id,raw:Math.floor(total/10)+(i<total%10?1:0),damageType:'magic',actionSeq:seq,ordinal:i,
     delivery:'ability-direct',critEligibility:'requires-spell-authorization',area:true,triggeringCastActionSeq:seq});
