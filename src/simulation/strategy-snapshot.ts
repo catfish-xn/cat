@@ -39,7 +39,7 @@ import type {
 } from './strategy-types';
 import { UNIT_DEFINITIONS } from './units';
 import { getUnitStats } from './unit-stats';
-import { readRoundEnemyProjection } from './round-enemies';
+import { roundEnemyItems } from './round-enemies';
 import { hexDistance } from './board';
 import { resolveAbility } from './combat-abilities';
 import type { TraitProjectionContext } from './traits/effective-membership';
@@ -104,7 +104,7 @@ export function* buildStrategySnapshotSteps(state: CombatStrategyInputs, catalog
     const holder = state.preparation.units.find(u => u.id === holderId), unit = holder && UNIT_DEFINITIONS[holder.definitionId];
     return !holder || !victims.has(holder.team) || !!catalog.items[definitionId]?.emblemTrait || !unit || !!unit.summon || unit.unitKind === 'neutral';
   };
-  const enemyItems = (state.preparation.units.some(u => u.team === 'enemy') ? readRoundEnemyProjection(state.round).items : []).filter(i => keeps(i.unitId, i.definitionId));
+  const enemyItems = roundEnemyItems(state).filter(i => keeps(i.unitId, i.definitionId));
   if (victims.size) state = { ...state, items: state.items.filter(i => i.location.kind !== 'unit' || keeps(i.location.unitId, i.definitionId)),
     temporaryEquipment: state.temporaryEquipment.filter(i => keeps(i.holderId, i.definitionId)) };
   state=qualityProjection(state,equipmentBasis);

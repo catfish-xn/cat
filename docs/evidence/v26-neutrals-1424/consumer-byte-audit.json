@@ -2657,6 +2657,14 @@
       "currentSha256": "e20c17249c02ce67c60ec3df99bbe29f2e5076f4a4210f15c11e7d43807a36eb",
       "firstDifferentByte": 0
     },
+    "tests/recording-enemy-items.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3476,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a6111571d9efa8ca33d1e692e109a1023a426908f422bac224acc727556d66d2",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-animation.test.ts": {
       "previousBytes": 16727,
       "currentBytes": 19192,

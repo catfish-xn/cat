@@ -62,3 +62,12 @@ export const ROUND_ENEMY_PROJECTIONS = freezeContent(ROUND_CATALOG.map(round => 
 export function readRoundEnemyProjection(round:number,openingId?:string|null): typeof ROUND_ENEMY_PROJECTIONS[number] {
   getStageRound(round);const base=ROUND_ENEMY_PROJECTIONS[round-1];const crab=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.encounterId===`${openingId}/${base.roundId}`);return crab?{...base,units:crab.deployment}:base;
 }
+/**
+ * The enemy items the strategy reads: the round's own (when enemies stand on the board), unless a recording tool names
+ * them (CombatStrategyInputs.recordingEnemyItems; dev/castcmp --foe-items). A match never sets that field, so it reads
+ * exactly the round's items as before.
+ */
+export function roundEnemyItems(state:{readonly round:number;readonly preparation:{readonly units:readonly {readonly team:string}[]};readonly recordingEnemyItems?:readonly EnemyItem[]}):readonly EnemyItem[] {
+  if(state.recordingEnemyItems!==undefined)return state.recordingEnemyItems;
+  return state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[];
+}

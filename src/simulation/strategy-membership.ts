@@ -5,7 +5,7 @@ import { projectR3Roster, r3Traits } from './augment-pool-batch5-r3';
 import { projectHallOfMirrors } from './augment-pool-batch5-r3-mirrors';
 import { bindV20Teamups, v20MembershipSources } from './v20-teamups';
 import { projectEffectiveMembership, type TraitProjectionContext } from './traits/effective-membership';
-import { readRoundEnemyProjection } from './round-enemies';
+import { roundEnemyItems } from './round-enemies';
 
 /** Shared opening roster/membership for combat and preparation summon visibility/occupancy.
  * Projects combat bodies only; never grants assets or consumes resources/RNG. */
@@ -26,7 +26,7 @@ export function projectStrategyMembership(state: CombatStrategyInputs,
     round: state.round, sources: [...(context?.sources ?? []), ...sisterSources, ...teamupSources],
   } : context;
   const projection = projectEffectiveMembership(state.preparation, traitContext, definitions, [...state.items,
-    ...(state.preparation.units.some(u => u.team === 'enemy') ? readRoundEnemyProjection(state.round).items : []).map(i => ({
+    ...roundEnemyItems(state).map(i => ({
       id: 'enemy:' + i.unitId + ':' + i.slot, definitionId: i.definitionId,
       location: { kind: 'unit' as const, unitId: i.unitId, slot: i.slot },
     })),
