@@ -9,6 +9,7 @@ import { p2Target } from '../src/simulation/s13-augments-p2-combat';
 import { nextRandom } from '../src/simulation/rng';
 import type { Unit } from '../src/simulation/unit-types';
 import { battle, freeze, unit } from './combat-helpers';
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 
 function actor(id = 'p', patch: Partial<CombatUnit> = {}): S13Unit {
   return unit(id, 'player', 3, 4, { definitionId: 'draven', ability: resolveAbility('draven-ability', 1),
@@ -22,6 +23,14 @@ function enemy(id: string, col: number, row: number, patch: Partial<CombatUnit> 
 }
 const get = (state: CombatState, id = 'p') => state.units.find(u => u.id === id)!;
 const step = (units: CombatUnit[], rngState = 0) => stepCombat(freeze(battle(units, { tick: 0, rngState, rngDraws: 0 })));
+// Ranged attack wind-up (#791, window and tick literals only): Draven's attack event comes on the launch, W ticks after it
+// starts; `thru` steps W more ticks and keeps every event of the window.
+const W = rangedAttackWindupTicks('draven', 20);
+function thru(r: { state: CombatState; events: readonly CombatEvent[] }, n = W) {
+  let state = r.state; const events = [...r.events];
+  for (let i = 0; i < n; i++) { const next = stepCombat(state); state = next.state; events.push(...next.events); }
+  return { state, events };
+}
 
 describe('equal-distance tie break', () => {
   const pair = (rngState: number, reverse = false, patch: Partial<CombatUnit> = {}) => {
@@ -169,11 +178,11 @@ describe('hard-control target hold', () => {
     const held = stepCombat(stunned.state);
     expect(get(held.state).targetId).toBe('old');
     expect(held.state.rngDraws).toBe(0);
-    const release = stepCombat(held.state);
+    const release = thru(stepCombat(held.state));
     expect(isControlled(get(release.state) as S13Unit, 3)).toBe(false);
     expect(get(release.state).targetId).toBe('near');
     expect(release.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 3, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 3 + W, attackerId: 'p', targetId: 'near' },
     ]);
   });
 
@@ -185,10 +194,10 @@ describe('hard-control target hold', () => {
     const still = stepCombat(stunned.state);
     expect(get(still.state).targetId).toBe('old');
     expect(still.events.filter(e => e.type === 'attack')).toEqual([]);
-    const release = stepCombat(still.state);
+    const release = thru(stepCombat(still.state));
     expect(get(release.state).targetId).toBe('near');
     expect(release.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 3, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 3 + W, attackerId: 'p', targetId: 'near' },
     ]);
   });
 
@@ -208,10 +217,10 @@ describe('hard-control target hold', () => {
       energy: 0, convertedMana: 0, frenzyUntil: 0, permanentFrenzy: true, nextFrenzyPulse: 99,
       kills: 0, devoured: [], pendingDevour: null, storedEnergy: 0, absorbedRemainder: 0, storm: null } });
     applyStatus(frenzy, origin(old), 'stun', 0, 2, 0, []);
-    const acting = step([frenzy, enemy('old', 3, 2), enemy('near', 3, 3)]);
+    const acting = thru(step([frenzy, enemy('old', 3, 2), enemy('near', 3, 3)]));
     expect(get(acting.state).targetId).toBe('near');
     expect(acting.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 1, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 1 + W, attackerId: 'p', targetId: 'near' },
     ]);
   });
 });

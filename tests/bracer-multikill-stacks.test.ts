@@ -1,5 +1,5 @@
 import { hexDistance } from '../src/simulation/board';
-import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
+import { rangedAttackFlightTicks, rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { stepLanded } from './helpers/landing';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
@@ -90,10 +90,11 @@ beforeEach(() => {
 
 it('Lux kills two different targets in one root action and gains two +20 stacks', () => {
   const packets = doubleKill.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome] : []);
-  // Ranged attack landing (pure-result re-pin): the double kill comes when Lux's hits land, the flight after tick 118.
-  expect(after.combat!.tick).toBe(118 + rangedAttackFlightTicks(1));
+  // Ranged attack landing (pure-result re-pin): the double kill comes when Lux's hits land, the flight after tick 128.
+  // Ranged attack wind-up (#791, pure-result re-pin): that attack launches at 128 (was 118 before the wind-up).
+  expect(after.combat!.tick).toBe(128 + rangedAttackFlightTicks(1));
   expect(packets).toHaveLength(2);
-  expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([18]));
+  expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([20])); // #791 wind-up: root action 20 (was 18)
   expect(new Set(packets.map(p => p.context.targetId)).size).toBe(2);
   expect(packets.map(p => p.context.delivery)).toEqual(['ability-direct', 'equipment-proc']);
   expect(count(before)).toBe(0); expect(count(after)).toBe(2);
@@ -115,7 +116,7 @@ describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
     // The hedge-fund priority keeps the public offer on inert Hedge Fund (v25, then seed 84; seed 18 since cast wind-up batch 3), not Tiniest Titan,
-    // whose replay authority conflicts with the later boundary grants. Keep the double kill (tick 77 since cast wind-up batch 3).
+    // whose replay authority conflicts with the later boundary grants. Keep the double kill (tick 77 since cast wind-up batch 3; tick 82 since the ranged attack wind-up #791, same root action and targets).
     let preparation = acquireEquipment(['rod'],{seed:18,augmentPriorities:['hedge-fund']});
     // v26 pve-loot-carryover (8f794062): carried loot can leave an anvil whose sale opens a forge choice; resolve it publicly
     // before the next sale, as frontRowRod does.
@@ -141,7 +142,7 @@ describe('Renata public acquisition fixture', () => {
   });
 
   // Temporarily 20 s (user-approved 2026-10-20); restore the default 5 s once this slow case is sped up.
-  it('saves Renata\'s tick-77 double kill, restores object/JSON, and replays every complete combat state', () => {
+  it('saves Renata\'s tick-82 double kill, restores object/JSON, and replays every complete combat state', () => {
     let preparation = ownFixture(acquired);
     expect(preparation.seed).toBe(18); expect(preparation.roundDefinitionId).toBe('2-1');
     preparation = ownFixture(granted);
@@ -160,7 +161,7 @@ describe('Renata public acquisition fixture', () => {
     while (state.phase === 'combat') {
       const before = state, next = stepMatch(state); state = next.state;
       observe(before, state, next.events, 'tick'); states.push(state.combat!);
-      if (state.combat!.tick === 77) {
+      if (state.combat!.tick === 82) { // #791 wind-up: was 77
         earlyBefore = before; earlyAfter = state;
         const packets = next.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
         expect(packets).toHaveLength(2);
@@ -236,11 +237,16 @@ it('S1: a holder and its target dying in the same tick award no stack to the dea
   expect(combatUnit(result.state, 'p').runtime!.abilityPowerFlat).toBe(0);
 });
 
-it('S1 ranged holder: the target kills Lux on tick 1; her shot is still in flight when the fight ends, so nobody gets a stack', () => {
+it('S1 ranged holder: the target kills Lux on her launch tick; her shot is still in flight when the fight ends, so nobody gets a stack', () => {
   const { state } = attributionFight(['lux']);
+  // Ranged attack wind-up (#791, scene change): Lux's shot now leaves a wind-up after her attack starts, so the target strikes on
+  // that launch tick (its cooldown is her wind-up plus one) instead of tick 1; the window runs through that tick.
+  const w = holderWindup(state);
   const initial = { ...state, units: state.units.map(u => ({ ...u, hp: 1, maxHp: 1,
-    attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: 0 })) };
-  const result = stepCombat(initial);
+    attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: u.id === 'e' ? w + 1 : 0 })) };
+  let result = stepCombat(initial); const windowEvents = [...result.events];
+  for (let n = 0; n < w && result.state.status === 'running'; n++) { result = stepCombat(result.state); windowEvents.push(...result.events); }
+  result = { ...result, events: windowEvents };
   expect(result.events.filter(e => e.type === 'attackLaunched').map(e => e.type === 'attackLaunched' && e.attackerId)).toEqual(['p']);
   const lethal = result.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
   expect(lethal.map(p => [p.source.ownerId, p.targetId])).toEqual([['e', 'p']]);
@@ -248,6 +254,7 @@ it('S1 ranged holder: the target kills Lux on tick 1; her shot is still in fligh
   expect(earned(result.state)).toEqual([]);
 });
 
+const holderWindup = (state: CombatState) => rangedAttackWindupTicks(combatUnit(state, 'p').definitionId, readCombatStats(combatUnit(state, 'p'), state).attackIntervalTicks);
 it.each([false, true])('S1: Sion owns its kill; Black Rose holder earns only a real prior assist (%s)', contributed => {
   const started = attributionFight(['morgana', 'vladimir', 'cassiopeia'], true);
   const sion = started.state.units.find(u => u.definitionId === 'g23-sion')!;
@@ -255,14 +262,15 @@ it.each([false, true])('S1: Sion owns its kill; Black Rose holder earns only a r
   expect(started.events).toContainEqual(expect.objectContaining({ type: 'unitSpawned', unitId: sion.id, definitionId: 'g23-sion' }));
   let state: CombatState = { ...started.state, units: started.state.units.map(u => u.id === sion.id
     // Ranged attack landing (scene change, Fable 11-18): Sion strikes 2 + the holder's flight ticks in, after her shot has landed.
-    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2 + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell)), attackDamage: 10000, attackDamageBase: 10000 }
+    // Ranged attack wind-up (#791, window only): and after the holder's wind-up, so her shot launches before he strikes.
+    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2 + holderWindup(started.state) + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell)), attackDamage: 10000, attackDamageBase: 10000 }
     : u.id === 'e' ? { ...u, hp: 100, maxHp: 100 }
     : u.id === 'p' && contributed ? { ...u, cooldownTicks: 0 } : u) };
   const first = stepLanded(state); state = first.state; // window: the holder's shot lands
   expect(first.events.some(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p' && e.outcome.hpDamage > 0)).toBe(contributed);
   expect(earned(state)).toEqual([]);
-  // Window: on to Sion's strike, which kills on exactly the tick his cooldown (2 + the holder's flight) runs out.
-  const sionCooldown = 2 + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell));
+  // Window: on to Sion's strike, which kills on exactly the tick his cooldown (2 + the holder's wind-up and flight) runs out.
+  const sionCooldown = 2 + holderWindup(started.state) + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell));
   let second = stepCombat(state); for (let n = 0; n < 10 && !second.events.some(e => e.type === 'kill'); n++) second = stepCombat(second.state); state = second.state;
   expect(second.state.tick).toBe(started.state.tick + sionCooldown);
   const lethal = second.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);

@@ -172,7 +172,7 @@ it('restores the holder-death grant after live defenses and periodic history', (
     }
   }
   expect(death).toBeDefined();
-  expect(death!.combat!.tick).toBe(443); // landing batch re-pin (was 411; v26 489); before overtime: the resists replay is the restore authority
+  expect(death!.combat!.tick).toBe(445); // #791 wind-up re-pin (was 443; landing batch 443, earlier 411; v26 489); before overtime: the resists replay is the restore authority
   const restored = restoreMatch(JSON.stringify(death));
   expect(restored).toEqual(death); expect(stepMatch(restored)).toEqual(stepMatch(death!));
 });
@@ -231,12 +231,13 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
   expect(holder.triggerLedger!.runtimes.some(r => r.source.definitionId === 'TFT_Item_Artifact_SeekersArmguard' && r.triggerCount > 0)).toBe(true);
   // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1): the holder's one bracer trigger is now a personal kill
   // (+20 AP, +20 armor/MR) instead of an assist (+15): AP flat 15→20, AP 145→150, stacked resists 310→320.
-  expect(holder.runtime!.abilityPowerFlat).toBe(20);
-  expect(readCombatStats(holder, state.combat!).abilityPower).toBe(150);
+  // Ranged attack wind-up (#791, pure-result re-pin): that trigger is an assist again: AP flat 20→15, AP 150→145, resists 320→310.
+  expect(holder.runtime!.abilityPowerFlat).toBe(15);
+  expect(readCombatStats(holder, state.combat!).abilityPower).toBe(145);
   // 70% of the stacked 160 armor + 160 MR is 224; v22 tick 600 is the first overtime stack, which
   // scales new shields by 90% (so this checkpoint is authenticated by the overtime full replay).
   const stats = readCombatStats(holder, state.combat!);
-  expect(stats.armor + stats.magicResist).toBe(320);
+  expect(stats.armor + stats.magicResist).toBe(310);
   expect(active(state).layer.granted).toBe(Math.floor(224 * overtimeReceivedBps(600) / 10000));
   expect(active(state).layer.granted).toBe(201);
   const input = format === 'object' ? state : serializeMatch(state);

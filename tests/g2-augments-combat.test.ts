@@ -1,3 +1,4 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
@@ -198,7 +199,9 @@ it('Glass Cannon I+II start at 60% HP and amplify 100 attack damage by 32%; Mana
  expect(landing(s,'p0').units.find(u=>u.id==='enemy')!.hp).toBe(s.units.find(u=>u.id==='enemy')!.hp-132);
  let mana=initial(['lux'],[{mechanic:'extraAttackMana',values:{amount:2}},{mechanic:'extraAttackMana',values:{amount:4}}]);
  mana={...mana,units:mana.units.map(u=>u.id==='p0'?{...u,cooldownTicks:0,attackRange:20,mana:0}:u)};
- expect(stepCombat(mana).state.units.find(u=>u.id==='p0')!.mana).toBe(16);
+ // Ranged attack wind-up (#791, window only): the attack mana comes on the launch, a wind-up after the start.
+ let manaStep=stepCombat(mana).state;for(let n=0;n<rangedAttackWindupTicks('lux',20);n++)manaStep=stepCombat(manaStep).state;
+ expect(manaStep.units.find(u=>u.id==='p0')!.mana).toBe(16);
 });
 import { packets } from './helpers/replay2-views';
 import { commitMechanismHeal } from '../src/simulation/m8/s13-mechanisms';

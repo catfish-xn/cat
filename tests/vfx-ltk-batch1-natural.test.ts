@@ -1,3 +1,4 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -57,14 +58,15 @@ describe('batch 1 natural domain events through the online whitelist', () => {
     expect(plans.find(p => p.event.type === 'attack' && p.event.attackerId === 'p')?.variant).toBe('empowered');
   });
   it.each([false, true])('Lux shield follows authoritative self/ally recipient (ally=%s)', ally => {
-    const plans = natural('lux', 45, ally);
+    // Ranged attack wind-up (#791, window only): her attacks come a wind-up after they start.
+    const plans = natural('lux', 45 + rangedAttackWindupTicks('lux', 20), ally);
     const cast = plans.find(p => p.event.type === 'cast' && p.event.sourceId === 'p')!;
     expect(cast.event).toMatchObject({ targetIds: [ally ? 'ally' : 'p'] }); expect(cast.variant).toBe(ally ? undefined : 'self');
     const attacks = plans.filter(p => p.event.type === 'attack' && p.event.attackerId === 'p');
     expect(attacks.slice(0, 2).map(p => p.variant)).toEqual(['empowered', undefined]);
   });
   it('KogMaw cast is self-only while its attack still has actual magic packets', () => {
-    const plans = natural('kogmaw', 25);
+    const plans = natural('kogmaw', 25 + rangedAttackWindupTicks('kogmaw', 20));
     expect(plans.find(p => p.event.type === 'cast' && p.event.sourceId === 'p')?.event).toMatchObject({ targetIds: ['p'] });
     expect(plans.some(p => p.event.type === 'packetDamage' && p.event.sourceId === 'p' && p.event.damageType === 'magic')).toBe(true);
   });

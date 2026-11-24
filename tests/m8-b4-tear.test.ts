@@ -1,7 +1,7 @@
 import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 import { describe,it,expect } from 'vitest';
-import { wearing,enemy,run,packets,heals,LANDING } from './fixtures/m8-b4-items';
+import { wearing,enemy,run,packets,heals,LANDING,WINDUP } from './fixtures/m8-b4-items';
 import { stepCombat } from '../src/simulation/combat';
 import { statusMagnitude } from '../src/simulation/m8/status';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -38,13 +38,13 @@ describe('B4 tear recipes: hand vectors and real effects',()=>{
   // half-open boundary — moves later by exactly that shot's flight (rangedAttackFlightTicks of its distance); both sides of
   // the boundary are still asserted. Before landing: kill on tick 1 → 161; second kill on tick 2 → 162; hits at 161 / 162.
   const fa=rangedAttackFlightTicks(1),fb=rangedAttackFlightTicks(2),fz=rangedAttackFlightTicks(hexDistance({col:1,row:4},{col:3,row:3}));
-  const first=run(wearing('blue-buff',{baseCritChanceBps:0,targetId:'a'}),1+fa,[enemy('a',1,3,{hp:100}),enemy('b',2,3),enemy('z',3,3)]);
+  const first=run(wearing('blue-buff',{baseCritChanceBps:0,targetId:'a'}),1+WINDUP+fa,[enemy('a',1,3,{hp:100}),enemy('b',2,3),enemy('z',3,3)]);
   const buff=first.p.mechanismState!.statuses.flatMap(g=>g.contributions).find(c=>c.application.modifier?.stat==='damageAmp')!;
-  expect(buff.application.modifier!.value).toEqual({kind:'constant',amount:500});expect(buff.expiresAtTick).toBe(161+fa);
+  expect(buff.application.modifier!.value).toEqual({kind:'constant',amount:500});expect(buff.expiresAtTick).toBe(161+WINDUP+fa);
   // One attack on targetId, then on until its shot lands: [landing step, its events].
   const attack=(state:typeof first.state,targetId:string,hp?:number)=>{let r=stepCombat({...state,units:state.units.map(u=>u.id==='p'?{...u,cooldownTicks:0,targetId}:u.id===targetId&&hp!==undefined?{...u,hp}:u)});
     while(!r.events.some(e=>e.type==='attackLanded'&&e.attackerId==='p'))r=stepCombat({...r.state,units:r.state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)});return r;};
-  const second=attack(first.state,'b',120);expect(packets(second.events)[0].hpDamage).toBe(120);expect(second.state.tick).toBe(first.state.tick+1+fb);
+  const second=attack(first.state,'b',120);expect(packets(second.events)[0].hpDamage).toBe(120);expect(second.state.tick).toBe(first.state.tick+1+WINDUP+fb);
   const refreshed=second.state.units.find(u=>u.id==='p')!.mechanismState!.statuses.flatMap(g=>g.contributions).filter(c=>c.application.modifier?.stat==='damageAmp');expect(refreshed).toHaveLength(1);expect(refreshed[0].expiresAtTick).toBe(second.state.tick+160);expect(refreshed[0].application.modifier!.value).toEqual({kind:'constant',amount:500});
   const expiry=refreshed[0].expiresAtTick!;
   // The attacker's side (this buff) is taken on the attack tick: a shot launched on expiry-1 keeps +500 bps wherever it lands,
