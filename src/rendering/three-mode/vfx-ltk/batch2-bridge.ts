@@ -43,6 +43,9 @@ export function createBatch2VfxBridge(host: Host) {
   const viSlamTicks = new Map<string, number>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
+  // Sevikas whose rolled spell is the punch, with the cast's target and tick: the punch plays when her skill's first
+  // direct damage on that target after the cast arrives (the rules' landing), not on a fixed delay from the cast.
+  const punches = new Map<string, { target: string; tick: number }>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
   let variant: TimelineVariant | undefined;
   // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
@@ -92,7 +95,9 @@ export function createBatch2VfxBridge(host: Host) {
         if (!skill) return false; // Never guess a random move from the cast count.
         const channel = outcome!.castVariant!.move === 'flamethrower' ? outcome!.castVariant!.channelTicks : 0;
         // The rolled spell and its mod land when the slot machine stops, as the rules do.
-        const handled = play(champion, source, targets, skill, 'cast', false, channel > 0 ? channel * .05 : undefined, false, SEVIKA_SLOT_SECONDS);
+        // The punch itself plays on its landing (event()); the slot machine and the mod still start with the cast.
+        const handled = skill === 'sevika-punch' ? true
+          : play(champion, source, targets, skill, 'cast', false, channel > 0 ? channel * .05 : undefined, false, SEVIKA_SLOT_SECONDS);
         if (handled && ['rocket', 'shield', 'coin'].includes(outcome!.outcome)) play(champion, source, targets, `sevika-${outcome!.outcome}`, 'cast', false, undefined, false, SEVIKA_SLOT_SECONDS);
         // The slot machine is decoration over the cast: a catalogue without it keeps the cast as it was.
         if (handled) for (const slot of sevikaSlotSkills(outcome!.castVariant!.move, outcome!.outcome)) play(champion, source, targets, slot);
@@ -178,6 +183,16 @@ export function createBatch2VfxBridge(host: Host) {
       if (event.type === 'bloodFrenzyChanged' && host.unit(event.unitId)?.definitionId === 'warwick') {
         if (event.active) { if (!frenzied.has(event.unitId)) frenzied.set(event.unitId, 0); } else frenzied.delete(event.unitId);
       }
+      // Sevika's punch: observed in catch-up too, so a landing in a later batch still knows its cast.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'sevika') {
+        const rolled = outcomes.get(`${event.sourceId}:${event.actionSeq}`)?.castVariant?.move;
+        if (rolled === 'punch' && event.targetIds[0]) punches.set(event.sourceId, { target: event.targetIds[0], tick: event.tick });
+        else punches.delete(event.sourceId);
+      }
+      const punch = event.type === 'packetDamage' ? punches.get(event.sourceId) : undefined;
+      const punchLands = !!punch && event.type === 'packetDamage' && event.sourceKind === 'ability' && event.delivery === 'ability-direct'
+        && event.targetId === punch.target && event.tick > punch.tick;
+      if (punchLands) punches.delete((event as { sourceId: string }).sourceId);
       // Each cast of hers starts a fresh slam: a replay that starts over (castcmp's warm pass, a rewind) brings her slam on the
       // same tick again, and must draw it again.
       if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'vi') {
@@ -207,6 +222,7 @@ export function createBatch2VfxBridge(host: Host) {
           if (third && event.ordinal === 0) play('mel', event.sourceId, [event.targetId], 'mel-third-blast', 'cast', true);
         }
       }
+      if (punchLands && event.type === 'packetDamage') play('sevika', event.sourceId, [event.targetId], 'sevika-punch', 'cast', true);
       if (viSlam) {
         // Her right hand's trail ends as she lands; her landing group plays there, on her grabbed target (its place, should
         // it have died while held), else on the enemy this damage struck.
@@ -233,7 +249,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); punches.clear(); },
   };
   return bridge;
 }

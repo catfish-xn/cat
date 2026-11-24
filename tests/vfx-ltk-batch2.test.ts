@@ -57,7 +57,7 @@ describe('batch 2 exact display stages', () => {
       else expect(play).toHaveBeenCalledTimes(1);
     }
   });
-  it.each(['flamethrower','punch','chomp'] as const)('selects Sevika %s from a later outcome in the batch, including animation branch', move => {
+  it.each(['flamethrower','chomp'] as const)('selects Sevika %s from a later outcome in the batch, including animation branch', move => {
     const { bridge: b, play } = bridge('sevika'), c = cast('s',42);
     const outcome: DisplayCombatEvent = {type:'castOutcome',eventSeq:2,tick:0,unitId:'s',abilityKey:'sevika-ability',outcome:'none',subOutcomes:[],castVariant:{actionSeq:42,move,channelTicks:40,enhanced:false,heroAugmentIds:[]}};
     b.begin([c,outcome]); b.action('cast','s',['target'],c);
@@ -71,6 +71,37 @@ describe('batch 2 exact display stages', () => {
     expect(play.mock.calls[0]?.[4].cancelWithSource).toBe(true);
     expect(SEVIKA_SLOT_SECONDS).toBe(G23_POLICY.highRoller.slotTicks*.05);
     b.begin([c]); expect(b.action('cast','s',['target'],c)).toBe(false);
+  });
+  it('Sevika\'s punch plays when the rules\' punch lands on the cast\'s target, not on a delay from the cast; the slot machine still starts with the cast', () => {
+    const { bridge: b, play } = bridge('sevika'), c = cast('s',42,10);
+    const outcome: DisplayCombatEvent = {type:'castOutcome',eventSeq:2,tick:10,unitId:'s',abilityKey:'sevika-ability',outcome:'none',subOutcomes:[],castVariant:{actionSeq:42,move:'punch',channelTicks:0,enhanced:false,heroAugmentIds:[]}};
+    const hit = (tick: number, over: Partial<Extract<DisplayCombatEvent,{type:'packetDamage'}>> = {}): DisplayCombatEvent => ({ ...stormDamage(tick), sourceId:'s', damageType:'physical', definitionId:'sevika-ability', ...over });
+    b.begin([c,outcome]); b.event(c,true);
+    expect(b.action('cast','s',['target'],c)).toBe(true);
+    expect(b.branch(c)).toBe('two');
+    expect(play.mock.calls.map(x=>x[4].skill)).toEqual(['sevika-slots','sevika-slots-punch']);
+    // Not the punch: her own damage on another unit, an item's damage on the target, damage on the cast's own tick.
+    for (const other of [hit(30,{targetId:'other'}), hit(30,{sourceKind:'item'}), hit(30,{delivery:'basic-attack'}), hit(10)]) b.event(other,true);
+    expect(play).toHaveBeenCalledTimes(2);
+    b.begin([hit(35)]); b.event(hit(35),true);
+    expect(play).toHaveBeenCalledTimes(3);
+    expect(play.mock.calls[2]).toMatchObject(['sevika','s',['target'],'cast',{skill:'sevika-punch',snapshotTargets:true}]);
+    expect(play.mock.calls[2][4].delay).toBeUndefined();
+    // Once per cast: the punch's other packets on that tick (a mod's rockets) play nothing more.
+    b.event(hit(35),true); expect(play).toHaveBeenCalledTimes(3);
+    // Every cue starts with the landing: none waits on a fixed offset.
+    expect(sevikaSkills['sevika-punch'].map(cue => cue.delay)).toEqual(sevikaSkills['sevika-punch'].map(() => 0));
+  });
+  it('Sevika\'s punch landing seen in catch-up plays nothing and is spent; a cast of another spell clears a pending punch', () => {
+    const { bridge: b, play } = bridge('sevika');
+    const punchCast = cast('s',1,0), chompCast = cast('s',2,40);
+    const rolled = (seq: number, move: 'punch' | 'chomp', tick: number): DisplayCombatEvent => ({type:'castOutcome',eventSeq:2,tick,unitId:'s',abilityKey:'sevika-ability',outcome:'none',subOutcomes:[],castVariant:{actionSeq:seq,move,channelTicks:0,enhanced:false,heroAugmentIds:[]}});
+    const hit = (tick: number): DisplayCombatEvent => ({ ...stormDamage(tick), sourceId:'s', damageType:'physical', definitionId:'sevika-ability' });
+    b.begin([punchCast,rolled(1,'punch',0)]); b.event(punchCast,false); b.event(hit(25),false); b.event(hit(30),true);
+    expect(play).not.toHaveBeenCalled();
+    b.begin([punchCast,rolled(1,'punch',0)]); b.event(punchCast,true);
+    b.begin([chompCast,rolled(2,'chomp',40)]); b.event(chompCast,true); b.event(hit(65),true);
+    expect(play).not.toHaveBeenCalled();
   });
   it('shows the rolled mod on the right reel and three of the spell on a Triple, from the mirrored twins', () => {
     expect(sevikaSlotSkills('punch','shield')).toEqual(['sevika-slots','sevika-slots-punch-pair','sevika-slots-shield']);

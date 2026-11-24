@@ -27,11 +27,13 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: '83de8443', event: 'cast-start', bone: 'L_ClampB', delay: 0, duration: 3, stopAfter: 2 },
     { system: '892df721', event: 'hit', delay: .2, duration: 2, stopAfter: 1.5 },
   ],
+  // The punch plays when the rules' punch lands (batch2-bridge: her first skill packet on the cast's target after the
+  // cast), all at once: the glove's swing and spring beam with the impact, none of them on a fixed offset from the cast.
   'sevika-punch': [
-    { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 20 / 30, duration: .7, stopAfter: 20 / 30 },
-    { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 22 / 30, duration: .6, stopAfter: .5, fadeOut: true },
-    { system: '8ccb497d', event: 'hit', primary: true, delay: .8, duration: .8 },
-    { system: '95fb90ce', event: 'hit', primary: true, delay: .8, duration: .8 },
+    { system: '42ceec5b', event: 'cast-start', bone: 'BoxingGlove', delay: 0, duration: .7, stopAfter: 20 / 30 },
+    { system: '0badab98', event: 'cast-start', bone: 'BoxingGlove', delay: 0, duration: .6, stopAfter: .5, fadeOut: true },
+    { system: '8ccb497d', event: 'hit', primary: true, delay: 0, duration: .8 },
+    { system: '95fb90ce', event: 'hit', primary: true, delay: 0, duration: .8 },
   ],
   'sevika-chomp': [
     { system: '7029bc3c', event: 'projectile', bone: 'BUFFBONE_GLB_WEAPON_1', delay: 11 / 30, duration: .3, travelSeconds: .3 },
