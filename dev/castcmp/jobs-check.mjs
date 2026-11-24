@@ -81,10 +81,9 @@ for (const line of lines) {
     ...['me-cell', 'ally-cell', 'foe-cell', 'foe2-cell', 'ally2-cell'].filter(k => o(k) !== undefined && !rc.parseCell(o(k))).map(k => `--${k} must be R,C (row,column), got ${o(k)}`),
     // --items me=a+b,ally=c: known item ids on the caster's side only, at most 3 per unit (real-combat.ts parseItems).
     ...(o('items') !== undefined && 'why' in rc.parseItems(o('items')) ? [rc.parseItems(o('items')).why] : []),
-    // --foe-items foe=a+b,foe2=c: known item ids on the foes (real-combat.ts parseFoeItems). Not applied to the combat yet
-    // (RealSetup.foeItems), so a line using it fails here rather than record without the items.
+    // --foe-items foe=a+b,foe2=c: known item ids on the foes (real-combat.ts parseFoeItems), into the combat through the rules'
+    // recording-only enemy items.
     ...(o('foe-items') !== undefined && 'why' in rc.parseFoeItems(o('foe-items')) ? [rc.parseFoeItems(o('foe-items')).why] : []),
-    ...(o('foe-items') !== undefined && !rc.FOE_ITEMS_APPLIED ? ['--foe-items is parsed but not applied yet (needs the rules\' recording-only enemy items field)'] : []),
     ...(o('as-scale') !== undefined && 'why' in rc.parseAsScale(o('as-scale')) ? [rc.parseAsScale(o('as-scale')).why] : []),
     ...(o('foe-cell') !== undefined && o('foe-offset') !== undefined ? ['--foe-cell and --foe-offset: give one'] : []),
     // Rule (11-15): a real recording names the systems its gate judges (--systems), so a row whose effects never start fails.
@@ -110,7 +109,7 @@ for (const line of lines) {
   try {
     run = rc.runRealCombat(rc.realUnits(setup), rc.afterTicksFor(ms, start), (state, shown) => {
       events.push(shown); alive.push(Object.fromEntries(state.units.map(u => [u.id, !!u.alive]))); cells.push(rc.cellsOf(state));
-    }, start.castNumber, anchor, rc.realItems(setup), setup.asScale ?? 1);
+    }, start.castNumber, anchor, rc.realItems(setup), setup.asScale ?? 1, rc.realFoeItems(setup));
   } catch (e) { results.push({ name, unit, mode: 'real', ok: false, why: [String(e.message ?? e)] }); continue; }
   if (run.castIndex < 0) { results.push({ name, unit, mode: 'real', ok: false, why: [anchor.kind === 'cast' ? `never cast${start.castNumber !== 1 ? ` ${start.castNumber} times` : ''} in ${run.ticks} ticks` : `no ${rc.anchorName(anchor)}${start.castNumber !== 1 ? ` #${start.castNumber}` : ''} in ${run.ticks} ticks`] }); continue; }
   const a = rc.auditWindow(events, alive, run.castIndex, ms, rc.leadTicksFor(run.castIndex, start), anchor);
