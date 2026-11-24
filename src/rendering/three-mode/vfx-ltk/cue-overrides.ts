@@ -24,6 +24,10 @@ import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
+/** Seconds after Zeri's main-target spark that her bounces' sparks and arcs go off (fitted, not original data). */
+export const ZERI_BOUNCE_SECONDS = 0.07;
+/** Her bounce arc's missile part, drawn for one rule tick like her main-target arc's (runtime.ts BEAM_FLIGHT_SECONDS). */
+export const ZERI_BOUNCE_FLIGHT_SECONDS = 0.05;
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
 export const MALZAHAR_GATE_DELAY = 0.2;
 /**
@@ -174,6 +178,15 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   // (the swing's own target takes it with the swing's hit). Played to its own end (ownLife), like the swing's (C71).
   'nocturne-tar': [{ system: '6fb6c5e5', action: 'passive', event: 'hit', delay: 0, duration: 1, ownLife: true, bone: chest }],
   'drmundo-zap-body': [{ system: 'b8021b81', action: 'passive', event: 'cast-start', delay: 0, duration: 2, bone: chest }],
+  // Zeri's spark bounces (batch1-events.ts): on each enemy her empowered attack's bounce damage strikes (the rules' 'attack-extra'
+  // packets of that attack's tick), her empowered hit, and her empowered arc from her main target's chest to it, a moment after
+  // her main target's (ZERI_BOUNCE_SECONDS). Her own empowered pair, as she plays it on her main target, reused: her assets hold no
+  // other system that could draw a bounce. The arc's beam plays its own life (runtime.ts beamSeconds), as hers does.
+  'zeri-bounce': BATCH1_TIMELINES.zeri.filter(cue => cue.variant === 'empowered').map(({ variant: _variant, bone, ...cue }) =>
+    cue.event === 'projectile'
+      ? { ...cue, action: 'passive' as const, everyReceipt: true, fromPrimary: true, fromBone: chest, delay: ZERI_BOUNCE_SECONDS,
+        travelSeconds: ZERI_BOUNCE_FLIGHT_SECONDS, duration: ZERI_BOUNCE_FLIGHT_SECONDS }
+      : { ...cue, bone, action: 'passive' as const, everyReceipt: true, delay: ZERI_BOUNCE_SECONDS }),
   // Trundle's bite and Zyra's vines (batch1-events.ts): their hits play when the damage lands, CAST_WINDUP_TICKS after the cast,
   // on every enemy hit that tick (Zyra's first is her primary target). Cues as in their cast lists before.
   'trundle-bite': [{ system: '8bb9f6ab', action: 'passive', event: 'hit', delay: 0, duration: 1 }],

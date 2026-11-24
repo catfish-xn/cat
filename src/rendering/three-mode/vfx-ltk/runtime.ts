@@ -361,6 +361,11 @@ export function withFlightSeconds<T extends TimelineCue>(cue: T, seconds: number
   if (cue.spanFlight) return { ...cue, duration: seconds + cue.duration };
   return cue;
 }
+/** Where one of a unit's bones is now (its cue bone, as unitAnchor finds it), in the units pieces stand in. */
+export function bonePoint(root: Object3D, body: Object3D | null, bone: string): WorldPoint {
+  const at = unitAnchor(root, body, bone).originAt(0);
+  return [at[0] * AXIS_SIGN[0] * FX_SCALE, at[1] * FX_SCALE, at[2] * FX_SCALE];
+}
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
@@ -924,7 +929,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A projectile from the primary target's place (TimelineCue.fromPrimary) takes that place now: the main bomb that lands
         // there may kill it first. Without that unit it does not play.
         const fromUnit = spawn.fromId !== undefined ? findUnit(spawn.fromId) : undefined;
-        const from = fromUnit && !fromUnit.disposed ? standingPoint(fromUnit.root) : undefined;
+        const from = fromUnit && !fromUnit.disposed ? spawn.fromBone ? bonePoint(fromUnit.root, fromUnit.body, spawn.fromBone) : standingPoint(fromUnit.root) : undefined;
         if (spawn.fromId !== undefined && !from) continue;
         // A flight the rule timed (LtkPlayOptions.flightSeconds), else one by distance (TimelineCue.flightTicks), from where
         // caster and target stand now.

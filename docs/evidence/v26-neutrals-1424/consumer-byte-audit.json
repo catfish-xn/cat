@@ -5255,6 +5255,14 @@
       "currentSha256": "57cfea41690c2f5580578069e7c47ef5c12038c620992d5f80cc0aef3f0286ab",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-zeri-bounce.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6597,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "75d4a7f393c7d4dc85b79f9324152285dcef2761cd06ccded6d254938c2ec9ed",
+      "firstDifferentByte": 0
+    },
     "tests/vi-grab-slam.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
