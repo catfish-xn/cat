@@ -84,6 +84,22 @@ describe('vfx-ltk falling projectile (TimelineCue.fromAbove)', () => {
     runtime.dispose();
   });
 
+  it('a board-point drop (Rumble\'s missiles) falls from above its point onto it, with no unit target', async () => {
+    const { board: _b, primary: _p, ...rest } = { ...drop, board: undefined };
+    const { runtime } = await setup([{ ...rest, location: 'board' }]);
+    const point = [40, 0, -30] as const;
+    expect(runtime.play('caitlyn', 'caster', [], 'cast', { board: point })).toBe(true);
+    runtime.update(1 / 30, new Camera());
+    expect(built).toHaveLength(1);
+    const { options } = built[0];
+    expect(options.attachment).toBeUndefined();
+    expect(options.projectileSeconds).toBe(0.25);
+    expect(options.anchor.originAt(0)).toEqual(toSystem(40 - cell, 5 * cell, -30 - 1.5 * cell));
+    expect(options.target.originAt(0)).toEqual(toSystem(40, 0, -30));
+    expect(() => parseIndex(index([{ ...rest, location: 'board' }]))).not.toThrow();
+    runtime.dispose();
+  });
+
   it('parses only on a projectile, not with a row, as three finite numbers 1-10 cells up and at most 4 across', () => {
     expect(() => parseIndex(index([drop]))).not.toThrow();
     expect(() => parseIndex(index([{ ...drop, event: 'hit' }]))).toThrow();

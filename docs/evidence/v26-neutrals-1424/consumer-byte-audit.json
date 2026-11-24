@@ -4664,9 +4664,9 @@
     "tests/vfx-ltk-falling-projectile.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7632,
+      "currentBytes": 8520,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "816ef3457cfb8f0ceb4e2ee49695738c6f20222171ecf56525e1b60202aeac1f",
+      "currentSha256": "8be639c489bfa74f843a0aa99d00a976390b955e0d0bd365241cae3ac4fa74e3",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-fan-out.test.ts": {
@@ -4966,6 +4966,14 @@
       "currentBytes": 27472,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "59e64416e76bc5703162090d59a7cdf2131afed6b92c4c7a4667c7f5f413d585",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-rumble-row.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3326,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "d77b0aeb968ad6842911ba6adc4f327c150fb4ac30b5cd614b20bb4483029437",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-seed.test.ts": {
