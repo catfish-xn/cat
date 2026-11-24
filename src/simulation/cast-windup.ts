@@ -95,6 +95,10 @@ export function heimerRocketLaunchTick(k: number, n: number): number {
  */
 export const MORDEKAISER_CLAW_TICKS: Readonly<Record<1 | 2 | 3, { readonly appear: number; readonly land: number }>> =
   Object.freeze({ 1: { appear: 2, land: 26 }, 2: { appear: 4, land: 27 }, 3: { appear: 4, land: 27 } });
+/** Malzahar's line (11-20, the 14.24 description "a 5-hex line across the target", square to the line from him to it as in the
+ * original footage; the hex axis it takes is self-chosen, board.ts hexCrossLine): this many cells on either side of the target.
+ * docs/S13_RULES_GAP.md (玛尔扎哈技能直线). */
+export const MALZAHAR_LINE_HALF = 2;
 
 /** Heimerdinger's focus (11-20, user-approved; self-chosen, not original data): this share of each volley's rockets, rounded
  * down, goes to his current target; the rest pick at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火). */
@@ -131,8 +135,8 @@ export function melBoltOffset(i: number): number { return Math.round(i * MEL_BOL
 /** Jayce's ranged cast (11-21, authorization ②): crystal i (i = 0 is thrown at the nearest enemy, then by distance) lands
  * jayceCrystalLandTick(i) after the cast and stays there; the main hit on the nearest enemy lands JAYCE_MAIN_HIT_TICKS after it;
  * the crystals then explode one after another in chain order (the nearest's first, then the farthest back toward the nearest),
- * the n-th of the chain jayceCrystalBlastTick(n) after the cast. The first three of each are aligned to the original frame by
- * frame (2 stars throws three); the chain order rule and the spacing past three (3 stars) repeat the last measured gap and
+ * the n-th of the chain jayceCrystalBlastTick(n) after the cast. The listed ticks are aligned to the original frame by frame (two
+ * stars); the chain order rule and the spacing past the listed ones (three stars) repeat the last measured gap and
  * are self-chosen, not original data. */
 export const JAYCE_CRYSTAL_LANDS: readonly number[] = [11, 14, 15], JAYCE_MAIN_HIT_TICKS = 33, JAYCE_CRYSTAL_BLASTS: readonly number[] = [35, 37, 40];
 const extend = (list: readonly number[], i: number) => i < list.length ? list[i]! : list[list.length - 1]! + (i - list.length + 1) * (list[list.length - 1]! - list[list.length - 2]!);

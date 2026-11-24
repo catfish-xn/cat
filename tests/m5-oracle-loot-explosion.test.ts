@@ -61,12 +61,15 @@ function vector(roundId: string, drops: readonly Drop[]) {
   return { before, after, events, receipts };
 }
 
+// #795 (2026-11-21): the drop roll is keyed by the death's tick and unit; in these vectors the unit is named from eventSeq, so
+// the scene inputs (eventSeq) were re-chosen to keep every case's meaning and expected rewards (was 0, 2, 22 and 0 with 3; see PR #795).
+// Two components: no eventSeq in 1–1000 draws gloves then cloak; eventSeq 1 draws the same two in the other order.
 const cases: { name: string; roundId: string; drops: Drop[] }[] = [
   { name: 'two gold', roundId: '2-1', drops: [{ eventSeq: 0, rewards: [{ kind: 'gold', amount: 2 }] }] },
-  { name: 'one component', roundId: '5-1', drops: [{ eventSeq: 0, rewards: [{ kind: 'item', definitionId: 'gloves' }] }] },
-  { name: 'two components', roundId: '5-1', drops: [{ eventSeq: 2, rewards: [{ kind: 'item', definitionId: 'gloves' }, { kind: 'item', definitionId: 'cloak' }] }] },
-  { name: 'one completed item', roundId: '5-1', drops: [{ eventSeq: 22, rewards: [{ kind: 'item', definitionId: 'giant-slayer' }] }] },
-  { name: 'gold and equipment together', roundId: '5-1', drops: [{ eventSeq: 0, rewards: [{ kind: 'item', definitionId: 'gloves' }] }, { eventSeq: 3, rewards: [{ kind: 'gold', amount: 3 }] }] },
+  { name: 'one component', roundId: '5-1', drops: [{ eventSeq: 9, rewards: [{ kind: 'item', definitionId: 'gloves' }] }] },
+  { name: 'two components', roundId: '5-1', drops: [{ eventSeq: 1, rewards: [{ kind: 'item', definitionId: 'cloak' }, { kind: 'item', definitionId: 'gloves' }] }] },
+  { name: 'one completed item', roundId: '5-1', drops: [{ eventSeq: 80, rewards: [{ kind: 'item', definitionId: 'giant-slayer' }] }] },
+  { name: 'gold and equipment together', roundId: '5-1', drops: [{ eventSeq: 9, rewards: [{ kind: 'item', definitionId: 'gloves' }] }, { eventSeq: 10, rewards: [{ kind: 'gold', amount: 3 }] }] },
 ];
 for (const { name, roundId, drops } of cases) describe(`generic Loot Explosion oracle: ${name}`, () => {
   it('accepts the literal due rewards through validateRewards and the full conservation Ledger', () => {
