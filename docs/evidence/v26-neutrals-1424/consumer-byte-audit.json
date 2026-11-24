@@ -3816,9 +3816,9 @@
     "tests/server/placeholder-augment-history.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 16746,
+      "currentBytes": 17336,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "28100468dc5bc9306b5794f0a1788df124551728798b838b8a1d3db088285f7d",
+      "currentSha256": "11c513b23e4c674dd6c9571e32cd8dbcfcc3d7171dd4dbea708bda9a892620a7",
       "firstDifferentByte": 0
     },
     "tests/server/placeholder-resolver-helper.ts": {
