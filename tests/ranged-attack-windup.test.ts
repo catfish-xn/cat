@@ -88,6 +88,24 @@ describe('ranged attack wind-up', () => {
     expect(of(r.out, 'attackWindupCancelled').map(e => e.targetId)).toEqual([first.targetId]);
     expect(of(r.out, 'attackWindup').map(e => e.targetId)).toEqual([other]);
   });
+  it('a target turning unselectable during the wind-up cancels the attack; the next one on a new target winds up in full, never launching that tick', () => {
+    // 11-24 Fable: cancelled like a dead target, then the ordinary target choice and a whole wind-up of its own.
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3), dummy('f', 4, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    Object.assign(mid.units.find(u => u.id === first.targetId)!, { anomalyState: { invisibleUntilTick: mid.tick + 30 } });
+    const r = run(mid, 30), other = first.targetId === 'e' ? 'f' : 'e';
+    const cancelled = of(r.out, 'attackWindupCancelled');
+    expect(cancelled.map(e => e.targetId)).toEqual([first.targetId]);
+    expect(cancelled[0]!.tick).toBe(mid.tick + 1);
+    const next = of(r.out, 'attackWindup')[0]!;
+    expect(next).toMatchObject({ tick: mid.tick + 1, targetId: other, launchTick: mid.tick + 1 + first.launchTick - first.tick });
+    const attacks = of(r.out, 'attack');
+    expect(attacks.filter(e => e.targetId === first.targetId)).toEqual([]);
+    expect(attacks[0]).toMatchObject({ tick: next.launchTick, targetId: other });
+    // No wind-up is ever left behind its launch tick.
+    let st = mid; for (let n = 0; n < 30; n++) { st = stepCombat(st).state; const w = p(st).windup; if (w) expect(w.launchTick).toBeGreaterThan(st.tick); }
+  });
   it('melee attacks have no wind-up', () => {
     const r = run(battle([shooter('garen', { attackRange: 1 }), dummy('e', 3, 5)], { rngState: 42 }), 30);
     expect(of(r.out, 'attackWindup')).toEqual([]);
@@ -124,6 +142,19 @@ describe('ranged attack wind-up: Match save', () => {
     const s = windingUp(), json = serializeMatch(s);
     expect(serializeMatch(restoreMatch(json))).toBe(json);
   }, 60000);
+  it('Edge of Night: a wind-up whose target turns unselectable is cancelled, and every save of that combat restores', () => {
+    // The 11-24 repro: the enemy Tristana winds up on unit-1 as its Edge of Night stealth begins. Before the fix the wind-up hung past
+    // its launch tick and that save was refused ('attack windup launch').
+    let s = itemMatch('edge-of-night'), cancelled = 0;
+    for (let n = 0; n < 361 && s.phase === 'combat'; n++) {
+      const r = stepMatch(s); s = r.state;
+      cancelled += r.events.filter(e => (e as { type: string }).type === 'attackWindupCancelled' && (e as { targetId?: string }).targetId === 'unit-1').length;
+      if (s.phase !== 'combat') break;
+      for (const u of s.combat!.units) if (u.windup) expect(u.windup.launchTick).toBeGreaterThan(s.combat!.tick);
+      if (s.combat!.units.some(u => u.windup)) expect(serializeMatch(restoreMatch(serializeMatch(s)))).toBe(serializeMatch(s));
+    }
+    expect(cancelled, 'premise: a wind-up on unit-1 is cancelled by its stealth').toBeGreaterThan(0);
+  }, 120000);
   it.each([
     ['an ally target', (u: any, units: any[]) => { u.windup.targetId = units.find((x: any) => x.team === u.team && x.id !== u.id)?.id ?? u.id; }],
     ['a launch in the past', (u: any) => { u.windup.launchTick = 0; }],

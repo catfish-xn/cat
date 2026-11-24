@@ -32,7 +32,7 @@ import {splitExperimentClones} from './combat-experiment-clone';
 import { hallOfMirrorsDamage, hallOfMirrorsExecution } from './augment-pool-batch5-r3-mirrors';
 import { castAnomaly, tickAnomalies, takedownAnomalies, deathAnomalies, attackAnomaly } from './anomalies/runtime';
 import { isAttackProxy, scheduleAnomalyAttacks, removeBoundAnomalySummons, recordAnomalyProxyHit } from './anomalies/summons';
-import { isAbsent, occupiesCell } from './anomalies/availability';
+import { isAbsent, isSelectable, occupiesCell } from './anomalies/availability';
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
@@ -484,11 +484,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       advanceMadChemist(ctx, unit, () => actionSeq++);
       if(isOpeningCrab(unit)){if(unit.alive&&!blocked.has(unit.id))crabJump(ctx,unit,()=>actionSeq++);rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);continue;}
       // A winding-up ranged attack (remote wind-up, 11-19, cancel semantics inferred, not original): it is cancelled when its
-      // attacker is controlled (or cannot act) or its target died or left range, with the cooldown cleared so the next attack can
-      // start at once (this tick, on a new target).
+      // attacker cannot act this tick (dead, controlled, bound, channelling, holding, or without a target) or its target died,
+      // became unselectable (11-24 Fable: e.g. Edge of Night) or left range, with the cooldown cleared so the next attack can
+      // start at once (this tick, on a newly chosen target) with a full wind-up of its own.
       if (unit.windup) {
         const w = unit.windup, windupTarget = units.find(u => u.id === w.targetId && u.alive && u.hp > 0);
-        if (!unit.alive || blocked.has(unit.id) || !windupTarget || hexDistance(unit.cell, windupTarget.cell) > range(unit)) {
+        if (!unit.alive || blocked.has(unit.id) || !target || g23Bound(unit) || active(unit, tick, 'channel').length > 0 || renniHolding(unit)
+          || !windupTarget || !isSelectable(windupTarget, tick) || hexDistance(unit.cell, windupTarget.cell) > range(unit)) {
           if (unit.alive) events.push({ type: 'attackWindupCancelled', tick, attackerId: unit.id, targetId: w.targetId });
           delete unit.windup; unit.cooldownTicks = 0;
         }
