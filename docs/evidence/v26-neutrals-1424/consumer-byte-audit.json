@@ -1864,9 +1864,9 @@
     },
     "tests/m5-route.test.ts": {
       "previousBytes": 8129,
-      "currentBytes": 10113,
+      "currentBytes": 10246,
       "previousSha256": "03f26283ae3278f1f29e2b9eab445d64f58b32e5e8d1ed19c62b893b1bd711e4",
-      "currentSha256": "a7f567bf0037e4f9c128735a16088358a715103cfdeed690f05a163317b97d7d",
+      "currentSha256": "82b95f7a41a9cb2229f4caf32e46ea813ef3dd01067538443e220a0be4c2a876",
       "firstDifferentByte": 9
     },
     "tests/m5-strategy-numbers.test.ts": {
@@ -2032,6 +2032,13 @@
       "previousSha256": "1520234edcd36414f7483b72118da9ba617fe945150b627e792a43dc7130b4ee",
       "currentSha256": "b480276470cc350854b14fd31a68dd7b30698d1f9acc05a5e7457ded1e9bab68",
       "firstDifferentByte": 232
+    },
+    "tests/m8-b4-r3b-lifecycle.test.ts": {
+      "previousBytes": 7029,
+      "currentBytes": 7420,
+      "previousSha256": "4333ae2e6c759d9c4109e04d4e40b544bfdbf90e93a18f8df7d7bf99c6917986",
+      "currentSha256": "1c7e9a6095d28cc94d49ed2c093312d52f489043aed2bcc4d4f92a85eb61af48",
+      "firstDifferentByte": 4310
     },
     "tests/m8-b4-rod.test.ts": {
       "previousBytes": 2393,
