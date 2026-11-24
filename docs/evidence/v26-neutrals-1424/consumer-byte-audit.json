@@ -2190,9 +2190,9 @@
     },
     "tests/m8-b8-live-capacity.test.ts": {
       "previousBytes": 12692,
-      "currentBytes": 13579,
+      "currentBytes": 14223,
       "previousSha256": "44fe089c28d8fdcb338ba585cf215313c01a07f2d58452d71f2a8699a0bb13f3",
-      "currentSha256": "ce3a0049f56cb146d6ccb4bcb3e8e7e2318dda957bb2a2314967b17b60b0e9ac",
+      "currentSha256": "6cfad95264777868a520c7d03f9d83a37fd7cfe036f1f04f673594880ca2c90b",
       "firstDifferentByte": 1795
     },
     "tests/m8-b8-live-cross-round.test.ts": {
