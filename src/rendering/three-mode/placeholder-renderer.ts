@@ -70,12 +70,13 @@ import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, im
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, RUMBLE_MISSILE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
 import { gateEnds } from './vfx-ltk/gate-ends';
+import { cellAt, rowStrikeCells } from './vfx-ltk/rumble-row';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
 /** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
@@ -1530,6 +1531,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (!form.on && view) ltk?.stopSystems(form.id, TIMED_FORM_STOPS[view.definitionId] ?? []);
     };
     for (const form of timedForms.advance(latest)) setForm(form);
+    // Rumble's casts of this batch (display only): his primary target and the units his cast struck, by cast tick.
+    const rumbleCasts = new Map<string, { sourceId: string; primary?: string; struck: string[] }>();
     for (const planned of ltkEvents.batch(events)) {
       const { event } = planned;
       ltkTick = tickOf(event) ?? ltkTick;
@@ -1570,6 +1573,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (caster?.definitionId === 'powder' && hides !== undefined && currentEffect && !reducedMotion()) monkeys.prepare(event.sourceId, hides);
       }
       if (event.type === 'death') monkeys.drop(event.unitId);
+      // Rumble's missiles: the units his cast strikes on its tick, kept for the drops and row explosions played after the batch.
+      if (currentEffect && !reducedMotion() && event.type === 'cast' && pieces.get(event.sourceId)?.definitionId === 'rumble')
+        rumbleCasts.set(`${event.sourceId}|${event.tick}`, { sourceId: event.sourceId, primary: event.targetIds?.[0], struck: [] });
+      if (event.type === 'packetDamage' && event.hit && (event as { delivery?: string }).delivery === 'ability-direct') {
+        const cast = rumbleCasts.get(`${event.sourceId}|${event.tick}`);
+        // One entry per damage packet: a unit struck by several missiles is listed once for each.
+        if (cast) cast.struck.push(event.targetId);
+      }
       // Malzahar's gate: its portal at each end of the line of cells his cast covers (CastReceipt.area, from one end to the
       // other), facing the other end (a one-cell line faces him). Display only; his hits stay with the cast's targets.
       if (event.type === 'cast' && event.area?.cells.length && grid && currentEffect && !reducedMotion() && pieces.get(event.sourceId)?.definitionId === 'malzahar') {
@@ -1672,6 +1683,25 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // A real step or death takes over from a lunge at once: the body is back on the root.
         const view = pieces.get((event as { unitId: string }).unitId); if (view) cancelLunge(view);
       }
+    }
+    // Rumble's missiles (CUE_EXTRA_SKILLS rumble-drop / rumble-strike, RUMBLE_MISSILE; fitted display, not original data): an
+    // explosion on the ground of the struck cell of each damage packet, then of the nearest unstruck cells of his primary
+    // target's row, up to his missile count, one after another from the end of the row nearest him, each after the first
+    // preceded by its fall.
+    for (const cast of rumbleCasts.values()) {
+      const board = grid;
+      if (!ltk || !board) break;
+      const cellOf = (id: string | undefined) => { const at = id ? pieces.get(id)?.root.position : undefined; return at ? cellAt(at.x, at.z, board) : undefined; };
+      const hits = cast.struck.map(cellOf).filter((c): c is NonNullable<typeof c> => !!c);
+      const primary = cellOf(cast.primary) ?? hits[0], caster = pieces.get(cast.sourceId)?.root.position;
+      if (!primary) continue;
+      const cells = rowStrikeCells(hits, primary, board.columns).map(cell => ({ cell, at: hexCenter(cell, board) }));
+      if (caster) cells.sort((a, b) => Math.abs(a.at.x - caster.x) - Math.abs(b.at.x - caster.x));
+      cells.forEach(({ at }, k) => {
+        const point = [at.x, at.y, at.z] as const, delay = k * RUMBLE_MISSILE.step;
+        if (k > 0) ltk.play('rumble', cast.sourceId, [], 'cast', { skill: 'rumble-drop', board: point, delay: Math.max(0, delay - RUMBLE_MISSILE.fall) });
+        ltk.play('rumble', cast.sourceId, [], 'cast', { skill: 'rumble-strike', board: point, ...(delay > 0 ? { delay } : {}) });
+      });
     }
     // Each mixer takes the batch's final action once (it starts only a changed one; nothing ran in between).
     for (const [id, view] of pieces) if (view.dance !== 'clip') view.mixer?.apply(actionOf(id, view, view.state.output));
