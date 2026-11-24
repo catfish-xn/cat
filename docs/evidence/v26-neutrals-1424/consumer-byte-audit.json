@@ -11,9 +11,9 @@
     "tests/ability-effect-ended.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 15382,
+      "currentBytes": 15590,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "cc801caa7650af16a1724be254aa99e3fa2853d896541961f2f010fba823a4cf",
+      "currentSha256": "b47478726454a72b8a08156448c8fbffc5ac19a8b7710455f91b1667be5295ee",
       "firstDifferentByte": 0
     },
     "tests/ambessa-cast-branch.test.ts": {
@@ -3999,9 +3999,9 @@
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10619,
+      "currentBytes": 10807,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4af931160bbf5b8522d315c11dbe410a2b619b80a07b9bf12f264052aedebcc0",
+      "currentSha256": "7c44794c8f844dccfa9873a231967fe93677d03be092c84c0378f7095ed10b50",
       "firstDifferentByte": 0
     },
     "tests/swain-drain.test.ts": {
@@ -5040,12 +5040,20 @@
       "currentSha256": "8b957a69531cbed0c0df6ee19ff37527e5be6463ffcdd970e1eb1fcbba8706f4",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-status-follows-rules-2.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5521,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "e21b79b92ba88d0d7861937f0678dc25205cf2eb71da94b77452e9a3b5fbdb4d",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-status-follows-rules.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9509,
+      "currentBytes": 9624,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "5fd852a5552774ef7835a029f2bb52877bf4b7d2531ce90340155c6cf54102b7",
+      "currentSha256": "b4964933fe0125c1ca43461de3470b2ed67c37ab44884e13fb0e42dc006f61c1",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-steb-heal.test.ts": {

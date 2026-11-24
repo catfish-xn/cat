@@ -884,6 +884,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
      * As stopSystemsOn, for a unit's own cast-starts of these systems (no target: a state it put on itself, Lux's self-cast
      * bubble). Its cues on other units are untouched.
      */
+    /** As stopSystemsOn, easing them out over `seconds` instead (a state on that unit ended: Elise's cocoon, Zyra's root). */
+    fadeSystemsOn(targetId: string, systems: readonly string[], seconds: number) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.target === targetId && systems.includes(run.system) && !run.stopped) { run.fx.fade(seconds); run.fading = true; run.until = Math.min(run.until, clock + seconds); }
+    },
     stopSystemsOnSelf(unitId: string, systems: readonly string[]) {
       for (let at = waiting.length - 1; at >= 0; at--) { const spawn = waiting[at].spawn; if (spawn.sourceId === unitId && spawn.targetId === undefined && systems.includes(spawn.system)) waiting.splice(at, 1); }
       for (const run of running) if (run.source === unitId && run.target === undefined && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
