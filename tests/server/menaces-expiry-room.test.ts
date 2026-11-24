@@ -23,11 +23,13 @@ const PRIORITIES = ['menaces', 'loot-explosion', 'a-golden-find', 'forbidden-mag
  * four augments are put first among the real, eligibility-filtered candidates) and taken with real choose commands: s0 fields
  * a family unit and takes Menaces at 3-2 (its Powder and Silco are gifted and fielded; it keeps bench room for them); every
  * other seat takes Loot Explosion (2-1) and A Golden Find (4-2), and s5/s6 also field Black Rose and take Forbidden Magic (3-2).
- * Everything else is the real shop, battle and settlement. On seed 23, s0's minions expire in battles against all three
- * (round 18 Loot Explosion with Forbidden Magic, 25 Loot Explosion with Golden Find); a precondition checks all three are really
+ * Everything else is the real shop, battle and settlement. On seed 10, s0's minions expire in battles against all three
+ * (round 18 Loot Explosion, 23 Forbidden Magic with Golden Find; was seed 23: 18 and 25); a precondition checks all three are really
  * reached. Each seat's state then restores. (Scene changes: 2026-11-21 for #787 the landing batch moved the pairings and the old
  * scene no longer reached Golden Find; 2026-11-23 for #808 Violet's combo moved them again so seed 19 no longer reached Forbidden
- * Magic, and seed 23 is the first from 20 on that reaches all three. Before the fix the expiring minions' settlement faulted.) */
+ * Magic, and seed 23 is the first from 20 on that reaches all three; for #791 the ranged attack wind-up moved them again so seed 23
+ * no longer reached Forbidden Magic, and seed 10 is the first from 0 that reaches all three (round 18 Loot Explosion, 23 Forbidden
+ * Magic with Golden Find). Before the fix the expiring minions' settlement faulted.) */
 it('Menaces minions expiring against Loot Explosion, Golden Find and Forbidden Magic seats settle and restore', () => {
   const generate = choices.generateChoices;
   const spy = vi.spyOn(choices, 'generateChoices').mockImplementation((ids, rng) => {
@@ -38,7 +40,7 @@ it('Menaces minions expiring against Loot Explosion, Golden Find and Forbidden M
   });
   setB1OfferCacheKey(PRIORITIES);
   try {
-  { const seed = 23;
+  { const seed = 10;
     const clock = new ManualClock();
     const seats = Array.from({ length: 8 }, (_, i) => ({ seatId: `s${i}`, name: `s${i}`, kind: 'human' as const }));
     const room = new Room(seats, { ...ROOM_TIMING_DEFAULTS, roomId: 'room-1', seed, clock, resolver: new TwoSidedBattleResolver(), carousel: CAROUSEL_RULES_BINDING });
@@ -93,7 +95,8 @@ it('Menaces minions expiring against Loot Explosion, Golden Find and Forbidden M
       // The scene must really reach all three readers: an expiring minion against a holder of each (else it covers less than it says).
       expect(new Set(hits.map(h => h.split(' ')[2]))).toEqual(new Set(READERS));
       // Where the minions expired, against whom (round, seat, augment, minion deaths).
-      expect(hits).toEqual(['18 s6 loot-explosion 3', '18 s6 forbidden-magic 3', '25 s7 loot-explosion 3', '25 s7 a-golden-find 3']);
+      // #791 scene (seed 10): was ['18 s6 loot-explosion 3', '18 s6 forbidden-magic 3', '25 s7 loot-explosion 3', '25 s7 a-golden-find 3'] on seed 23.
+      expect(hits).toEqual(['18 s2 loot-explosion 3', '23 s5 forbidden-magic 3', '23 s5 a-golden-find 3']);
       for (const seat of room.state.seats) if (seat.alive) {
         const restored = restoreSharedOrbSnapshot(room.state.pool, JSON.stringify(seat.match), room.augmentHistoryAuthority(seat.seatId));
         expect(restored).toEqual(seat.match);

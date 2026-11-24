@@ -13,8 +13,8 @@
 import { strikeOffsetTicks, type TimelineCue } from './timeline';
 import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
-import { jinxSkills } from './champions/jinx';
-import { jayceSkills } from './champions/jayce';
+import { JINX_EVENT_SKILLS, jinxSkills } from './champions/jinx';
+import { JAYCE_EVENT_SKILLS, jayceSkills } from './champions/jayce';
 import { MEL_EVENT_SKILLS, melSkills } from './champions/mel';
 import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
@@ -137,7 +137,22 @@ const TRISTANA_SHELL_TRAVEL = 0.4;
  * Display branches the export never had, by `<champion>-<branch>` key, played through LtkPlayOptions.skill. Each is added
  * to a loaded index that has the champion's own list and every system the branch names (withCueOverrides).
  */
+/**
+ * Rumble's missiles (Fable 11-24). His rules settle every missile's damage on the cast's own tick; the explosions show on the
+ * ground of his row's cells (rumble-row.ts) from that tick, one after another along the row from the end nearest him, `step`
+ * seconds apart, and each after the first is preceded by its missile falling onto its cell for `fall` seconds (the asset's
+ * missile falls: its sparks are shot downward and its rocket spins about the vertical). Display values, fitted, not
+ * original data: `step` from the 14.24 footage at 60 fps (the row's explosions follow each other a few frames apart), `fall`
+ * and `from` (cells above the cell) chosen so a drop never lands after its explosion; the first has none, as it shows on the
+ * damage's own tick.
+ */
+export const RUMBLE_MISSILE = { step: 0.05, fall: 0.05, from: [0, 3, 0] as const } as const;
 export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> = {
+  // Rumble's missiles (RUMBLE_MISSILE; placeholder-renderer.ts): on each cell of his row the renderer picks (rumble-row.ts
+  // rowStrikeCells), its explosion on the ground and, before each but the first, its missile's short fall onto that cell.
+  'rumble-drop': [{ system: '721e9fbc', action: 'cast', event: 'projectile', location: 'board', delay: 0, duration: RUMBLE_MISSILE.fall + 0.15,
+    travelSeconds: RUMBLE_MISSILE.fall, stopAfter: RUMBLE_MISSILE.fall, fadeOut: true, fromAbove: RUMBLE_MISSILE.from }],
+  'rumble-strike': [{ system: '89fc6454', action: 'cast', event: 'cast-start', location: 'board', delay: 0, duration: 1 }],
   // Gangplank's ranged-form attack (batch2-bridge.ts), drawn from the rules' attackLaunched / attackLanded: the shot leaves
   // his right hand on the launch and flies the rule's own flight (LtkPlayOptions.flightSeconds), so it lands on the tick his
   // damage does; its hit plays on a landing that hit. The travelSeconds here is only a stand-in the rule's flight replaces.
@@ -210,6 +225,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     .map(cue => ({ ...cue, delay: Math.max(0, cue.delay - VI_LANDING) })),
   // Powder: her blast's target burst plays when its damage lands, on each enemy it hits (batch1-events.ts); its explosion
   // plays once, on the cell her monkey arrives at ('powder-arrive', placeholder-renderer.ts powder-monkey-arrived).
+  // Jayce (champions/jayce.ts, placeholder-renderer.ts): his crystals land and explode on the rules' events, on their cells.
+  ...Object.fromEntries(JAYCE_EVENT_SKILLS.map(skill => [skill, jayceSkills[skill]!])),
+  // Jinx (champions/jinx.ts, batch2-bridge.ts): her rocket follows the rules' events, not fixed times.
+  ...Object.fromEntries(JINX_EVENT_SKILLS.map(skill => [skill, jinxSkills[skill]!])),
   // Mel (champions/mel.ts, batch2-bridge.ts): her dash, bolts and hits follow the rules' events, not fixed times.
   ...Object.fromEntries(MEL_EVENT_SKILLS.map(skill => [skill, melSkills[skill]!])),
   'powder-blast': [
@@ -360,6 +379,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // it played one comet and one burst on the cast target at 1 s, while the rule drops TotalShots shots over RaidDuration,
   // each on a random enemy centre. Each shot now plays its own comet and burst where its damage lands (CUE_EXTRA_SKILLS
   // caitlyn-shot, driven by the shot's packetDamage events in batch1-events.ts).
+  // Rumble's cast as exported, without its flight and explosion: both now come from his struck units and row cells
+  // (CUE_EXTRA_SKILLS rumble-drop / rumble-strike, played by the renderer).
+  rumble: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.36666666666666664, duration: 1.5 },
+    { system: '59e2ab23', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'BUFFBONE_CSTM_IGNITE' },
+    { system: '5b8e7f02', action: 'cast', event: 'cast-start', delay: 0.1, duration: 1.2, bone: 'BUFFBONE_CSTM_IGNITE' },
+    { system: '7562ce09', action: 'cast', event: 'cast-start', delay: 0.2, duration: 0.7, bone: 'BUFFBONE_CSTM_ROCKET' },
+  ],
   caitlyn: [
     { system: '4ddee85c', action: 'attack', event: 'projectile', bone: 'Rifle_TopBarrel2', delay: 0.2833333333333333, duration: 1.5, travelSeconds: 0.3, targetBone: chest },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.5833333333333333, duration: 1.5 },
@@ -784,8 +811,9 @@ export const CUE_BRANCHES: Readonly<Record<string, Readonly<Record<string, strin
   // Jinx W/E/R (combat writes zap/chompers/rocket). The live batch-2 index was staged from the old jinx.ts and still tags
   // these cues with the dropped `phase` 0/1/2 instead of a branch, so without these tags every cast played all three
   // (11-12 #629 Windows run). Same systems as champions/jinx.ts.
-  jinx: { a6a2b1cc: 'zap', '3496e112': 'zap', '10fede7e': 'zap', '40140250': 'zap', '9bd80364': 'chompers', cd05488e: 'chompers',
-    '7e6f06b5': 'rocket', '449d6617': 'rocket', '8b59c09d': 'rocket', '809da1b1': 'rocket' },
+  // Since 11-21 her rocket's flash, flight and explosion play from the rules' events (their own display branches), so her
+  // cast list tags only what plays with the cast.
+  jinx: { a6a2b1cc: 'zap', '3496e112': 'zap', '10fede7e': 'zap', '40140250': 'zap', '9bd80364': 'chompers', cd05488e: 'chompers', '7e6f06b5': 'rocket' },
 };
 /** `cues` with their CUE_BRANCHES tags, when every tagged system is among the champion's cast cues; else undefined. */
 export function withCueBranches(champion: string, cues: readonly TimelineCue[] | undefined): readonly TimelineCue[] | undefined {
@@ -941,19 +969,21 @@ export const CRIT_SKILL_HIT: Readonly<{ skill: (champion: string) => string; cue
  * cut the trails the asset keeps behind a landed missile (Fable 11-21, from Mel's barrage trails). Emitters without a
  * linger still go at the stop, so a missile head ends on the hit. No forced end or fade: their own curves end them.
  * The set is the rule applied to the 0c59 asset snapshot; tests/vfx-ltk-linger-play-out.test.ts recomputes it from the
- * assets (VFX_LTK_ROOT) and fails on any difference. PLAY_OUT_SYSTEMS entries and cues with their own playOut are not here.
+ * assets (VFX_LTK_ROOT) and fails on any difference. A list change that fires a new projectile updates it with that change
+ * (11-24: LeBlanc's empowered missile, Swain's ranged missile, Kog'Maw's attack missile and Gangplank's ranged flight were
+ * cued without it, and two systems no longer fired as projectiles stayed in it). PLAY_OUT_SYSTEMS entries and cues with their own playOut are not here.
  */
 export const LINGER_PLAY_OUT: ReadonlySet<string> = new Set([
-  '01873936', '022fe9ec', '06e90178', '1e05be94', '215abe6e', '2b0232bc', '3496e112', '36c79ae9',
-  '3c65ee71', '40140250', '45b69079', '4d0368dc', '4ddee85c', '4f2eb343', '4f6da7bc', '4fb68964',
-  '52963b0a', '52da669c', '539901e6', '53b93f82', '5938e29d', '5a18496c', '5a268f4e', '5c6b6f6a',
-  '5d31debe', '617e850e', '6d9e0430', '721e9fbc', '76f80db8', '7d0f4b1e', '7f403068', '809dc7ac',
-  '80ab2d1b', '84b969e0', '85788d2c', '857fe049', '87913524', '8b59c09d', '92bbeaf7', '92ff3d2c',
-  '93fe62de', '952026ec', '98c2c347', '9ad0dd7c', '9ad2672c', '9ad716c2', '9bd80364', '9ea5538e',
-  '9f19f946', 'a0484f04', 'a664114c', 'a6bde11c', 'b5077b11', 'ba5fe1c0', 'bdceb760', 'bef025dc',
-  'c173eb0c', 'c8d6ee2e', 'cbd8e1cc', 'd7fee2d8', 'dcebd22f', 'e0afe94c', 'ec4a03aa', 'ec6aaee6',
-  'ed157b4e', 'ee2e840c', 'ee7fccd1', 'f0aa0d95', 'f16dfc56', 'f2b3f090', 'f2d605de', 'f4e3e1bc',
-  'faf1aeac', 'fe407ac6', 'ffa688fa',
+  '01873936', '022fe9ec', '06e90178', '0ea87983', '1e05be94', '215abe6e', '2b0232bc', '3496e112',
+  '36c79ae9', '3c65ee71', '3d2697ac', '40140250', '45b69079', '4d0368dc', '4ddee85c', '4f2eb343',
+  '4f6da7bc', '4fb68964', '52963b0a', '52da669c', '539901e6', '53b93f82', '5938e29d', '5a18496c',
+  '5a268f4e', '5c6b6f6a', '5d31debe', '617e850e', '6d9e0430', '721e9fbc', '76f80db8', '7f403068',
+  '809dc7ac', '80ab2d1b', '84b969e0', '85788d2c', '857fe049', '87913524', '8b59c09d', '92bbeaf7',
+  '92ff3d2c', '93fe62de', '952026ec', '98c2c347', '9ad0dd7c', '9ad2672c', '9bd80364', '9ea5538e',
+  '9f19f946', 'a0484f04', 'a664114c', 'a6bde11c', 'b5077b11', 'b9318ef6', 'ba5fe1c0', 'bb62fca2',
+  'bdceb760', 'bef025dc', 'c173eb0c', 'c8d6ee2e', 'cbd8e1cc', 'd7fee2d8', 'dcebd22f', 'e0afe94c',
+  'ec4a03aa', 'ec6aaee6', 'ed157b4e', 'ee2e840c', 'ee7fccd1', 'f0aa0d95', 'f16dfc56', 'f2b3f090',
+  'f2d605de', 'f4e3e1bc', 'faf1aeac', 'fe407ac6', 'ffa688fa',
 ]);
 export const PLAY_OUT_SYSTEMS: Readonly<Record<string, PlayOut>> = {
   // A FIT to original footage (the 3-star full-board clip, 11-13), not the original's own values: the scorch stays clear

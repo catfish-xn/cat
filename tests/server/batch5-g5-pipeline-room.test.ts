@@ -7,6 +7,7 @@ import { pipelineExtraOrbs, pipelineBonusPlan } from '../../src/simulation/augme
 import { readLootView } from '../../src/simulation/match';
 import { assertSharedPoolConservation, restoreSharedOrbSnapshot, runSharedMatchCommand } from '../../src/simulation/shared-pool';
 import { UNIT_DEFINITIONS } from '../../src/simulation/units';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { claimAllOrbs } from './helpers';
 import type { MatchState } from '../../src/simulation/match-types';
 import { recordAugmentAcquisition, appendAugmentFact } from '../../src/simulation/augment-history';
@@ -50,6 +51,17 @@ it('earns the orb from a real PvE death, adds 8 gold only when opened, and rejec
   const orbId = pipelineExtraOrbs(mine())[0].orbId;
   runUntil(room, clock, s => readLootView(s.seats.find(x => x.seatId === route.seatId)!.match).unclaimedOrbs?.some(o => o.orbId === orbId) === true);
   // The common claim path opens it once (during a battle too, TFT), and its bonus is owed from that opening.
+  // Ranged attack wind-up (#791, scene change approved by Fable 11-24; assertions unchanged). Original premise: the orb's anvil
+  // forge is placed when it is claimed, so the orb opens fully. Measured: on the integration line the claim comes in 2-7's
+  // settlement (battle end tick 326) with 11 player units and 7 on the bench; with the wind-up the 2-7 battle ends at 276 and
+  // the seat has 13 units (an extra Sett and a second Irelia from the earlier rounds' different results), bench full (9). Its
+  // forge then stays 'revealed' (existing behaviour: a full bench leaves an anvil forge waiting, so the orb is not opened and
+  // pays no bonus; not changed here). Free one bench slot first with a public sale of a bench unit no assertion reads.
+  { const m = mine(), bench = m.preparation.units.filter(u => u.team === 'player' && u.location.kind === 'bench');
+    if (bench.length >= m.preparation.benchSize) {
+      const reserve = bench.find(u => UNIT_DEFINITIONS[u.definitionId] && !isAnvil(u.definitionId))!;
+      expect(room.handle(route.seatId, { type: 'sell', unitId: reserve.id })).toMatchObject({ ok: true });
+    } }
   const before = mine();
   expect(before.m8.loot.earnedEvidence.some(e => pipelineExtraOrbs(before)[0].entries.some(d => d.dropId === e.dropId))).toBe(true);
   const queued = room.handle(route.seatId, { type: 'claimOrb', round: before.round, orbId }); expect(queued).toMatchObject({ ok: true });

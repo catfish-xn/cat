@@ -30,8 +30,12 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // is 49e1d29a… again, so nothing but the landing rule moved.
     // Mel's barrage timing (11-20: her dash lands, bolts leave and settle later) changes this mixed combat (was 66c3a9e4…).
 // Mel dashes on every normal cast and never on the third (11-21), which changes this mixed combat (was a50c5309…).
-// Display only (11-21): attacks carry critical, which moves these bytes (was db0a5dbf…, Mel's bolt volley; 8491e0a6… Vi's slam).
-const MIXED_DIGEST = '5686be12318fd98bb2ace9359e6e0f5ca8103fea08da8b9810e8a8f6238f744d';
+// Mel's normal cast fires a volley of bolts per target, each settling on arrival (11-21), which changes this mixed combat (was
+// 8491e0a6…, Vi's slam; 67e0c368… Mel's dash away from foes).
+// Ranged attack wind-up (#791): the ranged heroes' shots launch after their wind-up, which moves this combat again (was
+// db0a5dbf…, Mel's bolt volley).
+// Display only (11-21): attacks carry critical, which moves these bytes again (was 2685a486…, the ranged attack wind-up).
+const MIXED_DIGEST = '7ce0f7dae43f7f0bbf032f83aa720354cf7adbb89d592f2e7a7313af60ba73d1';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

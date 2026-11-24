@@ -43,7 +43,13 @@ describe('attack critical (display only)', () => {
       const shown = out.flatMap(s => s.events.filter(e => e.type === 'attackLaunched' || e.type === 'attack') as any[]);
       expect(shown.length).toBeGreaterThan(10);
       // A shot that carries no basic-attack packet to its target (only an on-hit effect) has nothing to crit: false.
-      const hits = basicHits(out), carries = (e: any) => e.type === 'attack' || hits.some(h => h.attacker === e.attackerId && h.target === e.targetId && h.tick === e.arrivalTick);
+      // Ranged attack wind-up (#791): a shot whose target died in flight (its attackLanded says hit false) still carried its rolled
+      // packet, so it counts as carrying ...
+      const missed = out.flatMap(s => s.events.filter(e => e.type === 'attackLanded' && !(e as any).hit) as any[]);
+      const hits = basicHits(out), carries = (e: any) => e.type === 'attack' || hits.some(h => h.attacker === e.attackerId && h.target === e.targetId && h.tick === e.arrivalTick)
+        || missed.some(m => m.attackerId === e.attackerId && m.targetId === e.targetId && m.tick === e.arrivalTick)
+        // ... and so did a shot still in flight when the fight ended.
+        || e.arrivalTick > out.at(-1)!.tick;
       expect(new Set(shown.filter(carries).map(e => e.critical))).toEqual(new Set([want]));
       expect(shown.filter(e => !carries(e)).every(e => e.critical === false)).toBe(true);
       const view = toCombatViewEvents(toLedgerEvents(out.flatMap(s => s.events))).filter((e: any) => e.type === 'attackLaunched' || e.type === 'attack') as any[];
