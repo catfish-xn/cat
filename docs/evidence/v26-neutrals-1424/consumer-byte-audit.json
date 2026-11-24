@@ -4822,9 +4822,17 @@
     "tests/vfx-ltk-mel-barrage.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 12285,
+      "currentBytes": 12720,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8cd1f1fee3b1bdfab44fdc36bbfefa195e447f2f9e7185c51d1842560e26f96d",
+      "currentSha256": "c8bdd2f80928f1534b8e5917bca18c983a2b48a310b51963b89b96645b59c0c4",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-mel-curve.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4064,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "bf8a49318755fee06359e853d954d6c26d457bfa23a70e75d0e9b67ebed00143",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-mesh-pool-matrix.test.ts": {

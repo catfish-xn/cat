@@ -47,7 +47,7 @@ describe('Mel barrage cues follow the rules\' events', () => {
     const { bridge, played } = harness();
     for (const event of [cast(10, 1), move(20), launched(25, 1, 'e0', 0), launched(25, 1, 'e1', 1), launched(25, 1, 'e2', 2),
       landed(29, 1, 'e0', 0), landed(31, 1, 'e1', 1, false), landed(33, 1, 'e2', 2), move(40)]) bridge.event(event, true);
-    expect(played.map(p => [p.skill, ...p.targets])).toEqual([['mel-dash'], ['mel-bolt', 'e0'], ['mel-bolt', 'e1'], ['mel-bolt', 'e2'],
+    expect(played.map(p => [p.skill, ...p.targets])).toEqual([['mel-dash'], ['mel-bolt', 'e0'], ['mel-bolt-alt', 'e1'], ['mel-bolt', 'e2'],
       ['mel-bolt-hit', 'e0'], ['mel-bolt-hit', 'e2']]);
     expect(played.filter(p => p.skill === 'mel-bolt-hit').every(p => p.snapshot)).toBe(true);
   });
@@ -59,7 +59,10 @@ describe('Mel barrage cues follow the rules\' events', () => {
     // e1's first bolt lands on nothing (it was gone for a moment): its hit waits for the first bolt that strikes.
     for (const [n, target] of ['e0', 'e1'].entries()) for (let i = 0; i < BOLTS; i++) events.push(landed(29 + n + 2 * i, 1, target, n * BOLTS + i, !(target === 'e1' && i === 0), 'mel-bolt'));
     for (const event of events) bridge.event(event, true);
-    expect(played.filter(p => p.skill === 'mel-bolt').map(p => p.targets[0])).toEqual([...Array(BOLTS).fill('e0'), ...Array(BOLTS).fill('e1')]);
+    const arcs = played.filter(p => p.skill === 'mel-bolt' || p.skill === 'mel-bolt-alt');
+    expect(arcs.map(p => p.targets[0])).toEqual([...Array(BOLTS).fill('e0'), ...Array(BOLTS).fill('e1')]);
+    // Consecutive bolts swing to opposite sides, by their place in the cast.
+    expect(arcs.map(p => p.skill)).toEqual(Array.from({ length: 2 * BOLTS }, (_, k) => k % 2 ? 'mel-bolt-alt' : 'mel-bolt'));
     expect(played.filter(p => p.skill === 'mel-bolt-hit').map(p => p.targets[0])).toEqual(['e0', 'e1']);
     expect(played.filter(p => p.skill === 'mel-dash')).toHaveLength(1);
     // A new cast's bolts strike again.
@@ -139,7 +142,8 @@ describe('Mel barrage from the real rules', () => {
     expect(launches.length).toBeGreaterThan(0);
     expect(at.get('mel-dash')).toHaveLength(1);
     expect(at.get('mel-dash')![0]).toBeGreaterThan(castTick);
-    expect(at.get('mel-bolt')).toEqual(launches.map(l => l.tick));
+    expect([...(at.get('mel-bolt') ?? []), ...(at.get('mel-bolt-alt') ?? [])].sort((a, b) => a - b)).toEqual(launches.map(l => l.tick).sort((a, b) => a - b));
+    expect(at.get('mel-bolt-alt')?.length).toBe(Math.floor(launches.length / 2));
     // The rules' bolts a target (mel-bolt): an arc for each, the hit as each target's first striking bolt lands.
     expect(launches.length).toBe(3 * MEL_BOLTS_PER_TARGET);
     const strikes = display.filter(e => e.type === 'abilityProjectileLanded' && (e as { hit?: boolean }).hit) as unknown as { tick: number; targetId: string }[];
