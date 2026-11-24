@@ -2676,9 +2676,9 @@
     "tests/rell-shred-icon.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5563,
+      "currentBytes": 5759,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fa53579e7e04ce57402d1e796b5aa6025406ef0403007583dfce8f2926983926",
+      "currentSha256": "c1f7322c6fd96ed85f2edf16bc8c742b7a60e3263718d9ec07499869ee0052db",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {

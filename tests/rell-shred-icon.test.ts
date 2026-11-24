@@ -1,8 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { Texture, type Group, type Sprite, type SpriteMaterial } from 'three';
 import { describe, expect, it } from 'vitest';
-import { createDebuffMarks, DEBUFF_ICONS, RELL_SHRED } from '../src/rendering/three-mode/debuff-icons';
-import { createUnitOverhead, DEFAULT_METER_COLORS } from '../src/rendering/three-mode/unit-overhead';
+import { createDebuffMarks, DEBUFF_ICONS, quadWidth, RELL_SHRED } from '../src/rendering/three-mode/debuff-icons';
+import { ARENA_UNIT_SCALE } from '../src/rendering/three-mode/vfx-ltk/fx-size';
+import { BAR_WIDTH, createUnitOverhead, DEFAULT_METER_COLORS } from '../src/rendering/three-mode/unit-overhead';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { rell } from '../src/rendering/three-mode/vfx-ltk/batch3/rell';
 
@@ -74,8 +75,9 @@ describe('the icon over the bar', () => {
     expect(released).toBe(materials.length);
     expect(group.children).toHaveLength(0);
   });
-  it('is small: no wider than the bar\'s item icon', () => {
-    for (const def of Object.values(DEBUFF_ICONS)) for (const layer of def.layers) { expect(layer.size).toBeGreaterThan(0); expect(layer.size).toBeLessThanOrEqual(13); }
+  it('is drawn at the system\'s own size: a camera quad\'s scale is a half-extent, so its width is twice the scale', () => {
+    expect(quadWidth(1)).toBeCloseTo(2 * ARENA_UNIT_SCALE, 9);
+    for (const def of Object.values(DEBUFF_ICONS)) for (const layer of def.layers) expect(layer.size).toBeGreaterThan(BAR_WIDTH * 0.25);
   });
 });
 

@@ -29,8 +29,11 @@ export interface DebuffIconDef {
 /** An icon shown on a unit's bar: its kind and loaded texture. */
 export interface OverheadDebuff { readonly kind: string; readonly texture: Texture; readonly layers: readonly DebuffIconLayer[] }
 
-/** League units → board units: the arena scale every skill effect is drawn at (fx-size.ts). */
-const lu = (units: number) => units * ARENA_UNIT_SCALE;
+/**
+ * A camera quad's full width in board units from its scale: the scale is a half-extent (vfx-ltk quad.ts, REACH 2), taken at
+ * the arena scale every skill effect is drawn at (fx-size.ts).
+ */
+export const quadWidth = (scale: number) => 2 * scale * ARENA_UNIT_SCALE;
 /**
  * Rell's defence steal (her Q's armour/magic-resist shred system 5fe3dc8a): the system's two still camera-facing quads, the
  * same broken-shield texture tinted twice, a larger dim purple one behind a slightly smaller pale blue one. Their sizes,
@@ -41,8 +44,8 @@ export const RELL_SHRED: DebuffIconDef = {
   champion: 'rell',
   textureKey: 'assets/characters/tft13_rell/skins/base/particles/tft13_rell_base_q_armor_mr_shred2.tft_set13.tex',
   layers: [
-    { size: lu(36), color: [0.43, 0.24, 0.51], opacity: 0.41 },
-    { size: lu(32), color: [0.49, 0.64, 1], opacity: 0.78 },
+    { size: quadWidth(36), color: [0.43, 0.24, 0.51], opacity: 0.41 },
+    { size: quadWidth(32), color: [0.49, 0.64, 1], opacity: 0.78 },
   ],
 };
 export const DEBUFF_ICONS: Readonly<Record<string, DebuffIconDef>> = { 'rell-shred': RELL_SHRED };
