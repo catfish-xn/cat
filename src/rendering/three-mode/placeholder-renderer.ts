@@ -1,3 +1,4 @@
+import { jayceCrystalVisual } from './vfx-ltk/jayce-crystals';
 import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { pieceModel, type UnitModelChoice } from './unit-model';
@@ -1576,6 +1577,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           const at = hexCenter(end.cell, board), other = end.facing ? hexCenter(end.facing, board) : caster;
           ltk?.play('malzahar', event.sourceId, [], 'cast', { skill: 'malzahar-gate', board: [at.x, at.y, at.z], ...(other ? { boardFacing: [other.x, other.y, other.z] as const } : {}) });
         }
+      }
+      // Jayce's crystals (rules 11-21): each lands on its cell and stays there until the rules set it off, then explodes on
+      // that cell. Each crystal plays as its own board source, so its stay ends with its own explosion (or as the next cast's
+      // crystal of the same place lands); in catch-up the stay is still ended, nothing is started.
+      if (event.type === 'jayceCrystal' && grid) {
+        const at = hexCenter(event.cell, grid), { source, stop, skill } = jayceCrystalVisual(event);
+        ltk?.stopSystems(source, stop);
+        if (currentEffect && !reducedMotion()) ltk?.play('jayce', source, [], 'passive', { skill, board: [at.x, at.y, at.z] });
       }
       if (event.type === 'abilityMarker' && grid) {
         const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);

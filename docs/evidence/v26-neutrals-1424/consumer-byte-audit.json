@@ -4747,6 +4747,14 @@
       "currentSha256": "47c7754a7f47b32d6ed11e037f45499c5e94a03f20fa22afc36818c18da60c39",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-jayce-crystals.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4611,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "5979126d3515cfa8e98409d0b97e1bb71b50fdc9566c27a9e9295b3b072f28d3",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-kogmaw-q-flyer.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

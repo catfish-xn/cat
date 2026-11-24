@@ -14,7 +14,7 @@ import { strikeOffsetTicks, type TimelineCue } from './timeline';
 import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
 import { BATCH1_TIMELINES } from './batch1-timelines';
 import { jinxSkills } from './champions/jinx';
-import { jayceSkills } from './champions/jayce';
+import { JAYCE_EVENT_SKILLS, jayceSkills } from './champions/jayce';
 import { MEL_EVENT_SKILLS, melSkills } from './champions/mel';
 import { sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
@@ -210,6 +210,8 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
     .map(cue => ({ ...cue, delay: Math.max(0, cue.delay - VI_LANDING) })),
   // Powder: her blast's target burst plays when its damage lands, on each enemy it hits (batch1-events.ts); its explosion
   // plays once, on the cell her monkey arrives at ('powder-arrive', placeholder-renderer.ts powder-monkey-arrived).
+  // Jayce (champions/jayce.ts, placeholder-renderer.ts): his crystals land and explode on the rules' events, on their cells.
+  ...Object.fromEntries(JAYCE_EVENT_SKILLS.map(skill => [skill, jayceSkills[skill]!])),
   // Mel (champions/mel.ts, batch2-bridge.ts): her dash, bolts and hits follow the rules' events, not fixed times.
   ...Object.fromEntries(MEL_EVENT_SKILLS.map(skill => [skill, melSkills[skill]!])),
   'powder-blast': [
