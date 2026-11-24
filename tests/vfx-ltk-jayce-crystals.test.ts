@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { jayceCrystalVisual } from '../src/rendering/three-mode/vfx-ltk/jayce-crystals';
+import { createJayceCrystals } from '../src/rendering/three-mode/vfx-ltk/jayce-crystals';
 import { JAYCE_CRYSTAL_STAY, JAYCE_EVENT_SKILLS, jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
 import { CUE_EXTRA_SKILLS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
@@ -26,12 +26,37 @@ describe('Jayce crystals follow the rules\' events', () => {
     const other = (withCueOverrides({ version: 1, systems, assets: {}, skills: { 'vi-back': [{ system: 'ee2e840c', event: 'hit', delay: 0, duration: 1 }] } } as never) as unknown as { skills: Record<string, unknown> }).skills;
     for (const skill of JAYCE_EVENT_SKILLS) expect(other[skill]).toBeUndefined();
   });
-  it('each crystal is its own source: its landing plays its stay, its explosion ends that stay and plays the blast', () => {
-    const land = jayceCrystalVisual({ unitId: 'j', phase: 'landed', crystal: 1 }), blast = jayceCrystalVisual({ unitId: 'j', phase: 'exploded', crystal: 1 });
-    expect(land.skill).toBe('jayce-back-crystal-land'); expect(blast.skill).toBe('jayce-back-crystal-blast');
-    expect(blast.source).toBe(land.source); expect(blast.stop).toEqual([JAYCE_CRYSTAL_STAY]);
-    expect(jayceCrystalVisual({ unitId: 'j', phase: 'landed', crystal: 2 }).source).not.toBe(land.source);
-    expect(jayceCrystalVisual({ unitId: 'k', phase: 'landed', crystal: 1 }).source).not.toBe(land.source);
+  it('the renderer wiring: each crystal is its own source, stopped before anything of it plays; its explosion ends its stay', () => {
+    const calls: string[] = [];
+    const crystals = createJayceCrystals({
+      stopSystems: (source, systems) => { calls.push(`stop ${source} ${systems.join(',')}`); },
+      play: (_champion, source, _targets, _action, context) => { calls.push(`play ${source} ${context.skill} ${context.board.join(',')}`); return true; },
+    });
+    const at = [1, 0, 2] as const;
+    crystals.crystal({ type: 'jayceCrystal', unitId: 'j', phase: 'landed', crystal: 1 }, at, true);
+    crystals.crystal({ type: 'jayceCrystal', unitId: 'j', phase: 'landed', crystal: 2 }, at, true);
+    crystals.crystal({ type: 'jayceCrystal', unitId: 'j', phase: 'exploded', crystal: 1 }, at, true);
+    expect(calls).toEqual([
+      `stop @jayce-crystal:j:1 ${JAYCE_CRYSTAL_STAY}`, 'play @jayce-crystal:j:1 jayce-back-crystal-land 1,0,2',
+      `stop @jayce-crystal:j:2 ${JAYCE_CRYSTAL_STAY}`, 'play @jayce-crystal:j:2 jayce-back-crystal-land 1,0,2',
+      `stop @jayce-crystal:j:1 ${JAYCE_CRYSTAL_STAY}`, 'play @jayce-crystal:j:1 jayce-back-crystal-blast 1,0,2',
+    ]);
+    // Catch-up: the stay still ends, nothing starts.
+    calls.length = 0;
+    crystals.crystal({ type: 'jayceCrystal', unitId: 'j', phase: 'exploded', crystal: 2 }, at, false);
+    expect(calls).toEqual([`stop @jayce-crystal:j:2 ${JAYCE_CRYSTAL_STAY}`]);
+  });
+  it('Jayce dies before his crystals explode (the rules then drop the explosions): his standing crystals end with him, nobody else\'s', () => {
+    const calls: string[] = [];
+    const crystals = createJayceCrystals({ stopSystems: source => { calls.push(source); }, play: () => true });
+    for (const crystal of [0, 1, 2]) crystals.crystal({ type: 'jayceCrystal', unitId: 'j', phase: 'landed', crystal }, [0, 0, 0], true);
+    crystals.crystal({ type: 'jayceCrystal', unitId: 'k', phase: 'landed', crystal: 0 }, [0, 0, 0], true);
+    crystals.crystal({ type: 'jayceCrystal', unitId: 'j', phase: 'exploded', crystal: 0 }, [0, 0, 0], true);
+    calls.length = 0;
+    crystals.death('j');
+    expect(calls.sort()).toEqual(['@jayce-crystal:j:1', '@jayce-crystal:j:2']);
+    calls.length = 0; crystals.death('j'); crystals.death('someone');
+    expect(calls).toEqual([]);
   });
   it('the real rules: every crystal lands, then explodes on the same cell later, so its stay ends with its own explosion', () => {
     const units = realUnits({ unit: 'jayce', star: 2, form: 'ranged', meCell: { row: 6, col: 3 }, foe: 'amumu', dist: 4, nfoes: 3, foestar: 3 } as never);
@@ -41,7 +66,7 @@ describe('Jayce crystals follow the rules\' events', () => {
     expect(crystals.length).toBeGreaterThan(0);
     const open = new Map<string, any>();
     for (const e of crystals) {
-      const key = jayceCrystalVisual(e).source;
+      const key = `${e.unitId}:${e.crystal}`;
       if (e.phase === 'landed') { expect(open.has(key)).toBe(false); open.set(key, e); continue; }
       const landed = open.get(key);
       expect(landed, `crystal ${e.crystal} exploded without landing`).toBeDefined();

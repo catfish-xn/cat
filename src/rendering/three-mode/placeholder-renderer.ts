@@ -1,4 +1,4 @@
-import { jayceCrystalVisual } from './vfx-ltk/jayce-crystals';
+import { createJayceCrystals } from './vfx-ltk/jayce-crystals';
 import { projectedBox, spritesScreenBox } from './description-pick';
 import type { BoardDescription } from '../board-feed';
 import { pieceModel, type UnitModelChoice } from './unit-model';
@@ -740,6 +740,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
+  const jayceCrystals = createJayceCrystals({ play: (...args) => ltk?.play(...args) ?? false, stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
   // Powder's monkey on the board between her letting it go and its explosion (powder-monkey.ts); when each piece last cast.
   const monkeys = createPowderMonkeys(scene, loadLit), castAt = new Map<string, number>();
@@ -1192,7 +1193,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1582,10 +1583,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // that cell. Each crystal plays as its own board source, so its stay ends with its own explosion (or as the next cast's
       // crystal of the same place lands); in catch-up the stay is still ended, nothing is started.
       if (event.type === 'jayceCrystal' && grid) {
-        const at = hexCenter(event.cell, grid), { source, stop, skill } = jayceCrystalVisual(event);
-        ltk?.stopSystems(source, stop);
-        if (currentEffect && !reducedMotion()) ltk?.play('jayce', source, [], 'passive', { skill, board: [at.x, at.y, at.z] });
+        const at = hexCenter(event.cell, grid);
+        jayceCrystals.crystal(event, [at.x, at.y, at.z], currentEffect && !reducedMotion());
       }
+      if (event.type === 'death') jayceCrystals.death(event.unitId);
       if (event.type === 'abilityMarker' && grid) {
         const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
         if (event.marker === 'powder-monkey-sent' && currentEffect && !reducedMotion()) {
