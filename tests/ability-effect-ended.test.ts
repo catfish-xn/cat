@@ -132,6 +132,8 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
       ...CUE_OVERRIDES.malzahar!, ...warwickSkills.warwick!, ...CUE_OVERRIDES.vi!, ...CUE_OVERRIDES.viktor!,
       // 2026-11-16: shields on others (Mel's, Jayce's forge) end with the shielded ally's layer (abilityShieldEndedOnHolder).
       ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!,
+      // 2026-11-24: Lux's and Renata's shields end with the holder's layer; Elise's cocoon with its target's stun.
+      ...CUE_OVERRIDES.lux!, ...CUE_OVERRIDES.renata!, ...CUE_OVERRIDES['elise-front']!,
       // 2026-11-20: Loris's Q ground ring (his index list, held per skill: SUSTAIN_SKILL_CAPS) ends with his shield layer.
       ...loris.loris!];
     const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
@@ -178,7 +180,8 @@ describe('A3: cue stops that came before an emitter first emission (2026-11-16)'
       expect(cue(key, system).stopAfter, system).toBeUndefined();
       expect(cue(key, system).duration, system).toBe(end);
     }
-    expect(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems).toEqual({ 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] });
+    expect(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems).toEqual({ 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'],
+      'lux-ability': ['44c9516a'], 'renata-ability': ['fdf79734'] });
     const source = readFileSync(new URL('../src/rendering/three-mode/placeholder-renderer.ts', import.meta.url), 'utf8');
     expect(source).toContain('CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems');
     expect(source).toContain('ltk?.stopSystemsOn(event.targetId, systems)');
