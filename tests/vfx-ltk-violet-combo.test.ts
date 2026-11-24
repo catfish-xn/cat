@@ -41,6 +41,9 @@ describe('Violet\'s combo', () => {
     expect(CUE_OVERRIDES.violet!.map(cue => cue.action)).toEqual(['attack']);
     expect(CUE_EXTRA_SKILLS['violet-jab']!.every(cue => cue.delay === 0)).toBe(true);
     expect(CUE_EXTRA_SKILLS['violet-uppercut']!.every(cue => cue.delay === 0)).toBe(true);
+    // The uppercut plays its own hit alone; the jab's hit is not added to it.
+    expect(CUE_EXTRA_SKILLS['violet-uppercut']!.map(cue => cue.system)).toEqual(['1bcbe1b7']);
+    expect(CUE_EXTRA_SKILLS['violet-jab']!.map(cue => cue.system)).toEqual(['31193cf8']);
   });
   it('in a real combat her combo plays on the ticks its damage lands, jabs then uppercut', () => {
     const units = realUnits({ unit: 'violet', star: 2, form: null, foe: 'amumu', dist: 1, nfoes: 1, foestar: 2 } as never);

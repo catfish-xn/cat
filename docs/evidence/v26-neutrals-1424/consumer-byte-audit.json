@@ -5218,9 +5218,9 @@
     "tests/vfx-ltk-violet-combo.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4266,
+      "currentBytes": 4530,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "855e4aa02da46dd97c84e20de39284eeb60431c4a3d3d13ce0db0c693cebddcc",
+      "currentSha256": "14cc65569f2a08d113c63db1cae86ee5fe1ede2457842a23bbeeb1e30a7cda96",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-vladimir-heal.test.ts": {
