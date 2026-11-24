@@ -97,11 +97,11 @@ function heldTiming(raw: readonly number[], playback: ActionPlayback, hasOut: bo
 }
 
 /** Applies complete sequences, including overflow across stages in one update. */
-/** A timed form's entry or exit clip outweighs the body's clip on the form's bones (weights blend by share). */
+/** A timed form's entry or exit clip outweighs the body's clip on the form's bones (weights blend by share). Fitted, not original data. */
 const FORM_CLIP_WEIGHT = 1e4;
-/** Seconds the entry clip's bones take to hand back to the body's clip after it ends. */
+/** Seconds the entry clip's bones take to hand back to the body's clip after it ends. Fitted, not original data. */
 const FORM_CLIP_FADE = 0.2;
-/** Seconds an idle or move loop takes to change to the other form's loop when the timed form shows or hides. */
+/** Seconds an idle or move loop takes to change to the other form's loop when the timed form shows or hides. Fitted, not original data. */
 const FORM_LOOP_BLEND = 0.2;
 
 export class UnitAnimationMixer {

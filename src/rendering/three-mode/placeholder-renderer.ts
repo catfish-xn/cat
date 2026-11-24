@@ -1195,8 +1195,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
     generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
-    // A new combat or a rewind starts every timed form off, at once (its events were just cleared with it).
-    for (const view of pieces.values()) view.mixer?.setTimedForm(false, true);
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();

@@ -280,6 +280,19 @@ describe('timed form actions', () => {
     expect(mixer.resolvePlayback('cast')?.clips).toEqual(['spell']);
     mixer.dispose();
   });
+  it('a form clip the model does not carry falls back to the model\'s own clip', () => {
+    const root = model('Base', 'Alt');
+    const mixer = new UnitAnimationMixer(root, ['rest', 'swing', 'f_swing'].map(clip), { idle: 'rest', attack: 'swing' },
+      { timedForm: { show: ['Alt'], hide: [] }, submeshVisibility: { initiallyHidden: ['Alt'] }, timedFormAnimations: { idle: 'missing', attack: 'f_swing', attackAlt: 'missing2' } });
+    const running = () => [...(mixer as unknown as { mixer: { _actions: { isRunning(): boolean; getClip(): { name: string } }[] } }).mixer._actions]
+      .filter(a => a.isRunning()).map(a => a.getClip().name);
+    mixer.apply({ state: 'idle', previous: 'idle', blendSeconds: 0, loop: true, revision: 1 });
+    mixer.setTimedForm(true); mixer.update(0.5);
+    expect(running()).toEqual(['rest']);
+    expect(mixer.resolvePlayback('attack')?.clips).toEqual(['f_swing']);
+    expect(mixer.resolvePlayback('attack')?.clips).toEqual(['swing']);
+    mixer.dispose();
+  });
   it('the manifest contract takes timedFormAnimations and refuses unknown keys or empty names', () => {
     const manifest = (timedFormAnimations: unknown) => ({ schemaVersion: 1, models: { x: { path: 'models/x/model.glb', timedFormAnimations } } });
     expect(() => assertManifest(manifest({ idle: 'a', move: 'b', attack: 'c', attackAlt: 'd', enter: 'e' }))).not.toThrow();
