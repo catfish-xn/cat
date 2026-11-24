@@ -74,6 +74,7 @@ import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
 import { batch3ModelId, createBatch3Vfx } from './vfx-ltk/batch3/controller';
+import { gateEnds } from './vfx-ltk/gate-ends';
 import { FX_SCALE } from './vfx-ltk/particles';
 import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/fx-size';
 /** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
@@ -1569,6 +1570,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (caster?.definitionId === 'powder' && hides !== undefined && currentEffect && !reducedMotion()) monkeys.prepare(event.sourceId, hides);
       }
       if (event.type === 'death') monkeys.drop(event.unitId);
+      // Malzahar's gate: its portal at each end of the line of cells his cast covers (CastReceipt.area, from one end to the
+      // other), facing the other end (a one-cell line faces him). Display only; his hits stay with the cast's targets.
+      if (event.type === 'cast' && event.area?.cells.length && grid && currentEffect && !reducedMotion() && pieces.get(event.sourceId)?.definitionId === 'malzahar') {
+        const caster = pieces.get(event.sourceId)?.root.position, board = grid;
+        for (const end of gateEnds(event.area.cells)) {
+          const at = hexCenter(end.cell, board), other = end.facing ? hexCenter(end.facing, board) : caster;
+          ltk?.play('malzahar', event.sourceId, [], 'cast', { skill: 'malzahar-gate', board: [at.x, at.y, at.z], ...(other ? { boardFacing: [other.x, other.y, other.z] as const } : {}) });
+        }
+      }
       if (event.type === 'abilityMarker' && grid) {
         const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
         if (event.marker === 'powder-monkey-sent' && currentEffect && !reducedMotion()) {

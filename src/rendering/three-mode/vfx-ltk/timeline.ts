@@ -1,4 +1,4 @@
-/** The chest locator: 14.24 basic attacks hit here (BasicAttack mHitBoneName), and their missiles fly to it. */
+/** The chest locator: basic attacks hit here (the bone their attack data names for a hit), and their missiles fly to it. */
 export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Visual timeline only. The server's cast event remains the sole gameplay fact. */
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
@@ -25,6 +25,11 @@ export interface TimelineCue {
    * landing. A cue without a target, or whose caster or target is gone, keeps its own times.
    */
   readonly flightTicks?: { readonly perCell: number; readonly min: number };
+  /**
+   * Lasts the rule's flight (LtkPlayOptions.flightSeconds, from abilityProjectileLaunched): duration counts what the cue keeps
+   * after the landing, so a ground band laid at launch clears on the landing frame plus that tail.
+   */
+  readonly spanFlight?: boolean;
   /** Soft stop emission and let existing particles linger until duration. */
   readonly stopAfter?: number;
   /**
@@ -87,6 +92,11 @@ export interface TimelineCue {
    * seconds, instead of being cut there (cue-overrides.ts PLAY_OUT_AT_DEADLINE; per cue, Fable 11-19).
    */
   readonly playOut?: number;
+  /**
+   * The cue only gives way (Fable 11-21, Mel's bolt arcs): it starts only in free room, never ending, displacing or waiting
+   * on another run, and while it runs any newcomer may end it. Both are counted in LTK_RUN_STATS.gaveWay, never as drops.
+   */
+  readonly giveWay?: boolean;
   /**
    * Uniform size of this system about its anchor. Omitted means 1.
    *

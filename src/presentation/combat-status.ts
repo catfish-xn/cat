@@ -189,6 +189,9 @@ export function eventUnitId(event: LedgerCombatEvent): string | null {
     case 'combatFinished': return null;
     case 'carryChanged': return event.holderId;
     case 'attackLaunched': case 'attackLanded': return event.attackerId;
+    case 'jayceCrystal':
+    case 'swainAscensionExtended': return event.unitId;
+    case 'abilityProjectileLaunched': case 'abilityProjectileLanded': return event.sourceId;
     default: return event.unitId;
   }
 }

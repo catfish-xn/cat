@@ -1,3 +1,6 @@
+import { landMelDash } from './combat-six-cost';
+import { executeSkillShot, launchShot, scheduleShot } from './ability-projectile';
+import { DARIUS_SPIN_TICKS, LUX_SELF_SHIELD_TICKS, LUX_SHIELD_FLIGHT_TICKS } from './cast-windup';
 import { castMadChemist, isMadChemist } from './augment-pool-batch5-r4';
 import { CAST_WINDUP_TICKS } from './cast-windup';
 import { batch2Rocket } from './augment-pool-batch2-combat';
@@ -7,7 +10,6 @@ import { planG2Cast, planG2Attack, executeG2Task, executeV20Powder } from './com
 import { chooseRandomCenter, selectAbilityTargets, selectConeTargets } from './m8/targeting';
 import { targetingEnvironment } from './m8/s13-targeting';
 import { integer, safeNumber } from './m8/stats';
-import { splitTotal } from './m8/periodic';
 import { asSource, flatAmount } from './m8/s13-definitions';
 import { executeMechanismEffect, executeShieldEnd } from './m8/s13-mechanisms';
 import { landDragonsoul } from './s13-p3-combat';
@@ -39,6 +41,8 @@ export interface AbilityContext {
   castReceipts?: import('./m8/contracts').CastReceipt[];
   /** Set by an ability's own branch choice while its cast resolves; copied onto that cast's receipt as output only. */
   castBranch?: string;
+  /** Set by a cast that draws an area (Malzahar's gate): copied to the cast receipt's area. */
+  castArea?: readonly HexCell[];
   manaRequests?: import('./m8/contracts').ManaRequest[];
   /** Current resolved armor/MR; Scuttle may exclude only Shred/Sunder while retaining other modifiers. */
   defenses?: (unit: S13Unit, armor: boolean, ignoreShredSunder?: boolean) => number;
@@ -97,19 +101,25 @@ export function planS13Cast(ctx: AbilityContext, unit: S13Unit, target: S13Unit,
       const far = byDistance(unit, enemies(unit, units), true)[0];
       if (!far) break;
       const shots = [0, 4, 9, 13, 18, 23];
-      shots.forEach((offset, n) => addTask(unit, 'maddie', tick + offset, far.id, physical('PercentAttackDamage', 'APDamage'), seq, n, shots.length, true));
+      // Landing batch (11-20): each shot leaves on its offset and settles where it lands (ability-projectile.ts).
+      shots.forEach((offset, n) => scheduleShot(unit, 'maddie-shot', tick + offset, far.id, physical('PercentAttackDamage', 'APDamage'), seq, n, shots.length, true));
       applyStatus(unit, source, 'channel', 0, 24, tick, events, true, '', seq); targets.push(far.id); break;
     }
     case 'darius': {
-      for (const enemy of neighborsOf(unit, units)) hit(enemy, physical('PercentAttackDamage'), 'physical');
-      ctx.heals.push({ source, targetId: unit.id, amount: mag('Heal') });
-      const total = physical('BleedPercentAttackDamage');
-      unit.tasks = unit.tasks.filter(t => t.kind !== 'bleed' || t.targetId !== target.id);
-      for (let n = 0; n < 4; n++) addTask(unit, 'bleed', tick + (n + 1) * 20, target.id,
-        splitTotal(total, 4)[n], seq, n, 4); break;
+      // Landing batch (11-20): the spin's damage, heal and bleed land DARIUS_SPIN_TICKS after the cast (g2Landing); who is hit
+      // and every amount are taken now. Ordinals 0..k-1 are the neighbours' damage, k the heal, k+1 the bleed on the target.
+      const around = neighborsOf(unit, units), at = tick + DARIUS_SPIN_TICKS, total = around.length + 2;
+      around.forEach((enemy, n) => { addTask(unit, 'g2Landing', at, enemy.id, physical('PercentAttackDamage'), seq, n, total); targets.push(enemy.id); });
+      addTask(unit, 'g2Landing', at, unit.id, mag('Heal'), seq, around.length, total);
+      addTask(unit, 'g2Landing', at, target.id, physical('BleedPercentAttackDamage'), seq, around.length + 1, total); break;
     }
     case 'lux': {
-      const ally = lowestAlly(unit, units, true)!; shield(ally, mag('Shield'), duration('ShieldDuration'));
+      // Landing batch (11-20): an ally's shield lands when the bent missile arrives (abilityProjectile 'lux-shield'); her own,
+      // LUX_SELF_SHIELD_TICKS after the cast (g2Landing, no projectile). The amount is taken now.
+      const ally = lowestAlly(unit, units, true)!; targets.push(ally.id);
+      if (ally.id === unit.id) addTask(unit, 'g2Landing', tick + LUX_SELF_SHIELD_TICKS, unit.id, mag('Shield'), seq, 0, 1);
+      else launchShot(ctx, unit, { key: '', kind: 'skillShot', source, executeAtTick: tick, targetId: ally.id, amount: mag('Shield'), ordinal: 0, total: 1,
+        cancellable: false, actionSeq: seq, shot: { skill: 'lux-shield' } }, ally.id, tick + LUX_SHIELD_FLIGHT_TICKS);
       unit.runtime.nextAttackMagic = mag('Damage'); break;
     }
     case 'zyra': {
@@ -240,6 +250,8 @@ export function executeTask(ctx: AbilityContext, unit: S13Unit, task: CombatTask
   if(task.kind==='v20Powder'){executeV20Powder(ctx,unit,task);return;}
   if(task.kind==='v20Teamup'){executeV20Teamup(ctx,unit,task);return;}
   if (task.kind.startsWith('g2')) { executeG2Task(ctx, unit, task); return; }
+  if (task.kind === 'skillShot') { executeSkillShot(ctx, unit, task); return; }
+  if (task.kind === 'melDash') { landMelDash(ctx, unit, task); return; }
   if (task.kind === 'tristanaBounce' && !task.inherited) throw new RangeError('Missing inherited Tristana receipt');
   const opponents = enemies(unit, ctx.units), target = (task.attachedDot || task.inherited ? areaEnemies(unit, ctx.units) : opponents).find(u => u.id === task.targetId);
   const emit = (u: S13Unit, value: number, type: 'physical' | 'magic' = 'physical', ordinal = task.ordinal) => {
