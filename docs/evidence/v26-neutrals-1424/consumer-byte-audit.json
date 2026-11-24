@@ -2660,9 +2660,9 @@
     "tests/recording-enemy-items.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3476,
+      "currentBytes": 5981,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a6111571d9efa8ca33d1e692e109a1023a426908f422bac224acc727556d66d2",
+      "currentSha256": "a0b52dc2feebd4f04c6cd24808bdd3320bfe1836ac3461050c3f0148e7b2ca0b",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-animation.test.ts": {

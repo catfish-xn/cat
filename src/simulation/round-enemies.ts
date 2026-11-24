@@ -4,6 +4,9 @@ import { FINAL_ROUND, getRoundKind, getStageRound } from './round-schedule';
 import { freezeContent } from './content/freeze';
 import { COMPILED_NEUTRAL_ENCOUNTERS } from './neutral-encounter-compiler';
 import { ROUND_CATALOG } from './content/round-catalog';
+import { ITEM_DEFINITIONS } from './content/items';
+/** A unit's equipment slots. */
+const ENEMY_ITEM_SLOTS=3;
 /** Frontline precedes backline. Duplicate fill at stage two is intentional and never counts twice for traits. */
 export const ENEMY_TEMPLATES=freezeContent([
   ['irelia','rell','leona','loris','tristana','urgot','ezreal','corki'],
@@ -62,12 +65,31 @@ export const ROUND_ENEMY_PROJECTIONS = freezeContent(ROUND_CATALOG.map(round => 
 export function readRoundEnemyProjection(round:number,openingId?:string|null): typeof ROUND_ENEMY_PROJECTIONS[number] {
   getStageRound(round);const base=ROUND_ENEMY_PROJECTIONS[round-1];const crab=COMPILED_NEUTRAL_ENCOUNTERS.find(e=>e.encounterId===`${openingId}/${base.roundId}`);return crab?{...base,units:crab.deployment}:base;
 }
+/** Why recording-only enemy items were refused (CombatStrategyInputs.recordingEnemyItems), one code per kind of mistake. */
+export type RecordingEnemyItemsProblem='not-an-enemy'|'unknown-item'|'bad-slot'|'slot-taken'|'too-many';
+export class RecordingEnemyItemsError extends Error {
+  constructor(readonly problem:RecordingEnemyItemsProblem,detail:string){super(`recording enemy items: ${problem} (${detail})`);this.name='RecordingEnemyItemsError';}
+}
+/** Each item on an enemy unit of the board, a known item, in its own slot 0-2 of that unit: anything else is refused by name. */
+export function validateRecordingEnemyItems(items:readonly EnemyItem[],units:readonly {readonly id:string;readonly team:string}[]):void {
+  const enemies=new Set(units.filter(u=>u.team==='enemy').map(u=>u.id)),taken=new Map<string,Set<number>>(),count=new Map<string,number>();
+  for(const item of items)count.set(item.unitId,(count.get(item.unitId)??0)+1);
+  for(const [unitId,n] of count)if(n>ENEMY_ITEM_SLOTS)throw new RecordingEnemyItemsError('too-many',unitId);
+  for(const item of items){
+    if(!enemies.has(item.unitId))throw new RecordingEnemyItemsError('not-an-enemy',item.unitId);
+    if(!Object.hasOwn(ITEM_DEFINITIONS,item.definitionId))throw new RecordingEnemyItemsError('unknown-item',item.definitionId);
+    if(!Number.isSafeInteger(item.slot)||item.slot<0||item.slot>=ENEMY_ITEM_SLOTS)throw new RecordingEnemyItemsError('bad-slot',`${item.unitId} ${item.slot}`);
+    const slots=taken.get(item.unitId)??new Set<number>();
+    if(slots.has(item.slot))throw new RecordingEnemyItemsError('slot-taken',`${item.unitId} ${item.slot}`);
+    slots.add(item.slot);taken.set(item.unitId,slots);
+  }
+}
 /**
  * The enemy items the strategy reads: the round's own (when enemies stand on the board), unless a recording tool names
  * them (CombatStrategyInputs.recordingEnemyItems; dev/castcmp --foe-items). A match never sets that field, so it reads
  * exactly the round's items as before.
  */
-export function roundEnemyItems(state:{readonly round:number;readonly preparation:{readonly units:readonly {readonly team:string}[]};readonly recordingEnemyItems?:readonly EnemyItem[]}):readonly EnemyItem[] {
-  if(state.recordingEnemyItems!==undefined)return state.recordingEnemyItems;
+export function roundEnemyItems(state:{readonly round:number;readonly preparation:{readonly units:readonly {readonly id:string;readonly team:string}[]};readonly recordingEnemyItems?:readonly EnemyItem[]}):readonly EnemyItem[] {
+  if(state.recordingEnemyItems!==undefined){validateRecordingEnemyItems(state.recordingEnemyItems,state.preparation.units);return state.recordingEnemyItems;}
   return state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[];
 }
