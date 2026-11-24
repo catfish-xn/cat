@@ -1,4 +1,5 @@
-import { SEVIKA_PUNCH_HIT_TICKS, SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
+import { CASSIOPEIA_BOLT_LAUNCH_TICKS, SEVIKA_PUNCH_HIT_TICKS, SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
+import { scheduleShot } from './ability-projectile';
 import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
 import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, jayceCrystalChainPlace, jayceCrystalLandTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
@@ -129,7 +130,12 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'cassiopeia': {
       // One read decides the splash and the branch reported (display output only).
       const splash=u.runtime.castCount%v('NumCasts')===0;ctx.castBranch=splash?'splash':'single';
-      strike(t,mag('Damage'));
+      // The main bolt (11-24, authorization ②, timing only): it leaves CASSIOPEIA_BOLT_LAUNCH_TICKS after the cast and settles
+      // where it lands, cassiopeiaBoltFlightTicks(hexes to the target then) later (abilityProjectile 'cassiopeia-bolt'); its amount
+      // and target are taken now, and she stands still until it leaves (channel, self-chosen). The splash still settles on the cast
+      // (its timing is pending).
+      applyStatus(u,origin(u),'channel',0,CASSIOPEIA_BOLT_LAUNCH_TICKS,ctx.tick,ctx.events,true,'',seq);
+      scheduleShot(u,'cassiopeia-bolt',ctx.tick+CASSIOPEIA_BOLT_LAUNCH_TICKS,t.id,mag('Damage'),seq,0,1);ids.push(t.id);
       if(splash)for(const x of byDistance(t,foes()).filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=v('HexRadius')).slice(0,v('BonusNumEnemies')))strike(x,mag('MiasmaDamage'),'magic',true);break;}
     case 'nunu':{
       const ticks=Math.round(v('DamageDuration')*v('DamageTicksPerSecond'));
