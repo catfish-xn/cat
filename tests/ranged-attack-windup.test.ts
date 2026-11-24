@@ -106,6 +106,17 @@ describe('ranged attack wind-up', () => {
     // No wind-up is ever left behind its launch tick.
     let st = mid; for (let n = 0; n < 30; n++) { st = stepCombat(st).state; const w = p(st).windup; if (w) expect(w.launchTick).toBeGreaterThan(st.tick); }
   });
+  it('a taunt forcing the attacker onto another target during the wind-up cancels it; the forced target gets a full wind-up', () => {
+    // 11-24 Fable: the wind-up holds only for the current target, so a forced change cancels it even with the old target still selectable.
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3), dummy('f', 4, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state), other = first.targetId === 'e' ? 'f' : 'e';
+    Object.assign(mid.units.find(u => u.id === 'p')!, { voidSwarmTaunt: other });
+    const r = run(mid, 30);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, first.targetId]]);
+    expect(of(r.out, 'attackWindup')[0]).toMatchObject({ tick: mid.tick + 1, targetId: other, launchTick: mid.tick + 1 + first.launchTick - first.tick });
+    expect(of(r.out, 'attack').filter(e => e.targetId === first.targetId)).toEqual([]);
+  });
   it('melee attacks have no wind-up', () => {
     const r = run(battle([shooter('garen', { attackRange: 1 }), dummy('e', 3, 5)], { rngState: 42 }), 30);
     expect(of(r.out, 'attackWindup')).toEqual([]);

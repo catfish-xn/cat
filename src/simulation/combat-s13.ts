@@ -484,12 +484,13 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       advanceMadChemist(ctx, unit, () => actionSeq++);
       if(isOpeningCrab(unit)){if(unit.alive&&!blocked.has(unit.id))crabJump(ctx,unit,()=>actionSeq++);rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);continue;}
       // A winding-up ranged attack (remote wind-up, 11-19, cancel semantics inferred, not original): it is cancelled when its
-      // attacker cannot act this tick (dead, controlled, bound, channelling, holding, or without a target) or its target died,
-      // became unselectable (11-24 Fable: e.g. Edge of Night) or left range, with the cooldown cleared so the next attack can
-      // start at once (this tick, on a newly chosen target) with a full wind-up of its own.
+      // attacker cannot act this tick (dead, controlled, bound, channelling, holding, or without a target) or its target is no longer
+      // its current target (11-24 Fable: it died, became unselectable, e.g. Edge of Night, or was forced away, e.g. by a taunt) or
+      // left range, with the cooldown cleared so the next attack can start at once (this tick, on the new current target) with a
+      // full wind-up of its own.
       if (unit.windup) {
         const w = unit.windup, windupTarget = units.find(u => u.id === w.targetId && u.alive && u.hp > 0);
-        if (!unit.alive || blocked.has(unit.id) || !target || g23Bound(unit) || active(unit, tick, 'channel').length > 0 || renniHolding(unit)
+        if (!unit.alive || blocked.has(unit.id) || !target || target.id !== w.targetId || g23Bound(unit) || active(unit, tick, 'channel').length > 0 || renniHolding(unit)
           || !windupTarget || !isSelectable(windupTarget, tick) || hexDistance(unit.cell, windupTarget.cell) > range(unit)) {
           if (unit.alive) events.push({ type: 'attackWindupCancelled', tick, attackerId: unit.id, targetId: w.targetId });
           delete unit.windup; unit.cooldownTicks = 0;

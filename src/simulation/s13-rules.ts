@@ -73,6 +73,7 @@ export const S13_COMBAT_RULES = Object.freeze({
   jayceCrystals: 'jayce-crystals-land-then-chain-explode-v1',
   // Ranged attack wind-up (11-19): a ranged attack starts, then launches RANGED_ATTACK_WINDUP_TICKS later (cast-windup.ts).
   rangedAttackWindup: 'ranged-attack-start-then-launch-after-windup-v1',
-  // Its cancel cases (11-24 Fable): a target turning unselectable, or an attacker that cannot act this tick, cancels the wind-up too.
-  rangedAttackWindupCancel: 'ranged-attack-windup-cancels-on-unselectable-target-or-idle-attacker-v1',
+  // Its cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
+  // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
+  rangedAttackWindupCancel: 'ranged-attack-windup-cancels-when-current-target-changes-or-attacker-idle-v1',
 });
