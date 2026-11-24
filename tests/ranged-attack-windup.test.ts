@@ -117,6 +117,25 @@ describe('ranged attack wind-up', () => {
     expect(of(r.out, 'attackWindup')[0]).toMatchObject({ tick: mid.tick + 1, targetId: other, launchTick: mid.tick + 1 + first.launchTick - first.tick });
     expect(of(r.out, 'attack').filter(e => e.targetId === first.targetId)).toEqual([]);
   });
+  it('the target stepping out of range during the wind-up cancels it (target unchanged)', () => {
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    Object.assign(mid.units.find(u => u.id === 'e')!, { cell: { col: 3, row: 0 } });
+    const r = run(mid, 1);
+    expect(p(r.state).targetId).toBe('e');
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, 'e']]);
+    expect(p(r.state).windup).toBeUndefined();
+  });
+  it('the attacker starting to channel during the wind-up cancels it (target unchanged)', () => {
+    const start = battle([shooter('ezreal'), dummy('e', 3, 3)], { rngState: 42 });
+    const first = of(run(start, 40).out, 'attackWindup')[0]!;
+    const mid = structuredClone(run(start, first.tick - start.tick + 1).state);
+    applyStatus(p(mid), origin(p(mid)), 'channel', 0, 10, mid.tick, [], true);
+    const r = run(mid, 1);
+    expect(of(r.out, 'attackWindupCancelled').map(e => [e.tick, e.targetId])).toEqual([[mid.tick + 1, 'e']]);
+    expect(of(r.out, 'attack')).toEqual([]);
+  });
   it('melee attacks have no wind-up', () => {
     const r = run(battle([shooter('garen', { attackRange: 1 }), dummy('e', 3, 5)], { rngState: 42 }), 30);
     expect(of(r.out, 'attackWindup')).toEqual([]);
@@ -169,12 +188,13 @@ describe('ranged attack wind-up: Match save', () => {
   it.each([
     ['an ally target', (u: any, units: any[]) => { u.windup.targetId = units.find((x: any) => x.team === u.team && x.id !== u.id)?.id ?? u.id; }],
     ['a launch in the past', (u: any) => { u.windup.launchTick = 0; }],
+    ['a launch beyond the wind-up maximum', (u: any, _units: any[], tick: number) => { u.windup.launchTick = tick + RANGED_ATTACK_WINDUP_MAX + 1; }],
     ['an extra key', (u: any) => { u.windup.extra = 1; }],
     ['a dead holder', (u: any) => { u.alive = false; u.hp = 0; }],
   ] as const)('rejects a forged wind-up: %s', (_name, edit) => {
     const json = JSON.parse(serializeMatch(windingUp()));
     const holder = json.combat.units.find((u: any) => u.windup);
-    edit(holder, json.combat.units);
+    edit(holder, json.combat.units, json.combat.tick);
     expect(() => restoreMatch(JSON.stringify(json))).toThrow();
   }, 60000);
 });

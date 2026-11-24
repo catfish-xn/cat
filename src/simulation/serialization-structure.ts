@@ -1,3 +1,4 @@
+import { RANGED_ATTACK_WINDUP_MAX } from './cast-windup';
 import { ABILITY_PROJECTILE_OWNER, ABILITY_PROJECTILE_SKILLS } from './ability-projectile';
 import { validateAnomalyHistoryProof } from './anomaly-history-restore';
 import { validateOverEncumbered } from './over-encumbered';
@@ -445,13 +446,13 @@ function restoreMatchWithinCall(input: unknown, forSerialization = false, parsed
         requireValue(contains(combatPreparation.board, approach.cell), 'melee approach cell');
       }
       if (unit.windup !== undefined) {
-        // A winding-up ranged attack (cast-windup.ts): a living unit, an enemy target, a launch within the wind-up bound.
+        // A winding-up ranged attack (cast-windup.ts): a living unit, an enemy target, a launch at most RANGED_ATTACK_WINDUP_MAX ahead.
         const windup = unit.windup;
         record(windup);
         requireValue(Object.keys(windup).sort().join(',') === 'launchTick,targetId' && unit.alive, 'attack windup keys');
         requireValue(combatIds.has(windup.targetId) && combat.units.find(other => other.id === windup.targetId)?.team !== unit.team, 'attack windup target');
         integer(windup.launchTick);
-        requireValue(windup.launchTick > combat.tick && windup.launchTick <= combat.tick + 600, 'attack windup launch');
+        requireValue(windup.launchTick > combat.tick && windup.launchTick <= combat.tick + RANGED_ATTACK_WINDUP_MAX, 'attack windup launch');
       }
       requireValue(unit.cooldownTicks <= 1200 && unit.moveCooldownTicks <= 5, 'cooldown bounds');
       requireValue(contains(combatPreparation.board, unit.cell), 'combat cell');
