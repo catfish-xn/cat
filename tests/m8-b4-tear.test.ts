@@ -49,12 +49,26 @@ describe('B4 tear recipes: hand vectors and real effects',()=>{
   const expiry=refreshed[0].expiresAtTick!;
   // The attacker's side (this buff) is taken on the attack tick: a shot launched on expiry-1 keeps +500 bps wherever it lands,
   // one launched on expiry does not (the half-open boundary, now on the launch tick).
-  let state=second.state;while(state.tick<expiry-2)state=stepCombat({...state,units:state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)}).state;
-  const fire=(st:typeof state)=>stepCombat({...st,units:st.units.map(u=>u.id==='p'?{...u,cooldownTicks:0,targetId:'z'}:u)});
-  const launchBefore=fire(state);expect(launchBefore.state.tick).toBe(expiry-1);
-  const launchAt=fire(launchBefore.state);expect(launchAt.state.tick).toBe(expiry);
-  let r=launchAt;const landed:number[]=[];for(let n=0;n<fz+1;n++){r=stepCombat({...r.state,units:r.state.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)});landed.push(...packets(r.events).map(e=>e.hpDamage));}
-  expect(landed).toEqual([120,115]);
+  // Ranged attack wind-up (#791; assertion-structure change approved by Fable 11-24): the old form launched two shots on
+  // consecutive ticks (expiry-1, expiry) in one sequence and asserted landed [120,115]. A ranged attack now winds up for WINDUP
+  // ticks and cannot start another meanwhile, so two launches one tick apart are impossible in one sequence. Instead two
+  // branches leave the same save: one starts on expiry-1-WINDUP and launches on expiry-1 (keeps +500 bps: [120]); the other
+  // starts on expiry-WINDUP and launches on expiry (no buff: [115]). Pinning each launch tick also pins that the buff is read
+  // on the launch tick, not the start tick.
+  const hold=(st:typeof first.state)=>stepCombat({...st,units:st.units.map(u=>u.id==='p'?{...u,cooldownTicks:1000}:u)});
+  let branchPoint=second.state;while(branchPoint.tick<expiry-2-WINDUP)branchPoint=hold(branchPoint).state;
+  const branch=(startTick:number)=>{
+   let st=structuredClone(branchPoint);const origin=JSON.stringify(st);
+   while(st.tick<startTick-1)st=hold(st).state;
+   let r=stepCombat({...st,units:st.units.map(u=>u.id==='p'?{...u,cooldownTicks:0,targetId:'z'}:u)});expect(r.state.tick).toBe(startTick);
+   let launch:number|undefined;const landed:number[]=[];
+   for(let n=0;n<WINDUP+fz+1;n++){r=hold(r.state);if(r.events.some(e=>e.type==='attackLaunched'&&e.attackerId==='p'))launch=r.state.tick;landed.push(...packets(r.events).map(e=>e.hpDamage));}
+   return {origin,launch,landed};
+  };
+  const before=branch(expiry-1-WINDUP),at=branch(expiry-WINDUP);
+  expect(at.origin).toBe(before.origin); // both branches start from the same save
+  expect(before.launch).toBe(expiry-1);expect(before.landed).toEqual([120]);
+  expect(at.launch).toBe(expiry);expect(at.landed).toEqual([115]);
  });
  it('redemption:1150−650=500 missing;500×15%=75 at100;t100 damage stays100 before next-tick10% reduction',()=>{const r=run(wearing('redemption',{hp:650,cooldownTicks:1000}),100,[enemy('e',1,3,{cooldownTicks:100,attackDamage:100})]);expect(heals(r.events).filter(e=>e.unitId==='p')[0].actual).toBe(75);expect(packets(r.events,'e')[0].hpDamage).toBe(100);});
  it('justice:above50% AD130/AP130/vamp12%→15 heal;below AD115/vamp24%→27;equal50% none doubled',()=>{for(const [hp,ad,heal] of [[600,130,15],[490,115,27],[500,115,13]]){const r=run(wearing('hand-of-justice',{hp,baseCritChanceBps:0}),1+LANDING);expect(packets(r.events)[0].raw).toBe(ad);expect(heals(r.events)[0].actual).toBe(heal);expect(readCombatStats(r.p,r.state).abilityPower).toBe(hp+heal>500?130:115);}});

@@ -452,14 +452,17 @@ describe('dead-holder public combat fixture', () => {
     // as enemy-r8-4 kills her (no longer a mutual trade; the premise is the holder's same-tick killing blow).
     // Ranged attack landing (#739): seed 338 no longer trades in any cell. Searched seeds 0..199 over all 28 cells with the
     // same premises (one earlier kill, resistance buffs active); seed 149 at (4,6) trades at tick 300 (Zyra and enemy-r8-3 kill each other).
-    let state = frontRowRod(149);
+    // Ranged attack wind-up (#791, scene change approved by Fable 11-24): seed 149 no longer trades in any cell. Searched seeds
+    // 0..415 over all 28 cells with the same premises (same-enemy trade, one earlier kill, resistance buffs active): seed 306 at
+    // (4,7) trades at tick 460 (Zyra and enemy-r4-3 kill each other).
+    let state = frontRowRod(306);
     for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
     const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
     state = equipBracer(state, owner.id);
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 4, row: 6 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 4, row: 7 } }));
     const initial = accepted(startMatchCombat(state));
     let before = initial;
-    while (before.phase === 'combat' && before.combat!.tick < 299) before = stepMatch(before).state;
+    while (before.phase === 'combat' && before.combat!.tick < 459) before = stepMatch(before).state;
     fixture = freezeContent(structuredClone({ state, initial, before, ownerId: owner.id }));
   });
 
@@ -468,13 +471,13 @@ describe('dead-holder public combat fixture', () => {
     certifyFixture(copy.initial); certifyFixture(copy.before);
     const owner = state.preparation.units.find(u => u.id === copy.ownerId)!;
     expect(owner.starLevel).toBe(3);
-    const initial = copy.initial, before = stepTo(copy.before, 299);
+    const initial = copy.initial, before = stepTo(copy.before, 459);
     const result = stepMatch(before), after = result.state;
-    const targetId = 'enemy-r8-3';
-    expect(after.combat!.tick).toBe(300);
+    const targetId = 'enemy-r4-3';
+    expect(after.combat!.tick).toBe(460);
     expect(result.events.filter(e => e.type === 'kill')).toEqual([
-      expect.objectContaining({ type: 'kill', tick: 300, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-3' }) }),
-      expect.objectContaining({ type: 'kill', tick: 300, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+      expect.objectContaining({ type: 'kill', tick: 460, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r4-3' }) }),
+      expect.objectContaining({ type: 'kill', tick: 460, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
     ]);
     expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
       expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
