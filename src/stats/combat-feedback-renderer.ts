@@ -146,8 +146,8 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         if (event.type === 'packetDamage') {
           const tick = event.delivery === 'ability-periodic' || event.delivery === 'item-burn';
           // The killing packet shows its full amount, as the original does, not the target's last HP: the rest is the
-          // packet's overkill, when the event carries it (until then the number is the HP it took).
-          const overkill = event.killingPacket ? (event as { overkill?: number }).overkill ?? 0 : 0;
+          // packet's overkill (replay view, killing packets only). An event without it (an older server or replay) shows the HP it took.
+          const overkill = event.killingPacket ? event.overkill ?? 0 : 0;
           add(event.tick, event.targetId, event.damageType, event.hpDamage + overkill, at, event.critical ? 'crit' : tick ? 'tick' : 'plain', event.sourceId, event.delivery === 'item-burn');
         }
         // Only damage and heals float, as in the original; a status (stun, knock-up, shred, sunder, burn…) shows no word.
