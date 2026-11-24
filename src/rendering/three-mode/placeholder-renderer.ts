@@ -37,7 +37,7 @@ import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece,
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import { createStatusPoseEvents } from './status-pose-events';
-import { createSustainStops } from './vfx-ltk/sustain-stops';
+import { createControlEndStops, createSustainStops } from './vfx-ltk/sustain-stops';
 import { createTimedFormEvents } from './timed-form-events';
 import { createPowderMonkeys } from './powder-monkey';
 import type { TimelineVariant } from './vfx-ltk/timeline';
@@ -713,6 +713,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   // Persistent layers ended by a status or a later hit (sustain-stops.ts).
   const sustainStops = createSustainStops(id => pieces.get(id)?.definitionId);
+  const controlEndStops = createControlEndStops();
   // A timed form (Dr. Mundo's ultimate body, Swain's wings) follows its rule events over whatever clip plays (timed-form-events.ts).
   const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.form);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
@@ -1216,7 +1217,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); debuffMarks.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); controlEndStops.clear(); debuffMarks.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1452,6 +1453,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const ids = new Set(envelopePending); envelopePending.clear();
       for (const view of pieces.values()) if (view.model.id && ids.has(view.model.id) && view.lease && !view.lease.placeholder) attachBody(view);
     }
+    // A unit no longer stunned in the rules (its control in this frame is gone): its stun's layers end (CUE_RULE_STOPS stunEnded).
+    for (const stop of controlEndStops.frame(frame.pieces, frame.fighting)) ltk?.stopSystemsOn(stop.id, stop.systems);
     const seen = new Set<string>();
     const modelPieces = new Map(frame.pieces.map(piece => [piece.id, piece]));
     for (const piece of frame.pieces) {
@@ -1656,6 +1659,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOn(event.targetId, systems);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnSelf.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOnSelf(event.targetId, systems);
       if (event.type === 'statusChanged' && event.kind === 'shred' && event.reason !== 'applied' && event.reason !== 'refreshed')
         ltk?.stopSystemsOn(event.targetId, CUE_RULE_STOPS.shredEnded.systems);
       // Persistent layers that end with their rule's status or a later hit (cue-overrides.ts CUE_RULE_STOPS, sustain-stops.ts).

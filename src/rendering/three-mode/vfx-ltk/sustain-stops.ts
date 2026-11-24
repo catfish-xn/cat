@@ -54,3 +54,25 @@ export function createSustainStops(definitionOf: (id: string) => string | undefi
     clear(): void { vex.clear(); jayceCast.clear(); forgeOf.clear(); },
   };
 }
+
+/**
+ * Stops for CUE_RULE_STOPS stunEnded (cue-overrides.ts): a unit's stun shows in each board frame as its control (the rules'
+ * stun state, whoever caused it); the frame where a living unit that had one has none any more ends the listed layers on it.
+ * Read from the frame rather than from a stun's end event, so another stun that ends first does not end it early.
+ */
+export function createControlEndStops() {
+  const controlled = new Set<string>();
+  return {
+    frame(pieces: readonly { readonly id: string; readonly alive: boolean; readonly control?: unknown }[], fighting: boolean): SustainStop[] {
+      const stops: SustainStop[] = [];
+      for (const piece of pieces) {
+        const now = fighting && piece.alive && !!piece.control;
+        if (now) controlled.add(piece.id);
+        else if (controlled.delete(piece.id) && piece.alive) stops.push({ by: 'target', id: piece.id, systems: CUE_RULE_STOPS.stunEnded.systems });
+      }
+      return stops;
+    },
+    /** A new combat or rewind starts with no unit controlled. */
+    clear(): void { controlled.clear(); },
+  };
+}
