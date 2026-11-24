@@ -2748,9 +2748,9 @@
     "tests/rendering3d-attack-crits.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3071,
+      "currentBytes": 5348,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a81afd9f4406ae616c7246bcf42b3c1f23f6377dbbd30a215badfe415f669750",
+      "currentSha256": "3108d72f9904eaee866110174f06b8fe88b8d6fb0d33182db288d1a03d5f861c",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-attack-hold.test.ts": {
