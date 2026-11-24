@@ -238,8 +238,10 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
   // scales new shields by 90% (so this checkpoint is authenticated by the overtime full replay).
   const stats = readCombatStats(holder, state.combat!);
   expect(stats.armor + stats.magicResist).toBe(310);
-  expect(active(state).layer.granted).toBe(Math.floor(224 * overtimeReceivedBps(600) / 10000));
-  expect(active(state).layer.granted).toBe(201);
+  // Ranged attack wind-up (#791, pure-result re-pin): the tick-600 pulse's 70% resists sample is now 242 (was 224), so the
+  // overtime-scaled grant is 217 (was 201).
+  expect(active(state).layer.granted).toBe(Math.floor(242 * overtimeReceivedBps(600) / 10000));
+  expect(active(state).layer.granted).toBe(217);
   const input = format === 'object' ? state : serializeMatch(state);
   let original = state, restored = restoreMatch(input);
   expect(restored).toEqual(original);
@@ -271,7 +273,9 @@ it('restores crest shields after a chest grants the holder dual resists, and rej
   // v26 combat/offer drift: seed 78's chest now rolls Giant Slayer at 177. Seed 4 is the only seed in 0..119 whose same
   // public route (reroll slot 0, Placebo priority; it takes Quickstriker Crest) has the chest grant Gargoyle (tick 172)
   // before the tick-180 crest pulse on the receiver.
-  let open = reachRound('2-1', false, 4);
+  // Ranged attack wind-up (#791, scene change): seed 4's chest now rolls Adaptive Helm (169). Searched seeds 0..239 on the same
+  // public route: seeds 179 (Gargoyle at 143) and 201 (Gargoyle at 177) grant Gargoyle before the pulse; seed 179 is the first.
+  let open = reachRound('2-1', false, 179);
   const c = open.pendingChoice!;
   open = accepted(rerollAugment(open, c.choiceId, c.generation, 0));
   let state = resolveM5Choices(open, ['placebo']);
@@ -291,7 +295,7 @@ it('restores crest shields after a chest grants the holder dual resists, and rej
   while (state.phase === 'combat' && state.combat!.tick < 180) state = stepMatch(state).state;
   expect(state.combat!.tick).toBe(180);
   const holder = state.combat!.units.find(u => u.id === receiver)!;
-  expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 172 }]);
+  expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 143 }]);
   expect(active(state).layer.source.ownerId).toBe(receiver);
   expect(active(state).layer.m8State.startsAtTick).toBe(180);
   for (const input of [structuredClone(state), serializeMatch(state)]) expect(restoreMatch(input)).toEqual(state);

@@ -508,10 +508,14 @@ describe.each([
   // Ranged attack landing (#739): without contribution, seeds 0..80 give no lone Sion kill (with the Watcher Crest route) in
   // any Morgana cell with Cassiopeia (0,6) / Vladimir (4,7). The task-mechanism-restore layout keeps it: seed 1, Morgana (6,7),
   // Cassiopeia (0,4), Vladimir (3,4); Sion kills enemy-r4-1 at tick 323.
-  { contribution: false, seed: 1, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 323, targetId: 'enemy-r4-1' },
+  // Ranged attack wind-up (#791, scene change): seed 1 no longer gives it in any Morgana cell; the task-mechanism-restore search
+  // (seeds 0..19, all Morgana cells, Cassiopeia (0,4) / Vladimir (3,4)) gives seed 3, Morgana (4,5): Sion kills enemy-r8-1 at 242.
+  { contribution: false, seed: 3, cells: [{ col: 4, row: 5 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 242, targetId: 'enemy-r8-1' },
   // Ranged attack landing (#739): with contribution, Morgana (5,6) no longer gives the lone Sion kill; Morgana (4,6) does,
   // Sion kills enemy-r8-1 at tick 224 (same seed and Cassiopeia/Vladimir cells).
-  { contribution: true, seed: 2, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 224, targetId: 'enemy-r8-1' },
+  // Ranged attack wind-up (#791, scene change): seed 2 at (4,6) now has Morgana hit the target on the kill tick. The same
+  // task-mechanism-restore layout as above, seed 5, Morgana (6,7): Sion kills enemy-r4-2 at tick 420 with her prior contribution.
+  { contribution: true, seed: 5, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 420, targetId: 'enemy-r4-2' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   // Script only the draw; the following equality checks the fixture, not real-RNG availability.
   let restoreOffers: () => void;
