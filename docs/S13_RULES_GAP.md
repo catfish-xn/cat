@@ -1,7 +1,7 @@
 ## 2026-11-24 卡西奥佩娅主弹（授权②；只改时刻，不改数值；按正式服片定出手拍）
 
 - 以前：施法那一拍，主弹伤害当拍结算（第三次施法的溅射同样当拍）。
-- 现在：主弹在施法后第 `CASSIOPEIA_BOLT_LAUNCH_TICKS` 拍出手（出手前她站着不动、不普攻，沿用引导状态，自定），按速度每格飞 `CASSIOPEIA_BOLT_TICKS_PER_HEX` 拍（速度取自技能数据，按拍取整），落地那拍结算伤害（`abilityProjectileLaunched` / `abilityProjectileLanded`，skill `cassiopeia-bolt`）。目标和伤害在施法那拍定下；目标在飞行中阵亡就不结算，也不换人。
+- 现在：主弹在施法后第 `CASSIOPEIA_BOLT_LAUNCH_TICKS` 拍出手（出手前她站着不动、不普攻，沿用引导状态，自定），按速度每格飞 `CASSIOPEIA_BOLT_TICKS_PER_HEX` 拍（速度取自技能数据，按拍取整），落地那拍结算伤害（`abilityProjectileLaunched` / `abilityProjectileLanded`，skill `cassiopeia-bolt`）。目标和伤害在施法那拍定下；目标在飞行中阵亡就不结算，也不换人（与其他落地结算飞行物同一处理）。出手前她被控制，主弹照常在出手拍出手；她阵亡则不出手、不结算；蓝在施法那拍已扣（与其他技能前摇同一口径）。
 - 出手拍数按正式片量得（非原版数据）：tnv2（14.24 正式服）两次施法，从她的蓝条清空到弹体清楚可见都约在第 10 拍；落地对照片里伤害数字跳出的时刻，差在 2 拍以内。
 - 溅射不动：第三次施法的溅射仍在施法那拍结算。正式片两次第三次施法都没看到可确认是她的溅射，等第二个样本再定（官方说明：每第三次施法，向主目标 3 格内 2 名敌人溅射瘴气；"取离主目标最近的"为自定，说明未写）。
 - 规则标识：`S13_COMBAT_RULES.cassiopeiaBolt`，计入内容摘要（cf1ef035 → 359c3c11）。改动前的存档会判为 digest-mismatch。

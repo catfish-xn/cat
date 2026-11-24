@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatEvent, type CombatState, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
-import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
+import { EMPTY_RUNTIME, applyStatus, origin, type S13Unit } from '../src/simulation/combat-s13-state';
 import { CASSIOPEIA_BOLT_LAUNCH_TICKS, cassiopeiaBoltFlightTicks } from '../src/simulation/cast-windup';
 import { hexDistance } from '../src/simulation/board';
 import { S13_COMBAT_RULES } from '../src/simulation/s13-rules';
@@ -49,6 +49,24 @@ describe('Cassiopeia main bolt settles where it lands', () => {
       expect(hits[0]![0]).toBe(launch + flight);
       expect(r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLanded'))).toMatchObject([{ tick: launch + flight, skill: 'cassiopeia-bolt', hit: true }]);
     }
+  });
+  // Before it leaves (the skill wind-up convention, as Sevika's punch and the other cast wind-ups): a stun on her does not stop the
+  // bolt, her death does; her mana was spent on the cast either way.
+  it('stunned before the launch: the bolt still leaves on its launch tick and lands', () => {
+    const start = battle([cass(), dummy('e', 3, 5)], { rngState: 42 }), cast = start.tick + 1;
+    const after = structuredClone(run(start, 1).state);
+    applyStatus(after.units.find(u => u.id === 'p')! as S13Unit, origin(after.units.find(u => u.id === 'e')! as S13Unit), 'stun', 0, 30, after.tick, [], true);
+    const r = run(after, CASSIOPEIA_BOLT_LAUNCH_TICKS + cassiopeiaBoltFlightTicks(2) + 1);
+    expect(r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched')).map(e => e.tick)).toEqual([cast + CASSIOPEIA_BOLT_LAUNCH_TICKS]);
+    expect(mine(r.out, 'e').length).toBe(1);
+  });
+  it('dead before the launch: no bolt leaves and nothing lands; her mana stays spent', () => {
+    const start = battle([cass(), dummy('e', 3, 5)], { rngState: 42 });
+    const after = structuredClone(run(start, 1).state);
+    Object.assign(after.units.find(u => u.id === 'p')!, { hp: 0 });
+    const r = run(after, CASSIOPEIA_BOLT_LAUNCH_TICKS + cassiopeiaBoltFlightTicks(2) + 1);
+    expect(r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched'))).toEqual([]);
+    expect(mine(r.out, 'e')).toEqual([]);
   });
   it('a target dead in flight takes nothing and no other enemy is hit instead', () => {
     const start = battle([cass(), dummy('e', 3, 3), dummy('f', 4, 3)], { rngState: 42 });
