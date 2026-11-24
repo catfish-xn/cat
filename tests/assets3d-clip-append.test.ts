@@ -49,7 +49,7 @@ function anm() {
 describe('clip append', () => {
   it('names each timed form\'s entry and exit clip by graph key hash', () => {
     expect(TIMED_FORM_GRAPH_KEYS).toEqual({ swain: { enter: '0x70eb0dad', exit: '0xe1ad931b' } });
-    expect(TIMED_FORM_ACTION_KEYS).toEqual({ swain: { idle: '0x9dd9dc06', move: '0x2acd4eca', attack: '0x56b1e924', attackAlt: '0x59b1eddd' } });
+    expect(TIMED_FORM_ACTION_KEYS).toEqual({ swain: { idle: '0x9dd9dc06', move: '0x2acd4eca', attack: '0x56b1e924', attackAlt: '0x59b1eddd', enter: '0xfd5939c8' } });
     for (const keys of [...Object.values(TIMED_FORM_GRAPH_KEYS), ...Object.values(TIMED_FORM_ACTION_KEYS)])
       for (const key of Object.values(keys as Record<string, string>)) expect(key).toMatch(/^0x[0-9a-f]{8}$/);
   });
