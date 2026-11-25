@@ -219,3 +219,19 @@ it('keeps the ability text in a card that opens from the ability icon', async ()
   expect(result).toMatchObject({ closed: false, open: true, reclosed: true, role: true, stats: 8, target: true });
   expect(result.label).toContain('技能');
 });
+it('shows a form swapper the ability of its current form, and both forms off the board', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect;
+    const labels = (body: HTMLElement) => Array.from(body.querySelectorAll('.unit-card-ability .unit-card-label')).map(node => node.textContent ?? '');
+    const hover = (form: string | null) => labels(api.unitCardBody('elise', 2, null, '', [], undefined, false, form));
+    const panel = (data: object) => labels(api.buildUnitPanel({ id: 'e', definitionId: 'elise', starLevel: 2, team: 'player', ...data }));
+    return { melee: hover('melee'), ranged: hover('ranged'), bench: hover(null), panelRanged: panel({ form: 'ranged' }),
+      combatMelee: panel({ form: 'ranged', combat: { form: 'melee' } }), plain: labels(api.unitCardBody('lux', 2)) };
+  });
+  expect(result.melee).toHaveLength(1); expect(result.melee[0]).toMatch(/^前排形态 · 技能 · 结茧/);
+  expect(result.ranged).toHaveLength(1); expect(result.ranged[0]).toMatch(/^后排形态 · 技能 · 自爆蜘蛛/);
+  expect(result.bench.map(label => label.slice(0, 4))).toEqual(['前排形态', '后排形态']);
+  expect(result.panelRanged).toHaveLength(1); expect(result.panelRanged[0]).toMatch(/^后排形态 · 自爆蜘蛛/);
+  expect(result.combatMelee).toHaveLength(1); expect(result.combatMelee[0]).toMatch(/^前排形态 · 结茧/);
+  expect(result.plain).toHaveLength(1); expect(result.plain[0]).not.toMatch(/形态/);
+});
