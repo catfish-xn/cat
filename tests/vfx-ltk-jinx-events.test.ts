@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { createBatch2VfxBridge } from '../src/rendering/three-mode/vfx-ltk/batch2-bridge';
-import { JINX_EVENT_SKILLS, JINX_EVENT_SYSTEMS, JINX_ROCKET_FLIGHT_TICKS as RENDER_FLIGHT, jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
+import { JINX_EVENT_SKILLS, JINX_EVENT_SYSTEMS, JINX_ROCKET_DRAWN, JINX_ROCKET_FLIGHT_TICKS as RENDER_FLIGHT, jinxRocketFlightSeconds, jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { JINX_ROCKET_FLIGHT_TICKS, JINX_ROCKET_LAUNCH_TICKS } from '../src/simulation/cast-windup';
 import { realUnits, runRealCombat } from '../dev/castcmp/real-combat';
@@ -41,12 +41,12 @@ describe("Jinx's rocket follows the rules' events", () => {
   });
   it('the rocket flies the rules\' flight (mirrored) to the board\'s centre', () => {
     expect(RENDER_FLIGHT).toBe(JINX_ROCKET_FLIGHT_TICKS);
-    expect(CUE_EXTRA_SKILLS['jinx-rocket-fire']!.find(c => c.event === 'projectile')).toMatchObject({ travelSeconds: JINX_ROCKET_FLIGHT_TICKS * 0.05, location: 'board' });
+    expect(CUE_EXTRA_SKILLS['jinx-rocket-flight']!.find(c => c.event === 'projectile')).toMatchObject({ travelSeconds: JINX_ROCKET_FLIGHT_TICKS * 0.05, location: 'board' });
   });
-  it('rocket: flash and flight on its launch, explosion on its landing', () => {
+  it('rocket: flash and flight queued on its launch, explosion on its landing', () => {
     const { played, send } = harness();
     send([cast(10, 'rocket'), rocket('abilityProjectileLaunched', 37), rocket('abilityProjectileLanded', 47)]);
-    expect(played.map(p => [p.skill, p.at])).toEqual([['jinx-rocket-fire', 37], ['jinx-rocket-boom', 47]]);
+    expect(played.map(p => [p.skill, p.at])).toEqual([['jinx-rocket-flash', 37], ['jinx-rocket-flight', 37], ['jinx-rocket-boom', 47]]);
   });
 });
 
@@ -64,17 +64,40 @@ describe("Jinx's rocket from the real rules", () => {
   it('third cast (rocket): flash and flight on launch, explosion on landing', () => {
     const { run, played } = playedFor(3);
     expect(played.filter(p => p.skill.startsWith('jinx-rocket')).map(p => [p.skill, p.tick - run.castIndex]))
-      .toEqual([['jinx-rocket-fire', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-boom', JINX_ROCKET_LAUNCH_TICKS + JINX_ROCKET_FLIGHT_TICKS]]);
+      .toEqual([['jinx-rocket-flash', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-flight', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-boom', JINX_ROCKET_LAUNCH_TICKS + JINX_ROCKET_FLIGHT_TICKS]]);
   });
   it('the rocket flies to, and explodes on, the cell the rules land it on; without that cell, the board\'s centre', () => {
     const frame = { rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 } };
-    const boards: unknown[] = [];
+    const plays: { skill: string; board: unknown }[] = [];
     const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => frame as never,
-      play: (_c, _s, _t, _a, context) => { boards.push(context.board); return true; } });
+      play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, board: context.board }); return true; } });
     const at = (e: DisplayCombatEvent, cell?: { row: number; col: number }) => (cell ? { ...(e as object), cell } : e) as DisplayCombatEvent;
-    const point = (row: number, col: number) => [35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), 0, 50 + 34 * 1.5 * row];
+    const point = (row: number, col: number, y = 0) => [35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y, 50 + 34 * 1.5 * row];
     for (const e of [at(rocket('abilityProjectileLaunched', 37), { row: 1, col: 2 }), at(rocket('abilityProjectileLanded', 47), { row: 1, col: 2 })]) bridge.event(e, true);
     for (const e of [rocket('abilityProjectileLaunched', 57), rocket('abilityProjectileLanded', 67)]) bridge.event(e, true);
-    expect(boards).toEqual([point(1, 2), point(1, 2), point(3, 3), point(3, 3)]);
+    expect(plays.map(p => [p.skill, p.board])).toEqual([
+      ['jinx-rocket-flash', point(1, 2)], ['jinx-rocket-flight', point(1, 2, JINX_ROCKET_DRAWN.aimLift)], ['jinx-rocket-boom', point(1, 2)],
+      ['jinx-rocket-flash', point(3, 3)], ['jinx-rocket-flight', point(3, 3, JINX_ROCKET_DRAWN.aimLift)], ['jinx-rocket-boom', point(3, 3)]]);
   });
+  it('the rocket is drawn flying by distance and leaves the barrel that long before the landing tick, its flash just before; the landing tick is the rules\'', () => {
+    expect(jinxRocketFlightSeconds(0)).toBe(JINX_ROCKET_DRAWN.minSeconds);
+    expect(jinxRocketFlightSeconds(2)).toBeCloseTo(2 / JINX_ROCKET_DRAWN.cellsPerSecond, 9);
+    expect(jinxRocketFlightSeconds(99)).toBe(JINX_ROCKET_DRAWN.maxSeconds);
+    const frame = { rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 } };
+    const plays: { skill: string; delay?: number; flight?: number; at: number }[] = []; let tick = 0;
+    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => frame as never,
+      play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, delay: context.delay, flight: context.flightSeconds, at: tick }); return true; } });
+    // She casts from (5, 3); the rocket lands at the board's centre (3, 3), two cells ahead.
+    for (const e of [cast(10, 'rocket'), rocket('abilityProjectileLaunched', 37), rocket('abilityProjectileLanded', 47)]) { tick = (e as { tick: number }).tick; bridge.event(e, true); }
+    const total = 10 * 0.05, flight = jinxRocketFlightSeconds(2);
+    const [flash, body, boom] = plays;
+    expect(body).toMatchObject({ skill: 'jinx-rocket-flight', at: 37 });
+    expect(body!.flight).toBeCloseTo(flight, 9);
+    expect(body!.delay).toBeCloseTo(total - flight, 9);
+    expect(flash!.delay).toBeCloseTo(total - flight - JINX_ROCKET_DRAWN.flashLead, 9);
+    // Its body reaches the landing point on the rules' landing tick, where the explosion plays with no delay.
+    expect(body!.delay! + body!.flight!).toBeCloseTo(total, 9);
+    expect(boom).toMatchObject({ skill: 'jinx-rocket-boom', at: 47, delay: undefined });
+  });
+
 });

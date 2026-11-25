@@ -112,7 +112,7 @@ describe('batch 2 exact display stages', () => {
     const e = mapSkillTimeline(of('chompers'),'j',['a','b','c','d'],point);
     expect(e.spawns.filter(c=>c.system==='9bd80364').map(c=>c.targetId)).toEqual(['a','b','c']);
     // 11-21: the rocket's flight and explosion play from the rules' launch and landing (their own branches, batch2-bridge.ts).
-    const rocketCues = [...jinxSkills['jinx-rocket-fire']!, ...jinxSkills['jinx-rocket-boom']!];
+    const rocketCues = [...jinxSkills['jinx-rocket-flash']!, ...jinxSkills['jinx-rocket-flight']!, ...jinxSkills['jinx-rocket-boom']!];
     const r = mapSkillTimeline(rocketCues,'j',['a','b'],point);
     expect(r.spawns.filter(c=>c.location==='board')).toHaveLength(2);
     expect(r.spawns.find(c=>c.system==='809da1b1')).toMatchObject({point});

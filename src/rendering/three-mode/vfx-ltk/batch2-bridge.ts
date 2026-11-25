@@ -5,6 +5,7 @@ import type { LtkPlayOptions } from './runtime';
 import type { TimelineVariant, WorldPoint } from './timeline';
 import { CUE_RULE_STOPS, VI_HAND_TRAIL } from './cue-overrides';
 import { jayceSkill } from './champions/jayce';
+import { JINX_ROCKET_DRAWN, jinxRocketFlightSeconds } from './champions/jinx';
 import { SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
 import { melSkill } from './champions/mel';
 
@@ -27,6 +28,15 @@ export function batch2CellPoint(frame: ReturnType<Host['board']>, cell: { readon
   if (!frame) return;
   return [frame.origin.x + Math.sqrt(3) * frame.hexRadius * (cell.col + (cell.row % 2) / 2), 0, frame.origin.y + frame.hexRadius * 1.5 * cell.row];
 }
+type Cell = { readonly row: number; readonly col: number };
+/** The board's centre cell (the rules' rocket landing before they name a cell). */
+const boardCentre = (frame: ReturnType<Host['board']>): Cell | undefined => frame ? { row: Math.floor((frame.rows - 1) / 2), col: Math.floor((frame.columns - 1) / 2) } : undefined;
+/** Hex steps between two cells of the board (odd rows half a cell right). */
+function hexCells(a: Cell, b: Cell): number {
+  const cube = (c: Cell) => { const x = c.col - (c.row - (c.row & 1)) / 2, z = c.row; return [x, z, -x - z]; };
+  const [p, q] = [cube(a), cube(b)];
+  return Math.max(Math.abs(p[0]! - q[0]!), Math.abs(p[1]! - q[1]!), Math.abs(p[2]! - q[2]!));
+}
 /** No target search, RNG or rule calculation: branches and recipients come from display receipts. */
 export function createBatch2VfxBridge(host: Host) {
   const outcomes = new Map<string, Outcome>();
@@ -45,6 +55,8 @@ export function createBatch2VfxBridge(host: Host) {
   // Vi casters' grabbed target (the cast's first target), for her slam; and the tick each slam was drawn on (one per tick).
   const viTargets = new Map<string, string>();
   const viSlamTicks = new Map<string, number>();
+  // Jinx casters' cells at their latest cast (cast.completionCell): where her rocket is drawn leaving from.
+  const jinxCells = new Map<string, Cell>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
@@ -163,6 +175,8 @@ export function createBatch2VfxBridge(host: Host) {
           }
         }
       }
+      // Where each Jinx stands when she casts (its completion cell), for her rocket's drawn flight.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'jinx') jinxCells.set(event.sourceId, event.completionCell);
       // Mel (rules 'mel-barrage'): her dash lands, then her bolts leave and land, each reported by the rules; observed in
       // catch-up too, so a later bolt still knows its cast.
       if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'mel') {
@@ -217,14 +231,22 @@ export function createBatch2VfxBridge(host: Host) {
         host.stopSystems?.(event.sourceId, [VI_HAND_TRAIL]);
         play('vi', event.sourceId, [viTargets.get(event.sourceId) ?? event.targetId], 'vi-slam', 'cast', true);
       }
-      // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing.
+      // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing, to and on the cell the rules land
+      // it on (the event's `cell`; an event without it lands at the board's centre, as the rules did). The landing tick is the
+      // rules'; how long the rocket is drawn flying, and so when it leaves the barrel, is drawn by distance (JINX_ROCKET_DRAWN).
       if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
-        // The rocket's flash and flight as it leaves, to the cell the rules land it on; its explosion there. The rules name that
-        // cell on the event (`cell`); an event without it (rules before that field) lands at the board's centre, as they did.
-        const landing = (event as { cell?: { row: number; col: number } }).cell;
-        const board = landing ? batch2CellPoint(host.board(), landing) : batch2BoardPoint(host.board());
-        host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: event.type === 'abilityProjectileLaunched' ? 'jinx-rocket-fire' : 'jinx-rocket-boom',
-          board, snapshotTargets: true });
+        const frame = host.board(), landing = (event as { cell?: Cell }).cell ?? boardCentre(frame);
+        const board = landing ? batch2CellPoint(frame, landing) : undefined;
+        if (event.type === 'abilityProjectileLanded') host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-boom', board, snapshotTargets: true });
+        else {
+          const from = jinxCells.get(event.sourceId), total = Math.max(0, event.arrivalTick - event.tick) * 0.05;
+          const flight = Math.min(total, jinxRocketFlightSeconds(from && landing ? hexCells(from, landing) : 0));
+          const leaves = total - flight, flashAt = Math.max(0, leaves - JINX_ROCKET_DRAWN.flashLead);
+          const delayed = (seconds: number) => seconds > 0 ? { delay: seconds, cancelWithSource: true } : {};
+          host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flash', board, snapshotTargets: true, ...delayed(flashAt) });
+          host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flight', snapshotTargets: true, flightSeconds: flight,
+            board: board ? [board[0], JINX_ROCKET_DRAWN.aimLift, board[2]] : undefined, ...delayed(leaves) });
+        }
       }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
@@ -241,7 +263,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); jinxCells.clear(); },
   };
   return bridge;
 }
