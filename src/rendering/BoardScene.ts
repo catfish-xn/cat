@@ -1658,7 +1658,7 @@ export class BoardScene extends Phaser.Scene {
   /** ?render=3d: outside combat the 3D bar still shows the piece's full HP blocks and starting mana (2D keeps its bars hidden). */
   private planningMetersOf(id: string) {
     const unit = this.state.units.find(entry => entry.id === id) ?? this.summonOf(id)?.unit;
-    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit));
+    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit), this.unitFormOf(unit));
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
   private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'itemsConfiscated' | 'anomalies'> {
