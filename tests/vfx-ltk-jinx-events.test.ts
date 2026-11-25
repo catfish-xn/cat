@@ -66,4 +66,15 @@ describe("Jinx's rocket from the real rules", () => {
     expect(played.filter(p => p.skill.startsWith('jinx-rocket')).map(p => [p.skill, p.tick - run.castIndex]))
       .toEqual([['jinx-rocket-fire', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-boom', JINX_ROCKET_LAUNCH_TICKS + JINX_ROCKET_FLIGHT_TICKS]]);
   });
+  it('the rocket flies to, and explodes on, the cell the rules land it on; without that cell, the board\'s centre', () => {
+    const frame = { rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 } };
+    const boards: unknown[] = [];
+    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => frame as never,
+      play: (_c, _s, _t, _a, context) => { boards.push(context.board); return true; } });
+    const at = (e: DisplayCombatEvent, cell?: { row: number; col: number }) => (cell ? { ...(e as object), cell } : e) as DisplayCombatEvent;
+    const point = (row: number, col: number) => [35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), 0, 50 + 34 * 1.5 * row];
+    for (const e of [at(rocket('abilityProjectileLaunched', 37), { row: 1, col: 2 }), at(rocket('abilityProjectileLanded', 47), { row: 1, col: 2 })]) bridge.event(e, true);
+    for (const e of [rocket('abilityProjectileLaunched', 57), rocket('abilityProjectileLanded', 67)]) bridge.event(e, true);
+    expect(boards).toEqual([point(1, 2), point(1, 2), point(3, 3), point(3, 3)]);
+  });
 });

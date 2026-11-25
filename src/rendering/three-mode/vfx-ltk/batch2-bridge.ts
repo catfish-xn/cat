@@ -20,8 +20,12 @@ interface Host {
 }
 export function batch2BoardPoint(frame: ReturnType<Host['board']>): WorldPoint | undefined {
   if (!frame) return;
-  const row = Math.floor((frame.rows - 1) / 2), col = Math.floor((frame.columns - 1) / 2);
-  return [frame.origin.x + Math.sqrt(3) * frame.hexRadius * (col + (row % 2) / 2), 0, frame.origin.y + frame.hexRadius * 1.5 * row];
+  return batch2CellPoint(frame, { row: Math.floor((frame.rows - 1) / 2), col: Math.floor((frame.columns - 1) / 2) });
+}
+/** A board cell's centre on the ground, as the board lays pieces out (odd rows half a cell right). */
+export function batch2CellPoint(frame: ReturnType<Host['board']>, cell: { readonly row: number; readonly col: number }): WorldPoint | undefined {
+  if (!frame) return;
+  return [frame.origin.x + Math.sqrt(3) * frame.hexRadius * (cell.col + (cell.row % 2) / 2), 0, frame.origin.y + frame.hexRadius * 1.5 * cell.row];
 }
 /** No target search, RNG or rule calculation: branches and recipients come from display receipts. */
 export function createBatch2VfxBridge(host: Host) {
@@ -215,8 +219,12 @@ export function createBatch2VfxBridge(host: Host) {
       }
       // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing.
       if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
-        // The rocket's flash and flight as it leaves; its explosion at the board's centre where it lands.
-        play('jinx', event.sourceId, [event.targetId], event.type === 'abilityProjectileLaunched' ? 'jinx-rocket-fire' : 'jinx-rocket-boom', 'cast', true);
+        // The rocket's flash and flight as it leaves, to the cell the rules land it on; its explosion there. The rules name that
+        // cell on the event (`cell`); an event without it (rules before that field) lands at the board's centre, as they did.
+        const landing = (event as { cell?: { row: number; col: number } }).cell;
+        const board = landing ? batch2CellPoint(host.board(), landing) : batch2BoardPoint(host.board());
+        host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: event.type === 'abilityProjectileLaunched' ? 'jinx-rocket-fire' : 'jinx-rocket-boom',
+          board, snapshotTargets: true });
       }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
