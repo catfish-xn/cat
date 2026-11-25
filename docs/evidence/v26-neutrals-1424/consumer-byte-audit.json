@@ -4970,6 +4970,14 @@
       "currentSha256": "1a0d0638d51c3c61cca5da127cb85712a99bebd3160c73d31fcbc1f0feca8edf",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-play-out-tail.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3640,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "65edb6e9e8d2007285e173e439ad1b68dd25a5cf2ea56a7f27e58029053c6ae4",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-powder-blast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
