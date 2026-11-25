@@ -283,6 +283,10 @@ const ADMIT_RANK: Record<EffectImportance, number> = { critical: 3, body: 2, dec
  * past its landing, and none of its own particles' curves run longer.
  */
 export const PLAY_OUT_CAP = 2;
+/** MEASUREMENT EXPERIMENT ONLY: the most a cue may play out past its end under the play-out-all rule, and the four cues
+ * whose particles would outlast it (Viktor's 3-star slam board, Mel's third hit, Sett's two ground cues), left as they were. */
+const PLAY_OUT_ALL = 3;
+const PLAY_OUT_ALL_EXCLUDED: ReadonlySet<string> = new Set(['efdd9461', 'a9cc7bf3', 'f7d4d344', '2794d903']);
 /**
  * A row projectile's two ends: `from` and `cells` cells along the board row on `side`. Rows run along world X on both
  * halves of the board: a piece stands at (x, 0, y) of its 2D layout (placeholder-renderer), and hex-layout.ts puts a cell's
@@ -1185,7 +1189,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A hand-set stop near the end is a deliberate cut (Viktor's slam board, 2.1 s of 2.2): the tail fade never starts
         // before it, so the cue stays at full strength up to its stop.
         // A cue that plays out at its end (TimelineCue.playOut) keeps full strength to it: its particles then finish on their own.
-        const fadeFrom = spawn.fadeOut ? spawn.stopAfter : (!persistent && !spawn.playOut && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
+        // MEASUREMENT EXPERIMENT ONLY (claude/rec-playout-all, never merged): every cue that would fade whole at its end
+        // instead stops emitting there and lets its particles finish their own lives, for at most PLAY_OUT_ALL seconds.
+        const playAll = !spawn.fadeOut && !persistent && !spawn.playOut && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant)
+          && !PLAY_OUT_ALL_EXCLUDED.has(spawn.system);
+        const fadeFrom = playAll ? undefined : spawn.fadeOut ? spawn.stopAfter : (!persistent && !spawn.playOut && spawn.event !== 'projectile' && !(spawn.action === 'attack' && !spawn.variant))
           ? Math.max(runFor - tail, spawn.stopAfter ?? 0) : undefined;
         const room = rooms.get(spawn.system);
         const rootRoom = roots.get(spawn.system);
@@ -1221,8 +1229,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, event: spawn.event, ...(spawn.giveWay ? { giveWay: true } : {}), ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && (!!loaded.playOut || !!loaded.lingerPlayOut)) || !!spawn.playOut || undefined, lingerTail: (spawn.event === 'projectile' && !rowStart && !loaded.playOut && !spawn.playOut && !!loaded.lingerPlayOut) || undefined,
-            playOutEnd: spawn.playOut ? { seconds: spawn.playOut, fade: spawn.playOut } : spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, ...(spawn.giveWay ? { giveWay: true } : {}), ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && (!!loaded.playOut || !!loaded.lingerPlayOut)) || !!spawn.playOut || playAll || undefined, lingerTail: (spawn.event === 'projectile' && !rowStart && !loaded.playOut && !spawn.playOut && !!loaded.lingerPlayOut) || undefined,
+            playOutEnd: spawn.playOut ? { seconds: spawn.playOut, fade: spawn.playOut } : playAll ? { seconds: PLAY_OUT_ALL, fade: 0.25 } : spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
             ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
           else LTK_RUN_STATS.started[spawn.system] = (LTK_RUN_STATS.started[spawn.system] ?? 0) + 1;
