@@ -16,7 +16,7 @@ import { BATCH1_TIMELINES } from './batch1-timelines';
 import { JINX_EVENT_SKILLS, jinxSkills } from './champions/jinx';
 import { JAYCE_EVENT_SKILLS, jayceSkills } from './champions/jayce';
 import { MEL_EVENT_SKILLS, melSkills } from './champions/mel';
-import { sevikaSkills } from './champions/sevika';
+import { SEVIKA_EVENT_SKILLS, sevikaSkills } from './champions/sevika';
 import { viktorSkills } from './champions/viktor';
 import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES, VI_LANDING } from './s13-timelines';
@@ -229,6 +229,7 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ...Object.fromEntries(JAYCE_EVENT_SKILLS.map(skill => [skill, jayceSkills[skill]!])),
   // Jinx (champions/jinx.ts, batch2-bridge.ts): her rocket follows the rules' events, not fixed times.
   ...Object.fromEntries(JINX_EVENT_SKILLS.map(skill => [skill, jinxSkills[skill]!])),
+  ...Object.fromEntries(SEVIKA_EVENT_SKILLS.map(skill => [skill, sevikaSkills[skill]!])),
   // Mel (champions/mel.ts, batch2-bridge.ts): her dash, bolts and hits follow the rules' events, not fixed times.
   ...Object.fromEntries(MEL_EVENT_SKILLS.map(skill => [skill, melSkills[skill]!])),
   'powder-blast': [

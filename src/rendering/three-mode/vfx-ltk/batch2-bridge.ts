@@ -99,7 +99,8 @@ export function createBatch2VfxBridge(host: Host) {
         // The punch itself plays on its landing (event()); the slot machine and the mod still start with the cast.
         const handled = skill === 'sevika-punch' ? true
           : play(champion, source, targets, skill, 'cast', false, channel > 0 ? channel * .05 : undefined, false, SEVIKA_SLOT_SECONDS);
-        if (handled && ['rocket', 'shield', 'coin'].includes(outcome!.outcome)) play(champion, source, targets, `sevika-${outcome!.outcome}`, 'cast', false, undefined, false, SEVIKA_SLOT_SECONDS);
+        // The shield and coin mods start with the slot machine's stop; the rocket mod plays rocket by rocket from the rules' events.
+        if (handled && ['shield', 'coin'].includes(outcome!.outcome)) play(champion, source, targets, `sevika-${outcome!.outcome}`, 'cast', false, undefined, false, SEVIKA_SLOT_SECONDS);
         // The slot machine is decoration over the cast: a catalogue without it keeps the cast as it was.
         if (handled) for (const slot of sevikaSlotSkills(outcome!.castVariant!.move, outcome!.outcome)) play(champion, source, targets, slot);
         return handled;
@@ -236,6 +237,13 @@ export function createBatch2VfxBridge(host: Host) {
         // it have died while held), else on the enemy this damage struck.
         host.stopSystems?.(event.sourceId, [VI_HAND_TRAIL]);
         play('vi', event.sourceId, [viTargets.get(event.sourceId) ?? event.targetId], 'vi-slam', 'cast', true);
+      }
+      // Sevika's rocket mod (DRAFT, rules 'sevika-rocket' not there yet): each rocket's flight over the rules' own flight as it
+      // leaves, and its explosion where it lands on a target still there.
+      if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && (event.skill as string) === 'sevika-rocket') {
+        if (event.type === 'abilityProjectileLaunched') host.play('sevika', event.sourceId, [event.targetId], 'cast', { skill: 'sevika-rocket-fire', board: batch2BoardPoint(host.board()),
+          snapshotTargets: true, flightSeconds: Math.max(0, event.arrivalTick - event.tick) * 0.05 });
+        else if (event.hit) play('sevika', event.sourceId, [event.targetId], 'sevika-rocket-boom', 'cast', true);
       }
       // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing.
       if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {

@@ -5080,6 +5080,14 @@
       "currentSha256": "accf54642ab97fb7dac5a5994ebac777cd0ddaf193cd63b35163d3a80e5744d7",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-sevika-rockets.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3220,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "a8ec3ecb390c424f5d9321f6734fe6100713f0cc78acd15914d722a16f6e8132",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-singed-cast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,

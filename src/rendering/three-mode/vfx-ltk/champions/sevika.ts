@@ -58,6 +58,15 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: .1, duration: .3, travelSeconds: .3 },
     { system: 'd98fb49e', event: 'hit', primary: true, delay: .4, duration: 1 },
   ],
+  // The rocket mod, rocket by rocket as the rules report each (abilityProjectileLaunched / Landed 'sevika-rocket'): its flight
+  // from her weapon to the target over the rules' own flight, and its explosion where it lands. DRAFT: the rules' events are
+  // not there yet (L2's rocket timing branch); until then nothing plays them.
+  'sevika-rocket-fire': [
+    { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: 0, duration: .3, travelSeconds: .3 },
+  ],
+  'sevika-rocket-boom': [
+    { system: '4e1283b2', event: 'hit', primary: true, delay: 0, duration: .6 },
+  ],
   'sevika-rocket': [
     { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: 0, duration: .3, travelSeconds: .3 },
     { system: '4e1283b2', event: 'hit', primary: true, delay: .3, duration: .6 },
@@ -92,3 +101,5 @@ export function sevikaSkill(move: string, outcome: string): string | undefined {
   if (!['flamethrower', 'punch', 'chomp'].includes(move)) return;
   return outcome === 'blue-flamethrower' && move === 'flamethrower' ? 'sevika-blue-flamethrower' : `sevika-${move}`;
 }
+/** The display branches above that the bridge plays from the rules' rocket events (CUE_EXTRA_SKILLS). */
+export const SEVIKA_EVENT_SKILLS = ['sevika-rocket-fire', 'sevika-rocket-boom'] as const;
