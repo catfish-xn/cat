@@ -32,6 +32,22 @@ export const MALZAHAR_GATE_DELAY = 0.2;
  * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
  */
 export const PLAY_OUT_AT_DEADLINE = 0.5;
+/**
+ * Garen's falling sword (97c28077) starts GAREN_SWORD_DELAY after his cast, and his landing burst (5bbccb8c) starts
+ * GAREN_SWORD_INTO_BODY after that: when the sword's tip comes down into Garen's height, before it reaches the ground, so the
+ * burst covers the blade going in. Both measured from the official game's footage, not original data (量自正式服画面，非原版
+ * 数据): there his sword shows a beat after the cast starts, and the burst flashes a moment after it comes into view.
+ */
+export const GAREN_SWORD_DELAY = 0.3, GAREN_SWORD_INTO_BODY = 0.28;
+/**
+ * Skill systems that may take more root places than ROOT_PARTICLES_MOST, by system: the most this one run may take. Only for
+ * a system measured past that cap whose later emitters the cap visibly starves (11-24: Garen's landing burst 5bbccb8c measures
+ * about half again past it, and its spark and fire waves, part of its white flash, lost much of their particles). Our own
+ * cap (自定，非原版), measured on the asset.
+ */
+export const ROOT_ROOM_MOST: Readonly<Record<string, number>> = {
+  '5bbccb8c': 640,
+};
 /** Vi's landing group (s13-timelines.ts): played when the rules' slam lands (CUE_EXTRA_SKILLS 'vi-slam', batch2-bridge.ts). */
 export const VI_SLAM_SYSTEMS: readonly string[] = ['18e22631', 'd27b3044', '66c600e8', '84b969e0'];
 /** Vi's right hand's trail: from her cast until the slam lands, where batch2-bridge.ts stops it. */
@@ -359,11 +375,16 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // R: shield on Garen, then one sky beam and one impact on his own ground. Not one copy per target.
   // The landing burst is authored far wider than the original's drawn burst (castcmp-1103); 0.45 keeps it on his feet.
+  // 11-24: his package's cast burst (cbccc667: the energy rising off him and a glow at his feet) and its falling sword
+  // (97c28077: the golden blade dropping from above onto his ground, with its glow) were never cued. The burst plays from the
+  // cast; the sword a beat later (GAREN_SWORD_DELAY), and the landing burst as the sword's tip comes down into him.
   garen: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3333333333333333, duration: 1.5 },
+    { system: 'cbccc667', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: ground },
+    { system: '97c28077', action: 'cast', event: 'cast-start', delay: GAREN_SWORD_DELAY, duration: 1.2, bone: ground },
     { system: 'ea21ae27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: chest },
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
-    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground, scale: kept(0.45) },
+    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: GAREN_SWORD_DELAY + GAREN_SWORD_INTO_BODY, duration: 0.7, bone: ground, scale: kept(0.45) },
   ],
   // E (14.24 field: the main root lands a beat after the cast, the second roots a beat later): E_Sequence_Impact is the index's own ground
   // missile (travel 0.3): one crawls to the primary target, then short ones reach up to two others. The brown branching
@@ -1113,6 +1134,16 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
   // our Sion model is one merged part (Sion_Base_MD_lambert2SG1, 11-11 live parts audit). Remove when the model is split.
   '9118f221': ['Avatar_Fresnel'],
   '5afb9708': ['Avatar_Fresnel'],
+};
+
+/**
+ * Emitters drawn without their world acceleration, by system and emitter name. Garen's falling sword (97c28077 sword_drop)
+ * authors a world acceleration far beyond any other emitter's and no drag; drawn with it, the sword plunged to the ground in
+ * a fraction of its fall. The official game's sword lands when its own steady fall reaches the ground, so it is drawn falling
+ * at its own speed alone (自定，依据正式服画面的落地时刻，非原版数据).
+ */
+export const WORLD_ACCELERATION_OFF: Readonly<Record<string, readonly string[]>> = {
+  '97c28077': ['sword_drop'],
 };
 
 /**
