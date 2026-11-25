@@ -4719,9 +4719,9 @@
     "tests/vfx-ltk-garen-cast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1847,
+      "currentBytes": 2295,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "2bdadf9b490a1789c7ca869d86456378a1d5b603b19d6ab4ac8e09ab3d60aec2",
+      "currentSha256": "2689d2fb847f20b9210b1cac7eedc6f1e0e69932ed38cd8c05bc1b43253500ed",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-give-way.test.ts": {

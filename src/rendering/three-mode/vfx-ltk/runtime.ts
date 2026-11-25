@@ -442,6 +442,13 @@ export function ownSeconds(prepared: Pick<PreparedVfx, 'model'>): number | null 
   }
   return Math.min(10, end);
 }
+/**
+ * The most root places one run of a system may take: a skill system's own cap (cue-overrides.ts ROOT_ROOM_MOST) or the usual
+ * ROOT_PARTICLES_MOST, and a plain attack's ROOT_PARTICLES_ATTACK_MOST.
+ */
+export function rootRoomMost(system: string, skill: boolean): number {
+  return skill ? ROOT_ROOM_MOST[system] ?? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
+}
 /** A cue with `ownLife` lasts its system's own time (ownSeconds) once the system is loaded; any other cue is unchanged. */
 export function withOwnLife<T extends Pick<TimelineCue, 'ownLife' | 'duration'>>(cue: T, prepared: Pick<PreparedVfx, 'model'> | undefined): T {
   const own = cue.ownLife && prepared ? ownSeconds(prepared) : null;
@@ -652,7 +659,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // what it holds there, a skill's up to ROOT_PARTICLES_MOST (or its own ROOT_ROOM_MOST) and a plain attack's up to ROOT_PARTICLES_ATTACK_MOST. A
         // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
-        const most = skill ? ROOT_ROOM_MOST[id] ?? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
+        const most = rootRoomMost(id, skill);
         const flying = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds);
         const travel = flying?.travelSeconds, scale = flying ? (flying.scale ?? 1) * cueSize(flying) : 1;
         const seconds = Math.min(longest.duration, 10);

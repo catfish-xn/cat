@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { CUE_OVERRIDES, ROOT_ROOM_MOST } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
-import { ROOT_PARTICLES_MOST, rootRoomOf } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, rootRoomOf } from '../src/rendering/three-mode/vfx-ltk/particles';
+import { rootRoomMost } from '../src/rendering/three-mode/vfx-ltk/runtime';
 
 // Garen's cast: his package's cast burst and its falling sword play from the cast beside the shield, the sky beam and the
 // landing burst; the landing burst may take more room than the usual skill cap so its later waves are not starved.
@@ -21,5 +22,10 @@ describe("Garen's cast", () => {
     // A measure past the usual cap now gets its quarter more, up to the system's own cap.
     expect(rootRoomOf(ROOT_PARTICLES_MOST + 100, most)).toBeGreaterThan(ROOT_PARTICLES_MOST);
     expect(rootRoomOf(10_000, most)).toBe(most);
+  });
+  it('is the cap the runtime measures the landing burst under; every other system keeps the usual caps', () => {
+    expect(rootRoomMost('5bbccb8c', true)).toBe(ROOT_ROOM_MOST['5bbccb8c']);
+    expect(rootRoomMost('44aa54ff', true)).toBe(ROOT_PARTICLES_MOST);
+    expect(rootRoomMost('0f2af66b', false)).toBe(ROOT_PARTICLES_ATTACK_MOST);
   });
 });
