@@ -74,9 +74,12 @@ export const CRIT_FLASH_MAX = 4;
  * shared hit plays as the crit flash (not for keepHit champions), or the champion's own flash cue joins. A system `ready`
  * does not have keeps the cue as it was.
  */
-function critAttack(champion: string, cues: readonly TimelineCue[], flash: boolean, ready: (id: string) => boolean): TimelineCue[] {
+export function critAttack(champion: string, cues: readonly TimelineCue[], flash: boolean, ready: (id: string) => boolean): TimelineCue[] {
   const own = Object.hasOwn(CRIT_ATTACK_HIT.own, champion) ? CRIT_ATTACK_HIT.own[champion] : undefined;
-  const swap = (cue: TimelineCue, id: string | undefined) => id && ready(id) ? { ...cue, system: id } : cue;
+  const swap = (cue: TimelineCue, to: string | { readonly system: string; readonly bone: string } | undefined) => {
+    const id = typeof to === 'string' ? to : to?.system;
+    return id && ready(id) ? { ...cue, system: id, ...(typeof to === 'object' ? { bone: to.bone } : {}) } : cue;
+  };
   const out = cues.map(cue => (cue.action ?? 'cast') !== 'attack' ? cue
     : own?.swap && Object.hasOwn(own.swap, cue.system) ? swap(cue, own.swap[cue.system])
     : flash && cue.event === 'hit' && cue.system === CRIT_ATTACK_HIT.hit && !CRIT_ATTACK_HIT.keepHit.has(champion) ? swap(cue, CRIT_ATTACK_HIT.crit) : cue);

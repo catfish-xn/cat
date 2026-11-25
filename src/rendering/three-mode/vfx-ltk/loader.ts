@@ -10,7 +10,7 @@ import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
 import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM, CAST_START_RANKS } from './cue-ranks';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_OWN_MESH_DRAWN, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -35,10 +35,19 @@ export class VfxLoadError extends Error {
  * (#588, 11-10 a96aac47 recording), and Renata's empowered attack missile (d7729373 Alpha_Bullet/Add_Bullet, her
  * canister, scaled up too) would stretch her body the same way. These three are the only such emitters in Set 13;
  * every other attached-mesh emitter names no mesh or the host's own `.skn` and stays about its host's size (11-10 audit).
- * They are left undrawn like a muted emitter.
+ * They are left undrawn like a muted emitter, except where ATTACHED_OWN_MESH_DRAWN names one (withOwnMeshesDrawn).
  */
 export function attachedMeshOfItsOwn(emitter: { readonly quadType: number | null; readonly mesh: { readonly skinned: boolean } | null }): boolean {
   return emitter.quadType === QUAD_TYPE.attachedMesh && emitter.mesh !== null && !emitter.mesh.skinned;
+}
+/**
+ * The system with each emitter ATTACHED_OWN_MESH_DRAWN names for it (an attached mesh naming a static mesh of its own) drawn
+ * as that mesh: a mesh particle, so the mesh is loaded and drawn at the particle like any other mesh emitter.
+ */
+export function withOwnMeshesDrawn<T extends { readonly emitters: readonly { readonly name: string | null; readonly quadType: number | null; readonly mesh: { readonly skinned: boolean } | null }[] }>(id: string, model: T): T {
+  const names = Object.hasOwn(ATTACHED_OWN_MESH_DRAWN, id) ? ATTACHED_OWN_MESH_DRAWN[id]! : [];
+  if (!names.length) return model;
+  return { ...model, emitters: model.emitters.map(e => attachedMeshOfItsOwn(e) && names.includes(e.name ?? '') ? { ...e, quadType: QUAD_TYPE.mesh } : e) };
 }
 /**
  * An attached-mesh emitter whose look needs a frozen pose (afterimages: GhostImages, AvatarDash) or a dissolve, which
@@ -349,7 +358,7 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     if (held) return held;
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
-      const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
+      const parsed = withOwnMeshesDrawn(id, readVfxSystem(raw)), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
       const faint = EMITTER_ALPHA[id];
       const model = disabled || whole || heldOn || faint ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
         : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null }

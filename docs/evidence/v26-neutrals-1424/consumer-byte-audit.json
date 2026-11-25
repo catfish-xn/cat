@@ -772,9 +772,9 @@
     "tests/castcmp-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5150,
+      "currentBytes": 6137,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "562fff85d23d7acfbcd92726ad40604530c98afd1d56acdec022797ec7fa1ba8",
+      "currentSha256": "947c08fafc8c97227ecaa119666fd3d8b3935115fd20cf95d9724af6a3586caa",
       "firstDifferentByte": 0
     },
     "tests/castcmp-as-scale.test.ts": {
@@ -1065,9 +1065,9 @@
     "tests/fixtures/cue-dropped-systems.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3933,
+      "currentBytes": 3903,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "4325b96859db42368f3695f9a078d24df71856b325fbd96780bd7ecc0404012b",
+      "currentSha256": "a5c48d5c8a0d47023b7fa410d660e01409263881ae1e594574c1ec183c6f2809",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-index-systems.json": {
@@ -4479,6 +4479,14 @@
       "currentSha256": "581b33054dbaabe02846713297989af5deaffbb9431ca53e274dde1692d4ceeb",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-attached-own-mesh.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5271,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "1ee966912a24ec9eff148c3ffde8a3481a63bdadddc966c58a595c90a7cfd691",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-attack-anchor.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4656,9 +4664,9 @@
     "tests/vfx-ltk-crit-flash.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5789,
+      "currentBytes": 7056,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "cd91802d03d770c780c94754a5a96ba0a7c1338b8fd42573d568d890af3cdd8b",
+      "currentSha256": "f65cafa410badc6d37e756aa1beb6237021ecfcd89894ed5b8c357318d7e782c",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-cue-bone.test.ts": {
