@@ -16,6 +16,14 @@
       "currentSha256": "b47478726454a72b8a08156448c8fbffc5ac19a8b7710455f91b1667be5295ee",
       "firstDifferentByte": 0
     },
+    "tests/ability-text-forms.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1905,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0921113b9336f20f0cfcd22f09b5fc8744a7df90c55aa864c43dd99b4265e82e",
+      "firstDifferentByte": 0
+    },
     "tests/ambessa-cast-branch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -2583,10 +2591,10 @@
     },
     "tests/presentation/unit-panel.test.ts": {
       "previousBytes": 16261,
-      "currentBytes": 18118,
+      "currentBytes": 21587,
       "previousSha256": "4bcd330a1417a8baba38ec3b976ddf408abbe04a23f9d89d1bc41ad7e428d4da",
-      "currentSha256": "b14ada8126cffb1943bfc489432cd25808a6c75accbcb4e4255503bb8151df6c",
-      "firstDifferentByte": 1272
+      "currentSha256": "96bbd60d7fae78c9dc4aacca3a0028d8d1dbdc00ec90602c74247f2eafa03b76",
+      "firstDifferentByte": 429
     },
     "tests/presentation/v23-anomaly-panel.test.ts": {
       "previousBytes": 13768,

@@ -5,6 +5,8 @@ import type { Browser, Page } from 'playwright';
 import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
+import { g23FormStats } from '../../src/simulation/g2-3-forms';
+import { DEFAULT_BOARD } from '../../src/simulation/board';
 let browser: Browser, page: Page;
 // Bundling, browser launch and page setup are separate hooks so each stays within the default hook limit on slow CI runners.
 let bundle = '';
@@ -218,4 +220,46 @@ it('keeps the ability text in a card that opens from the ability icon', async ()
   });
   expect(result).toMatchObject({ closed: false, open: true, reclosed: true, role: true, stats: 8, target: true });
   expect(result.label).toContain('技能');
+});
+it('shows a form swapper the ability of its current form, and both forms off the board', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect;
+    const labels = (body: HTMLElement) => Array.from(body.querySelectorAll('.unit-card-ability .unit-card-label')).map(node => node.textContent ?? '');
+    const hover = (form: string | null) => labels(api.unitCardBody('elise', 2, null, '', [], undefined, false, form));
+    const panel = (data: object) => labels(api.buildUnitPanel({ id: 'e', definitionId: 'elise', starLevel: 2, team: 'player', ...data }));
+    return { melee: hover('melee'), ranged: hover('ranged'), bench: hover(null), panelRanged: panel({ form: 'ranged' }),
+      combatMelee: panel({ form: 'ranged', combat: { form: 'melee' } }), plain: labels(api.unitCardBody('lux', 2)) };
+  });
+  expect(result.melee).toHaveLength(1); expect(result.melee[0]).toMatch(/^前排形态 · 技能 · 结茧/);
+  expect(result.ranged).toHaveLength(1); expect(result.ranged[0]).toMatch(/^后排形态 · 技能 · 自爆蜘蛛/);
+  expect(result.bench.map(label => label.slice(0, 4))).toEqual(['前排形态', '后排形态']);
+  expect(result.panelRanged).toHaveLength(1); expect(result.panelRanged[0]).toMatch(/^后排形态 · 自爆蜘蛛/);
+  expect(result.combatMelee).toHaveLength(1); expect(result.combatMelee[0]).toMatch(/^前排形态 · 结茧/);
+  expect(result.plain).toHaveLength(1); expect(result.plain[0]).not.toMatch(/形态/);
+});
+it('labels each form section with that form\'s mana, as the rules resolve the form from the board row', async () => {
+  // Front rows are the first two of the player's deployment zone, back rows the rest (rules: seat-mechanics/forms.ts).
+  const front = DEFAULT_BOARD.deploymentZones.player.firstRow, back = DEFAULT_BOARD.deploymentZones.player.lastRow;
+  const heroes = ['elise', 'jayce', 'gangplank', 'swain'];
+  const expected = heroes.map(id => [g23FormStats(id, 2, 'player', front), g23FormStats(id, 2, 'player', back)]
+    .map(stats => `法力 ${stats.initialMana}/${stats.maxMana}`));
+  const result = await page.evaluate(ids => {
+    const api = (window as any).Inspect;
+    const labels = (body: HTMLElement) => Array.from(body.querySelectorAll('.unit-card-ability .unit-card-label')).map(node => node.textContent ?? '');
+    return ids.map(id => ({
+      melee: labels(api.unitCardBody(id, 2, null, '', [], undefined, false, 'melee')),
+      ranged: labels(api.unitCardBody(id, 2, null, '', [], undefined, false, 'ranged')),
+      bench: labels(api.unitCardBody(id, 2)),
+      panelRanged: labels(api.buildUnitPanel({ id, definitionId: id, starLevel: 2, team: 'player', form: 'ranged' })),
+      panelMelee: labels(api.buildUnitPanel({ id, definitionId: id, starLevel: 2, team: 'player', form: 'melee' })),
+    }));
+  }, heroes);
+  // The two forms differ for every one of them, so a back-row label reading the front-row mana fails here.
+  for (const [front, back] of expected) expect(front).not.toBe(back);
+  result.forEach((row, i) => {
+    const [front, back] = expected[i];
+    expect(row.melee[0]).toContain(front); expect(row.ranged[0]).toContain(back);
+    expect(row.bench[0]).toContain(front); expect(row.bench[1]).toContain(back);
+    expect(row.panelMelee[0]).toContain(front); expect(row.panelRanged[0]).toContain(back);
+  });
 });
