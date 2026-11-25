@@ -24,7 +24,8 @@ describe('which rule state ends each display', () => {
     expect(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems['lux-ability']).toEqual([SHIELD]);
     expect(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems['renata-ability']).toEqual([RENATA]);
     expect(CUE_RULE_STOPS.abilityShieldEndedOnSelf).toEqual({ systems: { 'lux-ability': [SHIELD] }, on: 'self' });
-    expect(CUE_RULE_STOPS.stunEnded.systems).toEqual([COCOON]);
+    // Zyra's root joined it in the second batch (vfx-ltk-status-follows-rules-2.test.ts).
+    expect(CUE_RULE_STOPS.stunEnded.systems).toContain(COCOON);
     expect(SUSTAIN_CAPS[MARK]).toBe(AKALI_MARK_SECONDS);
     expect(SUSTAIN_REFRESH.has(MARK)).toBe(true);
     const mark = CUE_OVERRIDES.akali!.filter(cue => cue.system === MARK);
@@ -132,7 +133,7 @@ describe('Elise cocoon: the stun as each board frame shows it', () => {
     const stops = createControlEndStops();
     expect(stops.frame([piece('a', { kind: 'stun' }), piece('b', null)], true)).toEqual([]);
     expect(stops.frame([piece('a', { kind: 'stun' }), piece('b', null)], true)).toEqual([]);
-    expect(stops.frame([piece('a', null), piece('b', null)], true)).toEqual([{ by: 'target', id: 'a', systems: [COCOON] }]);
+    expect(stops.frame([piece('a', null), piece('b', null)], true)).toEqual([{ by: 'target', id: 'a', systems: CUE_RULE_STOPS.stunEnded.systems }]);
     // Once only.
     expect(stops.frame([piece('a', null)], true)).toEqual([]);
   });

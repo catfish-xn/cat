@@ -1,0 +1,117 @@
+import { readFileSync } from 'node:fs';
+import { Camera, Group, Scene, Texture } from 'three';
+import { describe, expect, it } from 'vitest';
+import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
+import { CUE_EXTRA_SKILLS, CUE_RULE_STOPS, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, SUSTAIN_CAPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
+import { constant, num, syntheticSystem } from './vfx-ltk-synthetic';
+
+// 11-24, second batch: Sevika's roulette shield goes when her shield layer ends; Zyra's root cluster on her rooted target
+// stays while that target is stunned and eases out when the stun ends (as Elise's cocoon now does too).
+
+const SEVIKA_SHIELD = '518dee63', ZYRA_ROOT = 'b888a24f', ZYRA_VINE_HIT = '9d413df0', COCOON = '6d6525e8';
+
+describe('which rule state ends them', () => {
+  it('Sevika\'s shield ends with her ability\'s shield layer, on her own cast-start', () => {
+    expect(CUE_RULE_STOPS.abilityShieldEndedFade.systems['sevika-ability']).toEqual([SEVIKA_SHIELD]);
+    // Eased out, not stopped: not in the stop table as well.
+    expect(Object.hasOwn(CUE_RULE_STOPS.abilityShieldEnded.systems, 'sevika-ability')).toBe(false);
+    expect(SHIELD_END_FADE_SECONDS).toBeGreaterThan(0);
+    expect(SHIELD_END_FADE_SECONDS).toBeLessThanOrEqual(0.3);
+    expect(sevikaSkills['sevika-shield']!.map(cue => [cue.system, cue.event])).toEqual([[SEVIKA_SHIELD, 'cast-start']]);
+  });
+  it('Zyra\'s root cluster ends with the stun, held up to the rules\' stun plus 1 s; her vines\' body hit is left alone', () => {
+    expect(CUE_RULE_STOPS.stunEnded.systems).toEqual([COCOON, ZYRA_ROOT]);
+    expect(SUSTAIN_CAPS[ZYRA_ROOT]).toBeGreaterThan(0);
+    expect(CUE_RULE_STOPS.stunEnded.systems).not.toContain(ZYRA_VINE_HIT);
+    // On her primary target only: the one her vines stun.
+    const root = CUE_EXTRA_SKILLS['zyra-vines']!.filter(cue => cue.system === ZYRA_ROOT);
+    expect(root).toHaveLength(1);
+    expect(root[0]).toMatchObject({ event: 'hit', primary: true });
+  });
+  it('the renderer eases the stun layers out from each board frame', () => {
+    const source = readFileSync(new URL('../src/rendering/three-mode/placeholder-renderer.ts', import.meta.url), 'utf8');
+    expect(source).toContain('ltk?.fadeSystemsOn(stop.id, stop.systems, STUN_END_FADE_SECONDS)');
+    expect(source).toContain('ltk?.fadeSystems(event.targetId, systems, SHIELD_END_FADE_SECONDS)');
+    expect(STUN_END_FADE_SECONDS).toBeGreaterThan(0);
+    expect(STUN_END_FADE_SECONDS).toBeLessThan(0.5);
+  });
+});
+
+describe('the runtime: a state that ends early ends its display, one that holds keeps it', () => {
+  // Synthetic systems only (made-up numbers): each emits, and each particle lives, far longer than any cue here, so only the
+  // cue's end, a stop or a fade ends a run.
+  const long = () => syntheticSystem({ lifetime: num(30), particleLifetime: constant(num(30)), rate: constant(num(1)) });
+  const skills: Record<string, TimelineCue[]> = {
+    shield: [{ system: SEVIKA_SHIELD, action: 'cast', event: 'cast-start', delay: 0, duration: 4 }],
+    'shield-later': [{ system: SEVIKA_SHIELD, action: 'cast', event: 'cast-start', delay: 0.5, duration: 4 }],
+    root: [{ system: ZYRA_ROOT, action: 'passive', event: 'hit', delay: 0, duration: 1.4, stopAfter: 0.8, fadeOut: true, primary: true }],
+    // The same root, landing later (a row still waiting when the stun ends).
+    'root-later': [{ system: ZYRA_ROOT, action: 'passive', event: 'hit', delay: 0.5, duration: 1.4, stopAfter: 0.8, fadeOut: true, primary: true }],
+  };
+  async function setup() {
+    const systems = [SEVIKA_SHIELD, ZYRA_ROOT];
+    const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json')
+      ? { version: 1, systems: Object.fromEntries(systems.map(s => [s, `systems/${s}.json`])), assets: { 'synthetic.tex': 'texture.png' }, skills }
+      : long(), readTexture: async () => new Texture() });
+    const scene = new Scene(), units = new Map<string, { root: Group; body: null; alive: boolean }>();
+    ['zyra', 'foe', 'other'].forEach((id, i) => { const root = new Group(); root.position.set(10 + i * 60, 0, 20); scene.add(root); root.updateMatrixWorld(); units.set(id, { root, body: null, alive: true }); });
+    const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+    for (const champion of Object.keys(skills)) await runtime.warm(champion);
+    const camera = new Camera(), step = (seconds: number) => { for (let t = 0; t < seconds - 1e-9; t += 1 / 60) runtime.update(1 / 60, camera); };
+    return { runtime, step };
+  }
+
+  it('Sevika: her layer breaking early eases the whole shield out within the fade; a fade for someone else leaves it', async () => {
+    const broken = await setup();
+    broken.runtime.play('shield', 'zyra', [], 'cast'); broken.step(1);
+    expect(broken.runtime.active).toBe(1);
+    broken.runtime.fadeSystems('zyra', [SEVIKA_SHIELD], SHIELD_END_FADE_SECONDS);
+    // Still there while it fades (every layer at once), gone by the end of the fade: not left to each layer's own end.
+    broken.step(SHIELD_END_FADE_SECONDS / 2); expect(broken.runtime.active).toBe(1);
+    broken.step(SHIELD_END_FADE_SECONDS / 2 + 0.05); expect(broken.runtime.active).toBe(0);
+    const kept = await setup();
+    kept.runtime.play('shield', 'zyra', [], 'cast'); kept.step(1);
+    kept.runtime.fadeSystems('other', [SEVIKA_SHIELD], SHIELD_END_FADE_SECONDS); kept.step(SHIELD_END_FADE_SECONDS + 0.2);
+    expect(kept.runtime.active).toBe(1);
+  });
+
+  it('Sevika: a fade drops her shield still waiting to start', async () => {
+    const { runtime, step } = await setup();
+    runtime.play('shield-later', 'zyra', [], 'cast'); step(0.1);
+    expect(runtime.active).toBe(0);
+    runtime.fadeSystems('zyra', [SEVIKA_SHIELD], SHIELD_END_FADE_SECONDS);
+    step(1); expect(runtime.active).toBe(0);
+  });
+
+  it('Zyra: the root stays while the target is stunned, another unit\'s stun ending leaves it, its own ending eases it out', async () => {
+    const { runtime, step } = await setup();
+    runtime.play('root', 'zyra', ['foe'], 'passive');
+    step(1); expect(runtime.active).toBe(1);
+    // Another unit's stun ending touches nothing, for longer than the fade.
+    runtime.fadeSystemsOn('other', [ZYRA_ROOT], STUN_END_FADE_SECONDS); step(STUN_END_FADE_SECONDS + 0.05); expect(runtime.active).toBe(1);
+    // Its own target's stun ends: gone within the fade, well before its cap.
+    runtime.fadeSystemsOn('foe', [ZYRA_ROOT], STUN_END_FADE_SECONDS);
+    step(STUN_END_FADE_SECONDS / 2); expect(runtime.active).toBe(1);
+    step(STUN_END_FADE_SECONDS); expect(runtime.active).toBe(0);
+  });
+
+  it('Zyra: a root still waiting to land when the stun ends never shows', async () => {
+    const { runtime, step } = await setup();
+    runtime.play('root-later', 'zyra', ['foe'], 'passive'); step(0.1);
+    expect(runtime.active).toBe(0);
+    runtime.fadeSystemsOn('foe', [ZYRA_ROOT], STUN_END_FADE_SECONDS);
+    step(1); expect(runtime.active).toBe(0);
+  });
+
+  it('Zyra: with no stun end it still goes by its cap', async () => {
+    const { runtime, step } = await setup();
+    runtime.play('root', 'zyra', ['foe'], 'passive');
+    // Held past its old end (it faded from 0.8 s and was gone at 1.4 s).
+    step(1.6); expect(runtime.active).toBe(1);
+    step(SUSTAIN_CAPS[ZYRA_ROOT]! - 1.6 + 0.1);
+    expect(runtime.active).toBe(0);
+  });
+});
