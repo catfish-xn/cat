@@ -110,7 +110,16 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
     Object.assign(tag.style, { position: 'absolute', left: '8px', top: '8px', padding: '2px 8px', font: '16px "Noto Sans CJK SC",sans-serif', color: '#ff0', background: 'rgba(0,0,0,0.6)', zIndex: '60', pointerEvents: 'none' });
     host.style.position = 'relative'; host.append(tag); }
   const frame = (fighting: boolean) => ({ rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 }, bench: [], pieces, fighting, dragging: null });
-  listener.frame(frame(false)); step(50); listener.frame(frame(true));
+  listener.frame(frame(false)); step(50);
+  // REC ONLY (claude/rec-stand-proof): ?preload=1 holds the board out of combat until every champion here has been fitted
+  // out of combat (stand-log entry with fighting false), up to 60 s, so its model is loaded in preparation, not mid-combat.
+  if (params.get('preload') === '1') {
+    const ids = new Set(pieces.map((p: any) => p.definitionId)), deadline = performance.now() + 60000;
+    const done = () => { const log: any[] = (globalThis as any).__standLog ?? []; return [...ids].every(id => log.some(e => e.id === id && !e.fighting)); };
+    while (!done() && performance.now() < deadline) { listener.frame(frame(false)); step(50); await new Promise(r => setTimeout(r, 100)); }
+    (globalThis as any).__standPreload = { done: done(), waitedMs: Math.round(60000 - (deadline - performance.now())) };
+  }
+  listener.frame(frame(true));
   // ?real=1: the same five pieces fight a real combat (src/simulation): positions, HP, mana, control, damage and the
   // enemies' own attacks all come from the rules' event stream, replayed tick by tick on the virtual clock.
   if (pin !== null && params.get('real')) throw new Error('?pinfoe is for dummies only: a real combat moves and fights back');
