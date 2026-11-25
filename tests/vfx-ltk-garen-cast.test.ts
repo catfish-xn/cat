@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { CUE_OVERRIDES, ROOT_ROOM_MOST } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { Texture } from 'three';
+import { CUE_OVERRIDES, ROOT_ROOM_MOST, WORLD_ACCELERATION_OFF } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { struct, syntheticIndex, syntheticSystem, vec } from './vfx-ltk-synthetic';
 import { ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, rootRoomOf } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { rootRoomMost } from '../src/rendering/three-mode/vfx-ltk/runtime';
 
@@ -27,5 +30,20 @@ describe("Garen's cast", () => {
     expect(rootRoomMost('5bbccb8c', true)).toBe(ROOT_ROOM_MOST['5bbccb8c']);
     expect(rootRoomMost('44aa54ff', true)).toBe(ROOT_PARTICLES_MOST);
     expect(rootRoomMost('0f2af66b', false)).toBe(ROOT_PARTICLES_ATTACK_MOST);
+  });
+  it('draws the falling sword at its own steady speed: its world acceleration is left out, and no other emitter loses one', async () => {
+    expect(WORLD_ACCELERATION_OFF).toEqual({ '97c28077': ['sword_drop'] });
+    // Synthetic emitter (made-up numbers) named like the sword, with a world acceleration and a steady fall.
+    const pushed = { emitterName: { type: 'string' as const, value: 'sword_drop' }, birthVelocity: struct('ValueVector3', { constantValue: vec(0, -100, 0) }),
+      worldAcceleration: struct('IntegratedValueVector3', { constantValue: vec(0, -5000, 0) }) };
+    const accelerationOf = async (id: string) => {
+      const index = { ...syntheticIndex(), systems: { [id]: 'systems/sword.json' }, skills: {} };
+      const library = createVfxLibrary('/root/', { readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(pushed), readTexture: async () => new Texture() });
+      const emitter = (await library.load(id)).model.emitters[0]!;
+      library.dispose();
+      return { acceleration: emitter.worldAcceleration.constant, keys: emitter.worldAcceleration.keys.length, velocity: emitter.birthVelocity.constant };
+    };
+    expect(await accelerationOf('97c28077')).toEqual({ acceleration: [0, 0, 0], keys: 0, velocity: [0, -100, 0] });
+    expect((await accelerationOf('0badc0de')).acceleration).toEqual([0, -5000, 0]);
   });
 });

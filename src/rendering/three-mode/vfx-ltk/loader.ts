@@ -10,7 +10,7 @@ import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
 import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM, CAST_START_RANKS } from './cue-ranks';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, WORLD_ACCELERATION_OFF, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
 import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
@@ -342,10 +342,11 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
       const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
-      const faint = EMITTER_ALPHA[id];
-      const model = disabled || whole || heldOn || faint ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
+      const faint = EMITTER_ALPHA[id], unpushed = WORLD_ACCELERATION_OFF[id];
+      const model = disabled || whole || heldOn || faint || unpushed ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
         : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null }
         : heldOn?.includes(e.name ?? '') ? { ...e, lifetime: null }
+        : unpushed?.includes(e.name ?? '') ? { ...e, worldAcceleration: { ...e.worldAcceleration, constant: [0, 0, 0], keys: [], tables: [] } }
         : faint?.[e.name ?? ''] !== undefined ? { ...e, modulation: fainter(e.modulation, faint[e.name ?? '']!) } : e) } : parsed;
       const listed = drawnEmitters(model, true);
       // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
