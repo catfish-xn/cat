@@ -4482,9 +4482,9 @@
     "tests/vfx-ltk-attached-own-mesh.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3129,
+      "currentBytes": 5271,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "8bf916afeafc4a32df9b8a4d2ed1f46aff011a2fdf07db52a2a4256729c9c169",
+      "currentSha256": "1ee966912a24ec9eff148c3ffde8a3481a63bdadddc966c58a595c90a7cfd691",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-anchor.test.ts": {

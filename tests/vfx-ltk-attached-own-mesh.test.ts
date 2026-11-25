@@ -5,6 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { ATTACHED_OWN_MESH_DRAWN, MUTED_EMITTERS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { attachedMeshOfItsOwn, createVfxLibrary, withOwnMeshesDrawn } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { QUAD_TYPE } from '../src/rendering/three-mode/vfx-ltk/engine/model/enums';
+import type { VfxValue } from '../src/rendering/three-mode/vfx-ltk/bindings';
+import { syntheticIndex, syntheticSystem, struct } from './vfx-ltk-synthetic';
+import { binaryFixture } from './vfx-ltk-binary-fixture';
 
 // Fable 11-24: an attached mesh naming a static mesh of its own stays undrawn, except Renata's crit missile body (whitelist).
 const own = (name: string) => ({ name, quadType: QUAD_TYPE.attachedMesh, mesh: { skinned: false } });
@@ -20,6 +23,36 @@ describe('attached meshes of their own: a whitelist', () => {
     expect(drawn.emitters.filter(attachedMeshOfItsOwn).map(e => e.name)).toEqual(['Other']);
     // Another system with the same emitter names keeps them undrawn.
     expect(withOwnMeshesDrawn('95fb90ce', model)).toBe(model);
+  });
+});
+
+// The loader itself, on a synthetic system (no exported data): an attached mesh naming a static mesh of its own is drawn as a
+// mesh particle, with that mesh loaded, only under a whitelisted system id and emitter name.
+const asset = (path: string): VfxValue => ({ type: 'asset', path, asset: { kind: 'file', path: '/synthetic/' + path } });
+const ownMeshEmitter = (name: string) => ({ emitterName: { type: 'string', value: name } as VfxValue,
+  primitive: struct('VfxPrimitiveAttachedMesh', { mMesh: struct('VfxMeshDefinitionData', { mSimpleMeshName: asset('canister.scb') }) }) });
+async function loadAs(id: string, name: string) {
+  const index = { ...syntheticIndex(), systems: { [id]: 'systems/one.json' }, assets: { ...syntheticIndex().assets, 'canister.scb': 'meshes/canister.ltkg' }, skills: {} };
+  const library = createVfxLibrary('/root/', {
+    readJson: async url => url.endsWith('index.json') ? index : syntheticSystem(ownMeshEmitter(name)),
+    readTexture: async () => new Texture(),
+    readBinary: async () => binaryFixture('mesh', false, false),
+  });
+  const prepared = await library.load(id);
+  return { library, prepared };
+}
+describe('the loader with a synthetic own-mesh attachment', () => {
+  it('draws a whitelisted one as a mesh particle with its mesh, and leaves any other undrawn', async () => {
+    const listed = await loadAs('d7729373', 'Alpha_Bullet');
+    expect(listed.prepared.drawn.map(d => [d.emitter.name, d.emitter.quadType])).toEqual([['Alpha_Bullet', QUAD_TYPE.mesh]]);
+    expect(listed.prepared.meshes.size).toBe(1);
+    listed.library.dispose();
+    for (const [id, name] of [['d7729373', 'Other'], ['95fb90ce', 'Alpha_Bullet']] as const) {
+      const other = await loadAs(id, name);
+      expect(other.prepared.drawn).toEqual([]);
+      expect(other.prepared.model.emitters.map(e => e.quadType)).toEqual([QUAD_TYPE.attachedMesh]);
+      other.library.dispose();
+    }
   });
 });
 
