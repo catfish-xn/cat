@@ -612,9 +612,6 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.5666666666666667, duration: 1.5 },
   ],
-  // The spell is a hand comet plus one primary splash. The third cast also splashes the next two receipt targets. There is
-  // no separate hand-glow system. Her bolt's hit lands on the primary target every cast, when the comet does. Her unplayed
-  // ground system stays out (purpose unverified, see tests/fixtures/cue-dropped-systems.ts).
   // Ambessa: her exported list, with her chain-stance swipe (3b4c15e0) on the unit instead of her weapon locator. The
   // swipe is a half-disc of meshes drawn around its anchor toward the cast's target; on the weapon locator it turned with
   // the weapon and flew off over her head (11-25 review against the 3-star original). On the unit it faces her primary
@@ -629,6 +626,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '3b4c15e0', action: 'cast', event: 'cast-start', delay: AMBESSA_CHAIN_SWIPE_DELAY, duration: 0.7 },
     { system: '8a64f4dd', action: 'cast', event: 'hit', delay: 0.6, duration: 0.7 },
   ],
+  // The spell is a hand comet plus one primary splash. The third cast also splashes the next two receipt targets. There is
+  // no separate hand-glow system. Her bolt's hit lands on the primary target every cast, when the comet does. Her unplayed
+  // ground system stays out (purpose unverified, see tests/fixtures/cue-dropped-systems.ts).
   cassiopeia: [
     { system: '714bd6e8', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6166666666666667, duration: 1.5 },
