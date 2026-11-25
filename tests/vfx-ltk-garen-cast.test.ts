@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Texture } from 'three';
-import { CUE_OVERRIDES, ROOT_ROOM_MOST, WORLD_ACCELERATION_OFF } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_OVERRIDES, GAREN_SWORD_DELAY, GAREN_SWORD_FALL, ROOT_ROOM_MOST, WORLD_ACCELERATION_OFF } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { struct, syntheticIndex, syntheticSystem, vec } from './vfx-ltk-synthetic';
 import { ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, rootRoomOf } from '../src/rendering/three-mode/vfx-ltk/particles';
@@ -9,14 +9,20 @@ import { rootRoomMost } from '../src/rendering/three-mode/vfx-ltk/runtime';
 // Garen's cast: his package's cast burst and its falling sword play from the cast beside the shield, the sky beam and the
 // landing burst; the landing burst may take more room than the usual skill cap so its later waves are not starved.
 describe("Garen's cast", () => {
-  it('plays the cast burst and the falling sword from the cast, on his own ground', () => {
+  it('plays the cast burst from the cast and the falling sword a beat later, both on his own ground', () => {
     const cast = CUE_OVERRIDES.garen!.filter(cue => cue.action === 'cast');
     expect(cast.map(cue => cue.system)).toEqual(['cbccc667', '97c28077', 'ea21ae27', '44aa54ff', '5bbccb8c']);
-    for (const id of ['cbccc667', '97c28077']) expect(cast.find(cue => cue.system === id)).toMatchObject({ event: 'cast-start', delay: 0, bone: 'BUFFBONE_GLB_GROUND_LOC' });
-    // The sword's fall reaches the ground with the landing burst: it outlives the burst's start.
-    const sword = cast.find(cue => cue.system === '97c28077')!, burst = cast.find(cue => cue.system === '5bbccb8c')!;
-    expect(sword.delay + sword.duration).toBeGreaterThan(burst.delay);
+    expect(cast.find(cue => cue.system === 'cbccc667')).toMatchObject({ event: 'cast-start', delay: 0, bone: 'BUFFBONE_GLB_GROUND_LOC' });
+    expect(cast.find(cue => cue.system === '97c28077')).toMatchObject({ event: 'cast-start', delay: GAREN_SWORD_DELAY, bone: 'BUFFBONE_GLB_GROUND_LOC' });
+    expect(GAREN_SWORD_DELAY).toBeGreaterThan(0);
     expect(CUE_OVERRIDES.garen!.filter(cue => cue.action === 'attack')).toHaveLength(1);
+  });
+  it("starts the landing burst on the beat the sword's tip reaches the ground, while the sword still plays", () => {
+    const cast = CUE_OVERRIDES.garen!.filter(cue => cue.action === 'cast');
+    const sword = cast.find(cue => cue.system === '97c28077')!, burst = cast.find(cue => cue.system === '5bbccb8c')!;
+    expect(burst.delay).toBeCloseTo(sword.delay + GAREN_SWORD_FALL, 10);
+    expect(GAREN_SWORD_FALL).toBeGreaterThan(0);
+    expect(sword.delay + sword.duration).toBeGreaterThan(burst.delay);
   });
   it('lets the landing burst take more than the usual skill room, and only it', () => {
     expect(Object.keys(ROOT_ROOM_MOST)).toEqual(['5bbccb8c']);
