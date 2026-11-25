@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { createSustainStops } from '../src/rendering/three-mode/vfx-ltk/sustain-stops';
-import { CAMILLE_KICK_TICKS, CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_READMIT, SUSTAIN_REFRESH } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CAMILLE_KICK_TICKS, CUE_END_STOPS, CUE_EXTRA_SKILLS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_READMIT, SUSTAIN_REFRESH } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { CAMILLE_KICK_TICKS as SIM_CAMILLE_KICK_TICKS } from '../src/simulation/combat-g2-2';
 
 const status = (targetId: string, kind: string, reason: string, tick = 10) =>
@@ -63,8 +63,8 @@ describe('persistent layers ended by rule events (sustain-stops.ts)', () => {
       return Object.values(systems as Record<string, unknown>).flatMap(v => Array.isArray(v) ? v as string[] : (v as { systems: string[] }).systems);
     })]);
     // Draven's spinning axe, Amumu's passive and Kog'Maw's stacks last until death or the fight's end; Ekko's mark shows its
-    // own time after each hit (SUSTAIN_REFRESH).
-    const untilDeath = ['d86cc9bc', '56e6971e', '6889455c', '9f805f6e', '5af49b76'];
+    // own time after each hit (SUSTAIN_REFRESH); Akali's mark lasts exactly the rules' exposure, which nothing else ends (11-24).
+    const untilDeath = ['d86cc9bc', '56e6971e', '6889455c', '9f805f6e', '5af49b76', 'bc4a9e0d'];
     for (const system of Object.keys(SUSTAIN_CAPS)) expect(ended.has(system) || untilDeath.includes(system), system).toBe(true);
     for (const seconds of Object.values(SUSTAIN_CAPS)) expect(seconds).toBeGreaterThan(0);
   });
@@ -98,7 +98,7 @@ describe('fallback caps of held layers (Fable 11-19)', () => {
   it('a layer whose state has a time limit is capped at that limit plus 1 s, so the rule event always ends it first', () => {
     const limited: [string, string, string][] = [['8d9a4ccc', 'leona-ability', 'Duration'], ['afb2ec69', 'jayce-ranged-ability', 'ASDuration'],
       ['ea21ae27', 'garen-ability', 'ShieldDuration'], ['e22b48b0', 'loris-ability', 'Duration'], ['8682c9ee', 'vex-ability', 'DOTDuration'], ['eb9da1d5', 'vex-ability', 'DOTDuration'],
-      ['acd84091', 'leblanc-ability', 'ChainDuration']];
+      ['acd84091', 'leblanc-ability', 'ChainDuration'], ['b888a24f', 'zyra-ability', 'StunDuration']];
     for (const [system, ability, variable] of limited) expect(SUSTAIN_CAPS[system], system).toBeCloseTo(longest(ability, variable) + 1, 6);
     // Swain's form also grows with each takedown: its cap is our own, above the base time plus 1 s.
     expect(SUSTAIN_CAPS['796b6af2']).toBeGreaterThan(longest('swain-ability', 'Duration') + 1);
@@ -117,15 +117,18 @@ describe('fallback caps of held layers (Fable 11-19)', () => {
 
 describe('a rule stop finds the runs it ends (Fable 11-19: Jayce\'s glow waited for its cap)', () => {
   it('a stop keyed by target only lists systems played on their target (hit cues); a cast-start run has none', () => {
-    const cues = Object.values(CUE_OVERRIDES).flat();
+    // Rows that play from rule events (CUE_EXTRA_SKILLS: Zyra's vines) count too.
+    const cues = [...Object.values(CUE_OVERRIDES), ...Object.values(CUE_EXTRA_SKILLS)].flat();
     for (const [name, rule] of Object.entries(CUE_RULE_STOPS) as [string, { systems: unknown; on: string }][]) {
       if (rule.on !== 'target') continue;
       const systems = Array.isArray(rule.systems) ? rule.systems as string[]
         : Object.values(rule.systems as Record<string, unknown>).flatMap(v => Array.isArray(v) ? v as string[] : (v as { systems: string[] }).systems);
+      // A cast-start of such a system (a state the caster put on itself) is ended by the self stop instead (11-24, Lux).
+      const self = Object.values(CUE_RULE_STOPS.abilityShieldEndedOnSelf.systems).flat() as string[];
       for (const system of systems) {
         const played = cues.filter(cue => cue.system === system);
         expect(played.length, `${name} ${system}`).toBeGreaterThan(0);
-        for (const cue of played) expect(cue.event, `${name} ${system}`).toBe('hit');
+        for (const cue of played) expect(cue.event === 'hit' || (cue.event === 'cast-start' && self.includes(system)), `${name} ${system} ${cue.event}`).toBe(true);
       }
     }
   });

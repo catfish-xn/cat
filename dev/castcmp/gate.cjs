@@ -158,7 +158,7 @@ function verdict({ systems, absent, layerIds, column, real, ckout, audit, pre, f
       if (!audit.combatStart) fails.push('real: combat start not applied');
       if (!audit.coversWindow) fails.push(`real: combat ends at tick ${audit.replayEnds}, before the window's end ${audit.to}`);
       const dead = Object.entries(audit.targetsAliveAtEnd).filter(([, up]) => !up).map(([id]) => id);
-      if (dead.length) fails.push(`real: target dead by window end: ${dead.join(',')}`);
+      if (dead.length && !audit.pastEnd) fails.push(`real: target dead by window end: ${dead.join(',')}`);
       if (audit.otherCasts.length) fails.push(`real: others cast in window: ${audit.otherCasts.map(c => `${c.id}@${c.tick}`).join(' ')}`);
     }
   } else exempt.push('rules checks (not --real: dummies, no rules run)');

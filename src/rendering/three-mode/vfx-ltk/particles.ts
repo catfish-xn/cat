@@ -5,7 +5,7 @@ import { AXIS_SIGN } from './space';
 import { BOARD_CELL } from './fx-size';
 import { FIRST_FLIGHT, type Anchor, type Joints, type RigModel } from './engine/model/rig';
 import type { MissileFlight } from './engine/model/missile';
-import type { StrikeCurve } from './timeline';
+import { OVERHEAD_TOP, type StrikeCurve } from './timeline';
 import { createDriver } from './engine/simulation/driver';
 import type { Source } from './engine/simulation/particleRead';
 import { createQuads } from './rendering/components/Quads';
@@ -148,19 +148,29 @@ const PLACE_ONLY_LOCATOR = /^c?_?buffbone_glb_(ground|center|chest|head|layout)_
  * `aim` (a cast's primary target) turns the unit-facing basis toward it: the model turns over TURN_SECONDS after the
  * cast event, and a cast-start from a resting unit otherwise faced the camera (11-07: Zyra's roots thrown at open ground).
  */
-export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string, aim?: () => Object3D | null): Anchor {
+export function unitAnchor(root: Object3D, body: Object3D | null, bone?: string, aim?: () => Object3D | null,
+  overheadTop?: () => number | undefined, raise = 0): Anchor {
   const point = new Vector3(), toward = new Vector3(), matrix = new Matrix4();
+  // The top of the unit's overhead bar row (timeline.ts OVERHEAD_TOP) is no bone: over the unit at the bar's height, or
+  // without a bar, the overhead locator (or its share of the body's height).
+  const barTop = bone === OVERHEAD_TOP ? overheadTop : undefined;
+  const named = bone === OVERHEAD_TOP ? 'C_BUFFBONE_GLB_OVERHEAD_LOC' : bone;
   // The named bone, or for a torso bone the skeleton lacks its own nearest torso bone (findCueBone).
-  const found = bone ? findCueBone(body, bone) : undefined, attachment: Object3D | undefined = found?.node;
+  const found = named ? findCueBone(body, named) : undefined, attachment: Object3D | undefined = found?.node;
   const node = () => attachment ?? root;
   // A body locator the model lacks stands in at its share of the body's height above the unit, not on the floor.
-  const lift = !attachment && bone && body ? missingLocatorLift(bone, bodyHeightAbove(root, body)) : 0;
+  const lift = !attachment && named && body ? missingLocatorLift(named, bodyHeightAbove(root, body)) : 0;
   return {
-    originAt() { node().getWorldPosition(point); point.y += lift; return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE]; },
+    originAt() {
+      const top = barTop?.();
+      if (top !== undefined) { root.getWorldPosition(point); point.y = top; } else { node().getWorldPosition(point); point.y += lift; }
+      point.y += raise;
+      return [point.x * AXIS_SIGN[0] / FX_SCALE, point.y / FX_SCALE, point.z / FX_SCALE];
+    },
     basisInto(_time, out) {
       // A place-only locator lends its position; the effect faces the way the unit faces (Irelia's W swipe pointed backward).
       // A stand-in torso bone lends its place too, never its axes.
-      const held = attachment && !found?.standIn && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
+      const held = attachment && bone !== OVERHEAD_TOP && !found?.standIn && !PLACE_ONLY_LOCATOR.test(attachment.name) ? attachment : root;
       held.updateWorldMatrix(true, false); matrix.copy(held.matrixWorld);
       const aimed = held === root ? aim?.() : null;
       if (aimed) {

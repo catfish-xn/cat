@@ -167,7 +167,11 @@ export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags
   if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
   return needs;
 }
-export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
+export interface VfxUnit {
+  root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean;
+  /** World height of the top of the unit's overhead bar row, where the host draws one (OVERHEAD_TOP anchors on it). */
+  overheadTop?: number;
+}
 export interface LtkPlayOptions {
   /** Exact display branch in this champion's catalogue; each branch retains the 12-cue limit. */
   skill?: string;
@@ -882,10 +886,34 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
       for (const run of running) if (run.source === sourceId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
+    /**
+     * As stopSystems, easing those runs out over `seconds` instead: every layer of the run fades together by the same factor
+     * and keeps its colour (a stop ends each layer at its own pace, so the longest-lived layer is left alone on screen).
+     */
+    fadeSystems(sourceId: string, systems: readonly string[], seconds: number) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.source === sourceId && systems.includes(run.system) && !run.stopped) { run.fx.fade(seconds); run.fading = true; }
+    },
     /** As stopSystems, for the runs of these systems on one unit (whoever cast them): the rule's effect on that unit ended. */
     stopSystemsOn(targetId: string, systems: readonly string[]) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
       for (const run of running) if (run.target === targetId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
+    },
+    /**
+     * As stopSystemsOn, easing them out over `seconds` instead (a state on that unit ended: Elise's cocoon, Zyra's root). The
+     * fade itself ends the run when it is over (particles.ts fade shortens the run's own duration), so `until` is left as is.
+     */
+    fadeSystemsOn(targetId: string, systems: readonly string[], seconds: number) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.target === targetId && systems.includes(run.system) && !run.stopped) { run.fx.fade(seconds); run.fading = true; }
+    },
+    /**
+     * As stopSystemsOn, for a unit's own cast-starts of these systems (no target: a state it put on itself, Lux's self-cast
+     * bubble). Its cues on other units are untouched.
+     */
+    stopSystemsOnSelf(unitId: string, systems: readonly string[]) {
+      for (let at = waiting.length - 1; at >= 0; at--) { const spawn = waiting[at].spawn; if (spawn.sourceId === unitId && spawn.targetId === undefined && systems.includes(spawn.system)) waiting.splice(at, 1); }
+      for (const run of running) if (run.source === unitId && run.target === undefined && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
     stopAction(sourceId: string, action: TimelineAction) {
@@ -1156,7 +1184,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim, () => host!.overheadTop, spawn.lift);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);

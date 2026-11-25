@@ -37,7 +37,7 @@ import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece,
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import { createStatusPoseEvents } from './status-pose-events';
-import { createSustainStops } from './vfx-ltk/sustain-stops';
+import { createControlEndStops, createSustainStops } from './vfx-ltk/sustain-stops';
 import { createTimedFormEvents } from './timed-form-events';
 import { createPowderMonkeys } from './powder-monkey';
 import type { TimelineVariant } from './vfx-ltk/timeline';
@@ -68,9 +68,10 @@ import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
-import { createVfxLibrary } from './vfx-ltk/loader';
+import { createVfxLibrary, vfxUrl } from './vfx-ltk/loader';
+import { createDebuffMarks, DEBUFF_ICONS, type OverheadDebuff } from './debuff-icons';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, RUMBLE_MISSILE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -309,6 +310,8 @@ interface PieceView {
   stars: StarMark | null; starHeight: number;
   /** HP/mana bars and worn items over the head (unit-overhead.ts); a scene child placed each frame like the stars. */
   readonly overhead: UnitOverhead;
+  /** World height of the top of its bar row this frame, while one is drawn (vfx-ltk VfxUnit.overheadTop). */
+  overheadTop?: number;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; model: UnitModelChoice; bodyRevision: number; target: Vector3; placed: boolean; disposed: boolean;
   /** A summon that appeared or was revived in the shown combat: plays its spawn clip once its mixer is ready. */
@@ -712,6 +715,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   // Persistent layers ended by a status or a later hit (sustain-stops.ts).
   const sustainStops = createSustainStops(id => pieces.get(id)?.definitionId);
+  const controlEndStops = createControlEndStops();
   // A timed form (Dr. Mundo's ultimate body, Swain's wings) follows its rule events over whatever clip plays (timed-form-events.ts).
   const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.form);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
@@ -731,11 +735,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   }
   /** The rule tick of the event being played now (the last one between batches), for vfx-ltk's seeds (runtime seedOf). */
   let ltkTick: number | undefined;
-  const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
+  const ltkLibrary = models.reader && options.assetBase ? createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
-  }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
+  }, { groundPass: true }) : null;
+  const ltk = ltkLibrary ? createLtkRuntime(ltkLibrary, scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
     attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
@@ -761,6 +766,26 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const restored = contextRestored;
   renderer.domElement.addEventListener('webglcontextrestored', () => { if (!closed) restored?.(); });
   const textureLoader = new TextureLoader();
+  // Whole-fight debuff icons over the bars (debuff-icons.ts): who carries which, and each kind's texture from its champion's
+  // vfx-ltk package, read once (null when it cannot be had: the icon is then not drawn).
+  const debuffMarks = createDebuffMarks(), debuffTextures = new Map<string, Texture | null>(), debuffLoading = new Set<string>();
+  const loadDebuff = (kind: string) => {
+    const def = DEBUFF_ICONS[kind]; debuffLoading.add(kind);
+    if (!def || !ltkLibrary || !models.reader || !options.assetBase) { debuffTextures.set(kind, null); return; }
+    void (async () => {
+      const top = await ltkLibrary.ready, path = top?.champions?.[def.champion], child = await ltkLibrary.champion(def.champion);
+      const file = child?.index?.assets[def.textureKey];
+      if (!path || !file) { debuffTextures.set(kind, null); return; }
+      const texture = await models.reader!.readTexture(vfxUrl(options.assetBase!, path.slice(0, -'index.json'.length) + file));
+      if (closed) { texture.dispose(); return; }
+      texture.colorSpace = SRGBColorSpace; texture.needsUpdate = true; debuffTextures.set(kind, own(texture));
+    })().catch(() => { debuffTextures.set(kind, null); });
+  };
+  const debuffsOf = (id: string): OverheadDebuff[] => debuffMarks.of(id).flatMap(kind => {
+    const texture = debuffTextures.get(kind);
+    if (texture === undefined && !debuffLoading.has(kind)) loadDebuff(kind);
+    return texture ? [{ kind, texture, layers: DEBUFF_ICONS[kind]!.layers }] : [];
+  });
   const overheadContext = {
     ui: originalUi,
     font: canvasFont,
@@ -1194,7 +1219,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); controlEndStops.clear(); debuffMarks.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1430,6 +1455,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const ids = new Set(envelopePending); envelopePending.clear();
       for (const view of pieces.values()) if (view.model.id && ids.has(view.model.id) && view.lease && !view.lease.placeholder) attachBody(view);
     }
+    // A unit no longer stunned in the rules (its control in this frame is gone): its stun's layers end (CUE_RULE_STOPS stunEnded).
+    for (const stop of controlEndStops.frame(frame.pieces, frame.fighting)) ltk?.fadeSystemsOn(stop.id, stop.systems, STUN_END_FADE_SECONDS);
     const seen = new Set<string>();
     const modelPieces = new Map(frame.pieces.map(piece => [piece.id, piece]));
     for (const piece of frame.pieces) {
@@ -1455,6 +1482,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       syncStars(view, piece);
       view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted, piece.alive && piece.itemsConfiscated, piece.anomalies, piece.nonCombat);
+      view.overhead.setDebuffs(frame.fighting && piece.alive ? debuffsOf(piece.id) : []);
       setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
@@ -1548,6 +1576,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
       batch3?.event(event, currentEffect);
+      // LeBlanc's chain: from her primary target (the first one her cast names) to each other enemy it binds (cue-overrides.ts
+      // LEBLANC_CHAIN_FROM_PRIMARY); never from her, never to the primary itself.
+      if (currentEffect && !reducedMotion() && event.type === 'cast' && event.completed !== false && pieces.get(event.sourceId)?.definitionId === 'leblanc') {
+        const [primary, ...others] = [...new Set(event.targetIds)];
+        if (primary && others.length) ltk?.play('leblanc', primary, others, 'passive');
+      }
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       // Renata's own E_Shield when it is ready; the procedural bubble otherwise.
@@ -1564,6 +1598,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (pieces.get(event.unitId)?.definitionId === 'draven') ltk?.stopSystemsOn(event.unitId, [DRAVEN_AXE]);
         ltk?.stopSystems(event.unitId, [DRAVEN_AXE]);
       }
+      // A whole-fight debuff icon goes on with its ability's hit and off with the unit (debuff-icons.ts).
+      debuffMarks.next(event);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
       // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
       // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.
@@ -1623,14 +1659,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
       // Before the animation gate: these events move no unit, so ANIMATION_EVENTS does not list them.
       if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
+      if (event.type === 'abilityEffectEnded' && event.effect === LEBLANC_CHAIN_FROM_PRIMARY.effect)
+        for (const id of event.targetIds ?? []) ltk?.stopSystems(id, [LEBLANC_CHAIN_FROM_PRIMARY.system]);
       // Rule events that already end a state: the visuals listed for them end with it (cue-overrides.ts CUE_RULE_STOPS).
       if (event.type === 'bloodFrenzyChanged' && !event.active) ltk?.stopSystems(event.unitId, CUE_RULE_STOPS.frenzyEnded.systems);
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEnded.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystems(event.targetId, systems);
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedFade.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.fadeSystems(event.targetId, systems, SHIELD_END_FADE_SECONDS);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOn(event.targetId, systems);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnSelf.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOnSelf(event.targetId, systems);
       if (event.type === 'statusChanged' && event.kind === 'shred' && event.reason !== 'applied' && event.reason !== 'refreshed')
         ltk?.stopSystemsOn(event.targetId, CUE_RULE_STOPS.shredEnded.systems);
       // Persistent layers that end with their rule's status or a later hit (cue-overrides.ts CUE_RULE_STOPS, sustain-stops.ts).
@@ -2192,6 +2236,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
       view.overhead.object.position.set(overX, over.bar, overZ);
+      view.overheadTop = view.overhead.drawn ? over.bar + view.overhead.top : undefined;
       // The stars circle the head like the client's stun (at head level, under the bars), drawn over the model and bars.
       if (view.halo) {
         view.halo.update(seconds);

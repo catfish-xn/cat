@@ -8,12 +8,14 @@ import { planningBase, planningMeters } from './planning-meters';
 import { S13_ABILITY_DATA } from '../simulation/content/abilities';
 import type { CombatViewUnit } from './combat-display';
 import type { UnitBattleStats } from './battle-ranking';
-import { abilityText, fillAbilityTemplate } from './ability-text';
+import { abilityFormIds, abilityText, abilityUnitDefinition, fillAbilityTemplate, formDefinitionId } from './ability-text';
+import { resolveUnitStats } from '../simulation/unit-stats';
+import type { UnitForm } from '../simulation/seat-mechanics/types';
 import { heroTraitTagsWithIds } from './hero-identity';
 import { s13IconHtml } from './s13-assets';
 import { catalogEntry, itemCardBody, itemMarkHtml } from './item-codex';
 import { itemDisplayName } from './g23-display';
-import { unitCardBody, roleSection, battleLine, itemStackLine, abilityLabel } from './unit-card';
+import { unitCardBody, roleSection, battleLine, itemStackLine, abilityLabel, formCaption } from './unit-card';
 import { applyUnitPanelSkin, loadUnitPanelSkin, type UnitPanelSkin } from './unit-panel-skin';
 import { loadTooltipText, readTooltipText } from './tooltip-text-loader';
 import { PANEL_STYLE } from './unit-panel-style';
@@ -24,6 +26,12 @@ export interface UnitPanelData {
   combat?: CombatViewUnit | null;
   /** 卯足全力: this is the strongest Vander, whose ability the rules replace with the hero spell. */
   heroAbility?: boolean;
+  /** Current form of a form swapper (board row in preparation; `combat.form` wins in combat). */
+  form?: UnitForm | null;
+}
+/** A form swapper's current form: frozen in combat, else the preparation row's form the scene passed in. */
+export function panelForm(data: Pick<UnitPanelData, 'combat' | 'form'>): UnitForm | null {
+  return data.combat ? data.combat.form ?? null : data.form ?? null;
 }
 /** Future rules-side planning projection. Never reconstruct item/trait bonuses in the UI. */
 export function planningBonusProjection(_unit: UnitPanelData): null { return null; }
@@ -35,7 +43,7 @@ const node = (tag: string, text = '', className = '') => {
 export function abilityRanks(definitionId: string, star: number, heroAbility = false): HTMLElement {
   const out = node('p', '', 'unit-card-text');
   if (star === 4) { out.textContent = abilityText(definitionId, 4)?.text ?? '无主动技能说明'; return out; }
-  const def = UNIT_DEFINITIONS[definitionId], data = S13_ABILITY_DATA[def.abilityId];
+  const def = abilityUnitDefinition(definitionId)!, data = S13_ABILITY_DATA[def.abilityId];
   if (!data) { out.textContent = '无主动技能说明'; return out; }
   const hero = heroAbility && definitionId === 'vander' ? readTooltipText()?.HERO_ABILITY_ZH[data.id] : undefined;
   const values = ([1, 2, 3] as const).map(rank => hero ? glovesOffDisplayValues(rank) : abilityDisplayValues(definitionId, rank));
@@ -86,7 +94,9 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   }
   const base = planningBase(data.definitionId, star);
   const heroAbility = Boolean(data.heroAbility) && star !== 4;
-  const abilityName = abilityText(data.definitionId, star, undefined, heroAbility)?.name ?? '无主动技能';
+  const form = panelForm(data);
+  const displayIds = heroAbility || star === 4 ? [data.definitionId] : form ? [formDefinitionId(data.definitionId, form)] : abilityFormIds(data.definitionId);
+  const abilityName = displayIds.map(id => abilityText(id, star, undefined, heroAbility)?.name ?? '无主动技能').join(' / ');
   const row = node('div', '', 'inspect-row');
   const button = node('button', '', 'inspect-ability') as HTMLButtonElement; button.type = 'button';
   button.setAttribute('aria-label', `技能：${abilityName}`); button.setAttribute('aria-expanded', 'false');
@@ -98,10 +108,14 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   }
   row.append(button, items);
   const tip = node('div', '', 'inspect-ability-card'); tip.setAttribute('role', 'tooltip');
-  const ability = node('div', '', 'unit-card-ability');
-  const maxMana = planningMeters(data.definitionId, star, data.heroAbility).maxMana;
-  ability.append(abilityLabel(data.definitionId, `${abilityName} · 法力 ${base.initialMana}/${maxMana}`), abilityRanks(data.definitionId, data.starLevel, heroAbility));
-  tip.append(ability);
+  for (const displayId of displayIds) {
+    const ability = node('div', '', 'unit-card-ability');
+    const mana = displayId === data.definitionId ? { initialMana: base.initialMana, maxMana: planningMeters(data.definitionId, star, data.heroAbility).maxMana }
+      : resolveUnitStats(abilityUnitDefinition(displayId)!, Math.min(3, star) as 1 | 2 | 3);
+    const name = abilityText(displayId, star, undefined, heroAbility)?.name ?? '无主动技能';
+    ability.append(abilityLabel(displayId, `${formCaption(data.definitionId, displayId)}${name} · 法力 ${mana.initialMana}/${mana.maxMana}`), abilityRanks(displayId, data.starLevel, heroAbility));
+    tip.append(ability);
+  }
   const role = roleSection(data.definitionId); if (role) tip.append(role);
   const toggle = (open: boolean) => { tip.classList.toggle('open', open); button.setAttribute('aria-expanded', String(open)); };
   button.addEventListener('pointerenter', () => toggle(true)); button.addEventListener('pointerleave', () => toggle(false));
@@ -217,7 +231,8 @@ export function showSceneDescription(target: import('../rendering/board-feed').B
   if (target.kind === 'unit' || target.kind === 'carousel') {
     const data = target.kind === 'carousel' ? target.unit : unit;
     if (data) body = unitCardBody(data.definitionId, data.starLevel, null,
-      (data.items ?? []).map(item => itemDisplayName(typeof item === 'string' ? item : item.id)).join('、'), 'notes' in data ? data.notes : []);
+      (data.items ?? []).map(item => itemDisplayName(typeof item === 'string' ? item : item.id)).join('、'), 'notes' in data ? data.notes : [],
+      undefined, false, target.kind === 'unit' ? panelForm(data as UnitPanelData) : null);
   } else if (target.kind === 'item') {
     const entry = catalogEntry(target.id); if (entry) body = itemCardBody(entry);
   } else if (target.kind === 'orb') {
