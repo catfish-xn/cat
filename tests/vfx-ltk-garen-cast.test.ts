@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Texture } from 'three';
-import { CUE_OVERRIDES, GAREN_SWORD_DELAY, GAREN_SWORD_FALL, ROOT_ROOM_MOST, WORLD_ACCELERATION_OFF } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_OVERRIDES, GAREN_SWORD_DELAY, GAREN_SWORD_INTO_BODY, ROOT_ROOM_MOST, WORLD_ACCELERATION_OFF } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { struct, syntheticIndex, syntheticSystem, vec } from './vfx-ltk-synthetic';
 import { ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, rootRoomOf } from '../src/rendering/three-mode/vfx-ltk/particles';
@@ -17,11 +17,11 @@ describe("Garen's cast", () => {
     expect(GAREN_SWORD_DELAY).toBeGreaterThan(0);
     expect(CUE_OVERRIDES.garen!.filter(cue => cue.action === 'attack')).toHaveLength(1);
   });
-  it("starts the landing burst on the beat the sword's tip reaches the ground, while the sword still plays", () => {
+  it("starts the landing burst on the beat the sword's tip comes down into Garen, while the sword still plays", () => {
     const cast = CUE_OVERRIDES.garen!.filter(cue => cue.action === 'cast');
     const sword = cast.find(cue => cue.system === '97c28077')!, burst = cast.find(cue => cue.system === '5bbccb8c')!;
-    expect(burst.delay).toBeCloseTo(sword.delay + GAREN_SWORD_FALL, 10);
-    expect(GAREN_SWORD_FALL).toBeGreaterThan(0);
+    expect(burst.delay).toBeCloseTo(sword.delay + GAREN_SWORD_INTO_BODY, 10);
+    expect(GAREN_SWORD_INTO_BODY).toBeGreaterThan(0);
     expect(sword.delay + sword.duration).toBeGreaterThan(burst.delay);
   });
   it('lets the landing burst take more than the usual skill room, and only it', () => {
