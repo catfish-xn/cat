@@ -306,6 +306,13 @@ const ZIGGS_BOMB = (() => {
 })();
 /** When the flask lands on the ally's head: what it brings starts then. */
 const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
+/**
+ * How long a stun's own layers (CUE_RULE_STOPS stunEnded) take to ease out once their target is no longer stunned: a short
+ * fade of our own (自定，非原版), so the layer leaves with the stun instead of being cut.
+ */
+export const STUN_END_FADE_SECONDS = 0.25;
+/** How long a shield's layers (CUE_RULE_STOPS abilityShieldEndedFade) take to ease out when its layer ends: our own (自定，非原版). */
+export const SHIELD_END_FADE_SECONDS = 0.25;
 /** When Akali's mark (bc4a9e0d) lands on her target after the cast: with her shuriken's hit. */
 export const AKALI_MARK_DELAY = 0.3;
 /**
@@ -1151,6 +1158,9 @@ export const CUE_RULE_STOPS = {
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
   abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0', '2f1f3b60'] }, on: 'source' },
+  // The same, eased out over SHIELD_END_FADE_SECONDS rather than stopped: Sevika's roulette shield, whose layers live for very
+  // different times, so a stop left its pink rings alone on screen for a moment after the rest had gone (11-25).
+  abilityShieldEndedFade: { systems: { 'sevika-ability': ['518dee63'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
   abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'],
@@ -1172,7 +1182,10 @@ export const CUE_RULE_STOPS = {
   allyStatusEnded: { systems: { 'stat-buff': ['afb2ec69'] }, on: 'source' },
   // Elise's cocoon on a target goes when that target is no longer stunned (its control in the board frame ends: the rules'
   // stun state, whatever else stunned it too; sustain-stops.ts createControlEndStops). Her spider form is not touched (11-24).
-  stunEnded: { systems: ['6d6525e8'], on: 'target' },
+  // Zyra's root cluster on her rooted target likewise (11-24; her vines' hit on the target's body, 9d413df0, is not a stun
+  // display and keeps its own cue).
+  stunEnded: { systems: ['6d6525e8', 'b888a24f'], on: 'target' },
+
   // Vex's opening area holds until her delayed second hit lands on that target (the next direct ability hit after the first).
   vexSecondHit: { systems: ['8682c9ee', 'eb9da1d5'], on: 'target' },
 } as const;
@@ -1201,6 +1214,7 @@ export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '5af49b76': 2,
   // Akali's mark: exactly the rules' exposure time (AKALI_MARK_SECONDS), which nothing ends early; death ends it at once.
   'bc4a9e0d': AKALI_MARK_SECONDS,
+  'b888a24f': 2, // Zyra's root cluster on her rooted target → that target's stun ends (eased out: STUN_END_FADE_SECONDS)
   '8682c9ee': 1.8, // Vex opening area → her delayed second hit
   'eb9da1d5': 1.8,
 };

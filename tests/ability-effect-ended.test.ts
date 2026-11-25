@@ -5,6 +5,7 @@ import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { CUE_END_STOPS, CUE_OVERRIDES, CUE_RULE_STOPS, SUSTAIN_CAPS, TIMED_FORM_STOPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { warwickSkills } from '../src/rendering/three-mode/vfx-ltk/champions/warwick';
 import { loris } from '../src/rendering/three-mode/vfx-ltk/batch3/loris';
+import { sevikaSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { battle, unit } from './combat-helpers';
 import { readFileSync } from 'node:fs';
 import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
@@ -134,6 +135,8 @@ describe('abilityEffectEnded: display-only end signals for timed ability effects
       ...CUE_OVERRIDES['mel-shield']!, ...CUE_OVERRIDES['jayce-forge-front']!,
       // 2026-11-24: Lux's and Renata's shields end with the holder's layer; Elise's cocoon with its target's stun.
       ...CUE_OVERRIDES.lux!, ...CUE_OVERRIDES.renata!, ...CUE_OVERRIDES['elise-front']!,
+      // 2026-11-24 (second batch): Sevika's roulette shield ends with her layer.
+      ...sevikaSkills['sevika-shield']!,
       // 2026-11-20: Loris's Q ground ring (his index list, held per skill: SUSTAIN_SKILL_CAPS) ends with his shield layer.
       ...loris.loris!];
     const ruleLists = Object.entries(CUE_RULE_STOPS).flatMap(([k, v]): [string, readonly string[]][] =>
