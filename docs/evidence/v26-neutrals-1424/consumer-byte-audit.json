@@ -5040,6 +5040,14 @@
       "currentSha256": "accf54642ab97fb7dac5a5994ebac777cd0ddaf193cd63b35163d3a80e5744d7",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-shield-break-fade.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 1465,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "4f46302150e5231d12cdd7b6b43aca8bd2a42bb5e5951a8e1d290ce505901cd2",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-singed-cast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
