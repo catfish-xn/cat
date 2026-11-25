@@ -1605,7 +1605,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // cells or more), a little after the move, as his piece reaches it.
       if (event.type === 'movement' && grid && currentEffect && !reducedMotion() && pieces.get(event.unitId)?.definitionId === 'smeech') {
         const from = hexCenter(event.from, grid), to = hexCenter(event.to, grid);
-        if (from.distanceTo(to) > grid.radius * 2.5) ltk?.play('smeech', event.unitId, [], 'passive', { skill: 'smeech-land', board: [to.x, to.y, to.z], boardFacing: [from.x, from.y, from.z] as const });
+        if (from.distanceTo(to) > (grid.radius ?? 34) * 2.5) ltk?.play('smeech', event.unitId, [], 'passive', { skill: 'smeech-land', board: [to.x, to.y, to.z], boardFacing: [from.x, from.y, from.z] as const });
       }
       if (event.type === 'abilityMarker' && grid) {
         const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
