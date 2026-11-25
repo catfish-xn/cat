@@ -28,6 +28,12 @@ const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
 export const MALZAHAR_GATE_DELAY = 0.2;
 /**
+ * Seconds after Ambessa's chain cast that her chain swipe (3b4c15e0) starts. Fitted, measured on live-server 3-star footage,
+ * not original data: neither her character data nor her animation graph times it, and the export's estimate drew it
+ * later than the original's arc. The swipe's own emitters still start after their authored wait.
+ */
+export const AMBESSA_CHAIN_SWIPE_DELAY = 0.1;
+/**
  * Seconds a cue that plays out at its end (TimelineCue.playOut) may keep its particles after it, at most: our own cap
  * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
  */
@@ -626,6 +632,20 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'fd5fd6cc', action: 'cast', event: 'hit', delay: 0.45, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.5666666666666667, duration: 1.5 },
+  ],
+  // Ambessa: her exported list, with her chain-stance swipe (3b4c15e0) on the unit instead of her weapon locator. The
+  // swipe is a half-disc of meshes drawn around its anchor toward the cast's target; on the weapon locator it turned with
+  // the weapon and flew off over her head (11-25 review against the 3-star original). On the unit it faces her primary
+  // target and sits on her. Its start is earlier than the export's estimate (AMBESSA_CHAIN_SWIPE_DELAY). The export's bones
+  // and delays elsewhere are kept; CUE_BRANCHES still tags chain and fist.
+  ambessa: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.21666666666666667, duration: 1.5 },
+    { system: '754b6c78', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { system: 'a429a900', action: 'cast', event: 'cast-start', delay: 0.2, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '6390530e', action: 'cast', event: 'cast-start', delay: 0.4, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    { system: 'cba05b6e', action: 'cast', event: 'hit', delay: 0.8, duration: 1 },
+    { system: '3b4c15e0', action: 'cast', event: 'cast-start', delay: AMBESSA_CHAIN_SWIPE_DELAY, duration: 0.7 },
+    { system: '8a64f4dd', action: 'cast', event: 'hit', delay: 0.6, duration: 0.7 },
   ],
   // The spell is a hand comet plus one primary splash. The third cast also splashes the next two receipt targets. There is
   // no separate hand-glow system. Her bolt's hit lands on the primary target every cast, when the comet does. Her unplayed
