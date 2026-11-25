@@ -75,6 +75,9 @@ export const S13_COMBAT_RULES = Object.freeze({
   rangedAttackWindup: 'ranged-attack-start-then-launch-after-windup-v1',
   // Its cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
   // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
+  // Smeech after a kill (11-25, user decision): when his stab kills the target he stands still, then re-leaps
+  // SMEECH_RELEAP_AFTER_KILL_TICKS later and strikes on landing (cast-windup.ts).
+  smeechReleapAfterKill: 'smeech-stands-then-releaps-after-stab-kill-v1',
   // Jinx's Death Rocket (11-25, user decision): it explodes on the board's centre hex on her enemies' side, mirrored for an
   // enemy-side Jinx (ability-projectile.ts jinxRocketEpicenter), so both sides' rockets fall alike.
   jinxRocketMirror: 'jinx-death-rocket-epicenter-mirrors-to-caster-side-v1',

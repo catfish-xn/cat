@@ -11,6 +11,12 @@ export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 
  * after another, SMEECH_STAB_TICKS apart, instead of all on the cast tick. Each stab's amount is still taken on the cast.
  */
 export const SMEECH_STAB_TICKS = 7;
+/**
+ * Smeech after a kill (11-25, measured on official-server 14.24 footage qC7Z, one sample; not original data): when one of his
+ * stabs kills his target he stands still (no move, no attack) and leaps to the next one SMEECH_RELEAP_AFTER_KILL_TICKS later,
+ * striking on landing; before, the re-leap waited for the next stab's slot and he could walk meanwhile.
+ */
+export const SMEECH_RELEAP_AFTER_KILL_TICKS = 5;
 
 /** Wind-up batch 2 (same authorization; fitted, not original data): Dr. Mundo's closing blast lands this many ticks after his
  * last once-a-second damage instead of on the same tick. Its amount is still taken on the cast. */

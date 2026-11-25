@@ -2,6 +2,7 @@ import { CASSIOPEIA_BOLT_LAUNCH_TICKS, SEVIKA_PUNCH_HIT_TICKS, SWAIN_PULSE_TICKS
 import { scheduleShot } from './ability-projectile';
 import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
+import { SMEECH_RELEAP_AFTER_KILL_TICKS } from './cast-windup';
 import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, jayceCrystalChainPlace, jayceCrystalLandTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
@@ -11,6 +12,7 @@ import { g23State } from './g2-3-combat';
 /** Fixed-form, finite hex execution. All delayed work is part of the combat snapshot. */
 import { contains, hexDistance, type HexCell } from './board';
 import type { CombatTask } from './combat-types';
+import type { CombatEvent } from './combat';
 import type { S13Unit } from './combat-s13-state';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, heroLive, origin, path, variable } from './combat-s13-state';
@@ -57,12 +59,22 @@ const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.s
  * 2000+leap*n+i as before. */
 function smeechStabs(ctx:AbilityContext,u:S13Unit,target:S13Unit,raw:number,seq:number,leap:number,total:number):void{
  const n=variable(u,'BaseNumStabs'),ordinal=(i:number)=>leap===0?i:2000+leap*n+i;
- hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');
+ hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');ctx.packets.at(-1)!.smeechStab=true;
  for(let i=1;i<n;i++)later(ctx,u,target,'g23Stab',i*SMEECH_STAB_TICKS,split(raw,n,i),seq,ordinal(i),n);
  later(ctx,u,target,'g23Smeech',n*SMEECH_STAB_TICKS,raw,seq,leap+1,total);
 }
 function smeechTarget(ctx:AbilityContext,u:S13Unit):S13Unit|undefined{
  return enemies(u,ctx.units).filter(x=>hexDistance(u.cell,x.cell)<=variable(u,'LeapHexRange')).sort((a,b)=>g23ItemCount(a)-g23ItemCount(b)||hexDistance(u.cell,a.cell)-hexDistance(u.cell,b.cell)||compareText(a.id,b.id))[0];
+}
+/** One of Smeech's stabs killed its target (combat-s13 damage resolution): his remaining stabs on it are dropped, he stands
+ * still, and his re-leap check runs SMEECH_RELEAP_AFTER_KILL_TICKS later (11-25, footage qC7Z). A target killed by anything
+ * else is still found dead by his next stab, as before. */
+export function smeechKilled(u:S13Unit,targetId:string,seq:number,tick:number,events:CombatEvent[]):void{
+ const round=(x:CombatTask)=>x.actionSeq===seq&&x.targetId===targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
+ const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech');if(!check)return;
+ u.tasks=[...u.tasks.filter(x=>!round(x)),{...check,executeAtTick:tick+SMEECH_RELEAP_AFTER_KILL_TICKS}];
+ // Held through the re-leap's own tick too, so he does not take a step in it before the leap runs.
+ applyStatus(u,origin(u),'channel',0,SMEECH_RELEAP_AFTER_KILL_TICKS+1,tick,events,true,'',seq);
 }
 /** The rolled High Roller spell, once the slot machine has stopped. */
 function sevikaSpell(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number,spell:number,mod:string,mods=true):void{
@@ -322,7 +334,7 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   // A later stab: its target, if still alive, takes the amount taken on the cast (a dead one takes nothing; no other is picked).
   if(task.kind==='g23Stab'){
    const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);
-   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');return;}
+   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');ctx.packets.at(-1)!.smeechStab=true;return;}
    const round=(x:CombatTask)=>x.actionSeq===task.actionSeq&&x.targetId===task.targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
    const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech');if(!check)return;
    u.tasks=u.tasks.filter(x=>!round(x));executeG23Task(ctx,u,check);return;
