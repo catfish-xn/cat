@@ -309,6 +309,8 @@ interface PieceView {
   stars: StarMark | null; starHeight: number;
   /** HP/mana bars and worn items over the head (unit-overhead.ts); a scene child placed each frame like the stars. */
   readonly overhead: UnitOverhead;
+  /** World height of the top of its bar row this frame, while one is drawn (vfx-ltk VfxUnit.overheadTop). */
+  overheadTop?: number;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; model: UnitModelChoice; bodyRevision: number; target: Vector3; placed: boolean; disposed: boolean;
   /** A summon that appeared or was revived in the shown combat: plays its spawn clip once its mixer is ready. */
@@ -2201,6 +2203,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
       view.overhead.object.position.set(overX, over.bar, overZ);
+      view.overheadTop = view.overhead.drawn ? over.bar + view.overhead.top : undefined;
       // The stars circle the head like the client's stun (at head level, under the bars), drawn over the model and bars.
       if (view.halo) {
         view.halo.update(seconds);

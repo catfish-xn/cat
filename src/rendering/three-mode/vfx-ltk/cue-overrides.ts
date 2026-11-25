@@ -799,7 +799,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   'mel-third': melSkills['mel-third'],
   'mel-shield': melSkills['mel-shield'],
   sevika: sevikaSkills.sevika,
-  // Her slot machine and its result layers over her head (champions/sevika.ts SLOT_BONE, 11-25), from code likewise: the
+  // Her slot machine and its result layers over her bar (champions/sevika.ts SLOT_BONE, 11-25), from code likewise: the
   // asset index's copy stands them on her feet.
   ...Object.fromEntries(Object.entries(sevikaSkills).filter(([key]) => key.startsWith('sevika-slots'))),
   viktor: viktorSkills.viktor,
