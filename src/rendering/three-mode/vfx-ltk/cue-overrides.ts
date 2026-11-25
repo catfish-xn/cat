@@ -954,7 +954,7 @@ export const MUTED_EMITTERS: Readonly<Record<string, readonly string[]>> = {
   // and dark red) are authored to scale with the struck unit's size (scaleBirthScaleByBoundObjectSize), which the engine
   // does not do yet; drawn at their fixed size they left a black-edged blot over the target. Restore them once the engine
   // scales by the bound object (docs/S13_RULES_GAP.md, 2026-11-18).
-  '2436e086': ['flash2', 'flash3'],
+  // RECORDING ONLY (not for merge): the crit flash's two dark backing layers drawn, for a side-by-side.
 };
 
 /**
