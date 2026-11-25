@@ -295,6 +295,9 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
 };
 
+/** Darius's ground rings, drawn size (fx-size.ts measuredAtFxScale): measured from official-client footage, not from game data (11-25). */
+const DARIUS_RING_SCALE = kept(0.38);
+
 /** Singed's flask: released this long into his cast (a fitted display value), then in flight this long. */
 const SINGED_FLASK_RELEASE = 0.5, SINGED_FLASK_FLIGHT = 0.35;
 /**
@@ -694,12 +697,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // Q: exported cues, with the hit spark optional: a spin with nobody adjacent, or one that kills its targets, still shows
   // the ring, the spin and the heal (11-06 field: both casts refused and fell back to the plain charge ring).
+  // The two ground rings (wind-up and blade ring) are drawn at DARIUS_RING_SCALE: at the arena scale they drew about four
+  // cells across, well past the adjacent cells his spin hits, where the official client's ring hugs the adjacent cells (11-25).
   darius: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.36666666666666664, duration: 1.5 },
-    { system: 'a7efa545', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: 'a7efa545', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc', scale: DARIUS_RING_SCALE },
     // Its five emitters already wait most of a second before their first particle; a 0.6 s cue delay on top pushed the blade
     // ring to the very end of the cue (11-08 audit). The original shows it with the swing and fades it soon after.
-    { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'Buffbone_Glb_Ground_Loc', scale: DARIUS_RING_SCALE },
     { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
     { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
