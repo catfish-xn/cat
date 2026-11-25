@@ -4759,9 +4759,9 @@
     "tests/vfx-ltk-garen-cast.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4349,
+      "currentBytes": 6388,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a91138f1af570a08410268bbe1c318e90f07319d9851893f742b6ffe197c9c35",
+      "currentSha256": "ff6ae63b1893914855d92caf292b95c30a9b89dd17fd3a3923c9419f73ecfac9",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-give-way.test.ts": {
@@ -4965,9 +4965,9 @@
     "tests/vfx-ltk-play-out-deadline.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3901,
+      "currentBytes": 4002,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "591c1583c83fea70ba40cf8ad737277c50ef3822bad56f070a806fde4d089fcb",
+      "currentSha256": "1a0d0638d51c3c61cca5da127cb85712a99bebd3160c73d31fcbc1f0feca8edf",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-powder-blast.test.ts": {
