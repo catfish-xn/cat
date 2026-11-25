@@ -2,14 +2,14 @@ import { Camera, Group, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary, withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 import { createLtkRuntime } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { CUE_OVERRIDES, CUE_RULE_STOPS, PLAY_OUT_AT_DEADLINE, SUSTAIN_SKILL_CAPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { CUE_OVERRIDES, CUE_RULE_STOPS, GAREN_BURST_PLAY_OUT, PLAY_OUT_AT_DEADLINE, SUSTAIN_SKILL_CAPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { S13_ABILITY_DATA } from '../src/simulation/content/abilities';
 import { constant, num, syntheticSystem } from './vfx-ltk-synthetic';
 
 describe('cues that play out at their end (Fable 11-19 cut-off evidence)', () => {
-  it('only Ezreal\'s W bolt, Nami\'s W bounce and Viktor\'s rising knock-up play out, each for the same capped time', () => {
+  it('only Ezreal\'s W bolt, Nami\'s W bounce and Viktor\'s rising knock-up play out for the same capped time, and Garen\'s landing burst for its own', () => {
     const playing = Object.entries(CUE_OVERRIDES).flatMap(([champion, cues]) => cues.filter(cue => cue.playOut !== undefined).map(cue => [champion, cue.system, cue.playOut]));
-    expect(playing.sort()).toEqual([['ezreal', '9cb99eb2', PLAY_OUT_AT_DEADLINE], ['nami', 'a64f66ee', PLAY_OUT_AT_DEADLINE], ['viktor', '26c2f2d9', PLAY_OUT_AT_DEADLINE]]);
+    expect(playing.sort()).toEqual([['ezreal', '9cb99eb2', PLAY_OUT_AT_DEADLINE], ['garen', '5bbccb8c', GAREN_BURST_PLAY_OUT], ['nami', 'a64f66ee', PLAY_OUT_AT_DEADLINE], ['viktor', '26c2f2d9', PLAY_OUT_AT_DEADLINE]]);
   });
 
   it('at its end such a cue stops emitting and its live particles stay at most its play-out time; a plain cue is cut there', async () => {

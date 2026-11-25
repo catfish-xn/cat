@@ -5,11 +5,10 @@ import type { Camera } from 'three';
  * worn item icons, drawn from the BoardFeed values the 2D piece shows (unit-view.ts drawCombat) — the 3D layer covers
  * that view. Billboard sprites, above models and effects; nothing here is computed from rules. Display only.
  */
-import { CanvasTexture, Color, Group, LinearFilter, Mesh, MeshBasicMaterial, OctahedronGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Texture } from 'three';
+import { CanvasTexture, Group, LinearFilter, Mesh, MeshBasicMaterial, OctahedronGeometry, SRGBColorSpace, Sprite, SpriteMaterial, type Texture } from 'three';
 import type { BoardMeters, BoardPiece } from '../board-feed';
 import type { OriginalUi } from './ui-original-assets';
 import { createConfiscationStamp } from './confiscation-stamp';
-import type { OverheadDebuff } from './debuff-icons';
 
 export interface MeterColors { readonly hp: string; readonly hpEnemy: string; readonly mana: string; readonly manaFull: string; readonly shield: string }
 export const DEFAULT_METER_COLORS: MeterColors = { hp: '#5fd68a', hpEnemy: '#f08080', mana: '#449cfa', manaFull: '#bde5ff', shield: '#e8f4ff' };
@@ -45,11 +44,6 @@ export interface UnitOverhead {
    * too (full HP, as the client does). Null (monsters, structures) or no such atlas region: the plain bar.
    */
   setTier(level: number | null): void;
-  /**
-   * Whole-fight debuff icons (debuff-icons.ts) in a row just above the bar, each drawn as its layers of still sprites; an
-   * empty list takes them off. Only a change of the kinds shown rebuilds them.
-   */
-  setDebuffs(debuffs: readonly OverheadDebuff[]): void;
   /** Hides the plain and tier bars (a benched piece during combat, as in the client); items and tags stay. */
   setBarsHidden(hidden: boolean): void;
   /** Height of the top of the bar row over `object`'s origin (0 with no bar shown): where things meant to float above the bar start. */
@@ -88,9 +82,6 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   const icons = new Group(); icons.name = 'render3d-overhead-items';
   object.add(icons);
   const confiscation = createConfiscationStamp(); object.add(confiscation.sprite);
-  const debuffs = new Group(); debuffs.name = 'render3d-overhead-debuffs'; object.add(debuffs);
-  let debuffKey = '', debuffHeight = 0;
-  const clearDebuffs = () => { for (const icon of debuffs.children) for (const layer of icon.children as Sprite[]) layer.material.dispose(); debuffs.clear(); };
   // The tier bar: the client's whole bar image for the level, redrawn with the values like the plain bar.
   const tierCanvas = typeof document === 'undefined' ? null : document.createElement('canvas');
   const tierTexture = tierCanvas ? new CanvasTexture(tierCanvas) : null;
@@ -292,8 +283,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     const top = barRow.position.y + (barShown ? BAR_HEIGHT : 0);
     barTop = top;
     anomaly.position.set(BAR_WIDTH / 2 + 5, base + (items ? size / 2 : BAR_HEIGHT / 2), 0);
-    debuffs.position.set(0, top + (debuffHeight ? debuffHeight / 2 + 1 : 0), 0);
-    confiscation.sprite.position.y = top + 8 + (debuffHeight ? debuffHeight + 2 : 0);
+    confiscation.sprite.position.y = top + 8;
     wanted.position.y = confiscation.sprite.position.y + (confiscation.sprite.visible ? 18 : 0);
   };
   return {
@@ -309,29 +299,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       if (disposed || hidden === barsHidden) return;
       barsHidden = hidden; drawTier(); bar.visible = Boolean(shown) && !tier.visible && !barsHidden; layout();
     },
-    get drawn() { return bar.visible || tier.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0 || debuffs.children.length > 0; },
-    setDebuffs(list) {
-      if (disposed) return;
-      const key = list.map(debuff => debuff.kind).join(',');
-      if (key === debuffKey) return;
-      debuffKey = key; clearDebuffs();
-      const widths = list.map(debuff => Math.max(...debuff.layers.map(layer => layer.size))), gap = 2;
-      const total = widths.reduce((sum, width) => sum + width, 0) + gap * Math.max(0, list.length - 1);
-      let x = -total / 2;
-      list.forEach((debuff, index) => {
-        const icon = new Group(); icon.name = `render3d-overhead-debuff-${debuff.kind}`;
-        debuff.layers.forEach((layer, order) => {
-          const material = new SpriteMaterial({ map: debuff.texture, color: new Color(...layer.color), opacity: layer.opacity,
-            depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
-          const sprite = new Sprite(material); sprite.scale.set(layer.size, layer.size, 1); sprite.renderOrder = RENDER_ORDER + 1 + order;
-          icon.add(sprite);
-        });
-        icon.position.x = x + widths[index]! / 2; x += widths[index]! + gap;
-        debuffs.add(icon);
-      });
-      debuffHeight = widths.length ? Math.max(...widths) : 0;
-      layout();
-    },
+    get drawn() { return bar.visible || tier.visible || wanted.visible || confiscation.sprite.visible || anomaly.visible || icons.children.length > 0; },
     set(team, meters, items, enforcerWanted = false, itemsConfiscated = false, anomalies, nonCombat = false) {
       if (disposed) return;
       const nextBar = meters ? `${team}:${meters.hp}/${meters.maxHp}:${meters.mana}/${meters.maxMana}:${meters.shield}` : '';
@@ -361,7 +329,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
       if (disposed) return;
       disposed = true;
       unsubscribeUi?.();
-      clearItems(); clearDebuffs(); object.removeFromParent(); object.clear();
+      clearItems(); object.removeFromParent(); object.clear();
       barMaterial.dispose(); texture?.dispose(); wantedMaterial.dispose(); wantedTexture?.dispose();
       tierMaterial.dispose(); tierTexture?.dispose(); frameMaterial.dispose();
       confiscation.dispose();

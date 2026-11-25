@@ -68,8 +68,7 @@ import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
-import { createVfxLibrary, vfxUrl } from './vfx-ltk/loader';
-import { createDebuffMarks, DEBUFF_ICONS, type OverheadDebuff } from './debuff-icons';
+import { createVfxLibrary } from './vfx-ltk/loader';
 import { createLtkRuntime } from './vfx-ltk/runtime';
 import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
@@ -735,12 +734,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   }
   /** The rule tick of the event being played now (the last one between batches), for vfx-ltk's seeds (runtime seedOf). */
   let ltkTick: number | undefined;
-  const ltkLibrary = models.reader && options.assetBase ? createVfxLibrary(options.assetBase, {
+  const ltk = models.reader && options.assetBase ? createLtkRuntime(createVfxLibrary(options.assetBase, {
     readJson: url => models.reader!.readJson(url), readTexture: url => models.reader!.readTexture(url),
     readMesh: url => readParticleMesh(url, path => models.reader!.readModel(path)),
     readBinary: models.reader.readBinary ? url => models.reader!.readBinary!(url) : undefined,
-  }, { groundPass: true }) : null;
-  const ltk = ltkLibrary ? createLtkRuntime(ltkLibrary, scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
+  }, { groundPass: true }), scene, id => pieces.get(id) ?? batch3?.find(id), { budget: effects?.budget, renderer,
     floors: () => [boardGroup, ...arenaGroup.children.filter(child => child.name === 'render3d-board-arena')], foe: nearestFoe,
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
     attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
@@ -766,26 +764,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const restored = contextRestored;
   renderer.domElement.addEventListener('webglcontextrestored', () => { if (!closed) restored?.(); });
   const textureLoader = new TextureLoader();
-  // Whole-fight debuff icons over the bars (debuff-icons.ts): who carries which, and each kind's texture from its champion's
-  // vfx-ltk package, read once (null when it cannot be had: the icon is then not drawn).
-  const debuffMarks = createDebuffMarks(), debuffTextures = new Map<string, Texture | null>(), debuffLoading = new Set<string>();
-  const loadDebuff = (kind: string) => {
-    const def = DEBUFF_ICONS[kind]; debuffLoading.add(kind);
-    if (!def || !ltkLibrary || !models.reader || !options.assetBase) { debuffTextures.set(kind, null); return; }
-    void (async () => {
-      const top = await ltkLibrary.ready, path = top?.champions?.[def.champion], child = await ltkLibrary.champion(def.champion);
-      const file = child?.index?.assets[def.textureKey];
-      if (!path || !file) { debuffTextures.set(kind, null); return; }
-      const texture = await models.reader!.readTexture(vfxUrl(options.assetBase!, path.slice(0, -'index.json'.length) + file));
-      if (closed) { texture.dispose(); return; }
-      texture.colorSpace = SRGBColorSpace; texture.needsUpdate = true; debuffTextures.set(kind, own(texture));
-    })().catch(() => { debuffTextures.set(kind, null); });
-  };
-  const debuffsOf = (id: string): OverheadDebuff[] => debuffMarks.of(id).flatMap(kind => {
-    const texture = debuffTextures.get(kind);
-    if (texture === undefined && !debuffLoading.has(kind)) loadDebuff(kind);
-    return texture ? [{ kind, texture, layers: DEBUFF_ICONS[kind]!.layers }] : [];
-  });
   const overheadContext = {
     ui: originalUi,
     font: canvasFont,
@@ -1219,7 +1197,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); controlEndStops.clear(); debuffMarks.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); controlEndStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1482,7 +1460,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       }
       syncStars(view, piece);
       view.overhead.set(piece.team, piece.alive ? piece.meters : undefined, piece.items, piece.alive && piece.enforcerWanted, piece.alive && piece.itemsConfiscated, piece.anomalies, piece.nonCombat);
-      view.overhead.setDebuffs(frame.fighting && piece.alive ? debuffsOf(piece.id) : []);
       setControl(view, frame.fighting && piece.alive ? piece.control : null);
       // Dying: keep the piece up until its death action has played (the death event normally starts it already).
       if (piece.alive) {
@@ -1598,8 +1575,6 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (pieces.get(event.unitId)?.definitionId === 'draven') ltk?.stopSystemsOn(event.unitId, [DRAVEN_AXE]);
         ltk?.stopSystems(event.unitId, [DRAVEN_AXE]);
       }
-      // A whole-fight debuff icon goes on with its ability's hit and off with the unit (debuff-icons.ts).
-      debuffMarks.next(event);
       if (event.type === 'death') ltk?.stopUnit(event.unitId);
       // Powder's monkey (powder-monkey.ts): sent, it swaps in from her hand when her cast clip hides the hand one and runs to
       // its cell by the arrival tick; arrived, it goes and her explosion plays on its cell.

@@ -17,9 +17,6 @@ export const CUE_DROPPED_SYSTEMS: Readonly<Record<string, Readonly<Record<string
   sett: {
     '0856b131': { status: 'replaced', reason: 'drawn inside f7d4d344, which his cast plays whole instead (PR #674)' },
   },
-  rell: {
-    '5fe3dc8a': { status: 'replaced', reason: 'her defence-steal icon: drawn for the whole fight as a still overhead icon on each unit her stab hits (debuff-icons.ts RELL_SHRED, Fable 11-24)' },
-  },
   'swain-back': {
     '9ad716c2': { status: 'replaced', reason: 'drawn inside 3d2697ac, which his back-row cast now flies whole instead (Fable 11-21)' },
   },

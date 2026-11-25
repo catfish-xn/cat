@@ -6,7 +6,8 @@ import { SUSTAIN_CAPS } from '../src/rendering/three-mode/vfx-ltk/cue-overrides'
 import { syntheticSystem } from './vfx-ltk-synthetic';
 
 // Synthetic systems under the ids of the held layers (cue-overrides.ts SUSTAIN_*); the cues are short, as an export gives them.
-const MARK = '5af49b76', AXES = 'd86cc9bc', MOUTH = '6889455c', BUFF = '9f805f6e';
+// The refreshed mark: Akali's (Ekko's was one until 11-25, when it went back to its exported time).
+const MARK = 'bc4a9e0d', AXES = 'd86cc9bc', MOUTH = '6889455c', BUFF = '9f805f6e';
 const index = { version: 1, systems: { [MARK]: 's.json', [AXES]: 's.json', [MOUTH]: 's.json', [BUFF]: 's.json', filler: 's.json' }, assets: { 'synthetic.tex': 't.png' },
   skills: { ekko: [{ system: MARK, event: 'hit', delay: 0, duration: 0.5 }], draven: [{ system: AXES, event: 'cast-start', delay: 0, duration: 1, stopAfter: 0.5 }],
     kogmaw: [{ system: MOUTH, event: 'cast-start', delay: 0, duration: 2.6 }, { system: BUFF, event: 'cast-start', delay: 0, duration: 2.6 }],
@@ -24,7 +25,7 @@ async function board() {
 }
 
 describe('held layers: refreshed marks and decoration that comes back (Fable 11-19)', () => {
-  it('Ekko\'s mark shows its 2 s after each hit on that target, a new hit replacing it, one per target', async () => {
+  it('a refreshed mark shows its held time after each hit on that target, a new hit replacing it, one per target', async () => {
     const { runtime, library, step, shown } = await board();
     runtime.play('ekko', 'ekko', ['b']); step(1);
     expect(shown(MARK)).toHaveLength(1);
@@ -32,7 +33,7 @@ describe('held layers: refreshed marks and decoration that comes back (Fable 11-
     expect(shown(MARK)).toHaveLength(1);
     runtime.play('ekko', 'ekko', ['c']); step(0.1);
     expect(shown(MARK)).toHaveLength(2);
-    // Past its 2 s from the last hit on each, it is gone; not before.
+    // Past its held time from the last hit on each, it is gone; not before.
     step(SUSTAIN_CAPS[MARK]! - 0.5); expect(shown(MARK)).toHaveLength(2);
     step(0.6); expect(shown(MARK)).toHaveLength(0);
     runtime.dispose(); library.dispose();

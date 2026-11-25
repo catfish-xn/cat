@@ -274,8 +274,6 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
     { champion: 'leblanc', system: 'acd84091', on: 'a', end: tick => ({ type: 'abilityEffectEnded', tick, eventSeq: tick, unitId: 'a', effect: 'leblanc-chain', targetIds: ['b'] }) as unknown as DisplayCombatEvent },
     { champion: 'draven', system: 'd86cc9bc', on: 'a' },
     { champion: 'amumu', system: '56e6971e', on: 'a' },
-    // Ekko's mark shows 2 s after its hit (SUSTAIN_REFRESH), past its 0.5 s cue.
-    { champion: 'ekko', system: '5af49b76', on: 'b', held: 1.5 },
   ];
   const sustainBoard = async (champion: string, held = 3.5) => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion }, { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };

@@ -23,6 +23,9 @@ import { drawLayersOf } from './rendering/utils/frame';
 import { drawPhases } from './rendering/utils/drawKind';
 import { fades } from './rendering/utils/softParticle';
 import { withDrawFade } from './engine/simulation/particleRead';
+import { lingerSeconds } from './engine/model/systemModel';
+import { LINGER_TYPE } from './engine/model/enums';
+import type { EmitterModel } from './engine/model/model';
 
 /** League units -> board units. Shared across champions regardless of model fitting. */
 export const FX_SCALE = 0.44;
@@ -223,6 +226,12 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   fadeOut?: boolean;
   /** Seconds from cue start when alpha begins easing to nothing by `duration` (see `fadeAt`). */
   fadeFrom?: number;
+  /**
+   * A cue that plays out past its end (TimelineCue.playOut): from these seconds the draws of emitters whose particles go at
+   * a stop still ease to nothing by `to`, as a cue that does not play out fades whole, while emitters whose particles
+   * outlive the stop keep full strength and finish their own lives.
+   */
+  tailFade?: { from: number; to: number };
   /** Cue scale about the anchor. Omitted means 1. Not applied to the root group's FX_SCALE. */
   scale?: number;
   /** The run's child room (measureChildren); DEFAULT_CHILD_ROOM when omitted. Fixed for the life of the driver. */
@@ -257,6 +266,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   driver.steer(rig);
   const stencils: (StencilClaim & { material: ParticleDraw['material'] })[] = [];
   const draws: ParticleDraw[] = [], overlays: AttachedDraw[] = [], rootSources: Source[] = [driver];
+  const outliving = new Set<ParticleDraw>();
   const passes = { early: false, late: false, soft: false };
   try {
     for (const definition of prepared.drawn) {
@@ -274,7 +284,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         const attached = createAttachedMeshes(emitter, sources, samplers, definition.rank, object, spec.attachment);
         for (const held of attached) {
           held.object.layers.disableAll(); for (const layer of layers) held.object.layers.enable(layer);
-          draws.push(held); overlays.push(held); object.add(held.object);
+          draws.push(held); overlays.push(held); object.add(held.object); if (outlivesStop(emitter)) outliving.add(held);
           const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: held.material });
         }
       } else if (drawsAsMesh(emitter)) {
@@ -298,7 +308,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
         draw.object.name = `${emitter.name ?? '?'}#${definition.rank}`;
         draw.object.layers.disableAll(); for (const layer of layers) draw.object.layers.enable(layer);
         const phases = drawPhases(emitter); passes.early ||= phases.warpsEarly; passes.late ||= phases.warpsLate; passes.soft ||= fades(emitter);
-        draws.push(draw); object.add(draw.object); const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: draw.material });
+        draws.push(draw); object.add(draw.object); if (outlivesStop(emitter)) outliving.add(draw); const use = stencilOf(emitter); if (use) stencils.push({ use, live: true, material: draw.material });
       }
     }
   } catch (error) { for (const draw of draws) draw.dispose(); throw error; }
@@ -323,7 +333,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.curve = next.curve; spec.brightness = next.brightness; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next);
+      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.curve = next.curve; spec.brightness = next.brightness; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next); spec.tailFade = next.tailFade;
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },
@@ -350,10 +360,20 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       frameRenderer.info.render.frame++;
       const state: DrawFrameState = { camera: eye, gl: frameRenderer };
       const fade = (spec.fadeFrom !== undefined ? fadeAt(elapsed, spec.duration, spec.fadeFrom) : 1) * (ending ? fadeAt(elapsed, ending.to, ending.from) : 1);
-      withDrawFade(fade, () => { for (const draw of draws) draw.update(state); }, spec.brightness ?? 1);
+      const tail = spec.tailFade ? fadeAt(elapsed, spec.tailFade.to, spec.tailFade.from) : 1;
+      if (tail === 1) withDrawFade(fade, () => { for (const draw of draws) draw.update(state); }, spec.brightness ?? 1);
+      else for (const draw of draws) withDrawFade(outliving.has(draw) ? fade : fade * tail, () => draw.update(state), spec.brightness ?? 1);
     },
     dispose() { if (closed) return; closed = true; object.removeFromParent(); for (const draw of draws) draw.dispose(); object.clear(); },
   };
+}
+/**
+ * Whether an emitter's live particles outlive a stop of their system: the engine (integrate.ts settle) leaves them their
+ * own lifetime under LINGER_TYPE.none, gives them their linger under the other kinds, and cuts them where that is none.
+ */
+export function outlivesStop(emitter: EmitterModel): boolean {
+  const kind = emitter.simple ? LINGER_TYPE.maxLifetimeAfterEmitterDies : emitter.lingerType;
+  return kind === LINGER_TYPE.none || lingerSeconds(emitter) > 0;
 }
 export type LtkParticles = ReturnType<typeof createLtkParticles>;
 /**
