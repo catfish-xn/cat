@@ -29,8 +29,10 @@ export type G23CombatEventData =
   /**
    * Display only, no rule effect: a marker of an ability's moment for the renderer. 'powder-monkey-sent': Powder's monkey
    * sets off for its landing cell (cell), arriving at arrivalTick; 'powder-monkey-arrived': it reached that cell and explodes.
+   * 'smeech-leap-again': Smeech's target died and he leaps to the next one; cell is where he lands (the movement event of the
+   * same tick is that leap, not a walk), arrivalTick the same tick.
    */
-  | { readonly type: 'abilityMarker'; readonly tick: number; readonly unitId: string; readonly marker: 'powder-monkey-sent' | 'powder-monkey-arrived' | 'sevika-punch-thrown'; readonly cell: HexCell; readonly arrivalTick: number }
+  | { readonly type: 'abilityMarker'; readonly tick: number; readonly unitId: string; readonly marker: 'powder-monkey-sent' | 'powder-monkey-arrived' | 'sevika-punch-thrown' | 'smeech-leap-again'; readonly cell: HexCell; readonly arrivalTick: number }
   /**
    * Display only, no rule effect: holderId lifts targetId (carried true) or puts it down (carried false), for the renderer's
    * carry. Renni: lifted on her cast, put down when her stun's last pulse lands (a death of either ends it too: the renderer

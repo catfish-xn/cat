@@ -304,7 +304,10 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   if(task.kind==='g23Smeech'){
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;
    const next=smeechTarget(ctx,u);if(!next)return;
-   leapG23(ctx,u,next);smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
+   leapG23(ctx,u,next);
+   // Display only (authorization ①): marks this tick's movement as the re-leap, so the renderer plays a leap, not a walk.
+   ctx.events.push({type:'abilityMarker',tick:ctx.tick,unitId:u.id,marker:'smeech-leap-again',cell:{...u.cell},arrivalTick:ctx.tick});
+   smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
   }
   // Jayce's crystals (display only): one lands, or one explodes, at its cell.
   if(task.kind==='g23CrystalLand'||task.kind==='g23CrystalBlast'){

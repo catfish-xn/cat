@@ -4131,6 +4131,14 @@
       "currentSha256": "67adb9f4dc370258d7abc786d377da0982ac138849d6bf1fb28119ddee939366",
       "firstDifferentByte": 0
     },
+    "tests/smeech-leap-marker.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3137,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "dc897654aa199e43d29070c4d380cbb1f6a8f203e12d22f51731d725b220ef76",
+      "firstDifferentByte": 0
+    },
     "tests/stage5-feedback.test.ts": {
       "previousBytes": 10181,
       "currentBytes": 35233,
