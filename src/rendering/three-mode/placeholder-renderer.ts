@@ -1023,6 +1023,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // With an official scale the width cap covers everything the clips reach (measured once per model).
         // ... and its feet on the idle's lowest point (a bind pose can stand far below it: Darius, Nami floated).
         const envelope = unitScale ? envelopeOf(definitionId, lease) : undefined;
+        // REC ONLY (claude/rec-stand-proof, never merged): which way each champion was fitted (castcmp stand-log.json).
+        ((globalThis as { __standLog?: unknown[] }).__standLog ??= []).push({ id: definitionId, fighting: !!fighting, envelope: !!envelope,
+          support: !!standingSupport(definitionId, envelope), pending: envelopePending.has(definitionId), at: performance.now() });
         const drawn = fitModel(lease.scene, { height: MODEL_HEIGHT, width: MODEL_WIDTH, sourceScale: CHAMPION_SOURCE_SCALE, unitScale,
           envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(definitionId, envelope), support: standingSupport(definitionId, envelope) });
         view.body = lease.scene;
