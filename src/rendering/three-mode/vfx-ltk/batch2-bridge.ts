@@ -256,8 +256,10 @@ export function createBatch2VfxBridge(host: Host) {
           const leaves = total - flight, flashAt = Math.max(0, leaves - JINX_ROCKET_DRAWN.flashLead);
           const delayed = (seconds: number) => seconds > 0 ? { delay: seconds, cancelWithSource: true } : {};
           host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flash', board, snapshotTargets: true, ...delayed(flashAt) });
+          // The rules fired it already and resolve it on landing: it flies even if she dies before it is drawn leaving, from
+          // where her barrel was (outlivesSource). Only its muzzle flash goes with her.
           host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flight', snapshotTargets: true, flightSeconds: flight,
-            board: board ? [board[0], JINX_ROCKET_DRAWN.aimLift, board[2]] : undefined, ...delayed(leaves) });
+            board: board ? [board[0], JINX_ROCKET_DRAWN.aimLift, board[2]] : undefined, outlivesSource: true, ...(leaves > 0 ? { delay: leaves } : {}) });
         }
       }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
