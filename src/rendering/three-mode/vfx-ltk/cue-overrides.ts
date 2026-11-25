@@ -331,8 +331,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // to the primary target only for now; the nearby targets get none until the look is judged (Fable 11-21).
   'swain-back': swainBatch3['swain-back']!.map(cue => cue.system === '9ad716c2' ? { ...cue, system: '3d2697ac', primary: true } : cue),
   // Rell's cast as exported, without her defence-steal icon system 5fe3dc8a: that icon now stays over each unit her stab hits
-  // for the whole fight as a still overhead icon (debuff-icons.ts RELL_SHRED), not as this short particle play (11-24).
-  rell: rellBatch3.rell!.filter(cue => cue.system !== '5fe3dc8a'),
+  // for the whole fight as a still overhead icon (debuff-icons.ts RELL_SHRED), not as this short particle play (11-24). Her
+  // basic-attack hit, repeated here, lands on the target's chest like every attack hit named in this file (#627).
+  rell: rellBatch3.rell!.filter(cue => cue.system !== '5fe3dc8a')
+    .map(cue => cue.action === 'attack' && cue.event === 'hit' ? { ...cue, bone: chest } : cue),
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [

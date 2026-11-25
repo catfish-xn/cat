@@ -83,7 +83,9 @@ describe('the icon over the bar', () => {
 
 describe('the short particle play of the same icon is gone', () => {
   it('Rell\'s cast keeps every exported cue but her defence-steal icon system', () => {
-    expect(CUE_OVERRIDES.rell).toEqual(rell.rell!.filter(cue => cue.system !== '5fe3dc8a'));
+    expect(CUE_OVERRIDES.rell!.map(({ bone, ...cue }) => cue)).toEqual(rell.rell!.filter(cue => cue.system !== '5fe3dc8a').map(({ bone, ...cue }) => cue));
+    // Her attack hit, repeated in the override, names the target's chest (vfx-ltk-attack-anchor.test.ts).
+    expect(CUE_OVERRIDES.rell!.filter(cue => cue.action === 'attack').map(cue => cue.bone)).toEqual(['C_BUFFBONE_GLB_CHEST_LOC']);
     expect(rell.rell!.some(cue => cue.system === '5fe3dc8a')).toBe(true);
   });
   it('the renderer marks on every event, draws in every fighting frame for living units, and clears with a new combat', () => {
