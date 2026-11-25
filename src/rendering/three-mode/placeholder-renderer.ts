@@ -816,8 +816,27 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
   };
   /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
-  /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
+  /**
+   * Models first seen during a shown combat that were not measured on the way in (a scouted or stage copy, a monster, a
+   * measurement cut short): drawn from their bind box, measured and re-attached at the next preparation.
+   */
   const envelopePending = new Set<string>();
+  /**
+   * A champion's envelope measured during a combat (attachBody): one measurement per model at a time, shared by every
+   * piece waiting for it, in slices of about 3 ms at most one a frame, so the combat never gets a long task.
+   */
+  const combatMeasuring = new Map<string, Promise<Envelope | null>>();
+  const COMBAT_SLICE_PAUSE_MS = 16;
+  const combatEnvelope = (id: string, lease: ModelLease): Promise<Envelope | null> => {
+    let measuring = combatMeasuring.get(id);
+    if (!measuring) {
+      measuring = animationEnvelopeSliced(lease.scene, envelopeClips(lease), {
+        budgetMs: 3, stop: () => closed, pause: () => new Promise<void>(resolve => setTimeout(resolve, COMBAT_SLICE_PAUSE_MS)),
+      }).finally(() => combatMeasuring.delete(id));
+      combatMeasuring.set(id, measuring);
+    }
+    return measuring;
+  };
   const envelopeOf = (id: string, lease: ModelLease): Envelope | undefined => {
     // Flying monsters use only their authored bind fit, never an unused animation envelope.
     if (id.startsWith('pve-') && HOVERING_MODELS.has(id)) return undefined;
@@ -957,6 +976,16 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         } catch (error) { lease.release(); throw error; }
         if (closed || view.disposed || view.definitionId !== originalId || attaching.get(view) !== request) { lease.release(); return; }
         if (measured) envelopes.set(definitionId, measured);
+      }
+      // A champion first seen during a combat: measured here once (in slices, at most one a frame) while the stand-in pawn
+      // still stands, so its model arrives with the idle's foot calibration instead of its bind box, rather than drawn off
+      // its cell until the next preparation. The result is kept per model like any other envelope.
+      if (!lease.placeholder && fighting && !monsterFit(definitionId) && readUnitScale(models.cache?.manifest.models, definitionId)
+        && !HOVERING_MODELS.has(definitionId) && !envelopes.has(definitionId)) {
+        let measured: Envelope | null;
+        try { measured = await combatEnvelope(definitionId, lease); } catch (error) { lease.release(); throw error; }
+        if (closed || view.disposed || attaching.get(view) !== request || view.bodyRevision !== revision || view.definitionId !== originalId) { lease.release(); return; }
+        if (measured && !envelopes.has(definitionId)) envelopes.set(definitionId, measured);
       }
       championLighting?.apply(lease.scene, definitionId);
       cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
