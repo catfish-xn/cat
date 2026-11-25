@@ -21,7 +21,7 @@ describe('castcmp --after-end-ms', () => {
     expect(auditWindow(events, alive, 10, 2000, 10, undefined, 500)).toMatchObject({ coversWindow: true, pastEnd: true });
     expect(plain.pastEnd).toBe(false);
     // A window inside the combat is unchanged by it.
-    expect(auditWindow(events, alive, 10, 1000, 10, undefined, 500)).toMatchObject({ coversWindow: true, afterEndTicks: 0 });
+    expect(auditWindow(events, alive, 10, 1000, 10, undefined, 500)).toMatchObject({ coversWindow: true, afterEndTicks: 0, pastEnd: false });
     expect(auditWindow(events, alive, 10, 1000, 10)).toMatchObject({ coversWindow: true, afterEndTicks: 0 });
   });
 });

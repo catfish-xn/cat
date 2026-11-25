@@ -20,8 +20,9 @@
 //     nobody carries items without it; items on foes are not supported yet). Written to gate.json / render-meta.json and the
 //     keyframes caption; jobs-check warns about items not advised for acceptance rows (item-advice.cjs).
 //   [--after-end-ms N]: --real only; the window may run N ms (0–5000) past the combat's last tick: the rules stop there and the
-//     board holds its last state while effects already started play on (as the game shows them until the next round). Without
-//     it a window past the end fails the gate (combat ends before the window's end). Written to gate.json / render-meta.json.
+//     board holds its last state, still drawn as in combat (no end-of-combat wrap-up), while effects already started play on.
+//     Without it a window past the end fails the gate. With it, a window past the end lets every dead target pass (one that
+//     fell mid-combat too). Written to gate.json / render-meta.json.
 //   [--foe-items foe=a+b,foe2=c]: --real only; items on the foes (foe … foe4, up to 3 each; the page checks the ids:
 //     real-combat.ts parseFoeItems). Written to gate.json / render-meta.json like --items.
 //   [--as-scale X]: --real only; the caster's attack speed times X (0.2–1), recording only: frames carry a red corner tag

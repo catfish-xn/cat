@@ -764,9 +764,9 @@
     "tests/castcmp-after-end.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1951,
+      "currentBytes": 1967,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6bc6d1b239a627ba4c24512e3f2efca524ba0a4a716b05955a17293cae10cf85",
+      "currentSha256": "dde9766d92c97508dbc92647a779284e2ddd4337eab312e5e26330e11b5de487",
       "firstDifferentByte": 0
     },
     "tests/castcmp-anchor.test.ts": {
