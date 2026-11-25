@@ -34,6 +34,11 @@ export function launchShot(ctx: AbilityContext, unit: S13Unit, task: CombatTask,
     shot: { skill, arrivalTick } });
 }
 
+/** The hex Jinx's Death Rocket explodes on: the board's centre hex, (columns-1)/2 and (rows-1)/2 rounded down. */
+export function jinxRocketEpicenter(board: { readonly columns: number; readonly rows: number }): { col: number; row: number } {
+  return { col: Math.floor((board.columns - 1) / 2), row: Math.floor((board.rows - 1) / 2) };
+}
+
 /** Runs a skillShot task: its launch, or its landing. */
 export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: CombatTask): void {
   const shot = task.shot!;
@@ -58,7 +63,13 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
       const aim = ctx.units.find(u => u.id === task.targetId);
       launchShot(ctx, unit, task, task.targetId!, ctx.tick + Math.max(1, (aim ? hexDistance(unit.cell, aim.cell) : 1) * MEL_BOLT_TICKS_PER_HEX)); return;
     }
-    if (shot.skill === 'jinx-rocket') { launchShot(ctx, unit, task, task.targetId!, ctx.tick + JINX_ROCKET_FLIGHT_TICKS); return; }
+    if (shot.skill === 'jinx-rocket') {
+      launchShot(ctx, unit, task, task.targetId!, ctx.tick + JINX_ROCKET_FLIGHT_TICKS);
+      // Display only (authorization ①): the cell it explodes on, so the renderer aims the rocket there and not at her target.
+      ctx.events.push({ type: 'abilityMarker', tick: ctx.tick, unitId: unit.id, marker: 'jinx-rocket-epicenter', cell: jinxRocketEpicenter(ctx.board),
+        arrivalTick: ctx.tick + JINX_ROCKET_FLIGHT_TICKS });
+      return;
+    }
     if (shot.skill === 'cassiopeia-bolt') { const aim = ctx.units.find(u => u.id === task.targetId); launchShot(ctx, unit, task, task.targetId!, ctx.tick + cassiopeiaBoltFlightTicks(aim ? hexDistance(unit.cell, aim.cell) : 1)); return; }
     throw new RangeError('unlaunched skill shot ' + shot.skill);
   }
@@ -67,7 +78,7 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
   if (shot.skill === 'jinx-rocket') {
     ctx.events.push({ type: 'abilityProjectileLanded', tick: ctx.tick, sourceId: unit.id, targetId: task.targetId!, skill: shot.skill, ordinal: task.ordinal,
       actionSeq: task.actionSeq, count: task.total, hit: true });
-    const center = { col: Math.floor((ctx.board.columns - 1) / 2), row: Math.floor((ctx.board.rows - 1) / 2) }, falloff = Math.round(variable(unit, 'FalloffPercent') * 10000);
+    const center = jinxRocketEpicenter(ctx.board), falloff = Math.round(variable(unit, 'FalloffPercent') * 10000);
     byDistance(unit, enemies(unit, ctx.units)).forEach((foe, n) => ctx.packets.push({ source: task.source, targetId: foe.id,
       raw: Math.floor(task.amount * Math.max(0, 10000 - falloff * hexDistance(center, foe.cell)) / 10000), damageType: 'physical', actionSeq: task.actionSeq,
       ordinal: n, delivery: 'ability-direct', critEligibility: 'requires-spell-authorization', area: true, triggeringCastActionSeq: task.actionSeq }));
