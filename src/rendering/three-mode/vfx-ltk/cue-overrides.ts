@@ -1147,10 +1147,13 @@ export const CUE_RULE_STOPS = {
   frenzyEnded: { systems: ['8c054bed'], on: 'source' },
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
-  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0', '2f1f3b60'] }, on: 'source' },
+  // Garen's, Vi's and Loris's retaliation ring: every layer goes at once on a stop (checked per layer, 11-25).
+  abilityShieldEnded: { systems: { 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['2f1f3b60'] }, on: 'source' },
   // The same, eased out over SHIELD_END_FADE_SECONDS rather than stopped: Sevika's roulette shield, whose layers live for very
   // different times, so a stop left its pink rings alone on screen for a moment after the rest had gone (11-25).
-  abilityShieldEndedFade: { systems: { 'sevika-ability': ['518dee63'] }, on: 'source' },
+  // Blitzcrank's barrier and Loris's shield likewise (11-25): stopped, Blitzcrank's sparkles stayed well over a second after
+  // the barrier had gone, and Loris's dark shield face and lightning seconds after its edges.
+  abilityShieldEndedFade: { systems: { 'sevika-ability': ['518dee63'], 'blitzcrank-ability': ['fc783cba'], 'loris-ability': ['e22b48b0'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
   abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'],
