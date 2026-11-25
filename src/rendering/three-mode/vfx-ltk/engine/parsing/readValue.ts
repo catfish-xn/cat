@@ -322,9 +322,12 @@ export function stencilMode(node: VfxValue | null): StencilMode {
   return enumByte(node, STENCIL_MODE, STENCIL_MODE.disabled);
 }
 
-/** A byte outside the enum reads as `ADD`, which is the mode the schema defaults to. */
+/**
+ * RECORDING EXPERIMENT ONLY (claude/rec-blend-default-alpha, never merged): an emitter that leaves `blendMode` unset reads
+ * as ordinary alpha blending instead of the schema's `ADD`, to see whether the default is what makes those layers too bright.
+ */
 export function blendMode(node: VfxValue | null): BlendMode {
-  return enumByte(node, BLEND_MODE, BLEND_MODE.add);
+  return enumByte(node, BLEND_MODE, BLEND_MODE.alpha);
 }
 
 /** The linger type the byte names, and `none` for any value past the three the engine acts on. */
