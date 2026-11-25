@@ -50,42 +50,50 @@ describe("Jinx's rocket follows the rules' events", () => {
   });
 });
 
+const FRAME = { rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 } };
+const point = (row: number, col: number, y = 0) => [35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y, 50 + 34 * 1.5 * row];
 describe("Jinx's rocket from the real rules", () => {
   const playedFor = (castIndex: number) => {
     const units = realUnits({ unit: 'jinx', star: 2, form: null, foe: 'amumu', dist: 4, nfoes: 2, foestar: 3, ally: 'amumu', allystar: 2, allyCell: { row: 3, col: 2 } } as never);
     const shown: DisplayCombatEvent[][] = [];
     const run = runRealCombat(units, 60, (_s, events) => shown.push(events as DisplayCombatEvent[]), castIndex);
-    const played: { skill: string; tick: number }[] = []; let tick = 0;
+    const played: { skill: string; tick: number; board: unknown }[] = []; let tick = 0;
     const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: units.find((u: any) => u.id === id)?.definitionId ?? 'amumu', form: 'front', starLevel: 2, alive: true }),
-      board: () => null, play: (_c, _s, _t, _a, context) => { played.push({ skill: context.skill!, tick }); return true; } });
-    shown.forEach((events, at) => { tick = at; for (const event of events) bridge.event(event, true); });
-    return { run, played };
+      board: () => FRAME as never, play: (_c, _s, _t, _a, context) => { played.push({ skill: context.skill!, tick, board: context.board }); return true; } });
+    shown.forEach((events, at) => { tick = at; bridge.begin(events); for (const event of events) bridge.event(event, true); });
+    return { run, played, shown };
   };
   it('third cast (rocket): flash and flight on launch, explosion on landing', () => {
     const { run, played } = playedFor(3);
     expect(played.filter(p => p.skill.startsWith('jinx-rocket')).map(p => [p.skill, p.tick - run.castIndex]))
       .toEqual([['jinx-rocket-flash', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-flight', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-boom', JINX_ROCKET_LAUNCH_TICKS + JINX_ROCKET_FLIGHT_TICKS]]);
   });
-  it('the rocket flies to, and explodes on, the cell the rules land it on; without that cell, the board\'s centre', () => {
-    const frame = { rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 } };
+  it('real rules: the rocket explodes on the cell the rules\' epicenter marker names', () => {
+    const { played, shown } = playedFor(3);
+    const marker = shown.flat().find(e => e.type === 'abilityMarker' && e.marker === 'jinx-rocket-epicenter') as { cell: { row: number; col: number } } | undefined;
+    expect(marker).toBeDefined();
+    expect(played.find(p => p.skill === 'jinx-rocket-boom')!.board).toEqual(point(marker!.cell.row, marker!.cell.col));
+  });
+  it('the rocket flies to, and explodes on, the cell the rules\' marker names (either side); without a marker, the board\'s centre', () => {
     const plays: { skill: string; board: unknown }[] = [];
-    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => frame as never,
+    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => FRAME as never,
       play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, board: context.board }); return true; } });
-    const at = (e: DisplayCombatEvent, cell?: { row: number; col: number }) => (cell ? { ...(e as object), cell } : e) as DisplayCombatEvent;
-    const point = (row: number, col: number, y = 0) => [35 + 34 * Math.sqrt(3) * (col + (row % 2) / 2), y, 50 + 34 * 1.5 * row];
-    for (const e of [at(rocket('abilityProjectileLaunched', 37), { row: 1, col: 2 }), at(rocket('abilityProjectileLanded', 47), { row: 1, col: 2 })]) bridge.event(e, true);
-    for (const e of [rocket('abilityProjectileLaunched', 57), rocket('abilityProjectileLanded', 67)]) bridge.event(e, true);
+    const marker = (tick: number, cell: { row: number; col: number }) => ({ type: 'abilityMarker', tick, eventSeq: tick, unitId: 'jx', marker: 'jinx-rocket-epicenter', cell,
+      arrivalTick: tick + 10 }) as unknown as DisplayCombatEvent;
+    const batch = (events: DisplayCombatEvent[]) => { bridge.begin(events); for (const e of events) bridge.event(e, true); };
+    // The marker comes after the launch in its tick, as the rules push them; the launch still aims at its cell.
+    batch([rocket('abilityProjectileLaunched', 37), marker(37, { row: 4, col: 3 })]); batch([rocket('abilityProjectileLanded', 47)]);
+    batch([rocket('abilityProjectileLaunched', 57)]); batch([rocket('abilityProjectileLanded', 67)]);
     expect(plays.map(p => [p.skill, p.board])).toEqual([
-      ['jinx-rocket-flash', point(1, 2)], ['jinx-rocket-flight', point(1, 2, JINX_ROCKET_DRAWN.aimLift)], ['jinx-rocket-boom', point(1, 2)],
+      ['jinx-rocket-flash', point(4, 3)], ['jinx-rocket-flight', point(4, 3, JINX_ROCKET_DRAWN.aimLift)], ['jinx-rocket-boom', point(4, 3)],
       ['jinx-rocket-flash', point(3, 3)], ['jinx-rocket-flight', point(3, 3, JINX_ROCKET_DRAWN.aimLift)], ['jinx-rocket-boom', point(3, 3)]]);
   });
   it('the rocket is drawn flying by distance and leaves the barrel that long before the landing tick, its flash just before; the landing tick is the rules\'', () => {
     expect(jinxRocketFlightSeconds(0)).toBe(JINX_ROCKET_DRAWN.minSeconds);
     expect(jinxRocketFlightSeconds(2)).toBeCloseTo(2 / JINX_ROCKET_DRAWN.cellsPerSecond, 9);
     expect(jinxRocketFlightSeconds(99)).toBe(JINX_ROCKET_DRAWN.maxSeconds);
-    const frame = { rows: 8, columns: 7, hexRadius: 34, origin: { x: 35, y: 50 } };
     const plays: { skill: string; delay?: number; flight?: number; at: number }[] = []; let tick = 0;
-    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => frame as never,
+    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => FRAME as never,
       play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, delay: context.delay, flight: context.flightSeconds, at: tick }); return true; } });
     // She casts from (5, 3); the rocket lands at the board's centre (3, 3), two cells ahead.
     for (const e of [cast(10, 'rocket'), rocket('abilityProjectileLaunched', 37), rocket('abilityProjectileLanded', 47)]) { tick = (e as { tick: number }).tick; bridge.event(e, true); }

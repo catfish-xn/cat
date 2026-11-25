@@ -57,6 +57,9 @@ export function createBatch2VfxBridge(host: Host) {
   const viSlamTicks = new Map<string, number>();
   // Jinx casters' cells at their latest cast (cast.completionCell): where her rocket is drawn leaving from.
   const jinxCells = new Map<string, Cell>();
+  // Where each Jinx rocket explodes, by `<jinx>:<landing tick>`: the rules' 'jinx-rocket-epicenter' marker, which comes on its
+  // launch tick (read in begin(), so the launch already knows it) and is kept until the rocket lands.
+  const rocketCells = new Map<string, Cell>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
@@ -84,6 +87,7 @@ export function createBatch2VfxBridge(host: Host) {
         if (event.type === 'attackLaunched') launchers.add(event.attackerId);
         if (event.type === 'castOutcome' && event.castVariant) outcomes.set(`${event.unitId}:${event.castVariant.actionSeq}`, event);
         if (event.type === 'attack') attacks.add(`${event.attackerId}:${event.tick}`);
+        if (event.type === 'abilityMarker' && event.marker === 'jinx-rocket-epicenter') rocketCells.set(`${event.unitId}:${event.arrivalTick}`, event.cell);
         if (event.type !== 'cast') return;
         let end = at + 1;
         while (end < events.length && events[end].type !== 'cast' && events[end].type !== 'attack') end++;
@@ -232,10 +236,12 @@ export function createBatch2VfxBridge(host: Host) {
         play('vi', event.sourceId, [viTargets.get(event.sourceId) ?? event.targetId], 'vi-slam', 'cast', true);
       }
       // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing, to and on the cell the rules land
-      // it on (the event's `cell`; an event without it lands at the board's centre, as the rules did). The landing tick is the
+      // it on (the rules' 'jinx-rocket-epicenter' marker; a replay without one lands at the board's centre, as the rules did). The landing tick is the
       // rules'; how long the rocket is drawn flying, and so when it leaves the barrel, is drawn by distance (JINX_ROCKET_DRAWN).
       if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
-        const frame = host.board(), landing = (event as { cell?: Cell }).cell ?? boardCentre(frame);
+        const key = `${event.sourceId}:${event.type === 'abilityProjectileLaunched' ? event.arrivalTick : event.tick}`;
+        const frame = host.board(), landing = rocketCells.get(key) ?? boardCentre(frame);
+        if (event.type === 'abilityProjectileLanded') rocketCells.delete(key);
         const board = landing ? batch2CellPoint(frame, landing) : undefined;
         if (event.type === 'abilityProjectileLanded') host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-boom', board, snapshotTargets: true });
         else {
@@ -263,7 +269,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); jinxCells.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); jinxCells.clear(); rocketCells.clear(); },
   };
   return bridge;
 }
