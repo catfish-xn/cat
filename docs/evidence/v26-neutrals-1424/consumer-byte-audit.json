@@ -19,9 +19,17 @@
     "tests/ability-text-forms.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 1905,
+      "currentBytes": 1928,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "0921113b9336f20f0cfcd22f09b5fc8744a7df90c55aa864c43dd99b4265e82e",
+      "currentSha256": "11b42679c1d0c4be8f96d12dddb7f90733bfadfd945d2b4c4a0777a8db6d37a9",
+      "firstDifferentByte": 0
+    },
+    "tests/ability-text-official.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 7004,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "7fffb9c07cf7105fb67a6f77ef28fc7a6062972bf42b60134e765fadc56c2a77",
       "firstDifferentByte": 0
     },
     "tests/ability-text-plain-notes.test.ts": {

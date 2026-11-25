@@ -1,7 +1,7 @@
 /** Ability text of form swappers' back-row forms, Nunu's client name whitespace and the Experiment note's own line. */
 import { beforeAll, expect, it } from 'vitest';
 import { loadTooltipText } from '../src/presentation/tooltip-text-loader';
-import { EXPERIMENT_NOTE, abilityFormIds, abilityNameOf, abilityText, formDefinitionId } from '../src/presentation/ability-text';
+import { abilityFormIds, abilityNameOf, abilityText, formDefinitionId } from '../src/presentation/ability-text';
 
 beforeAll(async () => { await loadTooltipText(); });
 
@@ -36,9 +36,9 @@ it('drops the whitespace around client ability names (Nunu)', () => {
   expect(abilityNameOf('nunu')).toBe(nunu.name);
 });
 
-it('puts the Experiment note on a line of its own', () => {
+it('puts the Experiment line on a line of its own', () => {
   for (const id of ['nunu', 'urgot', 'zyra', 'twitch', 'drmundo']) {
     const text = abilityText(id, 2)!.text;
-    expect(text.split('\n')).toContain(EXPERIMENT_NOTE);
+    expect(text.split('\n')).toContainEqual(expect.stringMatching(/^【试验品】加成：/));
   }
 });

@@ -2,7 +2,7 @@
  * Ability description text for hover cards. The name and every value come from the rules' display functions
  * (`abilityDisplayName` / `abilityDisplayValues`, MATCH_CONTRACT SR-G2-01): `@Key@` and expression tokens such as
  * `@PercentShieldDamage*100@` are looked up as given, never multiplied or recomputed here. Riot markup is reduced to plain
- * text; the Experiment branch (trait not enabled in this release) is replaced by a "not enabled" note on its own line. The player sees the
+ * text; the Experiment branch (the Laboratory bonus) is put on a line of its own. The player sees the
  * 14.24 zh_cn client name and tooltip (`ABILITY_ZH`, same tokens as the English content text) where the client has one.
  */
 import { abilityDisplayName, abilityDisplayValues, glovesOffDisplayValues, ultimateHeroAbilityDisplayValues, type AbilityDisplayStats } from '../simulation/ability-display';
@@ -25,7 +25,7 @@ const SCALE_ICONS: Readonly<Record<string, string>> = {
   scaleAP: '法强', scaleAD: '攻击力', scaleHealth: '生命', scaleArmor: '护甲', scaleMR: '魔抗', scaleAS: '攻速', scaleMana: '法力', scaleDA: '伤害增幅', scaleDR: '减伤',
 };
 const ENTITIES: Readonly<Record<string, string>> = { '&nbsp;': ' ', '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#39;': "'" };
-/** Experiment is not an enabled trait: its whole tooltip branch is shown as a note instead of numbers (SR-G2-01). */
+/** The Experiment branch (the Laboratory bonus line) starts a line of its own; an empty branch shows the note instead. */
 const EXPERIMENT_BRANCH = /<spellActive enabled=TFT13_ExperimentActive[^>]*>[\s\S]*?<\/spellActive>/g;
 export const EXPERIMENT_NOTE = '试验品加成：本版本未启用';
 /** Private marker in front of the note until the line breaks are settled (never in client text). */
@@ -41,7 +41,7 @@ function formatNumber(value: number): string {
 /** Pure: `description` with every `@token@` replaced by `values[token]`, markup reduced to plain text. */
 export function fillAbilityTemplate(description: string, values: Readonly<Record<string, number>>): Omit<AbilityText, 'name'> {
   const unknown: string[] = [];
-  const filled = description.replace(EXPERIMENT_BRANCH, `${NOTE_LINE}${EXPERIMENT_NOTE}`).replace(/@([^@<>\s]+)@/g, (token, key: string) => {
+  const filled = description.replace(EXPERIMENT_BRANCH, branch => `${NOTE_LINE}${branch.replace(/^<spellActive[^>]*>|<\/spellActive>$/g, '').trim() || EXPERIMENT_NOTE}`).replace(/@([^@<>\s]+)@/g, (token, key: string) => {
     if (Object.hasOwn(values, key)) return formatNumber(values[key]);
     if (HIDDEN_TOKENS.has(key)) return '';
     if (!unknown.includes(token)) unknown.push(token);
