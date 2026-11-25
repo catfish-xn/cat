@@ -104,14 +104,15 @@ it('Smeech leaps again SMEECH_RELEAP_AFTER_KILL_TICKS after a kill, with the nex
  // The target dies on the cast's first stab; the re-leap follows SMEECH_RELEAP_AFTER_KILL_TICKS later, its three stabs 133 each.
  // (11-25 re-pin: was [1,2,3]*SMEECH_STAB_TICKS, the next stab slot.)
  expect(hits.map(p=>[p.unitId,p.raw])).toEqual([['far',133],['far',133],['far',133]]);
- expect(hits.map(p=>p.tick-first.state.tick)).toEqual([0,1,2].map(i=>SMEECH_RELEAP_AFTER_KILL_TICKS+i*SMEECH_STAB_TICKS));
+ // (v2: plus SMEECH_RELEAP_FLIGHT_TICKS, the stabs start on landing.)
+ expect(hits.map(p=>p.tick-first.state.tick)).toEqual([0,1,2].map(i=>SMEECH_RELEAP_AFTER_KILL_TICKS+SMEECH_RELEAP_FLIGHT_TICKS+i*SMEECH_STAB_TICKS));
  expect(later.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
 });
 
 it('Smeech: a target killed by a later stab is followed by the re-leap SMEECH_RELEAP_AFTER_KILL_TICKS after the kill, on the second or the last stab',()=>{
  // 11-25 re-pin: the re-leap was the next stab slot (2 and 3 stab intervals); it is now that many stabs on the target, then
  // SMEECH_RELEAP_AFTER_KILL_TICKS after the killing stab. The stab count is now given with each case instead of derived from leapAt.
- for(const [hp,stabs] of [[380,2],[570,3]] as const){const leapAt=(stabs-1)*SMEECH_STAB_TICKS+SMEECH_RELEAP_AFTER_KILL_TICKS;
+ for(const [hp,stabs] of [[380,2],[570,3]] as const){const leapAt=(stabs-1)*SMEECH_STAB_TICKS+SMEECH_RELEAP_AFTER_KILL_TICKS+SMEECH_RELEAP_FLIGHT_TICKS; // v2: + flight
   let state=battle([hero('smeech'),dummy('e',{hp,maxHp:hp}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});const start=state.tick;const all:CombatEvent[]=[];
   for(let i=0;i<=4*SMEECH_STAB_TICKS;i++){const step=stepCombat(state);state=step.state;all.push(...step.events);}
   const hits=packets(all).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability').map(p=>[p.unitId,p.tick-start-1]);
@@ -125,7 +126,7 @@ import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import type {S13Unit} from '../src/simulation/combat-s13-state';
 import {DEFAULT_BOARD} from '../src/simulation/board';
-import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_RELEAP_AFTER_KILL_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_RELEAP_AFTER_KILL_TICKS, SMEECH_RELEAP_FLIGHT_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
 it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
  for(const team of ['player','enemy'] as const){
   const row=(value:number)=>team==='player'?value:7-value;

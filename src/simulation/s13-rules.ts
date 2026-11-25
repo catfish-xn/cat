@@ -75,9 +75,13 @@ export const S13_COMBAT_RULES = Object.freeze({
   rangedAttackWindup: 'ranged-attack-start-then-launch-after-windup-v1',
   // Its cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
   // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
-  // Smeech after a kill (11-25, user decision): when his stab kills the target he stands still, then re-leaps
-  // SMEECH_RELEAP_AFTER_KILL_TICKS later and strikes on landing (cast-windup.ts).
-  smeechReleapAfterKill: 'smeech-stands-then-releaps-after-stab-kill-v1',
+  // Smeech after a kill (11-25, user decision): when his stab kills the target he stands still, and SMEECH_RELEAP_AFTER_KILL_TICKS
+  // later strikes the next one at once if it is next to him, else takes off and strikes on landing, SMEECH_RELEAP_FLIGHT_TICKS
+  // after (cast-windup.ts). v2 (11-25 Fable): no flight to an adjacent target, the flight before landing otherwise (v1 struck on
+  // take-off).
+  smeechReleapAfterKill: 'smeech-stands-then-strikes-adjacent-or-flies-to-next-v2',
+  // Smeech's stab interval (11-25, authorization ②): SMEECH_STAB_TICKS measured on official-server footage, fixed.
+  smeechStabInterval: 'smeech-stab-interval-from-official-footage-v1',
   // Jinx's Death Rocket (11-25, user decision): it explodes on the board's centre hex on her enemies' side, mirrored for an
   // enemy-side Jinx (ability-projectile.ts jinxRocketEpicenter), so both sides' rockets fall alike.
   jinxRocketMirror: 'jinx-death-rocket-epicenter-mirrors-to-caster-side-v1',

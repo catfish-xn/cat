@@ -153,6 +153,10 @@ skipped as above; the export equals the old file with that one substitution. SHA
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `4bb95a640d26f08358ab37455cfc6c253efd3bdfba8aa327bb111a3716098b7d`.
 
-2026-11-25 史密奇击杀后再跳 v1: identity-only refresh, `contentDigest` (×2) `1b32b9d3` → `b30fa3a6` (`S13_COMBAT_RULES.smeechReleapAfterKill`);
+2026-11-25 史密奇击杀后再跳 v1: identity-only refresh, `contentDigest` (×2) `1b32b9d3` → `b30fa3a6` (`S13_COMBAT_RULES.smeechReleapAfterKill`, `smeechStabInterval`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `91c0488c55633509756f4e5f6cbf9cb7edd794bdeac66541c95ccde1501cdff4`.
+
+2026-11-25 史密奇击杀后再跳 v2 与刀间隔 v1: identity-only refresh, `contentDigest` (×2) `b30fa3a6` → `0fa1da99` (`S13_COMBAT_RULES.smeechReleapAfterKill`, `smeechStabInterval`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `f7ab224588097cae90b9ff76fcdbb016c05d5cc52b79b52b90e412437035de22`.

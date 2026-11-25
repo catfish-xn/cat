@@ -9,14 +9,23 @@ export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 
 /**
  * Wind-up batch 2 (user-approved 2026-11-15 authorization, timing only; fitted, not original data): Smeech's stabs land one
  * after another, SMEECH_STAB_TICKS apart, instead of all on the cast tick. Each stab's amount is still taken on the cast.
+ * 11-25 (authorization ②, timing only): the interval is measured on official-server 14.24 footage qC7Z (not original data);
+ * whether it follows attack speed is unknown, so it is fixed (was a fitted value).
  */
-export const SMEECH_STAB_TICKS = 7;
+export const SMEECH_STAB_TICKS = 8;
 /**
- * Smeech after a kill (11-25, measured on official-server 14.24 footage qC7Z, one sample; not original data): when one of his
- * stabs kills his target he stands still (no move, no attack) and leaps to the next one SMEECH_RELEAP_AFTER_KILL_TICKS later,
- * striking on landing; before, the re-leap waited for the next stab's slot and he could walk meanwhile.
+ * Smeech after a kill (11-25, measured on official-server 14.24 footage qC7Z, two samples, fitted; not original data): when one
+ * of his stabs kills his target he stands still (no move, no attack) and goes on to the next one SMEECH_RELEAP_AFTER_KILL_TICKS
+ * later: striking at once if it is already next to him, else taking off for it (SMEECH_RELEAP_FLIGHT_TICKS). Before, the
+ * re-leap waited for the next stab's slot and he could walk meanwhile.
  */
 export const SMEECH_RELEAP_AFTER_KILL_TICKS = 5;
+/**
+ * Smeech's re-leap flight (11-25, measured on official-server 14.24 footage qC7Z, one sample; not original data): when his new
+ * target is not next to him he lands SMEECH_RELEAP_FLIGHT_TICKS after taking off and strikes on landing. In the air he stays on his old hex for the rules and
+ * takes no step and no attack (self-chosen). The cast's own leap is unchanged (instant).
+ */
+export const SMEECH_RELEAP_FLIGHT_TICKS = 6;
 
 /** Wind-up batch 2 (same authorization; fitted, not original data): Dr. Mundo's closing blast lands this many ticks after his
  * last once-a-second damage instead of on the same tick. Its amount is still taken on the cast. */

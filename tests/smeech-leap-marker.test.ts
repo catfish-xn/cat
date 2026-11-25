@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatEvent, type CombatUnit } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
-import { SMEECH_RELEAP_AFTER_KILL_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
+import { SMEECH_RELEAP_AFTER_KILL_TICKS, SMEECH_RELEAP_FLIGHT_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
 import { battle, unit } from './combat-helpers';
 
 // Smeech's re-leap marker (11-25, authorization ①, display only): when his target dies and he leaps to the next one, an
@@ -27,8 +27,8 @@ describe('Smeech re-leap marker', () => {
     const marked = markers(all);
     expect(marked).toHaveLength(1);
     const m = marked[0]!; if (m.type !== 'abilityMarker') throw Error('marker');
-    expect(m.arrivalTick).toBe(m.tick);
-    const leap = all.filter(e => e.type === 'movement' && e.unitId === 'p' && e.tick === m.tick);
+    expect(m.arrivalTick).toBe(m.tick + SMEECH_RELEAP_FLIGHT_TICKS); // 11-25 v2: lands after the flight (was m.tick)
+    const leap = all.filter(e => e.type === 'movement' && e.unitId === 'p' && e.tick === m.arrivalTick); // the landing's movement (was m.tick)
     expect(leap).toHaveLength(1);
     expect(leap[0]!.type === 'movement' && leap[0]!.to).toEqual(m.cell);
     const deaths = all.filter(e => e.type === 'death' && e.unitId === 'e').map(e => e.tick);
