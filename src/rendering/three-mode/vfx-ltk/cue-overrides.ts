@@ -1164,6 +1164,9 @@ export const WORLD_ACCELERATION_OFF: Readonly<Record<string, readonly string[]>>
  */
 export const EMITTER_BLEND: Readonly<Record<string, Readonly<Record<string, BlendMode>>>> = {
   '97c28077': { sword_drop: BLEND_MODE.alpha },
+  // RECORDING EXPERIMENT ONLY (claude/rec-draven-axe-alpha, never merged): Draven's axes, mesh layers with no colour field.
+  '5a268f4e': { Axe_Sheen: BLEND_MODE.alpha, Motion_Blur: BLEND_MODE.alpha },
+  '5d31debe': { Axe_Sheen: BLEND_MODE.alpha, Motion_Blur: BLEND_MODE.alpha },
 };
 
 /**
