@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { CUE_BRANCHES, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { AMBESSA_CHAIN_SWIPE_DELAY, CUE_BRANCHES, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 
 // Fable 11-25: Ambessa's chain-stance swipe sits on her (the unit's own anchor, facing her primary target), not on her
@@ -13,7 +13,8 @@ describe("Ambessa's chain swipe anchor", () => {
     const swipe = row.filter(cue => cue.system === SWIPE);
     expect(swipe).toHaveLength(1);
     expect(swipe[0]!.bone).toBeUndefined();
-    expect(swipe[0]).toMatchObject({ action: 'cast', event: 'cast-start' });
+    expect(swipe[0]).toMatchObject({ action: 'cast', event: 'cast-start', delay: AMBESSA_CHAIN_SWIPE_DELAY });
+    expect(AMBESSA_CHAIN_SWIPE_DELAY).toBe(0.1);
     expect(row.map(cue => cue.system).sort()).toEqual(['0f2af66b', '3b4c15e0', '6390530e', '754b6c78', '8a64f4dd', 'a429a900', 'cba05b6e']);
   });
   it('still carries the chain and fist branch tags', () => {
@@ -27,9 +28,9 @@ describe("Ambessa's chain swipe anchor", () => {
 // With the assets (VFX_LTK_ROOT = an asset root's vfx-ltk folder): the row is her exported list with only the swipe's bone gone.
 const root = process.env.VFX_LTK_ROOT;
 describe.skipIf(!root)("Ambessa's row against her exported list (VFX_LTK_ROOT)", () => {
-  it('differs from the export only in the swipe\'s bone', () => {
+  it('differs from the export only in the swipe\'s bone and its earlier start', () => {
     const index = JSON.parse(readFileSync(join(root!, 'set13/tft13_ambessa/index.json'), 'utf8'));
-    const exported = (index.skills.ambessa as { system: string; bone?: string }[]).map(c => (c.system === SWIPE ? (({ bone: _, ...rest }) => rest)(c) : c));
+    const exported = (index.skills.ambessa as { system: string; bone?: string }[]).map(c => (c.system === SWIPE ? (({ bone: _, ...rest }) => ({ ...rest, delay: AMBESSA_CHAIN_SWIPE_DELAY }))(c) : c));
     expect(CUE_OVERRIDES.ambessa).toEqual(exported);
   });
 });
