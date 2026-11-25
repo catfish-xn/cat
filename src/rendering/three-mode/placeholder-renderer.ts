@@ -830,9 +830,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const combatEnvelope = (id: string, lease: ModelLease): Promise<Envelope | null> => {
     let measuring = combatMeasuring.get(id);
     if (!measuring) {
+      // REC ONLY (claude/rec-stand-proof-fix, never merged): wall time, busy time, slice count and longest slice (castcmp stand-log.json).
+      const rec = { id, startedAt: performance.now(), busyMs: 0, slices: 0, maxSliceMs: 0, wallMs: 0 }; let sliceAt = performance.now();
+      const slice = () => { const d = performance.now() - sliceAt; rec.busyMs += d; rec.slices++; rec.maxSliceMs = Math.max(rec.maxSliceMs, d); };
       measuring = animationEnvelopeSliced(lease.scene, envelopeClips(lease), {
-        budgetMs: 3, stop: () => closed, pause: () => new Promise<void>(resolve => setTimeout(resolve, COMBAT_SLICE_PAUSE_MS)),
-      }).finally(() => combatMeasuring.delete(id));
+        budgetMs: 3, stop: () => closed, pause: () => { slice(); return new Promise<void>(resolve => setTimeout(() => { sliceAt = performance.now(); resolve(); }, COMBAT_SLICE_PAUSE_MS)); },
+      }).finally(() => { combatMeasuring.delete(id); slice(); rec.wallMs = performance.now() - rec.startedAt; ((globalThis as { __standMeasure?: unknown[] }).__standMeasure ??= []).push(rec); });
       combatMeasuring.set(id, measuring);
     }
     return measuring;
