@@ -129,6 +129,9 @@ export interface TimelineCue {
   /** A projectile that starts where the play's primary target (its first receipt target) stands when the play comes, not at
    * its caster: Ziggs's split bombs leave his main bomb's crater. It plays even once that target is gone. */
   readonly fromPrimary?: boolean;
+  /** With `fromPrimary`: the bone of the primary target it leaves from (its place taken when the play comes), instead of
+   * where that target stands. Zeri's bounced arcs leave her main target's chest. */
+  readonly fromBone?: string;
   /**
    * A target cue the cast can do without: with no living recipient it is left out instead of
    * refusing the whole plan (Darius's spin with nobody adjacent, Nunu's cloud whose receipt names no one).

@@ -52,6 +52,13 @@ const champions = new Set(['amumu', 'zeri', 'draven', 'lux', 'leona', 'nocturne'
  * checks it against the rules' data.
  */
 export const LEBLANC_EMPOWERED_ATTACKS = 3;
+/**
+ * Zeri's spark bounce damage as the display names it (combat-g2.ts planG2Attack): her ability's 'attack-extra' packets. She never
+ * casts, so her ability's packets of that delivery are only those.
+ */
+export function isZeriBounce(event: Extract<DisplayCombatEvent, { type: 'packetDamage' }>): boolean {
+  return event.delivery === 'attack-extra' && event.sourceKind === 'ability';
+}
 /** Caitlyn's shots planned, and how many found no enemy struck twice and fell back to the last one struck (dev load harness). */
 export const CAITLYN_SHOT_STATS = { shots: 0, fallback: 0 };
 export function caitlynShotCentre(events: readonly DisplayCombatEvent[], tick: number, sourceId: string): string | undefined {
@@ -111,10 +118,15 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
   return {
     clear() { units.clear(); shots.clear(); nunu.clear(); mundo.clear(); grabs.clear(); strikes.clear(); smeech.clear(); empoweredMorde.clear(); leblancAttacks.clear(); lastSeq = -1; },
     batch(events: readonly DisplayCombatEvent[]): Batch1EventPlan[] {
-      const packets = new Map<string, string[]>(), attacks = new Set<string>();
+      const packets = new Map<string, string[]>(), attacks = new Set<string>(), bounces = new Map<string, string[]>();
       const key = (tick: number, id: string, type: string) => JSON.stringify([tick, id, type]);
       for (const event of events) {
         if (event.type === 'attack') attacks.add(key(event.tick, event.attackerId, 'attack'));
+        if (event.type === 'packetDamage' && isZeriBounce(event) && definition(event.sourceId) === 'zeri') {
+          const k = key(event.tick, event.sourceId, 'bounce'), ids = bounces.get(k) ?? [];
+          if (!ids.includes(event.targetId)) ids.push(event.targetId);
+          bounces.set(k, ids);
+        }
         if (event.type === 'packetDamage') {
           const k = key(event.tick, event.sourceId, event.damageType), ids = packets.get(k) ?? [];
           if (!ids.includes(event.targetId)) ids.push(event.targetId);
@@ -341,6 +353,13 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
             || champion === 'lux' && state.luxAttack || champion === 'nocturne' && event.tick < state.nocturneUntil
             || champion === 'twitch' && state.twitchShots > 0) plan.variant = 'empowered';
           if (champion === 'lux') state.luxAttack = false;
+          // Zeri's spark bounces: every enemy her attack's bounce damage strikes on its tick (the rules pick them) gets her
+          // empowered hit and an arc from her main target ('zeri-bounce'), whether or not this attack counted as her empowered one.
+          if (champion === 'zeri') {
+            const bounced = (bounces.get(key(event.tick, event.attackerId, 'bounce')) ?? []).filter(id => id !== event.targetId);
+            if (bounced.length) plan.extra.push({ champion: 'zeri', sourceId: event.attackerId, targets: [event.targetId, ...bounced],
+              action: 'passive', skill: 'zeri-bounce', snapshotTargets: true });
+          }
           // Draven throws his empowered axes from each hand in turn: every second one is the other hand's axe.
           if (champion === 'draven' && plan.variant === 'empowered' && ++state.empoweredThrows % 2 === 0) plan.variant = 'empowered-alt';
           if (champion === 'nocturne' && plan.variant === 'empowered') strikes.set(event.attackerId, { tick: event.tick, struck: new Set([event.targetId]) });
