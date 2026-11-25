@@ -1139,11 +1139,6 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
 };
 
 /**
- * Emitters that keep emitting for their run's whole life instead of stopping at their own `lifetime` (fitted, not
- * original data): a form's look held at its first strength until the form ends (TIMED_FORM_STOPS stops the run).
- * Dr. Mundo R_Buf Avatar2: its shell pulses for the whole form (Fable 11-18).
- */
-/**
  * Emitters drawn without their world acceleration, by system and emitter name. Garen's falling sword (97c28077 sword_drop)
  * authors a world acceleration far beyond any other emitter's and no drag; drawn with it, the sword plunged to the ground in
  * a fraction of its fall. The official game's sword lands when its own steady fall reaches the ground, so it is drawn falling
@@ -1152,6 +1147,12 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
 export const WORLD_ACCELERATION_OFF: Readonly<Record<string, readonly string[]>> = {
   '97c28077': ['sword_drop'],
 };
+
+/**
+ * Emitters that keep emitting for their run's whole life instead of stopping at their own `lifetime` (fitted, not
+ * original data): a form's look held at its first strength until the form ends (TIMED_FORM_STOPS stops the run).
+ * Dr. Mundo R_Buf Avatar2: its shell pulses for the whole form (Fable 11-18).
+ */
 export const EMITTERS_HELD_ON: Readonly<Record<string, readonly string[]>> = {
   '4caada37': ['Avatar2'],
 };
