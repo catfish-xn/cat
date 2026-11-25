@@ -63,7 +63,7 @@ describe('14.24 official trait text with executable values', () => {
       const summary = traitSummary(id, tier.threshold), text = row(id, tier.threshold);
       expect(summary).toBeTruthy();
       expect(text.startsWith(`(${tier.threshold}) `)).toBe(true);
-      expect(`${summary}\n${text}`.replaceAll('下一 tick 冲刺', '下一刻冲刺')).not.toMatch(/@|<|%i:|NaN|undefined|[a-z]{4,}/);
+      expect(`${summary}\n${text}`).not.toMatch(/@|<|%i:|NaN|undefined|[a-z]{4,}/);
     }
   });
   it('uses official team/member wording and the current total AP rather than the replaced custom prose', () => {
@@ -100,9 +100,9 @@ describe('14.24 official trait text with executable values', () => {
     for (const part of parts) expect(row(id, threshold)).toContain(part);
   });
   it.each([
-    ['scrap', 6, '所有基础装备和成装都会成为幸运装备！', '项目约定：6档起每件基础装备优先临时合成该弈子推荐装备'],
+    ['scrap', 6, '所有基础装备和成装都会成为幸运装备！', '6档起，每件基础装备优先临时合成该弈子推荐装备'],
     ['scrap', 9, '生成光明版装备！', '9档再把这些临时成装换成对应光明版'],
-    ['enforcer', 10, '没收敌人的所有装备！', '项目约定：10档开战时敌方英雄身上除纹章外的装备本场全部失效'],
+    ['enforcer', 10, '没收敌人的所有装备！', '10档：开战时敌方英雄身上除纹章外的装备本场全部失效'],
   ] as const)('%s %i keeps the official clause and states the P execution instead of a deferred marker', (id, threshold, clause, note) => {
     expect(row(id, threshold)).toContain(clause);
     expect(row(id, threshold)).toContain(note);
@@ -110,8 +110,8 @@ describe('14.24 official trait text with executable values', () => {
     expect(describeTraitTier(TRAIT_DEFINITIONS[id], TRAIT_DEFINITIONS[id].tiers.find(t => t.threshold === threshold)!)).not.toContain('暂未实装');
   });
   it.each([
-    ['quickstriker', '移速 ×1.5；4 档当前目标阵亡后下一 tick 冲刺至新目标旁合法格（魔改执行）。'],
-    ['firelight', '魔改执行：每 6 秒冲刺，1 秒窗口内无限射程，攻速 +350%（工程取值），按实际承伤回复，撤离到 2 格内落点。'],
+    ['quickstriker', '移速 ×1.5；4 档时当前目标阵亡后，下一刻冲刺到新目标旁的空格。'],
+    ['firelight', '每 6 秒冲刺一次：先按这段时间实际受到的伤害回复生命，再撤到 2 格内离最近敌人最远的空格；之后 1 秒内射程无限，4 档起这 1 秒攻击速度 +350%。'],
   ] as const)('%s replaces deferred markers with execution notes in summaries and tier rows', (id, note) => {
     const definition = TRAIT_DEFINITIONS[id];
     for (const tier of definition.tiers) {
@@ -158,4 +158,17 @@ describe('14.24 official trait text with executable values', () => {
     expect(traitSummary('not-a-trait')).toBeNull();
     expect(traitSummary('__proto__')).toBeNull();
   });
+});
+
+it('words the trait notes players see without project jargon (the rules they describe are unchanged)', async () => {
+  const { annotate } = await import('../src/presentation/trait-display-text');
+  const { traitTierLimitations } = await import('../src/presentation/effect-text');
+  const { familyTraitFooter } = await import('../src/presentation/trait-text');
+  const jargon = /魔改|项目约定|执行约定|工程取值|未验证/;
+  for (const id of ['family', 'machine-herald', 'scrap', 'enforcer', 'firelight', 'quickstriker', 'mentorship', 'reunion', 'geniuses', 'menaces', 'unlikely-duo'])
+    expect(annotate(id, '')).not.toMatch(jargon);
+  for (const [id, threshold] of [['family', 5], ['scrap', 6], ['scrap', 9], ['enforcer', 10], ['experiment', 3]] as const)
+    expect(traitTierLimitations(id, threshold)).not.toMatch(jargon);
+  const footer = familyTraitFooter({ CurrentReward: '3TrainingDummies', CurrentProgress: 4, CurrentRewardValue: 10, currentRewardName: '训练假人替代：10 金（魔改）', progressText: '', policy: '未验证/魔改' } as never);
+  expect(footer).toEqual(['4/10；当前奖励：10金币（代替3个训练假人）']);
 });

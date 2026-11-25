@@ -82,7 +82,7 @@ export function syncOwnedAugmentIcon(chip: HTMLElement, id: string): void {
 const TEAMUP_PARTNERS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   sisters: ['vi', 'jinx'], ...Object.fromEntries(TEAMUP_IDS.map(id => [id, V20_TRAITS[id].partners])),
 });
-/** What a team-up augment grants, then its trait's official zh_cn text (with the project's 魔改 note) once both are on the board. */
+/** What a team-up augment grants, then its trait's official zh_cn text (with our rules' note) once both are on the board. */
 function teamupDescription(id: string): string | null {
   const partners = TEAMUP_PARTNERS[id], text = Object.hasOwn(TEAMUP_PARTNERS, id) ? traitSummary(id) : null;
   if (!partners || !text) return null;
@@ -158,13 +158,13 @@ export function augmentEffectText(id: string): string {
 
 /**
  * The choice card's two text areas, as the original card sets them: the effect description, then the extra notes in
- * their own block (the project's 魔改执行 note of a team-up, and the effect lines once a description already says what the
+ * their own block (a team-up's 具体做法 note of our rules, and the effect lines once a description already says what the
  * augment does). Without a description the effect lines are the description. Formatting only: the text is the same.
  */
 export function augmentCardSections(id: string, dynamic?: AugmentDynamicValue): { readonly body: string; readonly extra: readonly string[] } {
   const description = augmentPlayerDescription(id, dynamic), effects = augmentEffectText(id);
   if (!description) return { body: effects, extra: [] };
-  const cut = description.indexOf(' 魔改执行：');
+  const cut = description.indexOf(' 具体做法：');
   const body = cut < 0 ? description : description.slice(0, cut), note = cut < 0 ? '' : description.slice(cut + 1);
   return { body, extra: [note, effects].filter(Boolean) };
 }
