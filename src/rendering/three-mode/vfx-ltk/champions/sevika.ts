@@ -11,6 +11,8 @@ const SHIELD_SECONDS = 4;
 const SLOTS = '5ee3f587', SLOT_SECONDS = 2.3;
 /** The rolled spell lands when the right reel stops: G23_POLICY.highRoller.slotTicks (25) × 0.05 s. */
 export const SEVIKA_SLOT_SECONDS = 1.25;
+/** Where a rocket of her rocket mod starts its drop, above where it lands (engine units, a display value, not original data). */
+const SEVIKA_ROCKET_FROM = [0, 3, 0] as const;
 /** The punch's authored swing start (its glove's first cue) from the cast's own animation start; its cues count from here. */
 const PUNCH_SWING = 20 / 30;
 /** Seconds from the punch's swing start to its impact: the bridge starts the punch this long before the rules' hit tick. */
@@ -58,11 +60,12 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
     { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: .1, duration: .3, travelSeconds: .3 },
     { system: 'd98fb49e', event: 'hit', primary: true, delay: .4, duration: 1 },
   ],
-  // The rocket mod, rocket by rocket as the rules report each (abilityProjectileLaunched / Landed 'sevika-rocket'): its flight
-  // from her weapon to the target over the rules' own flight, and its explosion where it lands. DRAFT: the rules' events are
-  // not there yet (L2's rocket timing branch); until then nothing plays them.
+  // The rocket mod, rocket by rocket as the rules report each (abilityProjectileLaunched / Landed 'sevika-rocket'): each rocket
+  // drops from high above onto where it lands over the rules' own flight (the original's rockets come down from above, not
+  // level from her hand), and explodes there. DRAFT: the rules' events are not there yet (L2's rocket timing branch); until
+  // then nothing plays them. Where they land waits for the rules too: for now, on the target.
   'sevika-rocket-fire': [
-    { system: 'dcebd22f', event: 'projectile', bone: 'Buffbone_Glb_Weapon_1', delay: 0, duration: .3, travelSeconds: .3 },
+    { system: 'dcebd22f', event: 'projectile', delay: 0, duration: .45, travelSeconds: .3, stopAfter: .3, fadeOut: true, fromAbove: SEVIKA_ROCKET_FROM },
   ],
   'sevika-rocket-boom': [
     { system: '4e1283b2', event: 'hit', primary: true, delay: 0, duration: .6 },

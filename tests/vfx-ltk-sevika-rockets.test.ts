@@ -34,6 +34,12 @@ describe('Sevika\'s rocket mod, rocket by rocket', () => {
     expect(play.mock.calls.map(skill)).toEqual(['sevika-rocket-fire', 'sevika-rocket-fire', 'sevika-rocket-boom']);
     expect((play.mock.calls[0]![4] as { flightSeconds: number }).flightSeconds).toBeCloseTo(6 * 0.05, 9);
   });
+  it('each rocket drops from above onto where it lands, not level from her hand', () => {
+    const [fire] = CUE_EXTRA_SKILLS['sevika-rocket-fire']!;
+    expect(fire).toMatchObject({ system: 'dcebd22f', event: 'projectile' });
+    expect(fire!.fromAbove?.[1]).toBeGreaterThan(0);
+    expect(fire!.bone).toBeUndefined();
+  });
   it('both branches stay well under the per-skill cue limit', () => {
     for (const name of ['sevika-rocket-fire', 'sevika-rocket-boom']) expect(CUE_EXTRA_SKILLS[name]!.length).toBeLessThanOrEqual(12);
   });
