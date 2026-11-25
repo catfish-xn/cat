@@ -2812,9 +2812,9 @@
     },
     "tests/rendering3d-catchup.test.ts": {
       "previousBytes": 25182,
-      "currentBytes": 55841,
+      "currentBytes": 56024,
       "previousSha256": "2255836a1fafe4766ebc69c57cd2c6ed11d6eb77defa8f83dc2486cd747c412c",
-      "currentSha256": "309e083be138c4f8f6f91711ea93a5da1378072b487c9bbd72992def130b89f6",
+      "currentSha256": "b3793120c40d15a9cb42387bc2a63a77ea5947ce95941906a6dff19f1ae235b4",
       "firstDifferentByte": 1280
     },
     "tests/rendering3d-champion-arena-scale.test.ts": {
@@ -4817,6 +4817,14 @@
       "currentBytes": 1996,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "a8fb613e73462dc6125ec22c6f027ba81a5f2b2f9238248ee5bdd98d280089b2",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-leblanc-chain.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3750,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "7fc2216dd4c7a75c50a2d121d6c5d6762eb0fee60820248c5d982f7dc8330e33",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-leblanc-empowered.test.ts": {

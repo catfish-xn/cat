@@ -220,13 +220,14 @@ describe('real 3D renderer catch-up and effect cleanup', () => {
   // listed visuals, which otherwise play their own life (11-15: written after the gate, these stops never ran).
   it.each([
     ['twitch', 'twitch-volley', ['900dd2d2'], []],
-    ['leblanc', 'leblanc-chain', ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'], ['b']],
+    // Her chain (29d01632) runs from her primary target 'b' to the other bound enemy 'c' (11-25), and ends on them.
+    ['leblanc', 'leblanc-chain', ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee'], ['b', 'c']],
   ] as const)('%s: abilityEffectEnded %s stops its visuals through the event loop', async (champion, effect, stopped, targetIds) => {
     const board: BoardFrame = { ...frame, pieces: [{ ...frame.pieces[0], definitionId: champion },
-      { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }] };
+      { ...frame.pieces[0], id: 'b', team: 'enemy', x: 250 }, { ...frame.pieces[0], id: 'c', team: 'enemy', x: 350 }] };
     listener.frame({ ...board, fighting: false }); await debug().ltk.warm(champion); await flush(); listener.frame(board);
     const shown = () => debug().scene.children.filter(o => o.name === 'ltk-vfx').map(o => o.userData.ltkSystem as string);
-    listener.events([{ ...cast(1), targetIds: champion === 'twitch' ? ['a'] : ['b'] } as DisplayCombatEvent]);
+    listener.events([{ ...cast(1), targetIds: champion === 'twitch' ? ['a'] : ['b', 'c'] } as DisplayCombatEvent]);
     for (let i = 0; i < 80; i++) await advance(25);
     const before = shown();
     for (const system of stopped) expect(before).toContain(system);

@@ -485,7 +485,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'ed58bcfc', action: 'cast', event: 'hit', delay: 0.55, duration: 7.55, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '898ab758', action: 'cast', event: 'hit', delay: 0.72, duration: 7.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 6.4, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
-    { system: '29d01632', action: 'cast', event: 'link', delay: 0.78, duration: 5, bone: 'BUFFBONE_GLB_WEAPON_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // The chain runs from her primary target to each other enemy it binds, chest to chest (its spell data's start and end
+    // bones), never from her and never to the primary itself (11-25): played by the renderer with the primary as its source
+    // ('passive', placeholder-renderer.ts), ended with her chain (LEBLANC_CHAIN_FROM_PRIMARY).
+    { system: '29d01632', action: 'passive', event: 'link', delay: 0.78, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 6.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     // Her channel glow and swirling petals at her weapon hand, held until the rules' chain ends (SUSTAIN_CAPS, CUE_END_STOPS
     // 'leblanc-chain'). The skill's body: it never yields (Fable 11-19).
@@ -1124,10 +1127,17 @@ export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
+/**
+ * LeBlanc's chain links (29d01632) run from her primary target to the other enemies her cast binds: played from that primary
+ * (a 'passive' play the renderer makes on her cast), so her chain's end (abilityEffectEnded 'leblanc-chain', which names
+ * every bound unit) ends them on each bound unit as their source.
+ */
+export const LEBLANC_CHAIN_FROM_PRIMARY = { system: '29d01632', effect: 'leblanc-chain' } as const;
 export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension', readonly string[]>> = {
   // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark;
   // and her channel glow (acd84091, held for the chain: SUSTAIN_CAPS).
-  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
+  // Her chain links themselves run from the primary, not from her: they end on each bound unit (LEBLANC_CHAIN_FROM_PRIMARY).
+  'leblanc-chain': ['4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
   // The volley's buff glow (2beb0657) goes with the volley's last shot too.
   'twitch-volley': ['900dd2d2', '2beb0657'],
   // Swain's demon form (takedowns extend it in the rules). Mordekaiser's slam burst plays per hit and holds nothing to end.
