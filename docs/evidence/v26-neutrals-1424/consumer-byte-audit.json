@@ -4814,9 +4814,9 @@
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9318,
+      "currentBytes": 9664,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c625878816b984540debaf1607cc26e58ce4354261125f32926190902aa26776",
+      "currentSha256": "ad8e8cb24607dcbb13798636950babb4ff13da460173e0bdc8e7f654df1f5ba8",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-kogmaw-q-flyer.test.ts": {

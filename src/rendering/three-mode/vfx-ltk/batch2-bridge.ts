@@ -37,6 +37,12 @@ function hexCells(a: Cell, b: Cell): number {
   const [p, q] = [cube(a), cube(b)];
   return Math.max(Math.abs(p[0]! - q[0]!), Math.abs(p[1]! - q[1]!), Math.abs(p[2]! - q[2]!));
 }
+/**
+ * The rules' marker naming where Jinx's Death Rocket explodes: on its launch tick, the cell and the landing tick. It comes
+ * with the rules change that adds it (same name and fields); until then no event carries it, and the rocket lands at the
+ * board's centre, where the rules explode it today.
+ */
+export const JINX_ROCKET_EPICENTER = 'jinx-rocket-epicenter';
 /** No target search, RNG or rule calculation: branches and recipients come from display receipts. */
 export function createBatch2VfxBridge(host: Host) {
   const outcomes = new Map<string, Outcome>();
@@ -87,7 +93,7 @@ export function createBatch2VfxBridge(host: Host) {
         if (event.type === 'attackLaunched') launchers.add(event.attackerId);
         if (event.type === 'castOutcome' && event.castVariant) outcomes.set(`${event.unitId}:${event.castVariant.actionSeq}`, event);
         if (event.type === 'attack') attacks.add(`${event.attackerId}:${event.tick}`);
-        if (event.type === 'abilityMarker' && event.marker === 'jinx-rocket-epicenter') rocketCells.set(`${event.unitId}:${event.arrivalTick}`, event.cell);
+        if (event.type === 'abilityMarker' && (event.marker as string) === JINX_ROCKET_EPICENTER) rocketCells.set(`${event.unitId}:${event.arrivalTick}`, event.cell);
         if (event.type !== 'cast') return;
         let end = at + 1;
         while (end < events.length && events[end].type !== 'cast' && events[end].type !== 'attack') end++;

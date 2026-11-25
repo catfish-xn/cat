@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
-import { createBatch2VfxBridge } from '../src/rendering/three-mode/vfx-ltk/batch2-bridge';
+import { JINX_ROCKET_EPICENTER, createBatch2VfxBridge } from '../src/rendering/three-mode/vfx-ltk/batch2-bridge';
 import { JINX_EVENT_SKILLS, JINX_EVENT_SYSTEMS, JINX_ROCKET_DRAWN, JINX_ROCKET_FLIGHT_TICKS as RENDER_FLIGHT, jinxRocketFlightSeconds, jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { JINX_ROCKET_FLIGHT_TICKS, JINX_ROCKET_LAUNCH_TICKS } from '../src/simulation/cast-windup';
@@ -68,17 +68,20 @@ describe("Jinx's rocket from the real rules", () => {
     expect(played.filter(p => p.skill.startsWith('jinx-rocket')).map(p => [p.skill, p.tick - run.castIndex]))
       .toEqual([['jinx-rocket-flash', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-flight', JINX_ROCKET_LAUNCH_TICKS], ['jinx-rocket-boom', JINX_ROCKET_LAUNCH_TICKS + JINX_ROCKET_FLIGHT_TICKS]]);
   });
-  it('real rules: the rocket explodes on the cell the rules\' epicenter marker names', () => {
+  it('real rules: the rocket explodes on the cell the rules name (their marker once it is there; the board\'s centre before)', () => {
     const { played, shown } = playedFor(3);
-    const marker = shown.flat().find(e => e.type === 'abilityMarker' && e.marker === 'jinx-rocket-epicenter') as { cell: { row: number; col: number } } | undefined;
-    expect(marker).toBeDefined();
-    expect(played.find(p => p.skill === 'jinx-rocket-boom')!.board).toEqual(point(marker!.cell.row, marker!.cell.col));
+    const marker = shown.flat().find(e => e.type === 'abilityMarker' && (e.marker as string) === JINX_ROCKET_EPICENTER) as { cell: { row: number; col: number } } | undefined;
+    // Her side's centre cell: where the rules explode it today, and the cell their marker names for her side.
+    const cell = marker?.cell ?? { row: 3, col: 3 };
+    expect(cell).toEqual({ row: 3, col: 3 });
+    expect(played.find(p => p.skill === 'jinx-rocket-boom')!.board).toEqual(point(cell.row, cell.col));
   });
   it('the rocket flies to, and explodes on, the cell the rules\' marker names (either side); without a marker, the board\'s centre', () => {
     const plays: { skill: string; board: unknown }[] = [];
     const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => FRAME as never,
       play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, board: context.board }); return true; } });
-    const marker = (tick: number, cell: { row: number; col: number }) => ({ type: 'abilityMarker', tick, eventSeq: tick, unitId: 'jx', marker: 'jinx-rocket-epicenter', cell,
+    // A hand-built marker, by the rules change's name and fields (the rules emit it only once that change is in).
+    const marker = (tick: number, cell: { row: number; col: number }) => ({ type: 'abilityMarker', tick, eventSeq: tick, unitId: 'jx', marker: JINX_ROCKET_EPICENTER, cell,
       arrivalTick: tick + 10 }) as unknown as DisplayCombatEvent;
     const batch = (events: DisplayCombatEvent[]) => { bridge.begin(events); for (const e of events) bridge.event(e, true); };
     // The marker comes after the launch in its tick, as the rules push them; the launch still aims at its cell.
