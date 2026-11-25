@@ -113,6 +113,16 @@ describe("Jinx's rocket from the real rules", () => {
     expect(flights.map(p => p.flight)).toEqual([jinxRocketFlightSeconds(1), jinxRocketFlightSeconds(0)]);
     expect(booms()).toEqual([point(3, 3)]);
   });
+  it('fired, the rocket flies even if she dies before it is drawn leaving; only its muzzle flash goes with her', () => {
+    const plays: { skill: string; context: { outlivesSource?: boolean; cancelWithSource?: boolean } }[] = [];
+    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => FRAME as never,
+      play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, context }); return true; } });
+    for (const e of [cast(10, 'rocket'), rocket('abilityProjectileLaunched', 37)]) bridge.event(e, true);
+    const flash = plays.find(p => p.skill === 'jinx-rocket-flash')!.context, flight = plays.find(p => p.skill === 'jinx-rocket-flight')!.context;
+    expect(flash.cancelWithSource).toBe(true);
+    expect(flight).toMatchObject({ outlivesSource: true });
+    expect(flight.cancelWithSource).toBeUndefined();
+  });
   it('the rocket is drawn flying by distance and leaves the barrel that long before the landing tick, its flash just before; the landing tick is the rules\'', () => {
     expect(jinxRocketFlightSeconds(0)).toBe(JINX_ROCKET_DRAWN.minSeconds);
     expect(jinxRocketFlightSeconds(2)).toBeCloseTo(2 / JINX_ROCKET_DRAWN.cellsPerSecond, 9);

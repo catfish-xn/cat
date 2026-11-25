@@ -361,11 +361,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // system 3d2697ac (its smoke and red flash, with the crow 9ad716c2 that system carries) rather than the bare crow, and
   // to the primary target only for now; the nearby targets get none until the look is judged (Fable 11-21).
   'swain-back': swainBatch3['swain-back']!.map(cue => cue.system === '9ad716c2' ? { ...cue, system: '3d2697ac', primary: true } : cue),
-  // Rell's cast as exported, without her defence-steal icon system 5fe3dc8a: that icon now stays over each unit her stab hits
-  // for the whole fight as a still overhead icon (debuff-icons.ts RELL_SHRED), not as this short particle play (11-24). Her
-  // basic-attack hit, repeated here, lands on the target's chest like every attack hit named in this file (#627).
-  rell: rellBatch3.rell!.filter(cue => cue.system !== '5fe3dc8a')
-    .map(cue => cue.action === 'attack' && cue.event === 'hit' ? { ...cue, bone: chest } : cue),
+  // Rell's list as exported (her defence-steal hit 5fe3dc8a plays once per hit, as the asset does: a resistance cut shows
+  // nothing more in the original, 11-25), her basic-attack hit on the target's chest like every attack hit named here (#627).
+  rell: rellBatch3.rell!.map(cue => cue.action === 'attack' && cue.event === 'hit' ? { ...cue, bone: chest } : cue),
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
@@ -1272,9 +1270,6 @@ export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '56e6971e': 60, // Amumu passive → his death (自定上限)
   '6889455c': 60, // Kog'Maw attack speed stacks (no end in the rules) → his death (自定上限)
   '9f805f6e': 60,
-  // Ekko's mark on a target: the shred stays for the whole combat in the rules, so it shows 2 s after each hit, refreshed by
-  // the next (自定，非原版, Fable 11-19 GAP): held until death it would keep a slot per target hit, all fight long.
-  '5af49b76': 2,
   // Akali's mark: exactly the rules' exposure time (AKALI_MARK_SECONDS), which nothing ends early; death ends it at once.
   'bc4a9e0d': AKALI_MARK_SECONDS,
   'b888a24f': 2, // Zyra's root cluster on her rooted target → that target's stun ends (eased out: STUN_END_FADE_SECONDS)

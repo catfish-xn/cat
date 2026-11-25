@@ -263,3 +263,20 @@ it('labels each form section with that form\'s mana, as the rules resolve the fo
     expect(row.panelMelee[0]).toContain(front); expect(row.panelRanged[0]).toContain(back);
   });
 });
+it('shows the back-row form\'s stats in the card grid and the inspect panel', async () => {
+  const front = DEFAULT_BOARD.deploymentZones.player.firstRow, back = DEFAULT_BOARD.deploymentZones.player.lastRow;
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect;
+    const grid = (body: HTMLElement) => Object.fromEntries(Array.from(body.querySelectorAll('[data-debug="unit-card:stats"] dt')).map(dt => [dt.textContent, dt.nextElementSibling?.textContent]));
+    const panel = (form: string) => { const body = api.buildUnitPanel({ id: 'j', definitionId: 'jayce', starLevel: 2, team: 'player', form });
+      return { range: body.querySelector('[data-value="range"]')?.textContent ?? '', mana: body.querySelector('[data-value="mana"]')?.textContent ?? '' }; };
+    return { ranged: grid(api.unitCardBody('jayce', 2, null, '', [], undefined, false, 'ranged')), melee: grid(api.unitCardBody('jayce', 2, null, '', [], undefined, false, 'melee')),
+      bench: grid(api.unitCardBody('jayce', 2)), panelRanged: panel('ranged'), panelMelee: panel('melee') };
+  });
+  const ranged = g23FormStats('jayce', 2, 'player', back), melee = g23FormStats('jayce', 2, 'player', front);
+  expect(result.ranged['射程']).toBe(String(ranged.attackRange)); expect(result.ranged['生命']).toBe(String(ranged.health));
+  expect(result.melee['射程']).toBe(String(melee.attackRange)); expect(result.melee['生命']).toBe(String(melee.health));
+  expect(result.bench).toEqual(result.melee);
+  expect(result.panelRanged.mana).toContain(`/${ranged.maxMana}`); expect(result.panelMelee.mana).toContain(`/${melee.maxMana}`);
+  expect(result.panelRanged.range).toBe(`${ranged.attackRange} 格`); expect(result.panelMelee.range).toBe(`${melee.attackRange} 格`);
+});
