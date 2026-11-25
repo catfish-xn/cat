@@ -1160,7 +1160,9 @@ export const WORLD_ACCELERATION_OFF: Readonly<Record<string, readonly string[]>>
  * Emitters drawn with another blend mode than their asset reads as, by system and emitter name. Garen's falling sword
  * (97c28077 sword_drop) writes no blend mode, which reads as additive: its saturated yellow blade, added onto the bright
  * board, drew lemon yellow. Drawn with ordinary alpha blending it takes the official game's orange gold (依据正式服画面取色
- * 对比，非原版数据). Its tip's small blue-green patch is in the blade's own texture and stays.
+ * 对比，非原版数据). Its tip's small blue-green patch is in the blade's own texture and stays. For this one emitter only: no
+ * general rule (a mesh layer with no blend mode and no colour field) holds, as Draven's axes, of that kind, drew worse with
+ * alpha blending in the same comparison (11-25).
  */
 export const EMITTER_BLEND: Readonly<Record<string, Readonly<Record<string, BlendMode>>>> = {
   '97c28077': { sword_drop: BLEND_MODE.alpha },
