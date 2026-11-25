@@ -1026,9 +1026,9 @@
     },
     "tests/fixtures/b8-live-reveal-routes.ts": {
       "previousBytes": 6012,
-      "currentBytes": 6651,
+      "currentBytes": 6822,
       "previousSha256": "020fa0b869768d26566b0b7bfd68298e6e555677faca796d009ab8b4e0e7a58c",
-      "currentSha256": "23b1f89134613eff95487cfdd30543f91dc0e715132fdc97e3b59651b6136bd5",
+      "currentSha256": "3c75b7a31d5127a284af015cff8e1243599080973cdd3ef79170887c38a3cf24",
       "firstDifferentByte": 280
     },
     "tests/fixtures/castcmp-probe-globals.ts": {
@@ -1079,9 +1079,9 @@
     },
     "tests/fixtures/g2-3-b8-public.ts": {
       "previousBytes": 1743,
-      "currentBytes": 2364,
+      "currentBytes": 2659,
       "previousSha256": "205c4f5d110decac34735255865f884c68bc9faf3d827dfc42ec8da69885e198",
-      "currentSha256": "c42e8c8f9ae8d944b2fb52d990de06249f6ab94f3f83726b4f7661577393b8b8",
+      "currentSha256": "2c659bdad7dd0719cd059402a935394edef7c9e0bf5a56cd39ad3c9f2b77ad48",
       "firstDifferentByte": 204
     },
     "tests/fixtures/g24-pr161-natural-forge.ts": {
@@ -2226,9 +2226,9 @@
     },
     "tests/m8-b8-live-reveal.test.ts": {
       "previousBytes": 13403,
-      "currentBytes": 20132,
+      "currentBytes": 20791,
       "previousSha256": "f1b0aa9a11ff07cd57acadfd64d260f23a5148101ea4e22772e48b7eb3a5baa9",
-      "currentSha256": "1d92f9ef2880e62a9760de1fb35868ab40e3aeb05e75f56df27cbf00690132f6",
+      "currentSha256": "5f51ea09e540b593dd679f9e9cb9ace830242bf2c4895c0aec5424768137985c",
       "firstDifferentByte": 527
     },
     "tests/m8-b8-live-transfer.test.ts": {
