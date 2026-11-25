@@ -808,6 +808,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   'mel-third': melSkills['mel-third'],
   'mel-shield': melSkills['mel-shield'],
   sevika: sevikaSkills.sevika,
+  // Her slot machine and its result layers over her bar (champions/sevika.ts SLOT_BONE, 11-25), from code likewise: the
+  // asset index's copy stands them on her feet.
+  ...Object.fromEntries(Object.entries(sevikaSkills).filter(([key]) => key.startsWith('sevika-slots'))),
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
   // Exported to the asset index (0c59) and repeated as exported, but for the cast's W_Mis rocket and W_Tar hit: one each

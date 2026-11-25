@@ -167,7 +167,11 @@ export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags
   if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
   return needs;
 }
-export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
+export interface VfxUnit {
+  root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean;
+  /** World height of the top of the unit's overhead bar row, where the host draws one (OVERHEAD_TOP anchors on it). */
+  overheadTop?: number;
+}
 export interface LtkPlayOptions {
   /** Exact display branch in this champion's catalogue; each branch retains the 12-cue limit. */
   skill?: string;
@@ -1173,7 +1177,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim, () => host!.overheadTop, spawn.lift);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);

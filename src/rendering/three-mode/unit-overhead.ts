@@ -52,6 +52,8 @@ export interface UnitOverhead {
   setDebuffs(debuffs: readonly OverheadDebuff[]): void;
   /** Hides the plain and tier bars (a benched piece during combat, as in the client); items and tags stay. */
   setBarsHidden(hidden: boolean): void;
+  /** Height of the top of the bar row over `object`'s origin (0 with no bar shown): where things meant to float above the bar start. */
+  readonly top: number;
   /** True while the original tier bar is drawn; the host then draws no star row over the head. */
   readonly tiered: boolean;
   /** A cast's charge: the mana bar shows full and bright until it is switched off, then the meters as they are. */
@@ -261,6 +263,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
   };
 
   /** Item row at the origin, the bar row right over it, tags above the bar (or the items when no bar shows). */
+  let barTop = 0;
   const layout = () => {
     // A tier bar keeps a clear gap over the head like the client (playtest 11-03: it sat on the head).
     const base = tier.visible ? TIER_LIFT : 0, count = icons.children.length, barShown = bar.visible || tier.visible;
@@ -287,6 +290,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     // Under a tier bar the items sit right below its track (the emblem's lower half beside the first one, as in the client).
     barRow.position.y = base + items - (tier.visible && count ? tierTrackBottom : 0);
     const top = barRow.position.y + (barShown ? BAR_HEIGHT : 0);
+    barTop = top;
     anomaly.position.set(BAR_WIDTH / 2 + 5, base + (items ? size / 2 : BAR_HEIGHT / 2), 0);
     debuffs.position.set(0, top + (debuffHeight ? debuffHeight / 2 + 1 : 0), 0);
     confiscation.sprite.position.y = top + 8 + (debuffHeight ? debuffHeight + 2 : 0);
@@ -296,6 +300,7 @@ export function createUnitOverhead(ctx: OverheadContext): UnitOverhead {
     object,
     itemAt: (client, camera, area) => object.visible ? spritePick(icons.children as Sprite[], client, camera, area) : undefined,
     get tiered() { return tier.visible; },
+    get top() { return barTop; },
     setTier(level) {
       if (disposed || level === tierLevel) return;
       tierLevel = level; drawTier(); bar.visible = Boolean(shown) && !tier.visible && !barsHidden; layout();

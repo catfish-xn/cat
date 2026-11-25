@@ -189,6 +189,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || !finite(cue.duration) || Number(cue.duration) <= 0 || Number(cue.duration) > 10
         || (cue.bone !== undefined && typeof cue.bone !== 'string')
         || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
+        || (cue.lift !== undefined && !(finite(cue.lift) && Math.abs(Number(cue.lift)) <= 200))
         || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
         || (cue.location !== undefined && cue.location !== 'board')
         || (cue.targetLimit !== undefined && (!Number.isInteger(cue.targetLimit) || Number(cue.targetLimit) < 1 || Number(cue.targetLimit) > 8))

@@ -4474,9 +4474,9 @@
     "tests/vfx-ltk-batch2.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 32257,
+      "currentBytes": 32394,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "c353dcfcc0a379d8b47166cff919a02ec000a34237eb681320324b0dc090eb4b",
+      "currentSha256": "cc486e75d17358289e0d340053c1e3614620d24eba060913f2ee108c2f7569e5",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-batch3.test.ts": {
@@ -5062,6 +5062,14 @@
       "currentBytes": 5238,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "accf54642ab97fb7dac5a5994ebac777cd0ddaf193cd63b35163d3a80e5744d7",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-sevika-slot-height.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 4521,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "cefd6038769caa5f49e6c1a2599b8052bffa117ad9ea4c95c37375bd28c0bea5",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-shield-break-fade.test.ts": {
