@@ -24,6 +24,14 @@
       "currentSha256": "0921113b9336f20f0cfcd22f09b5fc8744a7df90c55aa864c43dd99b4265e82e",
       "firstDifferentByte": 0
     },
+    "tests/ability-text-plain-notes.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 959,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "bd73d9a94a9d96f3b01eaa62e199308df4e2c79f384bf9266d6955574737f622",
+      "firstDifferentByte": 0
+    },
     "tests/ambessa-cast-branch.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
