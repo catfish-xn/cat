@@ -12,6 +12,7 @@
  */
 import { strikeOffsetTicks, type TimelineCue } from './timeline';
 import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
+import { BLEND_MODE, type BlendMode } from './engine/model/enums';
 import { BATCH1_TIMELINES } from './batch1-timelines';
 import { JINX_EVENT_SKILLS, jinxSkills } from './champions/jinx';
 import { JAYCE_EVENT_SKILLS, jayceSkills } from './champions/jayce';
@@ -45,6 +46,13 @@ export const PLAY_OUT_AT_DEADLINE = 0.5;
  * 数据): there his sword shows a beat after the cast starts, and the burst flashes a moment after it comes into view.
  */
 export const GAREN_SWORD_DELAY = 0.3, GAREN_SWORD_INTO_BODY = 0.28;
+/**
+ * Seconds Garen's landing burst (5bbccb8c) plays out after its cue ends: emission stops there and the particles already
+ * out, the flying pebbles and dust among them, finish their own lives instead of the whole burst fading at the cut. By the
+ * asset's own lifetimes and lingers its last particles go a little under a second after the cut; this is the most it may
+ * take (自定，非原版). In the official game's footage the pebbles are still on the ground after the burst.
+ */
+export const GAREN_BURST_PLAY_OUT = 1;
 /**
  * Skill systems that may take more root places than ROOT_PARTICLES_MOST, by system: the most this one run may take. Only for
  * a system measured past that cap whose later emitters the cap visibly starves (11-24: Garen's landing burst 5bbccb8c measures
@@ -390,7 +398,7 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '97c28077', action: 'cast', event: 'cast-start', delay: GAREN_SWORD_DELAY, duration: 1.2, bone: ground },
     { system: 'ea21ae27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: chest },
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
-    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: GAREN_SWORD_DELAY + GAREN_SWORD_INTO_BODY, duration: 0.7, bone: ground, scale: kept(0.45) },
+    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: GAREN_SWORD_DELAY + GAREN_SWORD_INTO_BODY, duration: 0.7, bone: ground, scale: kept(0.45), playOut: GAREN_BURST_PLAY_OUT },
   ],
   // E (14.24 field: the main root lands a beat after the cast, the second roots a beat later): E_Sequence_Impact is the index's own ground
   // missile (travel 0.3): one crawls to the primary target, then short ones reach up to two others. The brown branching
@@ -1164,6 +1172,18 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
  */
 export const WORLD_ACCELERATION_OFF: Readonly<Record<string, readonly string[]>> = {
   '97c28077': ['sword_drop'],
+};
+
+/**
+ * Emitters drawn with another blend mode than their asset reads as, by system and emitter name. Garen's falling sword
+ * (97c28077 sword_drop) writes no blend mode, which reads as additive: its saturated yellow blade, added onto the bright
+ * board, drew lemon yellow. Drawn with ordinary alpha blending it takes the official game's orange gold (依据正式服画面取色
+ * 对比，非原版数据). Its tip's small blue-green patch is in the blade's own texture and stays. For this one emitter only: no
+ * general rule (a mesh layer with no blend mode and no colour field) holds, as Draven's axes, of that kind, drew worse with
+ * alpha blending in the same comparison (11-25).
+ */
+export const EMITTER_BLEND: Readonly<Record<string, Readonly<Record<string, BlendMode>>>> = {
+  '97c28077': { sword_drop: BLEND_MODE.alpha },
 };
 
 /**

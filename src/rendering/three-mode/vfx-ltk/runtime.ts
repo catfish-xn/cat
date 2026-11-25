@@ -1230,7 +1230,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
           curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
           brightness: spawn.brightness,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom,
+          // A cue (not a projectile) that plays out past its end still fades, as a plain cue would, the emitters whose
+          // particles go at the stop; only those that outlive it finish on their own (Fable 11-25, Garen's landing burst).
+          ...(spawn.playOut && spawn.event !== 'projectile' && !persistent && !spawn.fadeOut ? { tailFade: { from: Math.max(runFor - tail, spawn.stopAfter ?? 0), to: runFor } } : {}) };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
