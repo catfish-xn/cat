@@ -609,6 +609,19 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // The spell is a hand comet plus one primary splash. The third cast also splashes the next two receipt targets. There is
   // no separate hand-glow system. Her bolt's hit lands on the primary target every cast, when the comet does. Her unplayed
   // ground system stays out (purpose unverified, see tests/fixtures/cue-dropped-systems.ts).
+  // Ambessa: her exported list, with her chain-stance swipe (3b4c15e0) on the unit instead of her weapon locator. The
+  // swipe is a half-disc of meshes drawn around its anchor toward the cast's target; on the weapon locator it turned with
+  // the weapon and flew off over her head (11-25 review against the 3-star original). On the unit it faces her primary
+  // target and sits on her. The export's bones and delays elsewhere are kept; CUE_BRANCHES still tags chain and fist.
+  ambessa: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.21666666666666667, duration: 1.5 },
+    { system: '754b6c78', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { system: 'a429a900', action: 'cast', event: 'cast-start', delay: 0.2, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '6390530e', action: 'cast', event: 'cast-start', delay: 0.4, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    { system: 'cba05b6e', action: 'cast', event: 'hit', delay: 0.8, duration: 1 },
+    { system: '3b4c15e0', action: 'cast', event: 'cast-start', delay: 0.2, duration: 0.7 },
+    { system: '8a64f4dd', action: 'cast', event: 'hit', delay: 0.6, duration: 0.7 },
+  ],
   cassiopeia: [
     { system: '714bd6e8', action: 'attack', event: 'projectile', bone: 'L_Hand', delay: 0.31666666666666665, duration: 1.5, travelSeconds: 0.3, targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.6166666666666667, duration: 1.5 },

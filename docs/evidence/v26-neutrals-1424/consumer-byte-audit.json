@@ -4415,6 +4415,14 @@
       "currentSha256": "3518e4870cc51514fbc02dacc7b14516e3696bbbd5656eeff004b40207bf388c",
       "firstDifferentByte": 0
     },
+    "tests/vfx-ltk-ambessa-chain-swipe.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2290,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "bf0ae481b82717c7a135f0c125aaf3e591f2ac33186645dc2fb5c763e903c025",
+      "firstDifferentByte": 0
+    },
     "tests/vfx-ltk-attached-caps.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
