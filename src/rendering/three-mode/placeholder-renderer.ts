@@ -1601,6 +1601,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         jayceCrystals.crystal(event, [at.x, at.y, at.z], currentEffect && !reducedMotion());
       }
       if (event.type === 'death') jayceCrystals.death(event.unitId);
+      // Recording-only experiment (never merged): Smeech's launch burst again on the cell each leap lands on (a move of two
+      // cells or more), a little after the move, as his piece reaches it.
+      if (event.type === 'movement' && grid && currentEffect && !reducedMotion() && pieces.get(event.unitId)?.definitionId === 'smeech') {
+        const from = hexCenter(event.from, grid), to = hexCenter(event.to, grid);
+        if (from.distanceTo(to) > grid.radius * 2.5) ltk?.play('smeech', event.unitId, [], 'passive', { skill: 'smeech-land', board: [to.x, to.y, to.z], boardFacing: [from.x, from.y, from.z] as const });
+      }
       if (event.type === 'abilityMarker' && grid) {
         const cell = hexCenter(event.cell, grid), owner = pieces.get(event.unitId);
         if (event.marker === 'powder-monkey-sent' && currentEffect && !reducedMotion()) {

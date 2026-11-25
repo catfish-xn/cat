@@ -234,6 +234,10 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   'powder-blast': [
     { system: '8747b362', action: 'passive', event: 'hit', delay: 0, duration: 1 },
   ],
+  // Recording-only experiment (never merged): Smeech's launch burst again where each leap lands.
+  'smeech-land': [
+    { system: '17b8eb5c', action: 'passive', event: 'hit', location: 'board', delay: 0.25, duration: 0.7 },
+  ],
   'powder-arrive': [
     { system: '805215e2', action: 'passive', event: 'hit', location: 'board', delay: 0, duration: 1.5 },
   ],
