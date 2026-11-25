@@ -171,4 +171,6 @@ it('words the trait notes players see without project jargon (the rules they des
     expect(traitTierLimitations(id, threshold)).not.toMatch(jargon);
   const footer = familyTraitFooter({ CurrentReward: '3TrainingDummies', CurrentProgress: 4, CurrentRewardValue: 10, currentRewardName: '训练假人替代：10 金（魔改）', progressText: '', policy: '未验证/魔改' } as never);
   expect(footer).toEqual(['4/10；当前奖励：10金币（代替3个训练假人）']);
+  // Below Family 5 the task pauses and keeps its progress (g2-3-economy.ts only advances an eligible battle).
+  expect(annotate('family', '')).toContain('不满5名家人时进度暂停并保留');
 });

@@ -4245,9 +4245,9 @@
     },
     "tests/trait-text.test.ts": {
       "previousBytes": 11685,
-      "currentBytes": 12817,
+      "currentBytes": 13016,
       "previousSha256": "e4b00a1d0fb18d9c6185fd69a2afa911e694af7bd295f6d9e0ca0244ed84729d",
-      "currentSha256": "69645610c7e60f57d2ad666e946611c082900dea7120ed78b2facc7b36668111",
+      "currentSha256": "ee7a829d39a479208f3f519e17d78d7ed4dc77c469500af827d59d2519fc32f3",
       "firstDifferentByte": 4136
     },
     "tests/ui-chunk-split.test.ts": {
