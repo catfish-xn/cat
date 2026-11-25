@@ -161,7 +161,9 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     const role = roleSection(definitionId);
     if (role) body.append(role);
   }
-  const stats = fourStar ?? getUnitStats(definitionId, neutral ? 1 : star);
+  // A form swapper on the board shows its current form's stats (bench and shop: the front-row definition).
+  const stats = fourStar ?? (form === 'ranged' && formDefinitionId(definitionId, form) !== definitionId
+    ? resolveUnitStats(abilityUnitDefinition(formDefinitionId(definitionId, form))!, star) : getUnitStats(definitionId, neutral ? 1 : star));
   const hero = heroAbility && !fourStar;
   const displayIds = fourStar || hero ? [definitionId] : form ? [formDefinitionId(definitionId, form)] : abilityFormIds(definitionId);
   for (const displayId of displayIds) {

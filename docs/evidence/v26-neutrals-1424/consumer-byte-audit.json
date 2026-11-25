@@ -1455,6 +1455,14 @@
       "currentSha256": "7217f2274ce547a5bb863f2414b6ad96fa19fdacee9d0ee490a7ff14168a74ce",
       "firstDifferentByte": 0
     },
+    "tests/form-stats-display.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2619,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "049ccaa192912d13d3608d0e60d553d2593a51f0542b5a9a145b33170751a13e",
+      "firstDifferentByte": 0
+    },
     "tests/forming-history-equipment.test.ts": {
       "previousBytes": 2912,
       "currentBytes": 3179,
@@ -2599,9 +2607,9 @@
     },
     "tests/presentation/unit-panel.test.ts": {
       "previousBytes": 16261,
-      "currentBytes": 21587,
+      "currentBytes": 23356,
       "previousSha256": "4bcd330a1417a8baba38ec3b976ddf408abbe04a23f9d89d1bc41ad7e428d4da",
-      "currentSha256": "96bbd60d7fae78c9dc4aacca3a0028d8d1dbdc00ec90602c74247f2eafa03b76",
+      "currentSha256": "514cfed852140bea9cf5c153e5f899b5bfb4350610ad572a4291c502cb0a39d0",
       "firstDifferentByte": 429
     },
     "tests/presentation/v23-anomaly-panel.test.ts": {

@@ -92,7 +92,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
     if (kind === 'hp') { const shield = node('span', '', 'inspect-shield'); shield.dataset.fill = 'shield'; bar.append(shield); }
     const label = node('span', '', 'inspect-bar-text'); label.dataset.value = kind; bar.append(label); bars.append(bar);
   }
-  const base = planningBase(data.definitionId, star);
+  const base = planningBase(data.definitionId, star, panelForm(data));
   const heroAbility = Boolean(data.heroAbility) && star !== 4;
   const form = panelForm(data);
   const displayIds = heroAbility || star === 4 ? [data.definitionId] : form ? [formDefinitionId(data.definitionId, form)] : abilityFormIds(data.definitionId);
@@ -110,7 +110,7 @@ export function buildUnitPanel(data: UnitPanelData): HTMLElement | null {
   const tip = node('div', '', 'inspect-ability-card'); tip.setAttribute('role', 'tooltip');
   for (const displayId of displayIds) {
     const ability = node('div', '', 'unit-card-ability');
-    const mana = displayId === data.definitionId ? { initialMana: base.initialMana, maxMana: planningMeters(data.definitionId, star, data.heroAbility).maxMana }
+    const mana = displayId === formDefinitionId(data.definitionId, form) ? { initialMana: base.initialMana, maxMana: planningMeters(data.definitionId, star, data.heroAbility, form).maxMana }
       : resolveUnitStats(abilityUnitDefinition(displayId)!, Math.min(3, star) as 1 | 2 | 3);
     const name = abilityText(displayId, star, undefined, heroAbility)?.name ?? '无主动技能';
     ability.append(abilityLabel(displayId, `${formCaption(data.definitionId, displayId)}${name} · 法力 ${mana.initialMana}/${mana.maxMana}`), abilityRanks(displayId, data.starLevel, heroAbility));
@@ -141,10 +141,10 @@ export function applyUnitSplash(body: HTMLElement, skin: UnitPanelSkin | null): 
 /** Text and widths only: combat refresh never replaces the header, slots, bars or stat nodes. */
 export function updateUnitPanel(body: HTMLElement, data: UnitPanelData): void {
   if (body.classList.contains('unit-card-anvil')) return;
-  const base = planningBase(data.definitionId, data.starLevel);
+  const base = planningBase(data.definitionId, data.starLevel, panelForm(data));
   const live = data.combat ?? planningBonusProjection(data);
   const hp = live?.hp ?? base.health, maxHp = live?.maxHp ?? base.health, shield = live?.shield ?? 0;
-  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? planningMeters(data.definitionId, data.starLevel, data.heroAbility).maxMana;
+  const mana = live?.mana ?? base.initialMana, maxMana = live?.maxMana ?? planningMeters(data.definitionId, data.starLevel, data.heroAbility, panelForm(data)).maxMana;
   // The replay's interval is already the rules' current speed projection (including temporary effects).
   const speed = live ? 20 / live.attackIntervalTicks : base.baseAttackSpeedBps !== undefined ? base.baseAttackSpeedBps / 10000 : 20 / base.attackIntervalTicks;
   const crit = live as (CombatViewUnit & { baseCritChanceBps?: number; baseCritMultiplierBps?: number }) | null;
