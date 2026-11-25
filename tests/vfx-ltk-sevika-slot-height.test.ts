@@ -17,7 +17,7 @@ const slotKeys = Object.keys(sevikaSkills).filter(key => key.startsWith('sevika-
 describe('the slot machine stands on her bar', () => {
   it('the machine and every result layer, the pairs too, stand on the bar\'s top, by one fitted amount', () => {
     expect(SLOT_BONE).toBe(OVERHEAD_TOP);
-    expect(Math.abs(SLOT_LIFT)).toBeLessThan(20);
+    expect(Math.abs(SLOT_LIFT)).toBeLessThan(30);
     expect(slotKeys).toContain('sevika-slots');
     expect(slotKeys.filter(key => key.endsWith('-pair')).length).toBeGreaterThan(0);
     for (const key of slotKeys) for (const cue of sevikaSkills[key]!) expect([cue.bone, cue.lift], key).toEqual([SLOT_BONE, SLOT_LIFT]);

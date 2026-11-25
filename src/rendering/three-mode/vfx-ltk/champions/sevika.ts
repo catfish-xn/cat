@@ -17,9 +17,11 @@ const SLOTS = '5ee3f587', SLOT_SECONDS = 2.3;
 export const SLOT_BONE = OVERHEAD_TOP;
 /**
  * Board units the machine's anchor sits under her bar's top: its own rise (its transform) lifts it clear of the bar, and
- * this leaves a gap of about a quarter of its height under it. Fitted to live footage (按正式服画面拟合，非原版数据).
+ * this brings its lower edge down to just clear of it, a few pixels. Any higher and, when she fights the row above (her
+ * usual place, a melee unit), that row's bars cross the reels (11-25 Windows rows); this way they only graze its top frame.
+ * Fitted to live footage (按正式服画面拟合，非原版数据).
  */
-export const SLOT_LIFT = -6;
+export const SLOT_LIFT = -19;
 /** The rolled spell lands when the right reel stops: G23_POLICY.highRoller.slotTicks (25) × 0.05 s. */
 export const SEVIKA_SLOT_SECONDS = 1.25;
 const SLOT_LAYERS = { flamethrower: '75cc1285', punch: '5875fa39', thrash: '85a3c691',
