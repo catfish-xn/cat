@@ -91,6 +91,28 @@ describe("Jinx's rocket from the real rules", () => {
       ['jinx-rocket-flash', point(4, 3)], ['jinx-rocket-flight', point(4, 3, JINX_ROCKET_DRAWN.aimLift)], ['jinx-rocket-boom', point(4, 3)],
       ['jinx-rocket-flash', point(3, 3)], ['jinx-rocket-flight', point(3, 3, JINX_ROCKET_DRAWN.aimLift)], ['jinx-rocket-boom', point(3, 3)]]);
   });
+  it('a landed rocket\'s cell and the last combat\'s marks are forgotten: a later rocket without a marker lands at the centre', () => {
+    const plays: { skill: string; board: unknown; flight?: number }[] = [];
+    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => FRAME as never,
+      play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, board: context.board, flight: context.flightSeconds }); return true; } });
+    const marker = (tick: number, cell: { row: number; col: number }) => ({ type: 'abilityMarker', tick, eventSeq: tick, unitId: 'jx', marker: JINX_ROCKET_EPICENTER, cell,
+      arrivalTick: tick + 10 }) as unknown as DisplayCombatEvent;
+    const batch = (events: DisplayCombatEvent[]) => { bridge.begin(events); for (const e of events) bridge.event(e, true); };
+    const booms = () => plays.filter(p => p.skill === 'jinx-rocket-boom').map(p => p.board);
+    // Landed: its cell is dropped, so the same caster and landing tick again (a replay drawn over) without a marker lands at the centre.
+    batch([rocket('abilityProjectileLaunched', 37), marker(37, { row: 4, col: 3 })]); batch([rocket('abilityProjectileLanded', 47)]);
+    batch([rocket('abilityProjectileLaunched', 37)]); batch([rocket('abilityProjectileLanded', 47)]);
+    expect(booms()).toEqual([point(4, 3), point(3, 3)]);
+    // clear() (a new combat): a marked rocket that never landed, and her last cast cell, are both forgotten.
+    plays.length = 0;
+    batch([cast(10, 'rocket'), rocket('abilityProjectileLaunched', 37), marker(37, { row: 4, col: 3 })]);
+    bridge.clear();
+    batch([rocket('abilityProjectileLaunched', 37)]); batch([rocket('abilityProjectileLanded', 47)]);
+    const flights = plays.filter(p => p.skill === 'jinx-rocket-flight');
+    // Before clear(): from her cast cell (5, 3) to (4, 3), one cell. After: no cast cell known, drawn as a zero-cell flight.
+    expect(flights.map(p => p.flight)).toEqual([jinxRocketFlightSeconds(1), jinxRocketFlightSeconds(0)]);
+    expect(booms()).toEqual([point(3, 3)]);
+  });
   it('the rocket is drawn flying by distance and leaves the barrel that long before the landing tick, its flash just before; the landing tick is the rules\'', () => {
     expect(jinxRocketFlightSeconds(0)).toBe(JINX_ROCKET_DRAWN.minSeconds);
     expect(jinxRocketFlightSeconds(2)).toBeCloseTo(2 / JINX_ROCKET_DRAWN.cellsPerSecond, 9);
