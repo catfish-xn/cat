@@ -71,7 +71,7 @@ import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary, vfxUrl } from './vfx-ltk/loader';
 import { createDebuffMarks, DEBUFF_ICONS, type OverheadDebuff } from './debuff-icons';
 import { createLtkRuntime } from './vfx-ltk/runtime';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, RUMBLE_MISSILE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -1454,7 +1454,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       for (const view of pieces.values()) if (view.model.id && ids.has(view.model.id) && view.lease && !view.lease.placeholder) attachBody(view);
     }
     // A unit no longer stunned in the rules (its control in this frame is gone): its stun's layers end (CUE_RULE_STOPS stunEnded).
-    for (const stop of controlEndStops.frame(frame.pieces, frame.fighting)) ltk?.stopSystemsOn(stop.id, stop.systems);
+    for (const stop of controlEndStops.frame(frame.pieces, frame.fighting)) ltk?.fadeSystemsOn(stop.id, stop.systems, STUN_END_FADE_SECONDS);
     const seen = new Set<string>();
     const modelPieces = new Map(frame.pieces.map(piece => [piece.id, piece]));
     for (const piece of frame.pieces) {
@@ -1656,6 +1656,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEnded.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystems(event.targetId, systems);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedFade.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.fadeSystems(event.targetId, systems, SHIELD_END_FADE_SECONDS);
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOn(event.targetId, systems);
