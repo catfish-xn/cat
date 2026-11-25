@@ -4814,9 +4814,9 @@
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11811,
+      "currentBytes": 12748,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "57000861b13fc1609785cde0c8dd44bd679d5e2af75ddba4a5d8364dd3358ffa",
+      "currentSha256": "b7a95868358a14a1572119184c1a99e852a1ed116e4643a63a20918c02bbf946",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-kogmaw-q-flyer.test.ts": {
@@ -4929,6 +4929,14 @@
       "currentBytes": 5444,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "aeced9058aec4050b22f057725ca23c8dc720c7fdf68a237b0518879aa0592e9",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-outlives-source.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5045,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "83c25d0a3ae243aeb1bfb3ac45fc52c69a9788d5db70399bdd78efa4b562d248",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-own-life.test.ts": {
