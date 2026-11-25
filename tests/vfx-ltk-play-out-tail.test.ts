@@ -1,6 +1,7 @@
 import { Camera, Group, type Mesh, Scene, Texture } from 'three';
 import { describe, expect, it } from 'vitest';
 import { createVfxLibrary } from '../src/rendering/three-mode/vfx-ltk/loader';
+import { outlivesStop } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { createLtkRuntime, type VfxUnit } from '../src/rendering/three-mode/vfx-ltk/runtime';
 import type { TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { constant, num, syntheticSystem } from './vfx-ltk-synthetic';
@@ -56,5 +57,22 @@ describe('a cue that plays out keeps the usual tail fade on emitters that go at 
     expect(seen[87]!.goes).toBeLessThan(seen[69]!.goes!);
     expect(seen[98]!.goes).toBeLessThan(seen[69]!.goes! * 0.3);
     expect(seen[98]!.outlives).toBeCloseTo(seen[69]!.outlives!, 5);
+  });
+  it('counts as outliving the stop an emitter with a linger, and one whose linger type leaves its particles alone', async () => {
+    const emitterOf = async (fields: Parameters<typeof syntheticSystem>[0]) => {
+      const library = createVfxLibrary('/root/', {
+        readJson: async url => url.endsWith('index.json')
+          ? { version: 1, systems: { sample: 'systems/sample.json' }, assets: { 'synthetic.tex': 'textures/sample.png' }, skills: {} }
+          : syntheticSystem(fields),
+        readTexture: async () => new Texture(),
+      });
+      const emitter = (await library.load('sample')).model.emitters[0]!;
+      library.dispose();
+      return emitter;
+    };
+    expect(outlivesStop(await emitterOf({}))).toBe(false);
+    expect(outlivesStop(await emitterOf({ particleLinger: num(5) }))).toBe(true);
+    // The engine's 'none' linger type keeps each particle's own lifetime through a stop (integrate.ts settle).
+    expect(outlivesStop(await emitterOf({ particleLingerType: num(3) }))).toBe(true);
   });
 });
