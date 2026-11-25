@@ -1767,6 +1767,14 @@
       "currentSha256": "2a3e1c0d0ef08901262f1d6c74e5c094ee7319fe34caa861316d8a895236fa4b",
       "firstDifferentByte": 0
     },
+    "tests/jinx-rocket-epicenter.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 2778,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "b8dbd3a4f4f27165972e62f99318e979bd9779a3b35936169cd29dff71eab5ef",
+      "firstDifferentByte": 0
+    },
     "tests/jinx-timing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
