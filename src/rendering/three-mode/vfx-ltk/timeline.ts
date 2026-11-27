@@ -4,6 +4,11 @@ export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
 /** `empowered-alt`: an empowered attack thrown from the other hand (Draven's every second empowered attack). */
 export type TimelineVariant = 'empowered' | 'empowered-alt' | 'self' | 'single';
+/**
+ * A cue `bone` that is no bone: the top of the unit's overhead bar row, straight over the unit (VfxUnit.overheadTop), so a
+ * cue on it follows the bar wherever the host draws it, at every star level. Without a bar, the unit's overhead locator.
+ */
+export const OVERHEAD_TOP = 'render3d-overhead-top';
 export interface TimelineCue {
   readonly system: string;
   readonly action?: TimelineAction;
@@ -13,6 +18,11 @@ export interface TimelineCue {
   readonly delay: number;
   readonly duration: number;
   readonly bone?: string;
+  /**
+   * Board units the cue's anchor is raised by (lowered when negative), straight up. A display choice fitted to footage, never
+   * a value from the original.
+   */
+  readonly lift?: number;
   readonly targetBone?: string;
   /** The rule's branch for this cast (cast event `branch`, written where the rule picks it); a branched cue plays only when the cast names it. */
   readonly branch?: string;

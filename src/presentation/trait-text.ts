@@ -10,9 +10,16 @@ import { V20_TEAMUP_DISPLAY_SOURCE } from '../simulation/content/v20-trait-text'
 import { readTooltipText, peekTooltipText, onTooltipTextChanged } from './tooltip-text-loader';
 import type { familyDisplay } from '../simulation/family-heist';
 
-/** Append these supplied domain fields at the bottom of the Family tooltip; no counting or RNG in presentation. */
+/** 家人5 reward names as players see them: the rules' name, except the reward that replaces the 3 training dummies. */
+export function familyRewardName(key: string, rulesName: string): string {
+  return key === '3TrainingDummies' ? '10金币（代替3个训练假人）' : rulesName;
+}
+/**
+ * The rules' 家人5 progress at the bottom of the Family tooltip; no counting or RNG in presentation. The reward is named for
+ * players (familyRewardName); how the draw works is in the trait's own note, so the rules' policy summary is not repeated.
+ */
 export function familyTraitFooter(display:ReturnType<typeof familyDisplay>):readonly string[] {
-  return display?[display.progressText,display.policy]:[];
+  return display?[`${display.CurrentProgress}/${display.CurrentRewardValue}；当前奖励：${familyRewardName(display.CurrentReward,display.currentRewardName)}`]:[];
 }
 
 type SourceTier = { readonly threshold: number; readonly values: Readonly<Record<string, number | null | undefined>> };

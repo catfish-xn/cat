@@ -1,4 +1,5 @@
 import type { MultiplayerCommandResult } from '../simulation/round-settlement';
+import { getUnitForm } from '../simulation/seat-mechanics/forms';
 import { usableBenchSlots, isOverflowUnit } from '../simulation/bench-capacity';
 import { installUnitInspect } from '../presentation/unit-panel-loader';
 import type { UnitPanelData } from '../presentation/unit-panel';
@@ -1378,12 +1379,19 @@ export class BoardScene extends Phaser.Scene {
     // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
     const star = displayStarLevel(this.session.state, unit), notes = [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])];
     const itemStacks = this.session.combatView?.units.find(entry => entry.id === id)?.itemStacks;
-    const heroAbility = this.heroAbilityOf(unit);
-    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}:${heroAbility}`,
-      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks, heroAbility)!);
+    const heroAbility = this.heroAbilityOf(unit), form = this.unitFormOf(unit);
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}:${heroAbility}:${form}`,
+      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks, heroAbility, form)!);
     this.unitCardOpen = true;
   }
   private inspect?: ReturnType<typeof installUnitInspect>;
+  /** A form swapper's form for its ability text: frozen in combat, else from its preparation board row (rules: forms.ts). */
+  private unitFormOf(unit: { id: string }): 'melee' | 'ranged' | null {
+    const combat = this.session.combatView?.units.find(entry => entry.id === unit.id);
+    if (combat) return combat.form ?? null;
+    const prep = this.state.units.find(entry => entry.id === unit.id);
+    return prep ? getUnitForm(prep, this.state.board) : null;
+  }
   /** 卯足全力: my strongest board Vander shows the hero spell (never a scouted or watched seat's unit). */
   private heroAbilityOf(unit: { id: string; team: string }): boolean {
     const remote = this.session instanceof RemoteSession ? this.session : null;
@@ -1408,7 +1416,7 @@ export class BoardScene extends Phaser.Scene {
     const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
     const view = this.views.get(id);
     return { id, definitionId: unit.definitionId, starLevel: displayStarLevel(this.session.state, unit), team: remote?.watchedSeat != null ? 'enemy' : unit.team,
-      combat, items: view ? [...view.equipped, ...view.extras.temporary] : [], heroAbility: this.heroAbilityOf(unit),
+      combat, items: view ? [...view.equipped, ...view.extras.temporary] : [], heroAbility: this.heroAbilityOf(unit), form: this.unitFormOf(unit),
       notes: [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])],
       battle: history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null };
   }
@@ -1650,7 +1658,7 @@ export class BoardScene extends Phaser.Scene {
   /** ?render=3d: outside combat the 3D bar still shows the piece's full HP blocks and starting mana (2D keeps its bars hidden). */
   private planningMetersOf(id: string) {
     const unit = this.state.units.find(entry => entry.id === id) ?? this.summonOf(id)?.unit;
-    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit));
+    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit), this.unitFormOf(unit));
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
   private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'itemsConfiscated' | 'anomalies'> {

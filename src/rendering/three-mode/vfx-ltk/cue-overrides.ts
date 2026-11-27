@@ -12,6 +12,7 @@
  */
 import { strikeOffsetTicks, type TimelineCue } from './timeline';
 import { measuredAtFxScale as kept, measuredOnBody as hugged } from './fx-size';
+import { BLEND_MODE, type BlendMode } from './engine/model/enums';
 import { BATCH1_TIMELINES } from './batch1-timelines';
 import { JINX_EVENT_SKILLS, jinxSkills } from './champions/jinx';
 import { JAYCE_EVENT_SKILLS, jayceSkills } from './champions/jayce';
@@ -22,15 +23,45 @@ import { warwickSkills } from './champions/warwick';
 import { S13_TIMELINES, VI_LANDING } from './s13-timelines';
 import { elise as eliseBatch3 } from './batch3/elise';
 import { swain as swainBatch3 } from './batch3/swain';
+import { rell as rellBatch3 } from './batch3/rell';
 
 const chest = 'C_BUFFBONE_GLB_CHEST_LOC';
 /** Seconds after Malzahar's cast that his gate's end portals open (fitted, 自定，非原版). */
 export const MALZAHAR_GATE_DELAY = 0.2;
 /**
+ * Seconds after Ambessa's chain cast that her chain swipe (3b4c15e0) starts. Fitted, measured on live-server 3-star footage,
+ * not original data: neither her character data nor her animation graph times it, and the export's estimate drew it
+ * later than the original's arc. The swipe's own emitters still start after their authored wait.
+ */
+export const AMBESSA_CHAIN_SWIPE_DELAY = 0.1;
+/**
  * Seconds a cue that plays out at its end (TimelineCue.playOut) may keep its particles after it, at most: our own cap
  * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
  */
 export const PLAY_OUT_AT_DEADLINE = 0.5;
+/**
+ * Garen's falling sword (97c28077) starts GAREN_SWORD_DELAY after his cast, and his landing burst (5bbccb8c) starts
+ * GAREN_SWORD_INTO_BODY after that: when the sword's tip comes down into Garen's height, before it reaches the ground, so the
+ * burst covers the blade going in. Both measured from the official game's footage, not original data (量自正式服画面，非原版
+ * 数据): there his sword shows a beat after the cast starts, and the burst flashes a moment after it comes into view.
+ */
+export const GAREN_SWORD_DELAY = 0.3, GAREN_SWORD_INTO_BODY = 0.28;
+/**
+ * Seconds Garen's landing burst (5bbccb8c) plays out after its cue ends: emission stops there and the particles already
+ * out, the flying pebbles and dust among them, finish their own lives instead of the whole burst fading at the cut. By the
+ * asset's own lifetimes and lingers its last particles go a little under a second after the cut; this is the most it may
+ * take (自定，非原版). In the official game's footage the pebbles are still on the ground after the burst.
+ */
+export const GAREN_BURST_PLAY_OUT = 1;
+/**
+ * Skill systems that may take more root places than ROOT_PARTICLES_MOST, by system: the most this one run may take. Only for
+ * a system measured past that cap whose later emitters the cap visibly starves (11-24: Garen's landing burst 5bbccb8c measures
+ * about half again past it, and its spark and fire waves, part of its white flash, lost much of their particles). Our own
+ * cap (自定，非原版), measured on the asset.
+ */
+export const ROOT_ROOM_MOST: Readonly<Record<string, number>> = {
+  '5bbccb8c': 640,
+};
 /** Vi's landing group (s13-timelines.ts): played when the rules' slam lands (CUE_EXTRA_SKILLS 'vi-slam', batch2-bridge.ts). */
 export const VI_SLAM_SYSTEMS: readonly string[] = ['18e22631', 'd27b3044', '66c600e8', '84b969e0'];
 /** Vi's right hand's trail: from her cast until the slam lands, where batch2-bridge.ts stops it. */
@@ -294,6 +325,9 @@ export const CUE_EXTRA_SKILLS: Readonly<Record<string, readonly TimelineCue[]>> 
   ],
 };
 
+/** Darius's ground rings, drawn size (fx-size.ts measuredAtFxScale): measured from official-client footage, not from game data (11-25). */
+const DARIUS_RING_SCALE = kept(0.38);
+
 /** Singed's flask: released this long into his cast (a fitted display value), then in flight this long. */
 const SINGED_FLASK_RELEASE = 0.5, SINGED_FLASK_FLIGHT = 0.35;
 /**
@@ -306,6 +340,28 @@ const ZIGGS_BOMB = (() => {
 })();
 /** When the flask lands on the ally's head: what it brings starts then. */
 const SINGED_FLASK_LANDS = SINGED_FLASK_RELEASE + SINGED_FLASK_FLIGHT;
+/**
+ * How long a stun's own layers (CUE_RULE_STOPS stunEnded) take to ease out once their target is no longer stunned: a short
+ * fade of our own (自定，非原版), so the layer leaves with the stun instead of being cut.
+ */
+export const STUN_END_FADE_SECONDS = 0.25;
+/** How long a shield's layers (CUE_RULE_STOPS abilityShieldEndedFade) take to ease out when its layer ends: our own (自定，非原版). */
+export const SHIELD_END_FADE_SECONDS = 0.25;
+/** When Akali's mark (bc4a9e0d) lands on her target after the cast: with her shuriken's hit. */
+export const AKALI_MARK_DELAY = 0.3;
+/**
+ * Akali's exposure as the rules time it (from the tick after her cast, for her ability's Duration in rule ticks), mirrored here
+ * as CAST_WINDUP_TICKS is: importing the ability data from the 3D code pulls it into the render3d chunk and makes the 2D entry
+ * load that chunk eagerly (rendering3d-isolation). Kept in step with the rules' constant, enforced by
+ * tests/vfx-ltk-status-follows-rules.test.ts.
+ */
+export const AKALI_EXPOSURE = Object.freeze({ fromTick: 1, ticks: 80, ticksPerSecond: 20 } as const);
+/**
+ * How long Akali's mark shows: until the rules' exposure on that target ends, counted from when the mark lands. The exposure
+ * has no other end in the rules (it is not consumed or cleansed; a recast on the same target restarts it, as a recast
+ * replaces the mark: SUSTAIN_REFRESH); the target's death takes the mark at once (SUSTAIN_CAPS).
+ */
+export const AKALI_MARK_SECONDS = (AKALI_EXPOSURE.fromTick + AKALI_EXPOSURE.ticks) / AKALI_EXPOSURE.ticksPerSecond - AKALI_MARK_DELAY;
 export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // Elise's front-row cast as exported (batch3/elise.ts, baked into the asset index), with the Cocoon hit 6d6525e8 playing to its
   // system's own end instead of the default: no rule event ends it (11-15).
@@ -314,6 +370,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // system 3d2697ac (its smoke and red flash, with the crow 9ad716c2 that system carries) rather than the bare crow, and
   // to the primary target only for now; the nearby targets get none until the look is judged (Fable 11-21).
   'swain-back': swainBatch3['swain-back']!.map(cue => cue.system === '9ad716c2' ? { ...cue, system: '3d2697ac', primary: true } : cue),
+  // Rell's list as exported (her defence-steal hit 5fe3dc8a plays once per hit, as the asset does: a resistance cut shows
+  // nothing more in the original, 11-25), her basic-attack hit on the target's chest like every attack hit named here (#627).
+  rell: rellBatch3.rell!.map(cue => cue.action === 'attack' && cue.event === 'hit' ? { ...cue, bone: chest } : cue),
   // Steb's cast keeps its strike on the enemy only; his heal missile and heal ring play from his heal events
   // (CUE_EXTRA_SKILLS 'steb-share' / 'steb-heal'), never on the cast's enemy target.
   steb: [
@@ -333,11 +392,16 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // R: shield on Garen, then one sky beam and one impact on his own ground. Not one copy per target.
   // The landing burst is authored far wider than the original's drawn burst (castcmp-1103); 0.45 keeps it on his feet.
+  // 11-24: his package's cast burst (cbccc667: the energy rising off him and a glow at his feet) and its falling sword
+  // (97c28077: the golden blade dropping from above onto his ground, with its glow) were never cued. The burst plays from the
+  // cast; the sword a beat later (GAREN_SWORD_DELAY), and the landing burst as the sword's tip comes down into him.
   garen: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.3333333333333333, duration: 1.5 },
+    { system: 'cbccc667', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: ground },
+    { system: '97c28077', action: 'cast', event: 'cast-start', delay: GAREN_SWORD_DELAY, duration: 1.2, bone: ground },
     { system: 'ea21ae27', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: chest },
     { system: '44aa54ff', action: 'cast', event: 'cast-start', delay: 0.4, duration: 1, bone: ground },
-    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: 0.6, duration: 0.7, bone: ground, scale: kept(0.45) },
+    { system: '5bbccb8c', action: 'cast', event: 'cast-start', delay: GAREN_SWORD_DELAY + GAREN_SWORD_INTO_BODY, duration: 0.7, bone: ground, scale: kept(0.45), playOut: GAREN_BURST_PLAY_OUT },
   ],
   // E (14.24 field: the main root lands a beat after the cast, the second roots a beat later): E_Sequence_Impact is the index's own ground
   // missile (travel 0.3): one crawls to the primary target, then short ones reach up to two others. The brown branching
@@ -394,6 +458,16 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'ce2a567b', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Barrel_Loc', delay: 0, duration: 0.4 },
     { system: '4ecddce4', action: 'cast', event: 'cast-start', bone: 'Buffbone_Cstm_Rifle_Scope_Loc', delay: 0, duration: 0.5 },
     { system: 'a1ab2507', action: 'cast', event: 'hit', delay: 0.1, duration: 0.5 },
+  ],
+  // Ekko's list as exported, but his passive's burst 970252f2 plays until its own particles have all but gone (its petals,
+  // sparks and glow outlasted the exported second): played to where the asset's own visible weight falls to almost nothing
+  // (拟合，非原版数值, 11-24).
+  ekko: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'Spine', delay: 0.26666666666666666, duration: 1.5 },
+    { system: '006b32b1', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'C_Buffbone_Glb_Center_Loc' },
+    { system: '5af49b76', action: 'cast', event: 'hit', delay: 0, duration: 0.5 },
+    { system: '970252f2', action: 'cast', event: 'hit', delay: 0.6, duration: 1.57 },
+    { system: 'dda9e01c', action: 'cast', event: 'hit', delay: 0.6, duration: 1 },
   ],
   // Q: the grenade keeps emitting after it arrives, so the lightning sits on each target. Crystal travel is smoke, not the yellow arc. Straight flight only.
   scar: [
@@ -453,7 +527,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'ed58bcfc', action: 'cast', event: 'hit', delay: 0.55, duration: 7.55, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '898ab758', action: 'cast', event: 'hit', delay: 0.72, duration: 7.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '1b624dee', action: 'cast', event: 'hit', delay: 0.72, duration: 6.4, bone: 'BUFFBONE_GLB_GROUND_LOC', primary: true },
-    { system: '29d01632', action: 'cast', event: 'link', delay: 0.78, duration: 5, bone: 'BUFFBONE_GLB_WEAPON_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
+    // The chain runs from her primary target to each other enemy it binds, chest to chest (its spell data's start and end
+    // bones), never from her and never to the primary itself (11-25): played by the renderer with the primary as its source
+    // ('passive', placeholder-renderer.ts), ended with her chain (LEBLANC_CHAIN_FROM_PRIMARY).
+    { system: '29d01632', action: 'passive', event: 'link', delay: 0.78, duration: 5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '4ea54e59', action: 'cast', event: 'hit', delay: 0.8, duration: 6.5, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     // Her channel glow and swirling petals at her weapon hand, held until the rules' chain ends (SUSTAIN_CAPS, CUE_END_STOPS
     // 'leblanc-chain'). The skill's body: it never yields (Fable 11-19).
@@ -567,6 +644,20 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: '5a18496c', action: 'attack', event: 'projectile', bone: 'UpperBarrel', delay: 0.26666666666666666, duration: 1.5, targetBone: 'C_BUFFBONE_GLB_CENTER_LOC' },
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CENTER_LOC', delay: 0.5666666666666667, duration: 1.5 },
   ],
+  // Ambessa: her exported list, with her chain-stance swipe (3b4c15e0) on the unit instead of her weapon locator. The
+  // swipe is a half-disc of meshes drawn around its anchor toward the cast's target; on the weapon locator it turned with
+  // the weapon and flew off over her head (11-25 review against the 3-star original). On the unit it faces her primary
+  // target and sits on her. Its start is earlier than the export's estimate (AMBESSA_CHAIN_SWIPE_DELAY). The export's bones
+  // and delays elsewhere are kept; CUE_BRANCHES still tags chain and fist.
+  ambessa: [
+    { system: '0f2af66b', action: 'attack', event: 'hit', bone: 'C_BUFFBONE_GLB_CHEST_LOC', delay: 0.21666666666666667, duration: 1.5 },
+    { system: '754b6c78', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'C_Buffbone_Glb_Chest_Loc' },
+    { system: 'a429a900', action: 'cast', event: 'cast-start', delay: 0.2, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '6390530e', action: 'cast', event: 'cast-start', delay: 0.4, duration: 0.7, bone: 'Buffbone_Glb_Weapon_1' },
+    { system: 'cba05b6e', action: 'cast', event: 'hit', delay: 0.8, duration: 1 },
+    { system: '3b4c15e0', action: 'cast', event: 'cast-start', delay: AMBESSA_CHAIN_SWIPE_DELAY, duration: 0.7 },
+    { system: '8a64f4dd', action: 'cast', event: 'hit', delay: 0.6, duration: 0.7 },
+  ],
   // The spell is a hand comet plus one primary splash. The third cast also splashes the next two receipt targets. There is
   // no separate hand-glow system. Her bolt's hit lands on the primary target every cast, when the comet does. Her unplayed
   // ground system stays out (purpose unverified, see tests/fixtures/cue-dropped-systems.ts).
@@ -585,7 +676,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'd900f5b3', action: 'cast', event: 'cast-start', delay: 0, duration: 0.5, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: '76f80db8', action: 'cast', event: 'projectile', delay: 0.12, duration: 0.35, travelSeconds: 0.15, bone: 'Buffbone_Glb_Weapon_1', targetBone: 'C_BUFFBONE_GLB_CHEST_LOC' },
     { system: '838f31e4', action: 'cast', event: 'hit', delay: 0.28, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC' },
-    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: 0.3, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
+    // Her mark on the primary target, held until the rules' exposure on it ends (SUSTAIN_CAPS: AKALI_MARK_SECONDS).
+    { system: 'bc4a9e0d', action: 'cast', event: 'hit', delay: AKALI_MARK_DELAY, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
     { system: '1edf4c0e', action: 'cast', event: 'cast-start', delay: 0.85, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
     { system: 'd7cede72', action: 'cast', event: 'hit', delay: 1.1, duration: 1, bone: 'C_BUFFBONE_GLB_CHEST_LOC', primary: true },
   ],
@@ -652,12 +744,14 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   ],
   // Q: exported cues, with the hit spark optional: a spin with nobody adjacent, or one that kills its targets, still shows
   // the ring, the spin and the heal (11-06 field: both casts refused and fell back to the plain charge ring).
+  // The two ground rings (wind-up and blade ring) are drawn at DARIUS_RING_SCALE: at the arena scale they drew about four
+  // cells across, well past the adjacent cells his spin hits, where the official client's ring hugs the adjacent cells (11-25).
   darius: [
     { system: '0f2af66b', action: 'attack', event: 'hit', bone: chest, delay: 0.36666666666666664, duration: 1.5 },
-    { system: 'a7efa545', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: 'a7efa545', action: 'cast', event: 'cast-start', delay: 0, duration: 0.6, bone: 'Buffbone_Glb_Ground_Loc', scale: DARIUS_RING_SCALE },
     // Its five emitters already wait most of a second before their first particle; a 0.6 s cue delay on top pushed the blade
     // ring to the very end of the cue (11-08 audit). The original shows it with the swing and fades it soon after.
-    { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'Buffbone_Glb_Ground_Loc' },
+    { system: '97f3e391', action: 'cast', event: 'cast-start', delay: 0, duration: 1.2, bone: 'Buffbone_Glb_Ground_Loc', scale: DARIUS_RING_SCALE },
     { system: 'a5373796', action: 'cast', event: 'hit', delay: 0.6, duration: 0.6, optional: true },
     { system: 'd2b2862d', action: 'cast', event: 'cast-start', delay: 0.7, duration: 1, bone: 'C_Buffbone_Glb_Center_Loc' },
   ],
@@ -668,7 +762,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // arena scale sank into her chest, pr572-report 11-09 14:35, and 1.3 again in pr580-report).
   // It wraps her body, so it shrinks with the body (fx-size.ts measuredOnBody).
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
+  // Its end fades from its stop (fadeOut) instead of cutting there, as the other shields that end with their layer do: a broken
+  // shield ends it earlier (CUE_RULE_STOPS abilityShieldEndedOnHolder).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), fadeOut: true, ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
   // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
   // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
   // plays from the cast and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS), played at that
@@ -764,6 +860,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   'mel-third': melSkills['mel-third'],
   'mel-shield': melSkills['mel-shield'],
   sevika: sevikaSkills.sevika,
+  // Her slot machine and its result layers over her bar (champions/sevika.ts SLOT_BONE, 11-25), from code likewise: the
+  // asset index's copy stands them on her feet.
+  ...Object.fromEntries(Object.entries(sevikaSkills).filter(([key]) => key.startsWith('sevika-slots'))),
   viktor: viktorSkills.viktor,
   warwick: warwickSkills.warwick,
   // Exported to the asset index (0c59) and repeated as exported, but for the cast's W_Mis rocket and W_Tar hit: one each
@@ -1071,6 +1170,28 @@ export const ATTACHED_WHOLE_BODY: Readonly<Record<string, readonly string[]>> = 
 };
 
 /**
+ * Emitters drawn without their world acceleration, by system and emitter name. Garen's falling sword (97c28077 sword_drop)
+ * authors a world acceleration far beyond any other emitter's and no drag; drawn with it, the sword plunged to the ground in
+ * a fraction of its fall. The official game's sword lands when its own steady fall reaches the ground, so it is drawn falling
+ * at its own speed alone (自定，依据正式服画面的落地时刻，非原版数据).
+ */
+export const WORLD_ACCELERATION_OFF: Readonly<Record<string, readonly string[]>> = {
+  '97c28077': ['sword_drop'],
+};
+
+/**
+ * Emitters drawn with another blend mode than their asset reads as, by system and emitter name. Garen's falling sword
+ * (97c28077 sword_drop) writes no blend mode, which reads as additive: its saturated yellow blade, added onto the bright
+ * board, drew lemon yellow. Drawn with ordinary alpha blending it takes the official game's orange gold (依据正式服画面取色
+ * 对比，非原版数据). Its tip's small blue-green patch is in the blade's own texture and stays. For this one emitter only: no
+ * general rule (a mesh layer with no blend mode and no colour field) holds, as Draven's axes, of that kind, drew worse with
+ * alpha blending in the same comparison (11-25).
+ */
+export const EMITTER_BLEND: Readonly<Record<string, Readonly<Record<string, BlendMode>>>> = {
+  '97c28077': { sword_drop: BLEND_MODE.alpha },
+};
+
+/**
  * Emitters that keep emitting for their run's whole life instead of stopping at their own `lifetime` (fitted, not
  * original data): a form's look held at its first strength until the form ends (TIMED_FORM_STOPS stops the run).
  * Dr. Mundo R_Buf Avatar2: its shell pulses for the whole form (Fable 11-18).
@@ -1089,10 +1210,17 @@ export const TIMED_FORM_STOPS: Readonly<Record<string, readonly string[]>> = {
  * stop emitting and leave within half a second. Each cue lists the system's own end as its duration, so without the event
  * it plays out; with it, it ends when the rule's effect does.
  */
+/**
+ * LeBlanc's chain links (29d01632) run from her primary target to the other enemies her cast binds: played from that primary
+ * (a 'passive' play the renderer makes on her cast), so her chain's end (abilityEffectEnded 'leblanc-chain', which names
+ * every bound unit) ends them on each bound unit as their source.
+ */
+export const LEBLANC_CHAIN_FROM_PRIMARY = { system: '29d01632', effect: 'leblanc-chain' } as const;
 export const CUE_END_STOPS: Readonly<Record<'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension', readonly string[]>> = {
   // The chain to each target (it holds a looping emitter), the primary's mark, the empowered glow, the orb and the ground mark;
   // and her channel glow (acd84091, held for the chain: SUSTAIN_CAPS).
-  'leblanc-chain': ['29d01632', '4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
+  // Her chain links themselves run from the primary, not from her: they end on each bound unit (LEBLANC_CHAIN_FROM_PRIMARY).
+  'leblanc-chain': ['4ea54e59', 'ed58bcfc', '898ab758', '1b624dee', 'acd84091'],
   // The volley's buff glow (2beb0657) goes with the volley's last shot too.
   'twitch-volley': ['900dd2d2', '2beb0657'],
   // Swain's demon form (takedowns extend it in the rules). Mordekaiser's slam burst plays per hit and holds nothing to end.
@@ -1112,10 +1240,22 @@ export const CUE_RULE_STOPS = {
   frenzyEnded: { systems: ['8c054bed'], on: 'source' },
   // An ability shield's visual goes when that ability's shield layer ends (shieldLayerChanged depleted / expired / replaced /
   // death-cleanup), matched by the ability in the layer's key: Blitzcrank's and Vi's Q shields.
-  abilityShieldEnded: { systems: { 'blitzcrank-ability': ['fc783cba'], 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['e22b48b0', '2f1f3b60'] }, on: 'source' },
+  // Garen's, Vi's and Loris's retaliation ring: every layer goes at once on a stop (checked per layer, 11-25).
+  abilityShieldEnded: { systems: { 'vi-ability': ['9614ffb4'], 'garen-ability': ['ea21ae27'], 'loris-ability': ['2f1f3b60'] }, on: 'source' },
+  // The same, eased out over SHIELD_END_FADE_SECONDS rather than stopped: Sevika's roulette shield, whose layers live for very
+  // different times, so a stop left its pink rings alone on screen for a moment after the rest had gone (11-25).
+  // Blitzcrank's barrier and Loris's shield likewise (11-25): stopped, Blitzcrank's sparkles stayed well over a second after
+  // the barrier had gone, and Loris's dark shield face and lightning seconds after its edges.
+  abilityShieldEndedFade: { systems: { 'sevika-ability': ['518dee63'], 'blitzcrank-ability': ['fc783cba'], 'loris-ability': ['e22b48b0'] }, on: 'source' },
   // The same, for shields an ability puts on others: the visual runs on the shielded ally and ends with that ally's layer
   // (Mel's shield, Jayce's forge shield).
-  abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'] }, on: 'target' },
+  abilityShieldEndedOnHolder: { systems: { 'mel-ability': ['71e871c8'], 'jayce-ability': ['e8cd793f'],
+    // Lux's bubble on the ally she shields and Renata's shield on each ally her missiles shield: gone when that layer breaks
+    // or runs out (11-24).
+    'lux-ability': ['44c9516a'], 'renata-ability': ['fdf79734'] }, on: 'target' },
+  // The same for a shield a caster's cast put on itself, drawn as its own cast-start (no target): Lux's self-cast bubble goes
+  // when her own layer ends (the runtime's stopSystemsOnSelf). Her bubbles on allies are not touched.
+  abilityShieldEndedOnSelf: { systems: { 'lux-ability': ['44c9516a'] }, on: 'self' },
   // Viktor's board-wide warning goes when his slam lands (the ability's later direct magic hit, batch2-bridge.ts).
   viktorSlamLanded: { systems: ['12ac9712'], on: 'source' },
   // Malzahar's E mark goes when its target's shred ends (statusChanged kind shred, an end reason).
@@ -1126,6 +1266,12 @@ export const CUE_RULE_STOPS = {
   // (`<jayce>:g23-forge`, batch2-bridge.ts) and goes when the buff his cast gave ends on an ally (sustain-stops.ts ties each
   // buffed ally to its forge). Another stat buff on that ally ending first ends it too (the display event names no source).
   allyStatusEnded: { systems: { 'stat-buff': ['afb2ec69'] }, on: 'source' },
+  // Elise's cocoon on a target goes when that target is no longer stunned (its control in the board frame ends: the rules'
+  // stun state, whatever else stunned it too; sustain-stops.ts createControlEndStops). Her spider form is not touched (11-24).
+  // Zyra's root cluster on her rooted target likewise (11-24; her vines' hit on the target's body, 9d413df0, is not a stun
+  // display and keeps its own cue).
+  stunEnded: { systems: ['6d6525e8', 'b888a24f'], on: 'target' },
+
   // Vex's opening area holds until her delayed second hit lands on that target (the next direct ability hit after the first).
   vexSecondHit: { systems: ['8682c9ee', 'eb9da1d5'], on: 'target' },
 } as const;
@@ -1149,9 +1295,9 @@ export const SUSTAIN_CAPS: Readonly<Record<string, number>> = {
   '56e6971e': 60, // Amumu passive → his death (自定上限)
   '6889455c': 60, // Kog'Maw attack speed stacks (no end in the rules) → his death (自定上限)
   '9f805f6e': 60,
-  // Ekko's mark on a target: the shred stays for the whole combat in the rules, so it shows 2 s after each hit, refreshed by
-  // the next (自定，非原版, Fable 11-19 GAP): held until death it would keep a slot per target hit, all fight long.
-  '5af49b76': 2,
+  // Akali's mark: exactly the rules' exposure time (AKALI_MARK_SECONDS), which nothing ends early; death ends it at once.
+  'bc4a9e0d': AKALI_MARK_SECONDS,
+  'b888a24f': 2, // Zyra's root cluster on her rooted target → that target's stun ends (eased out: STUN_END_FADE_SECONDS)
   '8682c9ee': 1.8, // Vex opening area → her delayed second hit
   'eb9da1d5': 1.8,
 };
