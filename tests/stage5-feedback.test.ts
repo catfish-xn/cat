@@ -277,6 +277,33 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(three.map(e => e.text)).toEqual(['10', '20', '30']);
       for (const e of three) { expect(scale(e)).toBe(1); expect(Number(e.style.opacity)).toBe(1); expect(Math.abs(left(e) - (120 + 10 + 25 * 400 / 700))).toBeLessThanOrEqual(15 + 1e-6); }
     });
+    it('our readability rules (not original): same-tick damage on one unit steps right and down; damage clears a heal on its unit; a crit\'s top is its mark\'s', () => {
+      // Labels are 9 px a character wide in this DOM stand-in, at least 40 px: a 2-digit number is 40 px wide, 22 px tall.
+      const alone = labels([{ ...damage(1, 'a', 20), sourceId: 'c' }], 0)[0];
+      const [, second] = labels([damage(1, 'a', 10), { ...damage(1, 'a', 20), sourceId: 'c' }], 0);
+      expect(second.text).toBe('20');
+      expect(left(second) - left(alone)).toBeCloseTo(0.6 * 40, 5); expect(top(second) - top(alone)).toBeCloseTo(0.6 * 22, 5);
+      // A heal on the same unit stays on its midline; a damage number that would cover it moves right, by at most its own width.
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
+      renderer.push([heal(1), damage(1)], 0); renderer.render(0, anchors);
+      const [healed, hit] = ['+7', '10'].map(text => snapshot(h)[0].children.find(e => e.text === text)!);
+      expect(left(healed)).toBe(120);
+      // Popped, the heal is 80 px wide here: clearing it would take more than the damage number's own 40 px, so it moves 40.
+      expect(left(hit) - left(labels([damage(1)], 0)[0])).toBeCloseTo(40, 5);
+      renderer.dispose();
+      // Once the heal has risen out of its row, a new damage number lands where it would alone.
+      setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3);
+      r3.push([heal(1)], 0); r3.push([damage(9)], 600); r3.render(600, anchors);
+      const late = snapshot(h3)[0].children.find(e => e.text === '10')!;
+      expect(left(late)).toBe(left(labels([damage(9)], 0)[0]));
+      r3.dispose();
+      // A crit's mark reaches above its digits: its mark's top, not its digits', starts under its own bar's bottom (305).
+      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2);
+      r2.push([crit(1)], 0); r2.render(0, new Map([['a', { x: 120, y: 280, radius: 10 }]]), [], new Map([['a', { x: 120, y: 300, w: 60, h: 10 }]]));
+      const [big] = snapshot(h2)[0].children;
+      expect(top(big) - (1.27 - 0.35) * px(big) * scale(big)).toBeGreaterThanOrEqual(305 - 1e-6);
+      r2.dispose();
+    });
     it('bars are not avoided: a number on another unit\'s bar stays put; a 2D canvas label is still stepped past', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), other = { x: 160, y: 307, w: 80, h: 16 };
       renderer.push([damage(1, 'a', 10)], 0); renderer.render(0, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [], new Map([['b', other]]));

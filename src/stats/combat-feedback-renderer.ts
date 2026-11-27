@@ -10,7 +10,9 @@ type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShad
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
 interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; at: number; measured: number; life: number; px: number;
   /** A damage number's place on its first drawn frame: it stays there, its unit may move on (DAMAGE_RIGHT, DAMAGE_JITTER). */
-  spawn?: { x: number; y: number } }
+  spawn?: { x: number; y: number };
+  /** Its place among damage numbers of one tick on its unit (0 for the first): DAMAGE_SAME_TICK_STEP. */
+  order: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
 function style(item: Label, key: LabelStyle, value: string): void {
   if ((item.styles[key] ?? item.label.style[key]) !== value) item.label.style[key] = value;
@@ -68,6 +70,18 @@ const BODY_DROP = 0.35;
  * draw). Numbers on one unit do not queue or take turns: a new one lands near the last and may cover it, as in the original.
  */
 const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
+/**
+ * Our own readability rules on where a damage number appears (coordinator 11-27, not original data), each taken once on its
+ * first frame and never moved after:
+ * - DAMAGE_SAME_TICK_STEP: the 2nd, 3rd… damage number of one tick on one unit lands that many of its own widths and heights
+ *   further right and down per place, so each shows more than half of itself.
+ * - DAMAGE_HEAL_CLEAR: one that would cover a heal number still showing on its unit moves right until it does not, at most
+ *   that many of its own widths. A heal never moves for a damage number.
+ * - A crit's top edge is its mark's (CRIT_TOP_EM of its font size above its centre), not its digits'.
+ */
+const DAMAGE_SAME_TICK_STEP = 0.6, DAMAGE_HEAL_CLEAR = 1;
+/** The digits' half height in em (own fit for the rounded faces used) and so how far a crit's mark reaches above its centre. */
+const DIGITS_HALF_EM = 0.35;
 /** Two numbers in [−1, 1) from a number's key: the same hit always lands on the same spot. */
 function jitterOf(key: string): [number, number] {
   let h = 2166136261;
@@ -86,6 +100,8 @@ const BAR_SIDESTEP_GAP = 3;
  */
 const CRIT_MARK_PATH = 'M24 9L24 24 11 24 11 22.5 6.5 22 11 20.5 11 17.5 4.5 16.5 11 15 11.5 14.5 1 1 16.2 9.8 17 9 18 9 18.5 4 21.5 9Z';
 const MARK_EM = 1.27, MARK_PAD_EM = 0.42, DIGITS_BOTTOM_EM = 0.93;
+/** A crit's mark hangs from the digits' bottom (MARK_EM tall), so its top is this far above the label's centre, in em. */
+const CRIT_TOP_EM = MARK_EM - DIGITS_HALF_EM;
 const channels = (color: string) => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 const hex = (values: number[]) => `#${values.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
 const lightTone = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.86 + 30, g * 0.7, b * 0.78]); };
@@ -152,7 +168,8 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     if (perUnit.length >= PER_UNIT) { const first = perUnit.find(item => item.cls !== 'crit') ?? perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= ALL) release(floats.shift()!);
     const l = look(kind, cls, burn);
-    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, at, measured: Number.NaN, life: kind === 'heal' ? HEAL_LIFE_MS : LIFE_MS[cls], px: l.px });
+    const order = kind === 'heal' ? 0 : floats.filter(item => item.unitId === unitId && item.kind !== 'heal' && item.key.startsWith(`${tick}/`)).length;
+    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, at, measured: Number.NaN, life: kind === 'heal' ? HEAL_LIFE_MS : LIFE_MS[cls], px: l.px, order });
   }
   return {
     push(events, at) {
@@ -202,6 +219,9 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       for (const item of expired) release(item);
       // Each number on its own (no queue, no turns, as in the original): a heal on its unit's body, rising; a damage number where it
       // first appeared, drifting. Canvas labels (2D) it would cover make it step sideways; bars do not.
+      // Heals first: a damage number appearing this frame keeps clear of the heals already showing on its unit.
+      const heals = new Map<string, FeedbackObstacle[]>();
+      measured.sort((a, b) => Number(b.item.kind === 'heal') - Number(a.item.kind === 'heal'));
       for (const { item, anchor, half } of measured) {
         const age = Math.max(0, now - item.at), heal = item.kind === 'heal';
         const pop = heal ? (age < HEAL_POP_MS ? HEAL_POP_SCALE - (HEAL_POP_SCALE - 1) * (age / HEAL_POP_MS) : 1)
@@ -212,14 +232,21 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           // On the body's midline, rising from its first frame; it never rises past half its height below its bar.
           const floor = bar ? bar.y + bar.h / 2 + size / 2 : -Infinity;
           x = anchor.x; y = Math.max(anchor.y + anchor.radius * BODY_DROP - HEAL_RISE_PER_S * age / 1000, floor);
+          const list = heals.get(item.unitId) ?? []; list.push({ x, y, w: 2 * w, h: size }); heals.set(item.unitId, list);
         } else {
           if (!item.spawn) {
             // Its first frame: on the body, toward the bar's right end, with its own jitter; its top edge (at its popped size) no
             // higher than its own bar's bottom, so it never appears on its bar (coordinator 11-27). Its arc may then touch the bar a
             // little; other units' bars are not avoided.
             const [jx, jy] = jitterOf(item.key), right = bar ? bar.w * DAMAGE_RIGHT : anchor.radius * DAMAGE_RIGHT * 2;
-            const below = bar ? bar.y + bar.h / 2 + size / 2 : -Infinity;
-            item.spawn = { x: anchor.x + right + jx * DAMAGE_JITTER, y: Math.max(anchor.y + anchor.radius * BODY_DROP + jy * DAMAGE_JITTER, below) };
+            const top = item.cls === 'crit' ? CRIT_TOP_EM * item.px * pop : size / 2;
+            const below = bar ? bar.y + bar.h / 2 + top : -Infinity;
+            const step = DAMAGE_SAME_TICK_STEP * item.order;
+            const spawn = { x: anchor.x + right + jx * DAMAGE_JITTER + step * 2 * half, y: Math.max(anchor.y + anchor.radius * BODY_DROP + jy * DAMAGE_JITTER + step * item.px, below) };
+            const covers = (rect: FeedbackObstacle, at: number) => Math.abs(rect.x - at) < rect.w / 2 + w && Math.abs(rect.y - spawn.y) < rect.h / 2 + size / 2;
+            const near = heals.get(item.unitId) ?? [], start = spawn.x;
+            for (const rect of near) if (covers(rect, spawn.x)) spawn.x = Math.min(start + DAMAGE_HEAL_CLEAR * 2 * half, Math.max(spawn.x, rect.x + rect.w / 2 + w));
+            item.spawn = spawn;
           }
           const u = Math.min(1, age / Math.max(1, item.life)), still = item.cls === 'crit';
           x = item.spawn.x + (still ? 0 : DAMAGE_DRIFT_X * u); y = item.spawn.y + (still ? 0 : damageArc(u));
