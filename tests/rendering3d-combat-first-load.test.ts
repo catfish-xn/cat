@@ -1,5 +1,5 @@
 import { afterAll, afterEach, beforeEach, expect, it, vi } from 'vitest';
-import type { BoardFeedListener, BoardFrame, BoardPiece } from '../src/rendering/board-feed';
+import type { BoardFeedListener, BoardFrame, BoardPiece, BoardWarmHints } from '../src/rendering/board-feed';
 import type { Renderer3d } from '../src/rendering/three-mode/contract';
 
 // A champion whose model first arrives during a shown combat is measured then (sliced, before it replaces the stand-in
@@ -22,11 +22,14 @@ vi.mock('../src/rendering/three-mode/model-fit', async original => {
   };
 });
 // This browser's envelope store (envelope-store.ts), as a map the tests fill and read.
-const store = vi.hoisted(() => ({ stored: new Map<string, unknown>(), kept: [] as [string, string, unknown][] }));
+const store = vi.hoisted(() => ({ stored: new Map<string, unknown>(), kept: [] as [string, string, unknown][], failing: false }));
 vi.mock('../src/rendering/three-mode/envelope-store', () => ({
   openEnvelopeStore: async () => ({
-    load: async (models: ReadonlyMap<string, string>) => new Map([...models].filter(([id, sha]) => store.stored.has(`${id}|${sha}`)).map(([id, sha]) => [id, store.stored.get(`${id}|${sha}`)])),
-    keep: (id: string, sha: string, envelope: unknown) => { store.kept.push([id, sha, envelope]); },
+    load: async (models: ReadonlyMap<string, string>) => {
+      if (store.failing) throw new Error('store unavailable');
+      return new Map([...models].filter(([id, sha]) => store.stored.has(`${id}|${sha}`)).map(([id, sha]) => [id, store.stored.get(`${id}|${sha}`)]));
+    },
+    keep: (id: string, sha: string, envelope: unknown) => { if (store.failing) throw new Error('quota'); store.kept.push([id, sha, envelope]); },
   }),
 }));
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial } from 'three';
@@ -36,9 +39,13 @@ import * as renderer from '../src/rendering/three-mode/placeholder-renderer';
 
 let mounted: Renderer3d | undefined, listener: BoardFeedListener;
 const ROOT = 'https://assets.test/combat-first-load/', BODY = 'model', ID = 'twitch';
+/** The manifest's models (each its own file); the fetch log shows which model files were read, in order. */
+let models: string[] = [ID];
+const glbReads: string[] = [];
 const SHA = '0'.repeat(64);
 beforeEach(() => {
-  vi.clearAllMocks(); store.stored.clear(); store.kept.length = 0;
+  vi.clearAllMocks(); store.stored.clear(); store.kept.length = 0; store.failing = false; models = [ID];
+  vi.mocked(animationEnvelopeSliced).mockImplementation(async () => ({ radius: 1, ground: 0, feet: 0 }));
   vi.stubGlobal('window', { devicePixelRatio: 1 }); vi.stubGlobal('indexedDB', undefined);
   vi.stubGlobal('requestAnimationFrame', () => 1); vi.stubGlobal('cancelAnimationFrame', () => {});
   vi.stubGlobal('crypto', { subtle: { digest: async () => new Uint8Array(32).buffer } });
@@ -48,21 +55,25 @@ beforeEach(() => {
   });
   vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
     const url = String(input);
-    if (url === `${ROOT}manifest.json`) return Response.json({ schemaVersion: 1, models: { [ID]: { path: 'model.glb', unitScale: 1 } } });
-    if (url === `${ROOT}precache.json`) return Response.json({ schemaVersion: 1, files: [{ path: 'model.glb', bytes: BODY.length, sha256: SHA }] });
-    return url.endsWith('model.glb') ? new Response(BODY) : new Response('missing', { status: 404 });
+    const path = (id: string) => id === ID ? 'model.glb' : `${id}.glb`;
+    if (url === `${ROOT}manifest.json`) return Response.json({ schemaVersion: 1, models: Object.fromEntries(models.map(id => [id, { path: path(id), unitScale: 1 }])) });
+    if (url === `${ROOT}precache.json`) return Response.json({ schemaVersion: 1, files: models.map(id => ({ path: path(id), bytes: BODY.length, sha256: SHA })) });
+    if (url.endsWith('.glb')) { glbReads.push(url.slice(ROOT.length)); return new Response(BODY); }
+    return new Response('missing', { status: 404 });
   });
 });
-afterEach(() => { mounted?.dispose(); mounted = undefined; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+afterEach(() => { mounted?.dispose(); mounted = undefined; hints = undefined; glbReads.length = 0; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 afterAll(() => { vi.doUnmock('three'); vi.doUnmock('../src/rendering/three-mode/model-fit'); vi.doUnmock('../src/rendering/three-mode/envelope-store'); vi.resetModules(); });
 
+let hints: BoardWarmHints | undefined;
 const mount = async () => {
   let done!: () => void;
   const preloaded = new Promise<void>(resolve => { done = resolve; });
   renderer.useAssetProgress(text => { if (text.startsWith('素材已全部')) done(); });
-  renderer.useBoardFeed({ subscribe(next) { listener = next; return () => {}; }, controls: () => null as never });
+  renderer.useBoardFeed({ subscribe(next) { listener = next; return () => {}; }, controls: () => null as never, warmHints: () => hints ?? { version: 0, ids: [] } });
   mounted = await renderer.mountRenderer3d({ clientWidth: 800, clientHeight: 600, append() {} } as unknown as HTMLElement, { assetBase: ROOT });
   await preloaded;
+  await new Promise(resolve => setTimeout(resolve, 0)); // the renderer marks the preload done just after its last progress line
 };
 const piece = (id: string, x: number): BoardPiece => ({ id, definitionId: ID, team: 'enemy', starLevel: 1, x, y: 130, alive: true, visible: true });
 const frame = (fighting: boolean, pieces: BoardPiece[]): BoardFrame =>
@@ -123,4 +134,55 @@ it('a stored envelope for another model file is not used', async () => {
   await vi.waitFor(() => expect(championFits()).toHaveLength(1));
   expect(championFits()[0]![1]).toMatchObject({ envelopeRadius: 1, ground: 0, feet: 0 });
   expect(animationEnvelopeSliced).toHaveBeenCalledTimes(1);
+});
+
+// The warm-up in preparation (the second layer): what the room says comes next is measured before any combat shows it.
+const keptIds = () => store.kept.map(([id]) => id);
+it('preparation measures the warm list in order: pinned hints (shop, drawn opponent, scouted board) before every candidate board', async () => {
+  models = ['akali', 'garen', 'zoe'];
+  hints = { version: 1, ids: ['akali', 'garen'], later: ['zoe'] };
+  await mount();
+  listener.frame(frame(false, []));
+  await vi.waitFor(() => expect(keptIds()).toEqual(['akali', 'garen', 'zoe']), { timeout: 5000 });
+  expect(glbReads).toEqual(['akali.glb', 'garen.glb', 'zoe.glb']);
+  // Each measured in slices, the warm-up's own (it stops at a combat), never in one long task.
+  expect(animationEnvelope).not.toHaveBeenCalled();
+  for (const [, , options] of vi.mocked(animationEnvelopeSliced).mock.calls) expect(options?.stop).toBeTypeOf('function');
+});
+
+it('a combat stops the warm-up at once and preparation picks it up again; the model then fits from it with nothing measured mid-combat', async () => {
+  models = ['zoe'];
+  hints = { version: 1, ids: [], later: ['zoe'] };
+  let fighting = false;
+  // A measurement that hands the thread back between slices and stops when asked (model-fit.ts animationEnvelopeSliced).
+  vi.mocked(animationEnvelopeSliced).mockImplementation(async (_body, _clips, options) => {
+    for (let slice = 0; slice < 5; slice++) { await new Promise(resolve => setTimeout(resolve, 20)); if (options?.stop?.()) return null; }
+    return { radius: 3, ground: 0, feet: 0 };
+  });
+  await mount();
+  listener.frame(frame(false, []));
+  await vi.waitFor(() => expect(animationEnvelopeSliced).toHaveBeenCalledTimes(1));
+  fighting = true; listener.frame(frame(true, []));
+  await new Promise(resolve => setTimeout(resolve, 300));
+  expect(keptIds()).toEqual([]); // stopped by the combat, nothing kept, nothing measured meanwhile
+  const during = vi.mocked(animationEnvelopeSliced).mock.calls.length;
+  await new Promise(resolve => setTimeout(resolve, 600));
+  expect(vi.mocked(animationEnvelopeSliced).mock.calls.length).toBe(during); // waits out the whole combat
+  fighting = false; listener.frame(frame(false, []));
+  await vi.waitFor(() => expect(keptIds()).toEqual(['zoe']), { timeout: 5000 });
+  expect(fighting).toBe(false);
+  // The next combat shows zoe: fitted from the warm-up's envelope, no mid-combat measurement.
+  const before = vi.mocked(animationEnvelopeSliced).mock.calls.length;
+  listener.frame(frame(true, [{ ...piece('z', 150), definitionId: 'zoe' }]));
+  await vi.waitFor(() => expect(vi.mocked(fitModel).mock.calls.some(([, o]) => o.envelopeRadius === 3)).toBe(true));
+  expect(vi.mocked(animationEnvelopeSliced).mock.calls.length).toBe(before);
+});
+
+it('a failing envelope store never reaches the game: models are measured and fitted as without one', async () => {
+  store.failing = true;
+  await mount();
+  listener.frame(frame(true, [piece('a', 150)]));
+  await vi.waitFor(() => expect(championFits()).toHaveLength(1));
+  expect(championFits()[0]![1]).toMatchObject({ envelopeRadius: 1, ground: 0, feet: 0 });
+  expect(store.kept).toEqual([]);
 });

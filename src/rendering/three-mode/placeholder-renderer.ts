@@ -484,7 +484,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (envelopes.has(id)) return; // the first measurement stands (pieces sharing one, a stored one read meanwhile)
     envelopes.set(id, envelope);
     const sha = models.modelSha?.get(id);
-    if (sha) void envelopeStore?.then(store => store.keep(id, sha, envelope));
+    if (sha) void envelopeStore?.then(store => store.keep(id, sha, envelope)).catch(() => undefined); // a store failure never reaches the game
   };
   const storedEnvelopes = envelopeStore?.then(async store => {
     const wanted = new Map([...models.modelSha ?? []].filter(([id]) => !HOVERING_MODELS.has(id) && !!readUnitScale(models.cache?.manifest.models, id)));
