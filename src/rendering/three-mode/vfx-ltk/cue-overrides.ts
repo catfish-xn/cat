@@ -763,7 +763,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
   // Its end fades from its stop (fadeOut) instead of cutting there, as the other shields that end with their layer do: a broken
   // shield ends it earlier (CUE_RULE_STOPS abilityShieldEndedOnHolder).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), fadeOut: true, ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
+  // Her shield missile, once it has left, reaches her ally even if she dies (the rules' skill shot): it flies on
+  // (TimelineCue.flightOutlivesSource).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), fadeOut: true, ...(cue.event === 'hit' ? { livingTarget: true } : {}) }
+    : cue.system === 'f2d605de' ? { ...cue, flightOutlivesSource: true } : cue),
   // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
   // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
   // plays from the cast and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS), played at that

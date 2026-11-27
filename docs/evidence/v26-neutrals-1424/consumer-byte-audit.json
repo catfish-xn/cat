@@ -1777,9 +1777,9 @@
     "tests/landing-settle.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 16295,
+      "currentBytes": 17053,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "08e95bf035f9c6841cf7ec1753f0ba2759d60dca98f33d4c61b22a24e4515be6",
+      "currentSha256": "38159136560d54b654569ac3db95a5aa09f42f2c17d18de3766ecdb579b92f90",
       "firstDifferentByte": 0
     },
     "tests/late-lag-effects.test.ts": {
@@ -2401,9 +2401,9 @@
     "tests/mel-barrage.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 14915,
+      "currentBytes": 15977,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7534efc4679a027976d84ef4da654f52e37096016780673b3ed9fcebde9cde21",
+      "currentSha256": "764ba1387d40e633c6067e9a78393817314c0ba430bb359bdbdaf9c38ca2843e",
       "firstDifferentByte": 0
     },
     "tests/melee-dead-claim.test.ts": {
@@ -5067,9 +5067,9 @@
     "tests/vfx-ltk-outlives-source.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 7506,
+      "currentBytes": 8943,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "df1e46f97383dffb26f356ca1451e20ddb951ef9f573ded03ad2e96d0a4b3c2b",
+      "currentSha256": "58ee4d3dd6d59e814e2d4362a6ee132ac99fe10ecbad44a2e123b24ff14ce353",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-own-life.test.ts": {

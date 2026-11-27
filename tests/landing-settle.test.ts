@@ -151,6 +151,15 @@ describe('landing batch: files written before it', () => {
 });
 
 describe('landing batch: a caster who dies before the landing', () => {
+  it("Lux: her shield missile that has left reaches her ally after she dies", () => {
+    const start = battle([hero('lux', 2, 3, 7), dummy('a', 'player', 2, 5, { hp: 10, maxHp: 100000 }), dummy('e', 'enemy', 3, 1)], { rngState: 42 });
+    const cast = castTick(run(start, 40).out);
+    const mid = structuredClone(run(start, cast - start.tick).state);
+    expect(ofType(run(start, cast - start.tick).out, 'abilityProjectileLaunched').map(l => l.skill)).toEqual(['lux-shield']);
+    Object.assign(mid.units.find(u => u.id === 'p')!, { hp: 0, alive: false });
+    const after = run(mid, LUX_SHIELD_FLIGHT_TICKS + 2);
+    expect(((after.state.units.find(u => u.id === 'a') as S13Unit).shieldLayers ?? []).some(l => l.source.ownerId === 'p')).toBe(true);
+  });
   it("Heimerdinger: rockets that have left land after he dies; rockets not launched yet never leave", () => {
     // A passive ally far back keeps the fight running after his death.
     const start = battle([hero('heimerdinger', 2, 3, 7), dummy('ally', 'player', 6, 7), dummy('e', 'enemy', 3, 1), dummy('f', 'enemy', 5, 1)], { rngState: 42 });

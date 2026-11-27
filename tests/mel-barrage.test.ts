@@ -60,6 +60,18 @@ describe('Mel barrage timing', () => {
     expect(r.out.filter(s => s.tick < castAt + MEL_RELEASE_TICKS).flatMap(s => s.events).filter(e => e.type === 'packetDamage' && (e as any).outcome.context.source.ownerId === 'mel'
       && (e as any).outcome.context.source.sourceKind === 'ability')).toEqual([]);
   });
+  it('bolts that have left land after she dies; bolts still to leave never leave', () => {
+    const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-bolt') as any[]);
+    const first = launched[0]!, diesAt = first.tick, before = run(s0, diesAt - s0.tick);
+    const left = before.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched') as any[]);
+    expect(left.length).toBeGreaterThan(0); expect(left.length).toBeLessThan(launched.length);
+    const mid = structuredClone(before.state);
+    Object.assign(mid.units.find(u => u.id === 'mel')!, { hp: 0, alive: false });
+    const after = run(mid, 40);
+    expect(after.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched'))).toEqual([]);
+    const hits = after.out.flatMap(s => packets(s.events).filter(p => p.source.ownerId === 'mel' && p.source.sourceKind === 'ability').map(p => [s.tick, p.unitId]));
+    expect(hits.sort()).toEqual(left.map(l => [l.arrivalTick, l.targetId]).sort());
+  });
   it('a target that dies takes none of the bolts still flying or still to leave (hit false), and nobody else takes them', () => {
     const before = run(s0, castAt + MEL_RELEASE_TICKS - s0.tick).state;
     const launched = r.out.flatMap(s => s.events.filter(e => e.type === 'abilityProjectileLaunched' && (e as any).skill === 'mel-bolt') as any[]);
