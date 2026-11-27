@@ -4939,9 +4939,9 @@
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17553,
+      "currentBytes": 18143,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "51afd75e26517d5701cd90356d5c4d15a8ecc8b035845b57b9a48942c995e31d",
+      "currentSha256": "e853e54f45c600b011531c3ddd43a67943fe07de2f9b06727847d5cea44caa1a",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-jinx-rocket-render.test.ts": {

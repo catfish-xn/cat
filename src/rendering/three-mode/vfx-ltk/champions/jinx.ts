@@ -23,14 +23,21 @@ export const JINX_ROCKET_FLOWN = { leaveAfterFlash: { threeStar: 0.067, belowThr
  * When, after the rules launch her rocket (`total` seconds before they land it), its muzzle flash plays and it leaves the
  * barrel, how long it is drawn flying in all, and the share of that it takes to reach where it lands (then it waits there):
  * flash, leave, `cells` at JINX_ROCKET_FLOWN's pace, the wait, the landing. Never before the launch: a landing too soon
- * puts the flash on the launch, then cuts the wait, then flies faster to reach the landing point on the landing tick. It flies
+ * puts the flash on the launch, then cuts the wait, then the time to leave the barrel (no shorter than the three-star's),
+ * and only then flies faster to reach the landing point on the landing tick. It flies
  * at least `leastFlying` (our own floor, 自定): with her cell unknown (`cells` 0) it is not drawn already at the landing point.
  */
 export function jinxRocketTimes(star: number, cells: number, total: number): { flashAt: number; leaves: number; flight: number; arriveShare: number } {
   const span = Math.max(0, total), { leaveAfterFlash, cellsPerSecond, wait } = JINX_ROCKET_FLOWN;
   const lead = star >= 3 ? leaveAfterFlash.threeStar : leaveAfterFlash.belowThree;
   const flying = Math.max(JINX_ROCKET_FLOWN.leastFlying, Math.max(0, cells) / cellsPerSecond);
-  const flashAt = Math.max(0, span - wait - flying - lead), leaves = Math.min(span, flashAt + lead), flight = span - leaves;
+  // Too far for the measured times (Fable 11-28: the wait goes first, then the time from the flash to leaving the barrel,
+  // down to the three-star's, and only then does it fly faster): the flash is on the launch.
+  if (span < lead + flying + wait) {
+    const leaves = Math.min(span, Math.max(leaveAfterFlash.threeStar, Math.min(lead, span - flying))), flight = span - leaves;
+    return { flashAt: 0, leaves, flight, arriveShare: flight > 0 ? Math.min(1, flying / flight) : 1 };
+  }
+  const flashAt = span - wait - flying - lead, leaves = flashAt + lead, flight = span - leaves;
   return { flashAt, leaves, flight, arriveShare: flight > 0 ? Math.min(1, flying / flight) : 1 };
 }
 // Attack: 14.24 TFT13_JinxBasicAttack starts at Buffbone_Glb_Weapon_1 and hits C_BUFFBONE_GLB_CHEST_LOC.

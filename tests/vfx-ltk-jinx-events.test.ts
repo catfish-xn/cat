@@ -161,9 +161,16 @@ describe("Jinx's rocket from the real rules", () => {
       expect(two.flight * two.arriveShare).toBeCloseTo(flying, 9);
       expect(two.leaves + two.flight).toBeCloseTo(total, 9);
     }
-    // Far away it has no time to wait: it flies faster, reaching the landing point on the landing tick.
+    // Farther: the wait goes first, then the time to leave the barrel shrinks (no shorter than the three-star's), and only
+    // then does it fly faster, reaching the landing point on the landing tick.
+    const three = jinxRocketTimes(2, 3, total), flyingThree = 3 / cellsPerSecond;
+    expect(three.flashAt).toBe(0);
+    expect(three.leaves).toBeCloseTo(total - flyingThree, 9); // shorter than the two-star's own, longer than the three-star's
+    expect(three.leaves).toBeLessThan(leaveAfterFlash.belowThree); expect(three.leaves).toBeGreaterThan(leaveAfterFlash.threeStar);
+    expect(three.arriveShare).toBeCloseTo(1, 9);
     const far = jinxRocketTimes(2, 6, total);
-    expect(far.flashAt).toBe(0); expect(far.arriveShare).toBe(1); expect(far.leaves + far.flight).toBeCloseTo(total, 9);
+    expect(far.flashAt).toBe(0); expect(far.leaves).toBeCloseTo(leaveAfterFlash.threeStar, 9);
+    expect(far.arriveShare).toBe(1); expect(far.leaves + far.flight).toBeCloseTo(total, 9);
     // Her cell unknown (a zero-cell flight): it still flies the floor, not drawn already at the landing point.
     const unknown = jinxRocketTimes(3, 0, total);
     expect(unknown.flight * unknown.arriveShare).toBeCloseTo(JINX_ROCKET_FLOWN.leastFlying, 9);
