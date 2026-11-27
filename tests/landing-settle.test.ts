@@ -151,6 +151,21 @@ describe('landing batch: files written before it', () => {
 });
 
 describe('landing batch: a caster who dies before the landing', () => {
+  it("Heimerdinger: rockets that have left land after he dies; rockets not launched yet never leave", () => {
+    // A passive ally far back keeps the fight running after his death.
+    const start = battle([hero('heimerdinger', 2, 3, 7), dummy('ally', 'player', 6, 7), dummy('e', 'enemy', 3, 1), dummy('f', 'enemy', 5, 1)], { rngState: 42 });
+    const whole = run(start, 60), cast = castTick(whole.out), all = ofType(whole.out, 'abilityProjectileLaunched'), n = all[0]!.count;
+    expect(n).toBeGreaterThan(2);
+    // He dies right after his second rocket leaves.
+    const diesAt = cast + heimerRocketLaunchTick(1, n);
+    const mid = structuredClone(run(start, diesAt - start.tick).state);
+    const left = ofType(run(start, diesAt - start.tick).out, 'abilityProjectileLaunched');
+    expect(left.map(l => l.ordinal)).toEqual([0, 1]);
+    Object.assign(mid.units.find(u => u.id === 'p')!, { hp: 0, alive: false });
+    const after = run(mid, 40);
+    expect(ofType(after.out, 'abilityProjectileLaunched')).toEqual([]);
+    expect(hits(after.out).map(h => [h.tick, h.target])).toEqual(left.map(l => [l.arrivalTick, l.targetId]));
+  });
   it("Darius's spin is void if he dies before it lands: no damage, no heal, no bleed", () => {
     const start = battle([hero('darius', 2, 3, 4, { targetId: 'e', hp: 5000 }), dummy('e', 'enemy', 3, 3)], { rngState: 42 });
     const cast = castTick(run(start, 5).out);
