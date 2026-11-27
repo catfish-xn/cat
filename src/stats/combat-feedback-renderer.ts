@@ -11,7 +11,7 @@ interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, str
 interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; at: number; measured: number; life: number; px: number;
   /** A damage number's place on its first drawn frame: it stays there, its unit may move on (DAMAGE_RIGHT, DAMAGE_JITTER). */
   spawn?: { x: number; y: number };
-  /** Its place among damage numbers of one tick on its unit (0 for the first): DAMAGE_SAME_TICK_STEP. */
+  /** Its place among damage numbers of one tick on its unit (0 for the first): DAMAGE_SAME_TICK_DOWN. */
   order: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
 function style(item: Label, key: LabelStyle, value: string): void {
@@ -65,31 +65,33 @@ const PER_UNIT = 6, ALL = 40;
 const BODY_DROP = 0.35;
 /**
  * Where a damage number appears (official-server footage, 11-25): on the struck body, from its bar's centre toward its right
- * end, its top edge no higher than its own bar's bottom. DAMAGE_RIGHT of the bar's width (or of the unit's radius without a bar) to the right, and a jitter
- * of up to DAMAGE_JITTER px either way, the same every time a recording is replayed (it comes from the hit, not a random
- * draw). Numbers on one unit do not queue or take turns: a new one lands near the last and may cover it, as in the original.
+ * end, never above the bar, with a jitter that comes from the hit, not a random draw (the same on every replay). Numbers on
+ * one unit do not queue or take turns. Without a bar: DAMAGE_RIGHT of the unit's width right of it, ±DAMAGE_JITTER px.
  */
 const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
 /**
- * Our own readability rules on where a damage number appears (coordinator 11-27, not original data), each taken once on its
- * first frame and never moved after:
- * - DAMAGE_SAME_TICK_STEP: the 2nd, 3rd… damage number of one tick on one unit lands that many of its own heights further
- *   down per place, and right of the ones before it with a gap of at least DAMAGE_GAP of its own width.
- * - A damage number keeps at least DAMAGE_GAP of its own width clear of a heal still showing on its unit, moving right (at most
- *   DAMAGE_HEAL_CLEAR of its widths) when it would come closer. The heal counts at its largest popped size (HEAL_POP_SCALE)
- *   while it pops, at its own size once settled. A heal never moves for a damage number.
+ * Our own readability rules on where numbers appear (coordinator 11-27, not original data), taken on a number's first frame:
+ * damage and heals stand in two layers under the unit's own bar, so neither moves aside for the other.
+ * - A damage number's top edge starts DAMAGE_BELOW_BAR px (2–6, by its own jitter) under its bar's bottom, plus up to
+ *   DAMAGE_BELOW_JITTER px more; its centre between the bar's middle and its right end, by its own jitter.
+ * - A heal's centre is HEAL_BELOW_BAR px under its bar's bottom, on the unit's midline, and rises and follows from there.
+ * - DAMAGE_SAME_TICK_*: the 2nd, 3rd… damage number of one tick on one unit lands right of the earlier ones with a gap of at
+ *   least DAMAGE_GAP of its own width, and DAMAGE_SAME_TICK_DOWN px lower per place, at most DAMAGE_SAME_TICK_DOWN_MAX in all,
+ *   so it stays in the damage layer.
  * - A crit's top edge is its mark's (CRIT_TOP_EM of its font size above its centre), not its digits'.
+ * Without a bar (2D, replays) a number stands on its unit's body as before (BODY_DROP).
  */
-const DAMAGE_SAME_TICK_STEP = 0.6, DAMAGE_GAP = 0.5, DAMAGE_HEAL_CLEAR = 3;
-/** The digits' half height in em (own fit for the rounded faces used) and so how far a crit's mark reaches above its centre. */
-const DIGITS_HALF_EM = 0.35;
-/** Two numbers in [−1, 1) from a number's key: the same hit always lands on the same spot. */
-function jitterOf(key: string): [number, number] {
+const DAMAGE_BELOW_BAR = [2, 6] as const, DAMAGE_BELOW_JITTER = 20, HEAL_BELOW_BAR = 85;
+const DAMAGE_GAP = 0.5, DAMAGE_SAME_TICK_DOWN = 4, DAMAGE_SAME_TICK_DOWN_MAX = 8;
+/** Three numbers in [0, 1) from a number's key: the same hit always lands on the same spot. */
+function spotOf(key: string): [number, number, number] {
   let h = 2166136261;
   for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
-  const a = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, b = Math.imul(a ^ (a >>> 13), 3266489909) >>> 0;
-  return [(a % 2001) / 1000 - 1, (b % 2001) / 1000 - 1];
+  const a = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, b = Math.imul(a ^ (a >>> 13), 3266489909) >>> 0, c = Math.imul(b ^ (b >>> 16), 2654435761) >>> 0;
+  return [a / 4294967296, b / 4294967296, c / 4294967296];
 }
+/** The digits' half height in em (own fit for the rounded faces used) and so how far a crit's mark reaches above its centre. */
+const DIGITS_HALF_EM = 0.35;
 /** Canvas labels (2D) a number steps sideways past, BAR_SIDESTEP_GAP px clear of their ends (own rule). Bars are not avoided. */
 const BAR_SIDESTEP_GAP = 3;
 /**
@@ -220,41 +222,30 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       for (const item of expired) release(item);
       // Each number on its own (no queue, no turns, as in the original): a heal on its unit's body, rising; a damage number where it
       // first appeared, drifting. Canvas labels (2D) it would cover make it step sideways; bars do not.
-      // Heals first: a damage number appearing this frame keeps clear of the heals already showing on its unit.
-      const heals = new Map<string, FeedbackObstacle[]>();
-      measured.sort((a, b) => Number(b.item.kind === 'heal') - Number(a.item.kind === 'heal'));
       for (const { item, anchor, half } of measured) {
         const age = Math.max(0, now - item.at), heal = item.kind === 'heal';
         const pop = heal ? (age < HEAL_POP_MS ? HEAL_POP_SCALE - (HEAL_POP_SCALE - 1) * (age / HEAL_POP_MS) : 1)
           : item.cls === 'crit' ? critPop(age) : age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
-        const size = item.px * pop, w = half * pop, bar = bars.get(item.unitId);
+        const size = item.px * pop, w = half * pop, bar = bars.get(item.unitId), barBottom = bar ? bar.y + bar.h / 2 : 0;
         let x: number, y: number;
         if (heal) {
-          // On the body's midline, rising from its first frame; it never rises past half its height below its bar.
-          const floor = bar ? bar.y + bar.h / 2 + size / 2 : -Infinity;
-          x = anchor.x; y = Math.max(anchor.y + anchor.radius * BODY_DROP - HEAL_RISE_PER_S * age / 1000, floor);
-          // Kept clear of at its largest popped size while it pops, at its size then once it has settled.
-          const kept = age < HEAL_POP_MS ? HEAL_POP_SCALE : pop;
-          const list = heals.get(item.unitId) ?? []; list.push({ x, y, w: 2 * half * kept, h: item.px * kept }); heals.set(item.unitId, list);
+          // On the unit's midline in the heal layer (HEAL_BELOW_BAR under its bar), rising from its first frame and following
+          // its unit; it never rises past half its height below its bar.
+          const floor = bar ? barBottom + size / 2 : -Infinity, from = bar ? barBottom + HEAL_BELOW_BAR : anchor.y + anchor.radius * BODY_DROP;
+          x = anchor.x; y = Math.max(from - HEAL_RISE_PER_S * age / 1000, floor);
         } else {
           if (!item.spawn) {
-            // Its first frame: on the body, toward the bar's right end, with its own jitter; its top edge (at its popped size) no
-            // higher than its own bar's bottom, so it never appears on its bar (coordinator 11-27). Its arc may then touch the bar a
-            // little; other units' bars are not avoided.
-            const [jx, jy] = jitterOf(item.key), right = bar ? bar.w * DAMAGE_RIGHT : anchor.radius * DAMAGE_RIGHT * 2;
-            const top = item.cls === 'crit' ? CRIT_TOP_EM * item.px * pop : size / 2;
-            const below = bar ? bar.y + bar.h / 2 + top : -Infinity;
-            const spawn = { x: anchor.x + right + jx * DAMAGE_JITTER, y: Math.max(anchor.y + anchor.radius * BODY_DROP + jy * DAMAGE_JITTER + DAMAGE_SAME_TICK_STEP * item.order * item.px, below) };
-            const gap = DAMAGE_GAP * 2 * half, start = spawn.x;
+            // Its first frame, in the damage layer: its top edge (at its popped size; a crit's mark) just under its own bar, its
+            // centre between the bar's middle and right end. Its arc may then touch the bar a little; other bars are not avoided.
+            const [sx, sy, sd] = spotOf(item.key), top = item.cls === 'crit' ? CRIT_TOP_EM * item.px * pop : size / 2;
+            const down = Math.min(DAMAGE_SAME_TICK_DOWN_MAX, DAMAGE_SAME_TICK_DOWN * item.order);
+            const spawn = bar
+              ? { x: bar.x + bar.w / 2 * sx, y: barBottom + DAMAGE_BELOW_BAR[0] + (DAMAGE_BELOW_BAR[1] - DAMAGE_BELOW_BAR[0]) * sy + DAMAGE_BELOW_JITTER * sd + top + down }
+              : { x: anchor.x + anchor.radius * DAMAGE_RIGHT * 2 + (sx * 2 - 1) * DAMAGE_JITTER, y: anchor.y + anchor.radius * BODY_DROP + (sy * 2 - 1) * DAMAGE_JITTER + down };
             // Right of this tick's earlier damage numbers on its unit, a gap clear of each as both appear (popped alike: one tick).
-            const tick = item.key.slice(0, item.key.indexOf('/') + 1);
+            const gap = DAMAGE_GAP * 2 * half, tick = item.key.slice(0, item.key.indexOf('/') + 1);
             for (const other of floats) if (other !== item && other.spawn && other.unitId === item.unitId && other.kind !== 'heal' && other.order < item.order && other.key.startsWith(tick))
               spawn.x = Math.max(spawn.x, other.spawn.x + ((Number.isNaN(other.measured) ? 20 : other.measured) + half) * pop + gap);
-            // A gap clear of every heal still showing on its unit (in its row), by at most DAMAGE_HEAL_CLEAR of its widths.
-            const limit = Math.max(spawn.x, start + DAMAGE_HEAL_CLEAR * 2 * half);
-            const inRow = (rect: FeedbackObstacle) => Math.abs(rect.y - spawn.y) < rect.h / 2 + size / 2;
-            for (const rect of [...(heals.get(item.unitId) ?? [])].sort((a, b) => a.x - b.x))
-              if (inRow(rect) && Math.abs(rect.x - spawn.x) < rect.w / 2 + w + gap) spawn.x = Math.min(limit, rect.x + rect.w / 2 + w + gap);
             item.spawn = spawn;
           }
           const u = Math.min(1, age / Math.max(1, item.life)), still = item.cls === 'crit';
