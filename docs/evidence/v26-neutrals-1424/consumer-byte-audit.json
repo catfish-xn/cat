@@ -338,9 +338,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 15448,
+      "currentBytes": 15618,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "d9826194ddbe442c02477d6a9ca555efb1284afbd042c70dbe4cf46ced930621",
+      "currentSha256": "0ca1cd49e55f3d9a21e31e2fe268cd0518aed5dfe136f53763ec21688153c07e",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -1000,10 +1000,10 @@
     },
     "tests/displacement-control.test.ts": {
       "previousBytes": 10748,
-      "currentBytes": 12781,
+      "currentBytes": 12915,
       "previousSha256": "fc559f0948cef3fb1835d434920a12167695cfd6df3c00685eb3067dea9851d1",
-      "currentSha256": "0f752332a054cf58aaee6eb853399e617263cab9633d94f23602df8284652fa9",
-      "firstDifferentByte": 804
+      "currentSha256": "6cffe0db0140cbfb2621b024bfc69768f7d3e9f7eb01a00abc45cb0d5bf7d8d7",
+      "firstDifferentByte": 9
     },
     "tests/economy-flow-1023.test.ts": {
       "previousBytes": 7177,
@@ -1080,9 +1080,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 11580,
+      "currentBytes": 11999,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "9aefee40263bf2e19cf91618300c7b30ac1654856d2f159bb0981738e051e430",
+      "currentSha256": "94b0db4d91ab173591fe6ae591bfec71f3fadb514252d6d3ddc87a362164cedf",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1090,7 +1090,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "12397518f2ec53cf663705c724d7ed4b32997cabc7c2bb02443204e0186aa6c5",
+      "currentSha256": "b7a2743fc7093deeea21eccc5d190dd64de6d715434357eaf6ce8e1821418aad",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
@@ -1246,17 +1246,17 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17785,
+      "currentBytes": 17784,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "ed330b50263dec43d86014c866c26593c830a06b9c06df8561585f97950b1ae2",
+      "currentSha256": "86d70c143a89ac32a474c27d04ac2ff12226a3fb50920ce7c06d153f3c96b51e",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 23788,
+      "currentBytes": 23787,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "f94e805ab268b2f0b941a448bad6c27e8e1c55974d697801fd4121f19eaf880d",
+      "currentSha256": "572e69008827b361a16f6473e94889a5666418088c3034df1af0b382378c18e4",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1970,9 +1970,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 21596,
+      "currentBytes": 21713,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "53c729a7264b39720d8fe6b6d3ea233cc4ab114be8cc00ace0ef015bd746de33",
+      "currentSha256": "c8461060d1fc0326a69c40f59c7d581455218ade64d67e61ccfc7d0915c687e1",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -4089,9 +4089,9 @@
     "tests/sevika-high-roller-triple.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 4710,
+      "currentBytes": 10756,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6853531a78a7d64b4f4c929b5631e7a807ed6971bc4f66807a539ed0af171597",
+      "currentSha256": "8f811f8c5db4c4dae5b50cfc19da3769f514008c09165324a7b7865b0f623b65",
       "firstDifferentByte": 0
     },
     "tests/shared-pool-cache.test.ts": {

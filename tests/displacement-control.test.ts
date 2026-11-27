@@ -1,3 +1,4 @@
+import { SEVIKA_PUNCH_HIT_TICKS } from '../src/simulation/cast-windup';
 import { describe, expect, it, vi } from 'vitest';
 import { DEFAULT_BOARD, hexDistance, type HexCell } from '../src/simulation/board';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -127,10 +128,10 @@ describe('Sevika Extendo-Punch knockback', () => {
   it('real cast: target knocked away, Sevika dashes beside it, event order and replay', () => {
     let found: ReturnType<typeof run> | undefined;
     for (let seed = 1; seed < 400 && !found; seed++) {
-      // The punch lands when the slot machine stops, 25 ticks after the pull (G24-SEVIKA-SLOTS-01).
+      // The slot machine stops 25 ticks after the pull (G24-SEVIKA-SLOTS-01); the punch lands SEVIKA_PUNCH_HIT_TICKS after that (11-24).
       let r = run([caster('sevika', c(3, 6)), dummy('t', c(3, 5))], seed);
       const events = [...r.events];
-      for (let i = 0; i < 25 && r.state.status === 'running'; i++) { r = stepCombat(r.state); events.push(...r.events); }
+      for (let i = 0; i < 25 + SEVIKA_PUNCH_HIT_TICKS && r.state.status === 'running'; i++) { r = stepCombat(r.state); events.push(...r.events); }
       if (events.some(e => e.type === 'castOutcome' && e.castVariant?.move === 'punch')) found = { ...r, events };
     }
     expect(found).toBeDefined();
