@@ -2984,9 +2984,9 @@
     },
     "tests/rendering3d-isolation.test.ts": {
       "previousBytes": 11507,
-      "currentBytes": 15602,
+      "currentBytes": 15791,
       "previousSha256": "410858593844d8fd1f0c8aae9131239745a0cfaf8c73d0653312a53fe96be725",
-      "currentSha256": "f2014eedf87ba875ed5ea2b72540e08c7f86287f4b8418c3cffcdad56a044342",
+      "currentSha256": "049df1657492dc38f7f50b73e36e7255d947b5a5a2cfa46e006e9bea4acb4142",
       "firstDifferentByte": 4868
     },
     "tests/rendering3d-jayce-forge.test.ts": {
@@ -3135,9 +3135,9 @@
     },
     "tests/rendering3d-scout-shop.test.ts": {
       "previousBytes": 29133,
-      "currentBytes": 32667,
+      "currentBytes": 32680,
       "previousSha256": "c1bae1f4cb13c64770330d264d0ad68d36d6cf1d01ea2d4b1ea7794abbc8b779",
-      "currentSha256": "7b7ea63c6f4ec0e800326f1c2e51b83bd8972956eaf9f3337cb2b11961926010",
+      "currentSha256": "8c2fc2ce4a3b8388e493a64ed98dbaeb862dbaf06ad9820ca1e8b896bd3b5a07",
       "firstDifferentByte": 1665
     },
     "tests/rendering3d-scout.test.ts": {
@@ -4348,9 +4348,9 @@
     "tests/ui-chunk-split.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 11710,
+      "currentBytes": 17156,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "63afe488b88ee47e723c7e8f691d08ec0f2ec7aa1013ac2c0479bba496632ba0",
+      "currentSha256": "7be0646cb1799a95e947beb4b94fe87a97e885b8303968bb6c9d569c26a8e4d3",
       "firstDifferentByte": 0
     },
     "tests/ur-i3-combat-statuses.test.ts": {
@@ -4494,9 +4494,9 @@
     "tests/v26-confiscation-display.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17227,
+      "currentBytes": 17233,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "48ff3c76c52fd2ba712e6e91daf00d2b134918bbc6c820e7a570182f25f89530",
+      "currentSha256": "3d01bc660155d1ff2745a6774b97968eff2e321cc38f56dcd24f631db6f759d8",
       "firstDifferentByte": 0
     },
     "tests/v26-entry-strings.test.ts": {
