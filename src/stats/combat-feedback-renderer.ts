@@ -73,13 +73,14 @@ const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
 /**
  * Our own readability rules on where a damage number appears (coordinator 11-27, not original data), each taken once on its
  * first frame and never moved after:
- * - DAMAGE_SAME_TICK_STEP: the 2nd, 3rd… damage number of one tick on one unit lands that many of its own widths and heights
- *   further right and down per place, so each shows more than half of itself.
- * - DAMAGE_HEAL_CLEAR: one that would cover a heal number still showing on its unit moves right until it does not, at most
- *   that many of its own widths. A heal never moves for a damage number.
+ * - DAMAGE_SAME_TICK_STEP: the 2nd, 3rd… damage number of one tick on one unit lands that many of its own heights further
+ *   down per place, and right of the ones before it with a gap of at least DAMAGE_GAP of its own width.
+ * - A damage number keeps at least DAMAGE_GAP of its own width clear of a heal still showing on its unit, moving right (at most
+ *   DAMAGE_HEAL_CLEAR of its widths) when it would come closer. The heal counts at its largest popped size (HEAL_POP_SCALE),
+ *   whatever its age. A heal never moves for a damage number.
  * - A crit's top edge is its mark's (CRIT_TOP_EM of its font size above its centre), not its digits'.
  */
-const DAMAGE_SAME_TICK_STEP = 0.6, DAMAGE_HEAL_CLEAR = 1;
+const DAMAGE_SAME_TICK_STEP = 0.6, DAMAGE_GAP = 0.5, DAMAGE_HEAL_CLEAR = 3;
 /** The digits' half height in em (own fit for the rounded faces used) and so how far a crit's mark reaches above its centre. */
 const DIGITS_HALF_EM = 0.35;
 /** Two numbers in [−1, 1) from a number's key: the same hit always lands on the same spot. */
@@ -232,7 +233,8 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           // On the body's midline, rising from its first frame; it never rises past half its height below its bar.
           const floor = bar ? bar.y + bar.h / 2 + size / 2 : -Infinity;
           x = anchor.x; y = Math.max(anchor.y + anchor.radius * BODY_DROP - HEAL_RISE_PER_S * age / 1000, floor);
-          const list = heals.get(item.unitId) ?? []; list.push({ x, y, w: 2 * w, h: size }); heals.set(item.unitId, list);
+          // Kept clear of at its largest popped size, even once it has settled.
+          const list = heals.get(item.unitId) ?? []; list.push({ x, y, w: 2 * half * HEAL_POP_SCALE, h: item.px * HEAL_POP_SCALE }); heals.set(item.unitId, list);
         } else {
           if (!item.spawn) {
             // Its first frame: on the body, toward the bar's right end, with its own jitter; its top edge (at its popped size) no
@@ -241,11 +243,17 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
             const [jx, jy] = jitterOf(item.key), right = bar ? bar.w * DAMAGE_RIGHT : anchor.radius * DAMAGE_RIGHT * 2;
             const top = item.cls === 'crit' ? CRIT_TOP_EM * item.px * pop : size / 2;
             const below = bar ? bar.y + bar.h / 2 + top : -Infinity;
-            const step = DAMAGE_SAME_TICK_STEP * item.order;
-            const spawn = { x: anchor.x + right + jx * DAMAGE_JITTER + step * 2 * half, y: Math.max(anchor.y + anchor.radius * BODY_DROP + jy * DAMAGE_JITTER + step * item.px, below) };
-            const covers = (rect: FeedbackObstacle, at: number) => Math.abs(rect.x - at) < rect.w / 2 + w && Math.abs(rect.y - spawn.y) < rect.h / 2 + size / 2;
-            const near = heals.get(item.unitId) ?? [], start = spawn.x;
-            for (const rect of near) if (covers(rect, spawn.x)) spawn.x = Math.min(start + DAMAGE_HEAL_CLEAR * 2 * half, Math.max(spawn.x, rect.x + rect.w / 2 + w));
+            const spawn = { x: anchor.x + right + jx * DAMAGE_JITTER, y: Math.max(anchor.y + anchor.radius * BODY_DROP + jy * DAMAGE_JITTER + DAMAGE_SAME_TICK_STEP * item.order * item.px, below) };
+            const gap = DAMAGE_GAP * 2 * half, start = spawn.x;
+            // Right of this tick's earlier damage numbers on its unit, a gap clear of each as both appear (popped alike: one tick).
+            const tick = item.key.slice(0, item.key.indexOf('/') + 1);
+            for (const other of floats) if (other !== item && other.spawn && other.unitId === item.unitId && other.kind !== 'heal' && other.order < item.order && other.key.startsWith(tick))
+              spawn.x = Math.max(spawn.x, other.spawn.x + ((Number.isNaN(other.measured) ? 20 : other.measured) + half) * pop + gap);
+            // A gap clear of every heal still showing on its unit (in its row), by at most DAMAGE_HEAL_CLEAR of its widths.
+            const limit = Math.max(spawn.x, start + DAMAGE_HEAL_CLEAR * 2 * half);
+            const inRow = (rect: FeedbackObstacle) => Math.abs(rect.y - spawn.y) < rect.h / 2 + size / 2;
+            for (const rect of [...(heals.get(item.unitId) ?? [])].sort((a, b) => a.x - b.x))
+              if (inRow(rect) && Math.abs(rect.x - spawn.x) < rect.w / 2 + w + gap) spawn.x = Math.min(limit, rect.x + rect.w / 2 + w + gap);
             item.spawn = spawn;
           }
           const u = Math.min(1, age / Math.max(1, item.life)), still = item.cls === 'crit';

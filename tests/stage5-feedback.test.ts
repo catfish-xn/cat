@@ -277,19 +277,34 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(three.map(e => e.text)).toEqual(['10', '20', '30']);
       for (const e of three) { expect(scale(e)).toBe(1); expect(Number(e.style.opacity)).toBe(1); expect(Math.abs(left(e) - (120 + 10 + 25 * 400 / 700))).toBeLessThanOrEqual(15 + 1e-6); }
     });
-    it('our readability rules (not original): same-tick damage on one unit steps right and down; damage clears a heal on its unit; a crit\'s top is its mark\'s', () => {
+    it('our readability rules (not original): same-tick damage on one unit steps down and right with a gap; damage keeps a gap from a heal on its unit (counted popped); a crit\'s top is its mark\'s', () => {
       // Labels are 9 px a character wide in this DOM stand-in, at least 40 px: a 2-digit number is 40 px wide, 22 px tall.
       const alone = labels([{ ...damage(1, 'a', 20), sourceId: 'c' }], 0)[0];
-      const [, second] = labels([damage(1, 'a', 10), { ...damage(1, 'a', 20), sourceId: 'c' }], 0);
-      expect(second.text).toBe('20');
-      expect(left(second) - left(alone)).toBeCloseTo(0.6 * 40, 5); expect(top(second) - top(alone)).toBeCloseTo(0.6 * 22, 5);
+      const pair = [damage(1, 'a', 10), { ...damage(1, 'a', 20), sourceId: 'c' }] as SceneCombatEvent[];
+      for (const now of [0, 400]) {
+        const [first, second] = labels(pair, now);
+        expect(second.text).toBe('20');
+        // At least half a number's width (20 px) between them, popped or settled.
+        expect(left(second) - left(first) - 20 * scale(first) - 20 * scale(second), `at ${now}`).toBeGreaterThanOrEqual(20 - 1e-6);
+      }
+      expect(top(labels(pair, 0)[1]) - top(alone)).toBeCloseTo(0.6 * 22, 5);
       // A heal on the same unit stays on its midline; a damage number that would cover it moves right, by at most its own width.
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
       renderer.push([heal(1), damage(1)], 0); renderer.render(0, anchors);
       const [healed, hit] = ['+7', '10'].map(text => snapshot(h)[0].children.find(e => e.text === text)!);
       expect(left(healed)).toBe(120);
-      // Popped, the heal is 80 px wide here: clearing it would take more than the damage number's own 40 px, so it moves 40.
-      expect(left(hit) - left(labels([damage(1)], 0)[0])).toBeCloseTo(40, 5);
+      // The heal counts at its largest popped size (2 × 40 px wide), the damage number keeps half its width (20 px) clear of it.
+      expect(left(hit) - 20 * scale(hit) - (120 + 40)).toBeGreaterThanOrEqual(20 - 1e-6);
+      renderer.render(400, anchors);
+      const [settledHeal, settledHit] = ['+7', '10'].map(text => snapshot(h)[0].children.find(e => e.text === text)!);
+      // Pushed damage first, heal second (one push): the damage number still keeps clear of the heal.
+      setup(); const h4 = host(), r4 = createCombatFeedbackRenderer(h4);
+      r4.push([damage(1), heal(1)], 0); r4.render(0, anchors);
+      const [lateHeal, earlyHit] = ['+7', '10'].map(text => snapshot(h4)[0].children.find(e => e.text === text)!);
+      expect(left(lateHeal)).toBe(120);
+      expect(left(earlyHit) - 20 * scale(earlyHit) - (120 + 40)).toBeGreaterThanOrEqual(20 - 1e-6);
+      r4.dispose();
+      expect(left(settledHit) - 20 * scale(settledHit) - (left(settledHeal) + 20 * scale(settledHeal))).toBeGreaterThanOrEqual(20 - 1e-6);
       renderer.dispose();
       // Once the heal has risen out of its row, a new damage number lands where it would alone.
       setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3);
