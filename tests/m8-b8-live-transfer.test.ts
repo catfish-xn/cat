@@ -184,12 +184,13 @@ function corruptionRoute(initial:MatchState) {
   const live=make(state);
   const upgrade=live.events.find(e=>e.type==='unitUpgraded'&&e.survivorId===survivor);
   // Wind-up batch 2 (2026-11-16): the 4-7 loot Tristana is born as unit-35 (was unit-37: earlier rounds' fights moved the unit serials).
-  expect(upgrade).toMatchObject({survivorId:survivor,consumedIds:[donor,'unit-35'].sort(),fromStar:1,toStar:2});
+  // #791 ranged wind-up (2026-11-28): earlier rounds' fights move the serials again, and she is born as unit-37 (was unit-35).
+  expect(upgrade).toMatchObject({survivorId:survivor,consumedIds:[donor,'unit-37'].sort(),fromStar:1,toStar:2});
   expect(live.selected.anomalyBinding).toMatchObject({definitionId:'slime-time',unitId:survivor});
   expect(live.selected.items.find(item=>item.id===tg)!.location).toEqual({kind:'unit',unitId:survivor,slot:0});
   expect(live.selected.temporaryEquipment).toHaveLength(2);
   expect(restoreMatch(serializeMatch(live.selected))).toEqual(live.selected);
-  return {live,donor,survivor,tg,reward:'unit-35'}; // seed 43's 4-7 loot Tristana birth (was unit-37 before wind-up batch 2; seed 25: unit-38)
+  return {live,donor,survivor,tg,reward:'unit-37'}; // seed 43's 4-7 loot Tristana birth (unit-35 from wind-up batch 2 until #791; unit-37 before it; seed 25: unit-38)
 }
 let alternate:ReturnType<typeof corruptionRoute>;
 let CORRUPT_DONOR:string, CORRUPT_SURVIVOR:string, CORRUPT_TG:string, CORRUPT_REWARD:string;

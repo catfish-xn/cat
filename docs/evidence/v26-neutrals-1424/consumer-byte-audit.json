@@ -2233,9 +2233,9 @@
     },
     "tests/m8-b8-live-transfer.test.ts": {
       "previousBytes": 22501,
-      "currentBytes": 23418,
+      "currentBytes": 23570,
       "previousSha256": "a52404c57bbba2f15fc3f85e94c457a45dc9a047969788d3e3f2d297c47b088b",
-      "currentSha256": "b92da7577b7e4ad410e3197d5d5874b43ea0ff9d368f365458363a420a1d81f1",
+      "currentSha256": "97c8afb57cbd6af589a24dfcc8c7fc92da0966c14829d4cae0417ce09028699b",
       "firstDifferentByte": 1022
     },
     "tests/m8-b8-loot-freeze.test.ts": {
