@@ -236,5 +236,9 @@ describe("Jinx's rocket from the real rules", () => {
     expect(plays.find(p => p.skill === 'jinx-rocket-flash')!.aimPoint).toEqual(point(3, 3));
     bridge.event(rocket('abilityProjectileLanded', 47), true);
     expect(turns[2]).toEqual({ id: 'jx', point: null, seconds: 0 });
+    // A replayed old rocket (joining or seeking: not current) turns her nowhere, though its landing still clears.
+    turns.length = 0;
+    bridge.event(cast(60, 'rocket'), false); bridge.event(rocket('abilityProjectileLaunched', 87), false);
+    expect(turns).toEqual([]);
   });
 });

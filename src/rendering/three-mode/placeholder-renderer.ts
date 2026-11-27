@@ -1207,7 +1207,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const holds = new Map<PieceView, number>();
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
-    holds.clear(); for (const view of pieces.values()) { view.overhead.flashMana(false); view.facePoint = null; }
+    holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
     generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); controlEndStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();

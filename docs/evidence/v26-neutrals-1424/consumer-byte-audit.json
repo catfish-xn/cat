@@ -2999,9 +2999,9 @@
     "tests/rendering3d-jinx-rocket-facing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9915,
+      "currentBytes": 10924,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fe978adb59e45953051aa3d2e9adbf1ae3a5cb2b45729ea62156ebd82b374e60",
+      "currentSha256": "09e722ab0bf7f1f1959fdd75e7747713ce6bfd75da4b1ed8434672f25eb4e668",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-late-game-retention.test.ts": {
@@ -4962,9 +4962,9 @@
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 19723,
+      "currentBytes": 19998,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "86b78d88e1e9003fd77e8f9d8400068e26db2ddeb1ff6d009f03481b68332e9e",
+      "currentSha256": "9682bcd85ce7e2cdbba2f22e9d92ff09777b0d2eb733dd179bfef0a57c94d163",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-jinx-rocket-render.test.ts": {

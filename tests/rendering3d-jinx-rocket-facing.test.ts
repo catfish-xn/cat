@@ -159,4 +159,18 @@ describe("Jinx's rocket: she turns to where it lands while she fires it, in the 
     await send([{ type: 'attack', attackerId: 'jx', targetId: 'f1', tick: 30, eventSeq: 30 }]); advance(500);
     expect(headingOf('jinx')).toBeCloseTo(toward(340, 260), 3);
   }, 30000);
+
+  it('a new fight drops the look at the landing point: in it she looks at her target again', async () => {
+    await setUp();
+    await send([cast(10, 'rocket')]); advance(500);
+    expect(headingOf('jinx')).toBeCloseTo(toward(centre.x, centre.z), 3);
+    // The fight ends and the next one starts, well within the rocket's hold.
+    listener.frame(frame([jinx, foe], false)); advance(100);
+    listener.frame(frame([jinx, foe], true)); advance(100);
+    await send([{ type: 'attack', attackerId: 'jx', targetId: 'f1', tick: 1, eventSeq: 1 }]); advance(1500);
+    // Toward where the two stand now (the new fight may have nudged them), not toward the landing point.
+    const me = scene.getObjectByName('model-jinx')!.parent!.position, them = scene.getObjectByName('model-zeri')!.parent!.position;
+    expect(headingOf('jinx')).toBeCloseTo(Math.atan2(them.x - me.x, them.z - me.z), 3);
+    expect(Math.abs(headingOf('jinx') - Math.atan2(centre.x - me.x, centre.z - me.z))).toBeGreaterThan(0.5);
+  }, 30000);
 });

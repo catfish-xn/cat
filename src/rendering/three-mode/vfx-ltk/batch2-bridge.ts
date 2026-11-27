@@ -196,7 +196,8 @@ export function createBatch2VfxBridge(host: Host) {
         // Her rocket cast: she turns to where it will land (the board's centre until the rules name the cell at its launch)
         // while she fires it, not to the unit she targets (JINX_ROCKET_FACING).
         const centre = boardCentre(host.board()), at = centre ? batch2CellPoint(host.board(), centre) : undefined;
-        if (event.branch?.branch === 'rocket' && at) host.facePoint?.(event.sourceId, at, JINX_ROCKET_FACING.holdSeconds);
+        // Only on a current event: a replayed old cast (joining or seeking) would turn her to a rocket long since landed.
+        if (current && event.branch?.branch === 'rocket' && at) host.facePoint?.(event.sourceId, at, JINX_ROCKET_FACING.holdSeconds);
       }
       // Mel (rules 'mel-barrage'): her dash lands, then her bolts leave and land, each reported by the rules; observed in
       // catch-up too, so a later bolt still knows its cast.
@@ -270,7 +271,7 @@ export function createBatch2VfxBridge(host: Host) {
           const { flashAt, leaves, flight, arriveShare } = jinxRocketTimes(host.unit(event.sourceId)?.starLevel ?? 1, cells, total);
           const delayed = (seconds: number) => seconds > 0 ? { delay: seconds, cancelWithSource: true } : {};
           // She looks at the landing point until it lands, and her muzzle flash (its smoke with it) points there too.
-          if (board) host.facePoint?.(event.sourceId, board, total + JINX_ROCKET_FACING.afterLanding);
+          if (current && board) host.facePoint?.(event.sourceId, board, total + JINX_ROCKET_FACING.afterLanding);
           host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flash', board, snapshotTargets: true, ...(board ? { aimPoint: board } : {}), ...delayed(flashAt) });
           // The rules fired it already and resolve it on landing: it flies even if she dies before it is drawn leaving, from
           // where her barrel was (outlivesSource). Only its muzzle flash goes with her.
