@@ -259,6 +259,8 @@ export function runRealCombat(units: any[], afterTicks: number, onTick: (state: 
   let state = started.state, castIndex = -1, ticks = 1, casts = 0;
   onTick(state, toDisplayEvents(started.events as any) as any[]);
   while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {
+    const killAfter = (globalThis as any).__killMeAfter;
+    if (killAfter !== undefined && castIndex >= 0 && ticks === castIndex + killAfter) { state = structuredClone(state); const me = state.units.find((u: any) => u.id === 'me'); if (me) me.hp = 0; }
     const stepped = stepCombat(state); state = stepped.state;
     const shown = toDisplayEvents(stepped.events as any) as any[];
     if (castIndex < 0 && shown.some(e => anchorMatches(anchor, e)) && ++casts === castNumber) castIndex = ticks;

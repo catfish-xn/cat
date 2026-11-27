@@ -120,6 +120,7 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   // N-th cast (real-combat.ts Anchor); a unit that never casts still gets a window.
   const start = { fromStart: params.get('fromstart') === '1', leadMs: params.get('leadms') !== null ? Number(params.get('leadms')) : null,
     castNumber: params.get('castindex') !== null ? Number(params.get('castindex')) : 1, anchor: params.get('anchor') };
+  if (params.get('killme') !== null) (globalThis as any).__killMeAfter = Number(params.get('killme'));
   const real = params.get('real') ? await createRealReplay(unit, Number(params.get('star') ?? 3), params.get('form'), targetModel, dist, Number(params.get('window') ?? 3000), start) : null;
   // The game's own combat floats (damage by type, shield absorbed, heals, statuses), not a recording-only copy.
   const numbers = params.get('numbers') !== '0' && real ? createGameFloats(host, id => listener.screenBox?.(id), () => real.frames[0]!.map((p: any) => p.id), id => listener.barBox?.(id)) : null;
