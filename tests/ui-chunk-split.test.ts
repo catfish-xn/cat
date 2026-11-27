@@ -176,3 +176,56 @@ describe('G2-3 item names before and after their chunk', () => {
     expect(display.g23IconUrl('item', id)).toMatch(/assets\/s13\/g23\/items\/tft5_item_trapclawradiant\.png$/);
   });
 });
+
+describe('the online battle stats before and after their chunk (2D bundle budget 11-28)', () => {
+  afterEach(() => vi.unstubAllGlobals());
+  type Place = { hidden: boolean; removed: boolean; replacedWith?: unknown; remove(): void; replaceWith(node: unknown): void };
+  function placeDom() {
+    const places: Place[] = [];
+    vi.stubGlobal('document', { createElement: () => {
+      const holder: { firstElementChild: unknown; append(node: unknown): void } & Partial<Place> = { firstElementChild: null, append(node) { this.firstElementChild = node; } };
+      const place: Place = Object.assign(holder, { hidden: false, removed: false, remove() { place.removed = true; }, replaceWith(node: unknown) { place.replacedWith = node; } }) as never;
+      places.push(place); return place;
+    } });
+    const host = { appended: [] as unknown[], append(node: unknown) { this.appended.push(node); } };
+    return { places, host };
+  }
+  it('keeps a hidden place in the column, reads null, and shows only the latest call once the panel arrives, where the place was', async () => {
+    const { LazyBattleSummary } = await import('../src/rendering/online/battle-summary-loader');
+    const { places, host } = placeDom();
+    type Panel = { live: (battle: unknown, round: string) => void; show: (last: unknown, visible: boolean) => void; debug: () => unknown; dispose: () => void };
+    const held = heldChunk<{ BattleSummaryPanel: new (host: { append(node: unknown): void }) => Panel }>();
+    const summary = new LazyBattleSummary(host as never, held.chunk as never);
+    expect(held.prefetches).toHaveBeenCalledTimes(1);
+    expect(host.appended).toEqual([places[0]]); expect(places[0]!.hidden).toBe(true);
+    expect(summary.debug()).toBeNull();
+    summary.live({ played: 1 } as never, '2-1'); summary.show(null, false);
+    expect(held.loads).toHaveBeenCalled();
+    const calls: unknown[][] = [], root = { id: 'battle-summary' };
+    held.arrive({ BattleSummaryPanel: class { constructor(holder: { append(node: unknown): void }) { holder.append(root); }
+      live(...args: unknown[]) { calls.push(['live', ...args]); } show(...args: unknown[]) { calls.push(['show', ...args]); }
+      debug() { return { shown: true }; } dispose() { calls.push(['dispose']); } } });
+    expect(calls).toEqual([['show', null, false]]);
+    expect(places[0]!.replacedWith).toBe(root);
+    summary.live({ played: 2 } as never, '2-1');
+    expect(calls).toEqual([['show', null, false], ['live', { played: 2 }, '2-1']]);
+    expect(summary.debug()).toEqual({ shown: true });
+    summary.dispose(); expect(calls.at(-1)).toEqual(['dispose']);
+  });
+  it('a summary disposed before its chunk arrives never builds and leaves no place behind', async () => {
+    const { LazyBattleSummary } = await import('../src/rendering/online/battle-summary-loader');
+    const { places, host } = placeDom(), held = heldChunk<{ BattleSummaryPanel: never }>(), build = vi.fn();
+    const summary = new LazyBattleSummary(host as never, held.chunk as never);
+    summary.dispose(); held.arrive({ BattleSummaryPanel: build as never });
+    expect(build).not.toHaveBeenCalled(); expect(places[0]!.removed).toBe(true);
+  });
+});
+
+describe('the help dialog chunk (2D bundle budget 11-28)', () => {
+  it('loads the help dialog module on demand, once per page', async () => {
+    const { createHelpPanelChunk, helpPanelChunk } = await import('../src/presentation/help-panel-loader');
+    const module = await createHelpPanelChunk().load();
+    expect(typeof module.HelpPanel).toBe('function');
+    expect(helpPanelChunk()).toBe(helpPanelChunk());
+  });
+});
