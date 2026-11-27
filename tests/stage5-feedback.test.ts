@@ -70,26 +70,28 @@ describe('stage5 floating text equivalence and DOM work', () => {
     next.dispose(); expect(snapshot(newHost)).toEqual([]);
   });
 
-  it('runs the recorded sequence with every unit far apart: a unit\'s numbers stack up and never cover each other', () => {
-    // Review (11-18): the bounds above are nearly always true; here every unit stands alone (300 px apart on a wide board),
-    // so numbers at one x are one unit's, and they must stand one above another (drawn size = font size × transform scale).
+  it('runs the recorded sequence with every unit far apart: a damage number stays near where it appeared, whatever its unit does', () => {
+    // Original look (official-server footage, 11-25): a damage number does not follow its unit; it only drifts a little.
+    // Every unit walks on; within one frame a damage number moves only by its own small drift.
     setup(); size = { width: 7000, height: 520 }; const newHost = host(), next = createCombatFeedbackRenderer(newHost);
-    const anchors = new Map<string, FeedbackAnchor>(sequence.units.map((u, i) => [u.id, { x: 150 + i * 300, y: 200 + u.cell.row * 30, radius: 20 }]));
-    const drawn = (e: { style: Record<string, string> }) => parseFloat(e.style.fontSize) * Number(/scale\(([\d.]+)\)/.exec(e.style.transform ?? '')?.[1] ?? 1);
-    let stacks = 0;
+    const anchorsAt = (now: number) => new Map<string, FeedbackAnchor>(sequence.units.map((u, i) => [u.id, { x: 150 + i * 300 + now * 0.08, y: 200 + u.cell.row * 30, radius: 20 }]));
+    const placed = () => new Map((newHost as unknown as Element).children[0].children.filter(e => !e.hidden && e.style.left && !e.textContent.startsWith('+'))
+      .map(e => [e, { x: parseFloat(e.style.left), y: parseFloat(e.style.top) }] as const));
+    let checked = 0;
     for (const frame of sequence.ticks) {
-      next.push(frame.events as SceneCombatEvent[], frame.tick * 50);
-      for (const dt of [16.7, 120]) {
-        next.render(frame.tick * 50 + dt, anchors);
-        const placed = snapshot(newHost)[0].children.filter(e => !e.hidden && e.style.left).map(e => ({ x: parseFloat(e.style.left), y: parseFloat(e.style.top), size: drawn(e) }));
-        for (let i = 0; i < placed.length; i++) for (let j = i + 1; j < placed.length; j++) {
-          const a = placed[i], b = placed[j];
-          if (Math.abs(a.x - b.x) < 1) { stacks++; expect(Math.abs(a.y - b.y), `tick ${frame.tick} + ${dt}`).toBeGreaterThanOrEqual((a.size + b.size) / 2 - 1e-6); }
-        }
+      const at = frame.tick * 50;
+      next.push(frame.events as SceneCombatEvent[], at);
+      next.render(at, anchorsAt(at)); const before = placed();
+      next.render(at + 49.9, anchorsAt(at + 49.9));
+      for (const [e, now] of placed()) {
+        const was = before.get(e); if (!was) continue;
+        checked++;
+        expect(now.x - was.x, `tick ${frame.tick}`).toBeLessThanOrEqual(25 * 49.9 / 700 + 1e-6);
+        expect(now.x - was.x, `tick ${frame.tick}`).toBeGreaterThanOrEqual(-1e-6);
+        expect(Math.abs(now.y - was.y), `tick ${frame.tick}`).toBeLessThanOrEqual(6.5);
       }
     }
-    // The sequence does put several numbers on one unit at once, so the check above ran.
-    expect(stacks).toBeGreaterThan(0);
+    expect(checked).toBeGreaterThan(0);
     next.dispose();
   });
 
@@ -101,11 +103,13 @@ describe('stage5 floating text equivalence and DOM work', () => {
       { ...damage(1, 'e'), damageType: 'true' }];
     const anchors = new Map(['a', 'b', 'c', 'd', 'e'].map((id, i) => [id, { x: 50 + i * 90, y: 250, radius: 20 }]));
     next.push(events, 0);
-    for (const now of [-10, 0, 600, 899.999, 900]) {
+    for (const now of [-10, 0, 600, 619.999, 620, 699.999, 700]) {
       next.render(now, anchors);
       // A stun (any status) floats no word: only damage and heals do, as in the original.
       if (now === 0) expect(snapshot(newHost)[0].children.map(e => e.text)).toEqual(['15', '10', '+24', '10']);
-      if (now === 899.999) expect(snapshot(newHost)[0].children).toHaveLength(4);
+      // A heal is shorter-lived than a damage number (fitted to official-server footage).
+      if (now === 619.999) expect(snapshot(newHost)[0].children).toHaveLength(4);
+      if (now === 620 || now === 699.999) expect(snapshot(newHost)[0].children.map(e => e.text)).toEqual(['15', '10', '10']);
     }
     expect(snapshot(newHost)[0].children).toHaveLength(0);
   });
@@ -206,10 +210,10 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([damage(1), { ...damage(1), sourceId: 'c' }]).map(e => e.text)).toEqual(['10', '10']);
       expect(labels([damage(1), damage(1, 'a', 5)]).map(e => e.text)).toEqual(['15']);
     });
-    it('a crit is the same colour about 1.9 times as large (42 px), with the wedge mark (E5) in two hard tones and a dark edge, in its own label', () => {
+    it('a crit is the same colour and larger (CRIT_SCALE), with the wedge mark (E5) in two hard tones and a dark edge, in its own label', () => {
       const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400), [blue] = labels([{ ...crit(1), damageType: 'magic' }], 400);
       expect(big.text).toBe(plain.text);
-      expect(px(big) / px(plain)).toBeCloseTo(1.9, 1); expect(px(big)).toBe(42);
+      expect(px(big) / px(plain)).toBeCloseTo(1.4, 1); expect(px(big)).toBe(31);
       expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#36c4ff');
       // The mark (the user's pick E5): two hard tones of the number's colour, split along the slam, its dark edge and a black hard shadow.
       const mark = decodeURIComponent(big.style.backgroundImage), blueMark = decodeURIComponent(blue.style.backgroundImage);
@@ -234,113 +238,82 @@ describe('stage5 floating text equivalence and DOM work', () => {
       const shadow = labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.textShadow;
       for (const edge of ['1px 0 0', '-1px 0 0', '0 1px 0', '0 -1px 0', '1px 1px 0', '-1px -1px 0']) expect(shadow).toContain(edge);
     });
-    it('a number stays fully opaque until its last 300 ms (the newest of a stack too)', () => {
-      for (const now of [0, 300, 600]) expect(Number(labels([crit(1)], now)[0].style.opacity), `at ${now}`).toBe(1);
-      expect(Number(labels([damage(1)], 750)[0].style.opacity)).toBeCloseTo(0.5, 3);
+    it('a number stays fully opaque until its fade-out; a heal lives and fades shorter than damage', () => {
+      for (const now of [0, 300, 400]) expect(Number(labels([crit(1)], now)[0].style.opacity), `at ${now}`).toBe(1);
+      expect(Number(labels([damage(1)], 550)[0].style.opacity)).toBeCloseTo(0.5, 3);
+      expect(Number(labels([heal(1)], 450)[0].style.opacity)).toBe(1);
+      expect(Number(labels([heal(1)], 535)[0].style.opacity)).toBeCloseTo(0.5, 3);
     });
-    it('a number appears on its unit\'s body (chest to waist), not above its bar, and rises a little as it fades', () => {
-      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top);
-      // Anchor: y 300, radius 20 (one radius below the body box's top): the number starts BODY_DROP radii lower.
-      const [first] = labels([damage(1)], 0);
-      expect(top(first)).toBeCloseTo(300 + 20 * 0.35, 5); expect(top(first)).toBeGreaterThan(300 - 20);
-      const late = labels([damage(1)], 880)[0];
-      expect(top(first) - top(late)).toBeGreaterThan(0); expect(top(first) - top(late)).toBeLessThanOrEqual(28);
-    });
-    it('a unit\'s numbers stack up: the newest on the body, older ones above, smaller and fainter, never covering each other', () => {
-      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
-      const three = labels([damage(1, 'a', 10), damage(2, 'a', 20), damage(3, 'a', 30)].map((e, i) => ({ ...e, eventSeq: 1 + i })), 400);
-      const [oldest, middle, newest] = three;
-      expect([oldest.text, middle.text, newest.text]).toEqual(['10', '20', '30']);
-      expect(top(newest)).toBeGreaterThan(top(middle)); expect(top(middle)).toBeGreaterThan(top(oldest));
-      expect(scale(newest)).toBeGreaterThan(scale(middle)); expect(scale(middle)).toBeGreaterThan(scale(oldest));
-      expect(Number(newest.style.opacity)).toBeGreaterThan(Number(middle.style.opacity)); expect(Number(middle.style.opacity)).toBeGreaterThan(Number(oldest.style.opacity));
-      for (const [a, b] of [[newest, middle], [middle, oldest]]) expect(top(a) - top(b)).toBeGreaterThanOrEqual((px(a) * scale(a) + px(b) * scale(b)) / 2 - 1e-6);
-      // All on one column: nobody is pushed sideways.
-      expect(new Set(three.map(e => e.style.left)).size).toBe(1);
-    });
-    it('a newly popped number pushes the older one up by its popped size', () => {
-      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
-      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
-      // A crit peaks 30 ms after it comes (see the crit pop test below).
-      renderer.push([damage(1, 'a', 10)], 0); renderer.push([{ ...crit(2, 'a', 20), eventSeq: 2 }], 400); renderer.render(430, anchors);
-      const [older, popped] = snapshot(h)[0].children;
-      expect(scale(popped)).toBeCloseTo(1.6, 3);
-      expect(top(popped) - top(older)).toBeGreaterThanOrEqual((px(popped) * scale(popped) + px(older) * scale(older)) / 2 - 1e-6);
-      renderer.dispose();
-    });
-    it('a number never covers a unit\'s bar, by where it stands: below its own bar, sideways past another\'s, never faded', () => {
-      const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
-      const scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
-      // A short unit: its body point (300 + 0.35 × 10) is just under its bar (centre 290, 16 tall, so its bottom is 298).
-      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 10 }]]);
-      const bars = new Map([['a', { x: 120, y: 290, w: 60, h: 16 }]]);
-      renderer.push([damage(1, 'a', 10)], 0);
-      for (const now of [0, 200, 600]) {
-        renderer.render(now, anchors, [], bars);
-        const [label] = snapshot(h)[0].children, size = px(label) * scale(label);
-        // Its top is at least half its height under its own bar's bottom (298), and it is not faded to get there.
-        expect(top(label) - size / 2, `at ${now}`).toBeGreaterThanOrEqual(298 + size / 2 - 1e-6);
-        expect(Number(label.style.opacity), `at ${now}`).toBe(1);
-      }
-      renderer.dispose();
-      // Another unit's bar where the number would stand: it steps sideways past the bar's end, at full opacity.
-      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2), other = { x: 160, y: 307, w: 80, h: 16 };
-      r2.push([damage(1, 'a', 10)], 0); r2.render(200, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [], new Map([['b', other]]));
-      const [moved] = snapshot(h2)[0].children, w = Math.max(20, 9 * moved.text.length / 2) * scale(moved);
-      expect(Math.abs(left(moved) - other.x)).toBeGreaterThanOrEqual(other.w / 2 + w - 1e-6);
-      expect(Number(moved.style.opacity)).toBe(1);
-      r2.dispose();
-      // Two bars side by side across the number's spot: it clears both together (not back and forth between them), on the nearer end.
-      setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3), barA = { x: 100, y: 307, w: 120, h: 16 }, barB = { x: 210, y: 307, w: 120, h: 16 };
-      r3.push([damage(1, 'a', 10)], 0); r3.render(200, new Map([['a', { x: 165, y: 300, radius: 20 }]]), [], new Map([['b', barA], ['c', barB]]));
-      const [cleared] = snapshot(h3)[0].children, w3 = Math.max(20, 9 * cleared.text.length / 2) * scale(cleared);
-      for (const bar of [barA, barB]) expect(Math.abs(left(cleared) - bar.x)).toBeGreaterThanOrEqual(bar.w / 2 + w3 - 1e-6);
-      expect(left(cleared)).toBeGreaterThan(barB.x);
-      r3.dispose();
-    });
-    it('a number keeps clear of another unit\'s number already placed; packed in, it may overlap a number a little but never a bar', () => {
-      const left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
-      // Two units 10 px apart: the later unit's number steps sideways past the earlier one's.
+    const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
+    const scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
+    it('a damage number appears on the struck body toward its right, with its own jitter, the same every replay', () => {
+      // Anchor: x 120, y 300, radius 20. Without a bar it lands 0.25 × the body's width right of the midline, ±15 px either way.
+      const [first] = labels([damage(1)], 0), [again] = labels([damage(1)], 0);
+      expect(left(first)).toBe(left(again)); expect(top(first)).toBe(top(again));
+      expect(Math.abs(left(first) - (120 + 10))).toBeLessThanOrEqual(15); expect(Math.abs(top(first) - (300 + 20 * 0.35))).toBeLessThanOrEqual(15);
+      // Another hit (another tick, another source) lands on its own spot near it.
+      const [other] = labels([{ ...damage(2), sourceId: 'c', eventSeq: 2 }], 0);
+      expect(left(other) !== left(first) || top(other) !== top(first)).toBe(true);
+      // With a bar, toward its right half (0.25 × its width right of the midline) and never above it.
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
-      renderer.push([damage(1, 'a', 10)], 0); renderer.push([{ ...damage(2, 'b', 20), eventSeq: 2 }], 0);
-      renderer.render(300, new Map([['a', { x: 200, y: 300, radius: 20 }], ['b', { x: 210, y: 300, radius: 20 }]]));
-      const [first, second] = snapshot(h)[0].children;
-      expect(Math.abs(left(first) - left(second))).toBeGreaterThanOrEqual(40 - 1e-6);
+      renderer.push([damage(1)], 0); renderer.render(0, new Map([['a', { x: 120, y: 280, radius: 10 }]]), [], new Map([['a', { x: 120, y: 300, w: 60, h: 10 }]]));
+      const [barred] = snapshot(h)[0].children;
+      expect(Math.abs(left(barred) - 135)).toBeLessThanOrEqual(15); expect(top(barred)).toBeGreaterThanOrEqual(305);
       renderer.dispose();
-      // Bars close in on both sides and the only bar-free spot is taken by another number: it overlaps that number, not a bar.
-      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2), barL = { x: 100, y: 307, w: 160, h: 16 }, barR = { x: 300, y: 307, w: 160, h: 16 };
-      r2.push([damage(1, 'a', 10)], 0); r2.push([{ ...damage(2, 'b', 20), eventSeq: 2 }], 0);
-      r2.render(300, new Map([['a', { x: 200, y: 300, radius: 20 }], ['b', { x: 200, y: 300, radius: 20 }]]), [], new Map([['l', barL], ['r', barR]]));
-      for (const label of snapshot(h2)[0].children) {
-        for (const bar of [barL, barR]) expect(Math.abs(left(label) - bar.x)).toBeGreaterThanOrEqual(bar.w / 2 + 20 - 1e-6);
-      }
-      r2.dispose();
-      // Moved aside past a pair of bars, then crowded there by another unit's number: it steps a little further on, not across the bars.
-      setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3), pair = new Map([['l', { x: 100, y: 307, w: 120, h: 16 }], ['r', { x: 220, y: 307, w: 120, h: 16 }]]);
-      r3.push([damage(1, 'a', 10)], 0); r3.push([{ ...damage(2, 'b', 20), eventSeq: 2 }], 0);
-      r3.render(200, new Map([['b', { x: 162, y: 300, radius: 20 }]]), [], pair);
-      expect(left(snapshot(h3)[0].children.find(e => e.text === '20')!)).toBeGreaterThan(280);
-      r3.render(220, new Map([['a', { x: 320, y: 300, radius: 20 }], ['b', { x: 162, y: 300, radius: 20 }]]), [], pair);
-      const [ofA, ofB] = ['10', '20'].map(text => snapshot(h3)[0].children.find(e => e.text === text)!);
-      expect(left(ofB)).toBeGreaterThan(280); expect(Math.abs(left(ofB) - left(ofA))).toBeGreaterThanOrEqual(40 - 1e-6);
-      r3.dispose();
-      // Hemmed in by numbers on both sides: it steps aside at most 1.5 of its widths, else stays by its unit and overlaps a little.
-      setup(); const h4 = host(), r4 = createCombatFeedbackRenderer(h4);
-      r4.push([damage(1, 'a', 10)], 0); r4.push([{ ...damage(2, 'c', 30), eventSeq: 2 }], 0); r4.push([{ ...damage(3, 'd', 40), eventSeq: 3 }], 0);
-      r4.push([{ ...damage(4, 'b', 20), eventSeq: 4 }], 0);
-      r4.render(300, new Map([['a', { x: 200, y: 300, radius: 20 }], ['c', { x: 243, y: 300, radius: 20 }], ['d', { x: 157, y: 300, radius: 20 }], ['b', { x: 205, y: 300, radius: 20 }]]));
-      const hemmed = snapshot(h4)[0].children.find(e => e.text === '20')!;
-      expect(Math.abs(left(hemmed) - 205)).toBeLessThanOrEqual(1.5 * 40 + 1e-6);
-      r4.dispose();
     });
-    it('past four numbers on a unit, the earliest fades out early', () => {
-      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
-      for (let i = 0; i < 4; i++) renderer.push([{ ...damage(1 + i), eventSeq: 1 + i }], i * 50);
-      renderer.render(150, anchors); expect(snapshot(h)[0].children).toHaveLength(4);
-      renderer.push([{ ...damage(9), eventSeq: 9 }], 160);
-      // The earliest (shown at 0, normally 900 ms) is gone 200 ms after the fifth came; the other four remain.
-      renderer.render(400, anchors);
-      expect(snapshot(h)[0].children).toHaveLength(4);
+    it('a damage number does not follow its unit: it drifts right in a small arc, up a little and then down', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([damage(1)], 0);
+      const at = (now: number, x: number) => { renderer.render(now, new Map([['a', { x, y: 300, radius: 20 }]])); return snapshot(h)[0].children[0]; };
+      const start = at(0, 120), x0 = left(start), y0 = top(start);
+      const mid = at(245, 300), end = at(690, 20);
+      expect(left(mid) - x0).toBeCloseTo(25 * 245 / 700, 5); expect(top(mid) - y0).toBeCloseTo(-8, 1);
+      expect(left(end) - x0).toBeCloseTo(25 * 690 / 700, 5); expect(top(end) - y0).toBeGreaterThan(15);
+      renderer.dispose();
+    });
+    it('numbers on one unit do not queue: each lands near the last and may cover it, at full size and opacity', () => {
+      const three = labels([damage(1, 'a', 10), damage(2, 'a', 20), damage(3, 'a', 30)].map((e, i) => ({ ...e, eventSeq: 1 + i })), 400);
+      expect(three.map(e => e.text)).toEqual(['10', '20', '30']);
+      for (const e of three) { expect(scale(e)).toBe(1); expect(Number(e.style.opacity)).toBe(1); expect(Math.abs(left(e) - (120 + 10 + 25 * 400 / 700))).toBeLessThanOrEqual(15 + 1e-6); }
+    });
+    it('bars are not avoided: a number on another unit\'s bar stays put; a 2D canvas label is still stepped past', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), other = { x: 160, y: 307, w: 80, h: 16 };
+      renderer.push([damage(1, 'a', 10)], 0); renderer.render(0, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [], new Map([['b', other]]));
+      const [stays] = snapshot(h)[0].children;
+      expect(Math.abs(left(stays) - 170)).toBeLessThanOrEqual(15);
+      renderer.dispose();
+      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2), label = { x: 170, y: 307, w: 200, h: 40 };
+      r2.push([damage(1, 'a', 10)], 0); r2.render(0, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [label]);
+      const [moved] = snapshot(h2)[0].children;
+      expect(Math.abs(left(moved) - label.x)).toBeGreaterThanOrEqual(label.w / 2 + 20 - 1e-6);
+      r2.dispose();
+    });
+    it('a heal stays on its unit\'s midline and rises from its first frame, popping larger and back', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([heal(1)], 0);
+      const at = (now: number, x: number) => { renderer.render(now, new Map([['a', { x, y: 300, radius: 20 }]])); return snapshot(h)[0].children[0]; };
+      const first = at(0, 120);
+      expect(left(first)).toBe(120); expect(top(first)).toBeCloseTo(307, 5); expect(scale(first)).toBeCloseTo(2, 5);
+      const later = at(100, 140);
+      expect(left(later)).toBe(140); expect(top(later)).toBeCloseTo(307 - 8, 5); expect(scale(later)).toBeCloseTo(1.5, 5);
+      expect(at(200, 140).style.transform).toBe('translate(-50%, -50%)');
+      expect(top(at(600, 140))).toBeCloseTo(307 - 48, 5);
+      renderer.dispose();
+    });
+    it('a heal never rises past half its height below its own bar', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), bars = new Map([['a', { x: 120, y: 280, w: 60, h: 10 }]]);
+      renderer.push([heal(1)], 0); renderer.render(600, new Map([['a', { x: 120, y: 300, radius: 20 }]]), [], bars);
+      const [label] = snapshot(h)[0].children;
+      expect(top(label)).toBeGreaterThanOrEqual(285 + px(label) / 2 - 1e-6);
+      renderer.dispose();
+    });
+    it('heals one after another stand in one column, the newest lowest, none smaller or fainter', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([heal(1)], 0); renderer.push([{ ...heal(7), eventSeq: 7, actual: 9 } as SceneCombatEvent], 330);
+      renderer.render(400, new Map([['a', { x: 120, y: 300, radius: 20 }]]));
+      const [older, newer] = snapshot(h)[0].children;
+      expect(left(older)).toBe(left(newer)); expect(top(newer)).toBeGreaterThan(top(older));
+      expect(Number(older.style.opacity)).toBe(1); expect(scale(older)).toBe(1);
       renderer.dispose();
     });
     it('a damage-over-time tick is small (a burn white), shorter-lived; heals are not changed by crits', () => {
@@ -350,19 +323,18 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([{ ...damage(1), delivery: 'ability-periodic' } as SceneCombatEvent], 700)).toEqual([]);
       expect(labels([heal(1), crit(2, 'b')]).filter(e => e.text === '+7')).toEqual(labels([heal(1)]));
     });
-    it('a crit slams in from up-left, pops past its size and settles within 100 ms, then holds still until it fades', () => {
-      const scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
+    it('a crit slams in from up-left popping larger, settles quickly, then holds still until it fades', () => {
       const slam = (e: { style: Record<string, string> }) => /translate\((-[\d.]+)px, (-[\d.]+)px\)/.exec(e.style.transform);
       const at = (now: number) => labels([crit(1)], now)[0];
-      expect(scale(at(0))).toBeCloseTo(1.3, 3); expect(scale(at(30))).toBeCloseTo(1.6, 3); expect(scale(at(70))).toBeCloseTo(0.92, 3);
-      expect(at(100).style.transform).toBe('translate(-50%, -50%)');
-      // Up-left of its spot at first (a quarter of its size each way), on its spot from 100 ms.
+      expect(scale(at(0))).toBeCloseTo(1.9, 3); expect(scale(at(40))).toBeCloseTo(1.45, 3);
+      expect(at(80).style.transform).toBe('translate(-50%, -50%)');
+      // Up-left of its spot at first (CRIT_SLAM of its size each way), on its spot once settled (the user's pick, 11-19).
       const first = slam(at(0))!; expect(Number(first[1])).toBeCloseTo(-0.25 * px(at(0)), 1); expect(first[1]).toBe(first[2]);
-      expect(slam(at(100))).toBeNull();
-      // It does not rise: the same height from 100 ms until it fades.
-      expect(parseFloat(at(100).style.top)).toBe(parseFloat(at(800).style.top));
+      expect(slam(at(80))).toBeNull();
+      // It does not move: the same place from then until it fades.
+      expect(top(at(80))).toBe(top(at(650))); expect(left(at(80))).toBe(left(at(650)));
     });
-    it('a new number pops in larger and drops back to its size within 160 ms, then rises', () => {
+    it('a new number pops in larger and drops back to its size within 160 ms', () => {
       expect(labels([damage(1)], 0)[0].style.transform).toBe('translate(-50%, -50%) scale(1.600)');
       expect(labels([damage(1)], 80)[0].style.transform).toBe('translate(-50%, -50%) scale(1.300)');
       expect(labels([damage(1)], 160)[0].style.transform).toBe('translate(-50%, -50%)');
