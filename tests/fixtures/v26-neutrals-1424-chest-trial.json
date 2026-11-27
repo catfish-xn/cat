@@ -1,5 +1,5 @@
 {
-  "seed": 22441,
+  "seed": 34601,
   "grantTick": 96,
   "firstPulse": 196,
   "bracerTicks": [
@@ -42,9 +42,9 @@
       466
     ]
   ],
-  "initialSha256": "f2944472e5064f758d9fbc7a541f38173dd44e72498c9a5bd6b43bcb52ae6cd8",
-  "terminalSha256": "154552cfb8543d9fe2212788e94c294d849cd1c2179673940dd0312102dbdc3f",
-  "eventsSha256": "cfc6b28688db77703120b3b35ba2e33c91a100e8538f32667ad647e21b6c96b1",
+  "initialSha256": "bbf006d99e370fbc3beefa1c740de0a9188529d8baeb4ee06c0c6b88692f2b7b",
+  "terminalSha256": "4c6faa5030b26d4509563ee07779cd79bfd35ea6bb235779ce308c2c028027c2",
+  "eventsSha256": "bfbd75fa22e353007af17f0ab4e6a27290948ece336f5d506f14d4cd0d9a6a79",
   "frames": [
     {
       "tick": 1,

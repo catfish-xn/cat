@@ -1339,7 +1339,7 @@
       "previousBytes": 0,
       "currentBytes": 55159,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "bd3e05cf49bf2ff2a2c961f987515d98b71e8f3c6db5abccc4227d3ab0a25557",
+      "currentSha256": "b89edadbe3534196dd2d2aecde27e1e17c21b7fc8e0aab6a74b0ae9c6d0f44e2",
       "firstDifferentByte": 0
     },
     "tests/fixtures/v26-neutrals-1424-chest-trial.ts": {
