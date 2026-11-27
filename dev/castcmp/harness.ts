@@ -24,6 +24,9 @@ function step(ms: number) {
 const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
 function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
 import { installProbes } from './probes';
+// Recording-only probe (#749 Caitlyn 4-hex check; this branch is never merged): the LTK run counters on window.
+import { LTK_RUN_STATS } from '../../src/rendering/three-mode/vfx-ltk/runtime';
+(window as any).__ltkStats = LTK_RUN_STATS;
 import { AnimationMixer } from 'three';
 import { createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
 // Animation clocks (Fable 11-15): a unit that idles from its model's load (a dummy, a little legend, never recast) carried
