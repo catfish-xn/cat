@@ -203,7 +203,10 @@ export function unitJoints(root: Object3D, body: Object3D | null): Joints {
  * A cue projectile's flight: it lands `seconds` after it launches, however much of its path is a drop. With `arc` it flies
  * a gravity arc (TimelineCue.arc), with `curve` a perStrike spline, still landing after `seconds`.
  */
-export function projectileFlight(seconds: number, arc?: { readonly gravity: number; readonly targetOffset: number }, curve?: StrikeCurve): MissileFlight {
+export function projectileFlight(seconds: number, arc?: { readonly gravity: number; readonly targetOffset: number }, curve?: StrikeCurve,
+  arriveShare?: number): MissileFlight {
+  // Flown in and waiting (TimelineCue.arriveShare): straight at a steady pace, there before its flight runs out.
+  if (arriveShare !== undefined && !curve && !arc) return { ...FIRST_FLIGHT, movement: { kind: 'fixedTimeThenHold', travelTime: seconds, arriveShare } };
   // A perStrike curve (TimelineCue.perStrike.fan): the engine's fixed-time Hermite spline from the launch point, so it
   // still lands after `seconds`.
   if (curve) return { ...FIRST_FLIGHT, movement: { kind: 'fixedTimeSpline', travelTime: seconds,
@@ -220,6 +223,8 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
   arc?: { readonly gravity: number; readonly targetOffset: number };
   /** A perStrike projectile's curve (TimelineCue.perStrike.fan); it implies fixedTime. */
   curve?: StrikeCurve;
+  /** A projectile that reaches its target this share of the way through its flight and waits (TimelineCue.arriveShare); it implies fixedTime. */
+  arriveShare?: number;
   /** Each particle's red, green and blue times this when drawn (TimelineCue.brightness). Omitted means 1. */
   brightness?: number;
   /** After `stopAfter`, ease every particle's alpha to nothing by `duration` (see `fadeAt`). */
@@ -252,7 +257,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
       // Caitlyn's comet, mostly a drop, arrived at a third of its travelSeconds). A falling projectile (fixedTime) flies a
       // fixed time instead; every other cue projectile keeps its speed until that change is reviewed on its own.
       motion: spec.projectileSeconds && distance > 0 ? { kind: 'missile', from, to,
-        flight: spec.fixedTime || spec.arc || spec.curve ? projectileFlight(spec.projectileSeconds, spec.arc, spec.curve) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
+        flight: spec.fixedTime || spec.arc || spec.curve || spec.arriveShare !== undefined ? projectileFlight(spec.projectileSeconds, spec.arc, spec.curve, spec.arriveShare) : { ...FIRST_FLIGHT, movement: { kind: 'fixedSpeed', speed: distance / spec.projectileSeconds } } }
         : { kind: 'bone', anchor: spec.anchor, target: spec.target } };
   };
   // Cue scale stays off this group: scaling it would pull the anchor toward the world origin.
@@ -333,7 +338,7 @@ export function createLtkParticles(prepared: PreparedVfx, options: {
     reuse(next: typeof options) {
       if (closed) return;
       spec.anchor = next.anchor; spec.target = next.target; spec.joints = next.joints; spec.attachment = next.attachment;
-      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.curve = next.curve; spec.brightness = next.brightness; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next); spec.tailFade = next.tailFade;
+      spec.projectileSeconds = next.projectileSeconds; spec.fixedTime = next.fixedTime; spec.arc = next.arc; spec.curve = next.curve; spec.arriveShare = next.arriveShare; spec.brightness = next.brightness; spec.duration = next.duration; spec.stopAfter = next.stopAfter; spec.seed = next.seed; spec.fadeOut = next.fadeOut; spec.fadeFrom = resolveFadeFrom(next); spec.tailFade = next.tailFade;
       spec.scale = next.scale ?? 1; driver.setScale(spec.scale);
       elapsed = 0; peak = 0; childPeak = 0; ending = null; driver.reseed(next.seed); rig = rigFor(); driver.steer(rig);
     },

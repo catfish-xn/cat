@@ -5,7 +5,7 @@ import type { LtkPlayOptions } from './runtime';
 import type { TimelineVariant, WorldPoint } from './timeline';
 import { CUE_RULE_STOPS, VI_HAND_TRAIL } from './cue-overrides';
 import { jayceSkill } from './champions/jayce';
-import { JINX_ROCKET_DRAWN, jinxRocketFlightSeconds } from './champions/jinx';
+import { JINX_ROCKET_DRAWN, jinxRocketTimes } from './champions/jinx';
 import { SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
 import { melSkill } from './champions/mel';
 
@@ -246,7 +246,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
       // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing, to and on the cell the rules land
       // it on (the rules' 'jinx-rocket-epicenter' marker; a replay without one lands at the board's centre, as the rules did). The landing tick is the
-      // rules'; how long the rocket is drawn flying, and so when it leaves the barrel, is drawn by distance (JINX_ROCKET_DRAWN).
+      // rules'; its flash, when it leaves the barrel and how it flies in are timed back from it (jinxRocketTimes).
       if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
         const key = `${event.sourceId}:${event.type === 'abilityProjectileLaunched' ? event.arrivalTick : event.tick}`;
         const frame = host.board(), landing = rocketCells.get(key) ?? boardCentre(frame);
@@ -255,13 +255,14 @@ export function createBatch2VfxBridge(host: Host) {
         if (event.type === 'abilityProjectileLanded') host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-boom', board, snapshotTargets: true });
         else {
           const from = jinxCells.get(event.sourceId), total = Math.max(0, event.arrivalTick - event.tick) * 0.05;
-          const flight = Math.min(total, jinxRocketFlightSeconds(from && landing ? hexCells(from, landing) : 0));
-          const leaves = total - flight, flashAt = Math.max(0, leaves - JINX_ROCKET_DRAWN.flashLead);
+          const cells = from && landing ? hexCells(from, landing) : 0;
+          const { flashAt, leaves, flight, arriveShare } = jinxRocketTimes(host.unit(event.sourceId)?.starLevel ?? 1, cells, total);
           const delayed = (seconds: number) => seconds > 0 ? { delay: seconds, cancelWithSource: true } : {};
           host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flash', board, snapshotTargets: true, ...delayed(flashAt) });
           // The rules fired it already and resolve it on landing: it flies even if she dies before it is drawn leaving, from
           // where her barrel was (outlivesSource). Only its muzzle flash goes with her.
-          host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flight', snapshotTargets: true, flightSeconds: flight,
+          // Flown in at a steady pace, it waits at the landing point for the landing tick (JINX_ROCKET_FLOWN).
+          host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flight', snapshotTargets: true, flightSeconds: flight, arriveShare,
             board: board ? [board[0], JINX_ROCKET_DRAWN.aimLift, board[2]] : undefined, outlivesSource: true, ...(leaves > 0 ? { delay: leaves } : {}) });
         }
       }

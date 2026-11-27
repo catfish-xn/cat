@@ -78,6 +78,12 @@ export interface TimelineCue {
    */
   readonly curve?: StrikeCurve;
   /**
+   * A projectile that flies in at a steady pace and waits there: it reaches its target `arriveShare` of the way through its
+   * flight and stays until travelSeconds runs out (MissileMovement "fixedTimeThenHold"). Set by the play
+   * (LtkPlayOptions.arriveShare), not by a cue list.
+   */
+  readonly arriveShare?: number;
+  /**
    * One row per strike: for a cast whose rules strike several times (its targets list keeps one entry a strike, repeats
    * included; Heimerdinger's rockets), this cue plays once per entry instead of once per distinct target. The k-th of n
    * starts `strikeOffsetTicks(k, n, …)` rule ticks after the cue's delay, and a projectile row with `fan` flies a curve that
@@ -199,6 +205,13 @@ export interface TimelineCue {
    * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
    */
   readonly livingTarget?: boolean;
+  /**
+   * A projectile the rules settle on landing once it has left, even if its caster dies (rule receipt: the rules launch it and
+   * its landing no longer needs the caster): one already flying when the caster dies flies on to its landing. One not yet
+   * started still goes with the caster, as the rules do not launch it then. Only for cues drawn leaving on the rules' own
+   * launch tick (Heimerdinger's rockets, Renata's missiles); LtkPlayOptions.outlivesSource covers a flight drawn later.
+   */
+  readonly flightOutlivesSource?: boolean;
 }
 /** An attack projectile's flight when no landing event times it (LtkPlayOptions.landing is absent: a dummy target, an older
  * replay, a ranged unit the rules still settle on the attack tick). Fitted, not original; with the event the rules' arrival

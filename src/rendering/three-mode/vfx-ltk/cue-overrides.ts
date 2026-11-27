@@ -763,7 +763,10 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
   // The bubble is a state its target carries: it is not drawn where a dead ally stood (livingTarget).
   // Its end fades from its stop (fadeOut) instead of cutting there, as the other shields that end with their layer do: a broken
   // shield ends it earlier (CUE_RULE_STOPS abilityShieldEndedOnHolder).
-  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), fadeOut: true, ...(cue.event === 'hit' ? { livingTarget: true } : {}) } : cue),
+  // Her shield missile, once it has left, reaches her ally even if she dies (the rules' skill shot): it flies on
+  // (TimelineCue.flightOutlivesSource).
+  lux: BATCH1_TIMELINES.lux.map(cue => cue.system === '44c9516a' ? { ...cue, scale: hugged(1), fadeOut: true, ...(cue.event === 'hit' ? { livingTarget: true } : {}) }
+    : cue.system === 'f2d605de' ? { ...cue, flightOutlivesSource: true } : cue),
   // W: the guard holds until the shield runs out, and the swipe lands then (11-06 field). Both follow her shield's own end
   // (batch1-events.ts: shieldLayerChanged depleted or expired, an expiry being an event too), not fixed times: the stance
   // plays from the cast and is stopped where the shield ends; the swipe is 'irelia-swipe' (CUE_EXTRA_SKILLS), played at that
@@ -793,7 +796,9 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'cff69d8a', action: 'cast', event: 'cast-start', delay: 0, duration: 0.35, bone: 'C_Canister' },
     // Wind-up batch 3: the missiles' damage lands CAST_WINDUP_TICKS.renata after the cast; the missile flies its 0.6 s to arrive
     // then, and the blast pool and hits play on its arrival (fitted, not original data).
-    { system: 'faf1aeac', action: 'cast', event: 'projectile', delay: CAST_WINDUP_TICKS.renata / 20 - 0.6, duration: 0.9, travelSeconds: 0.6, bone: 'C_Canister', targetBone: chest },
+    // Its missiles, once they have left, land even if she dies (cast-windup.ts releasedLanding): in flight they fly on; before
+    // they leave they go with her, as the rules stop them then.
+    { system: 'faf1aeac', action: 'cast', event: 'projectile', delay: CAST_WINDUP_TICKS.renata / 20 - 0.6, duration: 0.9, travelSeconds: 0.6, bone: 'C_Canister', targetBone: chest, flightOutlivesSource: true },
     { system: 'f9926ae8', action: 'cast', event: 'hit', delay: CAST_WINDUP_TICKS.renata / 20, duration: 2, bone: ground, primary: true },
     { system: 'd5579768', action: 'cast', event: 'hit', delay: CAST_WINDUP_TICKS.renata / 20, duration: 1, bone: chest, targetLimit: 3, optional: true },
     // E_Shield on each ally the missiles shield, for the ability's 3 s ShieldDuration. Played by the renderer on the
@@ -875,6 +880,8 @@ export const CUE_OVERRIDES: Readonly<Record<string, readonly TimelineCue[]>> = {
     { system: 'c44d51d0', action: 'cast', event: 'cast-start', delay: 0, duration: 0.3, bone: 'C_Buffbone_Cstm_Rocket' },
     { system: 'c8d6ee2e', action: 'cast', event: 'projectile', delay: HEIMER_ROCKETS.launchTicks * 0.05, duration: HEIMER_ROCKETS.flightTicks * 0.05,
       bone: 'C_Buffbone_Cstm_Rocket', travelSeconds: HEIMER_ROCKETS.flightTicks * 0.05, rank: 'body', scale: HEIMER_ROCKETS.rocketScale,
+      // A rocket that has left lands even if he dies (the rules' skill shot): it flies on; one not launched yet goes with him.
+      flightOutlivesSource: true,
       brightness: HEIMER_ROCKETS.rocketBrightness,
       perStrike: { staggerTicks: HEIMER_ROCKETS.staggerTicks, spreadTicks: HEIMER_ROCKETS.spreadTicks, fan: { side: 0.9, lift: 0.6 },
         shown: HEIMER_ROCKETS.shown, tickCap: HEIMER_ROCKETS.tickCap } },
