@@ -82,7 +82,7 @@ import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/
 /** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
 const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
-import { openEnvelopeStore } from './envelope-store';
+import { ENVELOPE_STORE_TIMEOUT_MS, envelopeSource, openEnvelopeStore } from './envelope-store';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
 import { registerGolemModels } from './summon-models';
@@ -220,7 +220,7 @@ let isAnvilPiece: (definitionId: string) => boolean = () => false;
 export function useAnvilTest(next: (definitionId: string) => boolean): void { isAnvilPiece = next; }
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
-/** `modelSha`: each model's file sha256 from precache.json, by model id (keys the browser's envelope store). */
+/** `modelSha`: each model's envelope source (envelope-store.ts: file sha256 from precache.json + clip settings), by model id. */
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown>; modelSha: ReadonlyMap<string, string> }
   | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null; modelSha?: undefined };
 
@@ -277,7 +277,7 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
     const preloaded = preloader.start().catch(() => null);
     const shaByPath = new Map(list.files.flatMap(file => file.sha256 ? [[file.path, file.sha256] as const] : []));
     const modelSha = new Map(Object.entries(cache.manifest.models).flatMap(([id, entry]) => {
-      const sha = shaByPath.get(entry.path); return sha ? [[id, sha] as const] : [];
+      const sha = shaByPath.get(entry.path); return sha ? [[id, envelopeSource(sha, entry)] as const] : [];
     }));
     return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader, preloaded, modelSha };
   } catch {
@@ -486,10 +486,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const sha = models.modelSha?.get(id);
     if (sha) void envelopeStore?.then(store => store.keep(id, sha, envelope)).catch(() => undefined); // a store failure never reaches the game
   };
-  const storedEnvelopes = envelopeStore?.then(async store => {
-    const wanted = new Map([...models.modelSha ?? []].filter(([id]) => !HOVERING_MODELS.has(id) && !!readUnitScale(models.cache?.manifest.models, id)));
-    for (const [id, envelope] of await store.load(wanted)) if (!envelopes.has(id)) envelopes.set(id, envelope);
-  }).catch(() => undefined);
+  // Bounded: a store that never answers (an IndexedDB open or read that never calls back) counts as empty, so the warm-up
+  // and a mid-combat first load measure as without one instead of waiting forever (the model would stay a pawn).
+  const storedEnvelopes = envelopeStore && new Promise<void>(resolve => {
+    const giveUp = setTimeout(resolve, 2 * ENVELOPE_STORE_TIMEOUT_MS);
+    void envelopeStore.then(async store => {
+      const wanted = new Map([...models.modelSha ?? []].filter(([id]) => !HOVERING_MODELS.has(id) && !!readUnitScale(models.cache?.manifest.models, id)));
+      for (const [id, envelope] of await store.load(wanted)) if (!envelopes.has(id)) envelopes.set(id, envelope);
+    }).catch(() => undefined).finally(() => { clearTimeout(giveUp); resolve(); });
+  });
   const envelopeClips = (lease: ModelLease) => {
     const nameOf = (action: string) => lease.animationNames[action as keyof typeof lease.animationNames] ?? action;
     const names = new Set(ENVELOPE_ACTIONS.map(nameOf));

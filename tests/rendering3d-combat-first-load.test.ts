@@ -22,10 +22,14 @@ vi.mock('../src/rendering/three-mode/model-fit', async original => {
   };
 });
 // This browser's envelope store (envelope-store.ts), as a map the tests fill and read.
-const store = vi.hoisted(() => ({ stored: new Map<string, unknown>(), kept: [] as [string, string, unknown][], failing: false }));
-vi.mock('../src/rendering/three-mode/envelope-store', () => ({
+const store = vi.hoisted(() => ({ stored: new Map<string, unknown>(), kept: [] as [string, string, unknown][], failing: false, hanging: false }));
+vi.mock('../src/rendering/three-mode/envelope-store', async original => ({
+  ...await original<typeof import('../src/rendering/three-mode/envelope-store')>(),
+  // The tests key by the file sha256 alone (envelopeSource's own test covers the clip settings).
+  envelopeSource: (sha256: string) => sha256,
   openEnvelopeStore: async () => ({
     load: async (models: ReadonlyMap<string, string>) => {
+      if (store.hanging) return new Promise<never>(() => {});
       if (store.failing) throw new Error('store unavailable');
       return new Map([...models].filter(([id, sha]) => store.stored.has(`${id}|${sha}`)).map(([id, sha]) => [id, store.stored.get(`${id}|${sha}`)]));
     },
@@ -44,7 +48,7 @@ let models: string[] = [ID];
 const glbReads: string[] = [];
 const SHA = '0'.repeat(64);
 beforeEach(() => {
-  vi.clearAllMocks(); store.stored.clear(); store.kept.length = 0; store.failing = false; models = [ID];
+  vi.clearAllMocks(); store.stored.clear(); store.kept.length = 0; store.failing = false; store.hanging = false; models = [ID];
   vi.mocked(animationEnvelopeSliced).mockImplementation(async () => ({ radius: 1, ground: 0, feet: 0 }));
   vi.stubGlobal('window', { devicePixelRatio: 1 }); vi.stubGlobal('indexedDB', undefined);
   vi.stubGlobal('requestAnimationFrame', () => 1); vi.stubGlobal('cancelAnimationFrame', () => {});
@@ -185,4 +189,30 @@ it('a failing envelope store never reaches the game: models are measured and fit
   await vi.waitFor(() => expect(championFits()).toHaveLength(1));
   expect(championFits()[0]![1]).toMatchObject({ envelopeRadius: 1, ground: 0, feet: 0 });
   expect(store.kept).toEqual([]);
+});
+
+it('a store that never answers holds nothing back: the mid-combat first load is measured and fitted after the timeout', async () => {
+  store.hanging = true;
+  await mount();
+  listener.frame(frame(true, [piece('a', 150)]));
+  await vi.waitFor(() => expect(championFits()).toHaveLength(1), { timeout: 6000 });
+  expect(championFits()[0]![1]).toMatchObject({ envelopeRadius: 1, ground: 0, feet: 0 });
+}, 10_000);
+
+it('a piece that changes model while its first model is measured never shows the old one', async () => {
+  models = [ID, 'zoe'];
+  let calls = 0;
+  // The first measurement (twitch) is slow; the second (zoe) is quick and tells itself apart by its radius.
+  vi.mocked(animationEnvelopeSliced).mockImplementation(async () => {
+    const mine = ++calls;
+    if (mine === 1) { await new Promise(resolve => setTimeout(resolve, 300)); return { radius: 1, ground: 0, feet: 0 }; }
+    return { radius: 5, ground: 0, feet: 0 };
+  });
+  await mount();
+  listener.frame(frame(true, [piece('a', 150)]));
+  await vi.waitFor(() => expect(animationEnvelopeSliced).toHaveBeenCalledTimes(1));
+  listener.frame(frame(true, [{ ...piece('a', 150), definitionId: 'zoe' }]));
+  await vi.waitFor(() => expect(championFits()).toHaveLength(1));
+  await new Promise(resolve => setTimeout(resolve, 500)); // past the slow twitch measurement
+  expect(championFits().map(([, options]) => options.envelopeRadius)).toEqual([5]);
 });

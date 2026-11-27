@@ -49,6 +49,7 @@ export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
 /**
  * The measurement's version in the browser's envelope store (envelope-store.ts): raise it whenever envelopeSteps, the
  * clips it reads or the support sampler (model-grounding.ts) change what an envelope holds, so stored ones are measured again.
+ * That includes how a loaded model's clips are cut (rendering3d: IN_PLACE_CLIPS, trimClip, holdRootInPlace) and ENVELOPE_ACTIONS.
  */
 export const ENVELOPE_VERSION = 1;
 /** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
