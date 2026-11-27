@@ -147,6 +147,8 @@ describe("Jinx's rocket from the real rules", () => {
 
   it('leaves the barrel later after its flash below three stars, flies cells at a steady pace and waits, timed back from the landing', () => {
     const { leaveAfterFlash, cellsPerSecond, wait } = JINX_ROCKET_FLOWN, total = 10 * 0.05;
+    // The fitted leaving times, as measured (Fable 11-28): at once at three stars, 0.13 s below.
+    expect(leaveAfterFlash).toEqual({ threeStar: 0, belowThree: 0.13 });
     // Three stars, a cell away: flash, leave, fly the cell, wait, land on the rules' tick.
     const near = jinxRocketTimes(3, 1, total), flying = 1 / cellsPerSecond;
     expect(near.flashAt).toBeCloseTo(total - wait - flying - leaveAfterFlash.threeStar, 9);
