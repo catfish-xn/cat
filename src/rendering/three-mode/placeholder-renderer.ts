@@ -70,7 +70,7 @@ import { WINDUP_SECONDS, tracerDelay, castEffectTuning, createSkillFeel, effectC
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
-import { attackKey, attackLandings } from './vfx-ltk/attack-landing';
+import { attackKey, attackLandings, attackOutlivesSource } from './vfx-ltk/attack-landing';
 import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
@@ -1266,7 +1266,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, landing: AttackLanding | undefined, crit: boolean) => {
     const release = releaseOf(source);
-    return release || landing || crit ? { variant, ...(release ? { release } : {}), ...(landing ? { landing } : {}), ...(crit ? { crit } : {}) } : variant;
+    const outlives = attackOutlivesSource(landing);
+    return release || landing || crit ? { variant, ...(release ? { release } : {}), ...(landing ? { landing } : {}), ...(outlives ? { outlivesSource: true } : {}), ...(crit ? { crit } : {}) } : variant;
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
     extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }>; landing?: AttackLanding }, crit = false) => {

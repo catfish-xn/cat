@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, landingCues } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { attackKey, attackLandings } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
+import { attackKey, attackLandings, attackOutlivesSource } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
 import { DEFAULT_ATTACK_FLIGHT_SECONDS, withAttackFlight, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
@@ -37,6 +37,17 @@ describe('ranged attack landing (rules arrival tick)', () => {
     expect(landingCues([hit, flash], { seconds: 0.4 })).toEqual([hit, flash]);
     const cast = { ...shot, action: 'cast' as const, travelSeconds: 0.3 };
     expect(landingCues([cast, { ...hit, action: 'cast' as const }], { seconds: 0.4 })).toEqual([cast, { ...hit, action: 'cast' }]);
+  });
+});
+
+// #791 x #749 (Fable 11-27): a ranged attack the rules launched lands and hurts even if its attacker dies in flight, so its
+// projectile is played with outlivesSource (it flies on, #863); the wind-up before the launch still goes with the attacker.
+describe('a launched ranged attack outlives its attacker', () => {
+  it('the launch play and a landing without a phase outlive the attacker; the wind-up play and a plain attack do not', () => {
+    expect(attackOutlivesSource({ seconds: 0.4, phase: 'launch' })).toBe(true);
+    expect(attackOutlivesSource({ seconds: 0.4 })).toBe(true);
+    expect(attackOutlivesSource({ seconds: 0, phase: 'windup', windupSeconds: 0.3 })).toBe(false);
+    expect(attackOutlivesSource(undefined)).toBe(false);
   });
 });
 

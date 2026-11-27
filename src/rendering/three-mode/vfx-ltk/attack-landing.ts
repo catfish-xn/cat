@@ -3,6 +3,12 @@ import type { AttackLanding } from './runtime';
 
 /** Rules ticks per second (combat tick = 0.05 s). */
 const TICKS_PER_SECOND = 20;
+/**
+ * Whether an attack's play keeps its projectile when its attacker dies (LtkPlayOptions.outlivesSource): a ranged attack the
+ * rules have launched (attackLaunched) lands and hurts even if its attacker dies in flight (cast-windup.ts releasedLanding),
+ * so it flies on. Its wind-up part is not launched yet and goes with the attacker, as the rules cancel it then.
+ */
+export const attackOutlivesSource = (landing: AttackLanding | undefined): boolean => !!landing && landing.phase !== 'windup';
 /** The batch's attack key: one attacker's attack on one tick. */
 export const attackKey = (attackerId: string, tick: number): string => `${attackerId}:${tick}`;
 /**
