@@ -160,3 +160,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-25 史密奇击杀后再跳 v2 与刀间隔 v1: identity-only refresh, `contentDigest` (×2) `190a62ea` → `8ba38fcc` (`S13_COMBAT_RULES.smeechReleapAfterKill`, `smeechStabInterval`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `7e897b1043fbcc73f31dbe1b6420b5a77358fe86cffe6e2b2568449cdd1639a4`.
+
+2026-11-28 图奇试验品比例 v1: identity-only refresh, `contentDigest` (×2) `8ba38fcc` → `02b6424a` (`S13_COMBAT_RULES.twitchExperimentShare`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `6d481dd4b595b79b88f7666ce50ddc74bbc38f99f3624548964290747d870bf1`.

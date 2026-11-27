@@ -89,6 +89,8 @@ export const S13_COMBAT_RULES = Object.freeze({
   cassiopeiaBolt: 'cassiopeia-main-bolt-settles-on-landing-v1',
   // Sevika's punch (11-24): it lands SEVIKA_PUNCH_HIT_TICKS after her slot machine stops (cast-windup.ts).
   sevikaPunch: 'sevika-punch-lands-on-fist-hit-after-slot-stop-v1',
+  // Twitch's Experiment bonus (11-25, user decision): its max-HP share comes from the 14.24 client data (g2-3-experiment.ts).
+  twitchExperimentShare: 'twitch-experiment-max-hp-share-from-client-data-v1',
   // The ranged attack wind-up's cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
   // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
   rangedAttackWindupCancel: 'ranged-attack-windup-cancels-when-current-target-changes-or-attacker-idle-v1',

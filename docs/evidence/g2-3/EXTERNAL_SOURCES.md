@@ -216,6 +216,7 @@
 - 数值/规则：{"unit": "Twitch", "after_attacks": 5, "image_nearest_enemy_max_hp_physical_percent": 15, "tools_nearest_enemy_max_hp_physical_percent": 20}
 - 对应版本：旧图与当前攻略的跨版本参考；14.24/14.24b尚未冻结；状态：`candidate`；依据：[`experiment-image`](https://web.archive.org/web/20250219205122id_/https://assets.zyrosite.com/cdn-cgi/image/format=auto,w=606,h=319,fit=crop,trim=1.8125;0;1.8125;0/mnlvzo4MORckGV8d/set-13-tables-experimentbonuses-AzGeJ2kwzqSVMaVq.png)、[`experiment-tools`](https://tft.tools/info/set-13/traits/tft13_experiment)。
 - 边界：图中Twitch 15%：来源可能早于 14.23，仅作参考，不作为约定值依据。当前tft.tools的20%也未独立冻结到14.24；两者不能构成目标版本的可靠冲突或定值依据。
+- 2026-11-28：规则比例已改为依据 14.24 客户端数据（Twitch 技能的试验品变量，用户 11-25 定），不再取本条两个外部来源；本条仍为 `candidate`，仅留作对照。
 
 ### bonus-Warwick
 
