@@ -124,7 +124,10 @@ describe('battle opening slices', () => {
         if (!queued) finishOpening(room, clock);
         const seatId = 'seat-1';
         const match = () => room.state.seats.find(s => s.seatId === seatId)!.match;
-        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'amumu'), generation: match().shop.generation }));
+        // #791 scene re-pick (battle-start.json re-recorded at its epoch, c71b0759): the round-9 shop no longer offers Amumu, so
+        // the buy found no slot, nothing reached the bench and the sell callback threw inside the room (resolver-error). The
+        // one-cost Zyra is in this shop now; the bought hero is incidental to the FIFO check.
+        execute('buy', () => room.handle(seatId, { type: 'buy', slot: match().shop.slots.findIndex(s => s.status === 'available' && s.definitionId === 'zyra'), generation: match().shop.generation }));
         execute('sell', () => room.handle(seatId, { type: 'sell', unitId: match().preparation.units.find(u => u.location.kind === 'bench' && !u.definitionId.startsWith('TFT_ArmoryKey'))!.id }));
         execute('reroll', () => room.handle(seatId, { type: 'reroll' }));
         const orb = readLootView(frozen.seats[0]!.match).unclaimedOrbs![0]!;
@@ -203,7 +206,8 @@ describe('battle opening slices', () => {
         // Landing batch (battle-start.json re-recorded on a3d6db81): seat 4 now fields 8 (was 7).
         // #797 (Swain's drain four times a second; battle-start.json re-recorded at its epoch): the route changes again.
         // #808 (Violet's combo settles per hit; battle-start.json re-recorded at its epoch): the route changes again.
-        .toEqual([7, 8, 8, 7, 8, 8, 8]); // [8, 8, 9, 7, 8, 8, 7] before #808; [8, 8, 8, 8, 7, 8, 8] before #797; [8, 8, 8, 7, 7, 8, 8] before the landing batch; was [8, 8, 8, 7, 9, 8, 8] before #739; v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-rec; seat 5 fields 9 (was 8) in the wind-up batch 2 re-recordording; the fifth live seat fields 8 (was 9) after the 14.24b unit values re-recording (2026-11-12)
+        // #791 (ranged attack wind-up; battle-start.json re-recorded at its epoch): the route changes again.
+        .toEqual([8, 8, 9, 8, 8, 8, 8]); // [7, 8, 8, 7, 8, 8, 8] before #791; [8, 8, 9, 7, 8, 8, 7] before #808; [8, 8, 8, 8, 7, 8, 8] before #797; [8, 8, 8, 7, 7, 8, 8] before the landing batch; was [8, 8, 8, 7, 9, 8, 8] before #739; v26 recording (battle-start.json checkpoint round 23); seed 20261016 after P-CONQ-PVE-01 (PvE grants no Conquest, 2026-11-03); seat 4 fields 7 after Nunu's 3 s cast lock re-rec; seat 5 fields 9 (was 8) in the wind-up batch 2 re-recordording; the fifth live seat fields 8 (was 9) after the 14.24b unit values re-recording (2026-11-12)
       seam(room).freezeAndResolve();
       expect(cpu).toBeLessThanOrEqual(50);
       let slices = 1;

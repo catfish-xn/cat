@@ -79,7 +79,10 @@ describe('SR-B8-02 resumable pure tasks', () => {
     if (count === 9) deepStrictEqual(replay.ticks.flatMap(frame => frame.events).flatMap(event => event.type === 'heal' ? event.shares : [])
       .map(share => [share.sourceKind, share.definitionId, share.delivery, share.actual]),
     // Landing batch: Darius's spin (and its heal) now lands after the cast; this battle settles six of his heals (was three).
-    Array.from({ length: 6 }, () => ['ability', 'darius-ability', 'ability-direct', 150]));
+    // #791 (ranged attack wind-up): the ranged attackers now launch on ticks 5-6, not tick 1, so every later random draw
+    // shifts (the first Darius exchange no longer crits); one Darius casts later and dies sooner, and three heals settle (was
+    // six). Darius's own rule and his cast's packet structure are unchanged.
+    Array.from({ length: 3 }, () => ['ability', 'darius-ability', 'ability-direct', 150]));
   }); }
   if (mode === 'fast') { it.each([1, 7, 100, 1201])('PvP and mirror equal synchronous bytes at slice %s', budget => {
     for (const mirror of [false, true]) {

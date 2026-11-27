@@ -640,9 +640,9 @@
     },
     "tests/b8-resumable-battle-helper.ts": {
       "previousBytes": 10412,
-      "currentBytes": 11354,
+      "currentBytes": 11681,
       "previousSha256": "67c759622431c43a8437b70ef48675d656c483365c1bfbeeb9ce0828b3850dfc",
-      "currentSha256": "1c165f5d9d67788b496bdf185f663ee35398c60a88dcb9a4a62916726b65cc99",
+      "currentSha256": "c3f0d720100aad7ee92b69426d00a743747ab914962805d155ff52d398029a0c",
       "firstDifferentByte": 46
     },
     "tests/battle-replay-content-cache.test.ts": {
@@ -684,9 +684,9 @@
     },
     "tests/c19-missed-pulse.test.ts": {
       "previousBytes": 8230,
-      "currentBytes": 8587,
+      "currentBytes": 8780,
       "previousSha256": "eb874c685c0805846e1d0ce2f1e70c4c68f58659294d8aa26059bd5f8390c9c7",
-      "currentSha256": "703d2a17f1c980862842d676d952c90d90677a72827ce9542db48eb1c78e60eb",
+      "currentSha256": "a6034941544585fd065d8598b8b3ea3f9f6477abd404437f13ddf2e5e2b73fa0",
       "firstDifferentByte": 1078
     },
     "tests/camera-far.test.ts": {
@@ -835,9 +835,9 @@
     },
     "tests/chest-bracer-integration-trial.test.ts": {
       "previousBytes": 6430,
-      "currentBytes": 8847,
+      "currentBytes": 8943,
       "previousSha256": "01d8e67078df50fb6eefedad7a3ce758b015a8adbdcec868fc4886934fd6df4d",
-      "currentSha256": "eece81f98faebab45decf8fd42c994eba7c5a737957ad5adc1919361911389f0",
+      "currentSha256": "222b5933a3816d42818c2e9ce027afe213d552b1d34e95b0a02a7d01bc5302ab",
       "firstDifferentByte": 469
     },
     "tests/combat-fx-pool.test.ts": {
@@ -3618,9 +3618,9 @@
     },
     "tests/server/battle-start-slices.test.ts": {
       "previousBytes": 13052,
-      "currentBytes": 14882,
+      "currentBytes": 15377,
       "previousSha256": "8ee63aeeac5cdc9056d7b8145465bc964baba2ec402706d59f5265eec21f8ad7",
-      "currentSha256": "02e8dfb2287df8cac0834c25e65dd67a1b9ab1c4d60a851c436ad2355943cef0",
+      "currentSha256": "f29eb557cf90bffcbcc505c1d6240d9c158240240a08f5280bf1cc69f1ae9416",
       "firstDifferentByte": 623
     },
     "tests/server/bot-driver-helper.ts": {

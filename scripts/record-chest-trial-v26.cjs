@@ -8,6 +8,7 @@ async function main(){
  try{
  const {startFight}=await server.ssrLoadModule('/tests/fixtures/v26-neutrals-1424-chest-trial.ts'),{stepMatch}=await server.ssrLoadModule('/src/simulation/match.ts');
  const {selectOpeningUnit}=await server.ssrLoadModule('/src/simulation/opening-unit.ts');
+ const {serializeMatch,restoreMatch}=await server.ssrLoadModule('/src/simulation/serialization.ts');
  const output='tests/fixtures/v26-neutrals-1424-chest-trial.json',check=process.argv.includes('--check');
  const pinned=fs.existsSync(output)?JSON.parse(fs.readFileSync(output)).seed:null;
  let chosen=null;const candidates=[];
@@ -17,6 +18,9 @@ async function main(){
   // Preserve the old seed554 Morgana chest holder as well as the Lux receiver.
   if(selectOpeningUnit(seed)!=='morgana')continue;
   let setup;try{setup=startFight(seed);}catch(e){if(check)throw e;candidates.push({seed,reason:String(e)});continue;}
+  // #791 epoch: the opening must restore from its own save. A seed whose 2-1 pick needs augment history (an opening
+  // mechanism item grant is not a replayable command) cannot, and the trial's restore checks then fail on it.
+  try{restoreMatch(serializeMatch(setup.state));}catch(e){if(check)throw e;candidates.push({seed,reason:'opening save does not restore: '+String(e)});continue;}
   let {state,receiverId,chestHolderId}=setup;const initial=state,events=[],frames=[];let grantTick=null,firstPulse=null,deathTick=null,bracerTicks=[],previousStacks=0,previousPulse=0,invalid=false;
   const receiver=s=>s.combat.units.find(u=>u.id===receiverId);
   while(state.phase==='combat'){
@@ -42,7 +46,7 @@ async function main(){
  const text=JSON.stringify(chosen,null,2)+'\n';
  if(check)assert.equal(fs.readFileSync(output,'utf8'),text);else fs.writeFileSync(output,text);
  const sources=['scripts/record-chest-trial-v26.cjs','tests/fixtures/v26-neutrals-1424-chest-trial.ts','tests/fixtures/b8-public-equipment.ts','tests/fixtures/m5/oracle.g2.cjs'];
- const audit={epoch:'v26-neutrals-1424',reason:'seed554 Prismatic Prelude replaced Manaflow I and the v23 stage bans keep Manaflow I out of 2-1; search silver 2-1 seeds with the default pick, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions',sourceDigests:Object.fromEntries(sources.map(p=>[p,sha(fs.readFileSync(p))])),fixtureBytes:Buffer.byteLength(text),fixtureSha256:sha(text),seed:chosen.seed};
+ const audit={epoch:'v26-neutrals-1424',reason:'seed554 Prismatic Prelude replaced Manaflow I and the v23 stage bans keep Manaflow I out of 2-1; search silver 2-1 seeds with the default pick, with an opening that restores from its own save, preserving Archangel grant, two bracer stacks, three pulses, death and full continuation assertions',sourceDigests:Object.fromEntries(sources.map(p=>[p,sha(fs.readFileSync(p))])),fixtureBytes:Buffer.byteLength(text),fixtureSha256:sha(text),seed:chosen.seed};
  const auditPath='docs/evidence/v26-neutrals-1424/chest-trial-audit.json',auditText=JSON.stringify(audit,null,2)+'\n';
  if(check)assert.equal(fs.readFileSync(auditPath,'utf8'),auditText);else{fs.writeFileSync(auditPath,auditText);fs.writeFileSync('docs/evidence/v26-neutrals-1424/chest-trial-search.json',JSON.stringify(candidates,null,2)+'\n');}
  }finally{await server.close();}
