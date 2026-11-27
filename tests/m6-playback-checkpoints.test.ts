@@ -60,12 +60,21 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // the fight runs differently: 602 -> 669 ticks, 4499 -> 5422 events (attackLaunched/attackLanded display events included),
     // and 3 Vander brace ends instead of 4. Were (zyra chain) bb37fca6…, 6fd1e5a6…; frames fe8c3d4d…; #690 chain 3c23e8e6…,
     // 11bcd0ff…, 5c334b61…, 588e92b3…, 0b44dbf3…, d123865e…; record bf2635be…, events 2eba6280…, terminal de60ac0e….
+    // #791 re-pin (ranged attack wind-up, 2026-11-25): the sniper golden is re-recorded in #791's epoch, and its earlier
+    // combats now play differently, so round 32's preparation (B9's input) is no longer byte-identical: the same sixteen units,
+    // stars and items, but one 4-2 augment differs (bulky-buddies-ii -> sentinel-crest, with its health and trait targets).
+    // B9 therefore starts from another board and every trajectory pin below is replaced; the old values no longer apply.
+    // The checks keep their structure and premises: the first ranged launch still marks the fork (now tick 6, after the
+    // wind-up; was 1) with a non-empty pinned prefix before it, Zyra's first cast still marks the next segment, and there
+    // are still 3 abilityEffectEnded events. Were: fork prefix a3263291… / bea88f0b…; Zyra prefix 2df4d506… / 6162d58b…;
+    // frames 19d2537c…; #690 chain bfae10b4…, 68638973…, a21b0ae7…; #628 chain aed1abb5…, 0c786425…, 4855c22c…;
+    // record c148afc0…, events 3d9c7fc1…, terminal fbf3b60e…. New values printed by dev/m6-pins.cjs.
     const fork = record.events.find(e => e.type === 'attackLaunched')!.tick;
-    expect(fork).toBe(1);
-    expect(bytesHash([...expected.hashes].filter(([tick]) => tick < fork))).toBe('a3263291da8568758c0ebd15bf2ed03df524715c25456defc6e933d11e005b86');
-    expect(bytesHash(record.events.filter(e => e.tick < fork))).toBe('bea88f0b6a93c12e90c48f3a27b72e0b88e3c65b5db1d251c46fd8bc3d8644e5');
+    expect(fork).toBe(6);
+    expect(bytesHash([...expected.hashes].filter(([tick]) => tick < fork))).toBe('913f902d1e79d8e97174327005d5fe59b5a11545b8a150a29c8caf493f024d0a');
+    expect(bytesHash(record.events.filter(e => e.tick < fork))).toBe('468807fed0c8b3fe4694320da1de81795223a15e6d57c0deca1da4c8d0f3c989');
     // Landing batch (re-recorded on a3d6db81): the B9 battle now ends on 657 with 5235 events.
-    expect(record.endTick).toBe(657); expect(record.events).toHaveLength(5235); // was 669 and 5422 events
+    expect(record.endTick).toBe(623); expect(record.events).toHaveLength(5233); // #791: was 657 and 5235 (before: 669 and 5422)
     // Independent native stepping of the v26 input: pin all 603 native frame byte
     // hashes, not just a reference that calls the same optimized step function.
     // v26 re-pin (edaa63dd sniper golden; v25 values: frames cf8c0c91…, record 64fb5f0a…,
@@ -85,10 +94,10 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // before her cast; Zyra's cast tick, the abilityEffectEnded count and every check's structure are unchanged. Were
     // e1a141f2… 62a36320… bac1cf5a… 0904aaee… fc924c0c… dc3fb397… c274a68d… 870a558c… c6f3f0bf… 7779cbcf… fef4eeab… 075622f0….
     const zyraCast = record.events.find(e => e.type === 'cast' && e.receipt.source.definitionId === 'zyra-ability')!.tick;
-    expect(zyraCast).toBe(118);
-    expect(bytesHash([...expected.hashes].filter(([tick]) => tick < zyraCast))).toBe('2df4d50622a59bb93ca8ab86401cb2aeef79236ea76e89b34339da2754023038');
-    expect(bytesHash(record.events.filter(e => e.tick < zyraCast))).toBe('6162d58b4ea7733113783dd4ebd5c99348bdd77aa478775051331a058720e66f');
-    expect(bytesHash([...expected.hashes])).toBe('19d2537c6101c59fd985383a1b099babd965b0840d08225995b8c8f80bf1d7bd');
+    expect(zyraCast).toBe(125); // #791: was 118
+    expect(bytesHash([...expected.hashes].filter(([tick]) => tick < zyraCast))).toBe('0f1998d218a96b4691ad257110bb93c96b8a0fac75528e048756dc6a6699e3ac');
+    expect(bytesHash(record.events.filter(e => e.tick < zyraCast))).toBe('b48510ea5444714fd271c5436f0e4876cbdd846d76a3df92c269b6a4c35b4a1f');
+    expect(bytesHash([...expected.hashes])).toBe('9ea0a637210fba472aac794e29e38e003906f2632626c4b4a66c239286f6d2dc');
     const ended = record.events.filter(e => e.type === 'abilityEffectEnded');
     expect(ended).toHaveLength(3); // #739: was 4 (see above)
     const shift = (seq: number) => ended.filter(e => e.eventSeq! < seq).length;
@@ -96,11 +105,11 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
       ? Object.fromEntries(Object.entries(value).map(([key, x]) => [key, (key === 'eventSeq' || key === 'nextEventSeq') && typeof x === 'number' ? x - shift(x) : renumber(x)]))
       : value;
     const before690Events = record.events.filter(e => e.type !== 'abilityEffectEnded').map(renumber);
-    expect(bytesHash(before690Events)).toBe('bfae10b446d1da60dfd373bf7ded58d55c090893773239fe7581cd7629b33222');
+    expect(bytesHash(before690Events)).toBe('e59369e5399ee0974feef191d0d66073f014a90b4b192ebbf57abee3b0a38fd9');
     let replayed = structuredClone(record.initial); const before690Frames: [number, string][] = [[0, bytesHash(renumber(replayed))]];
     while (replayed.tick < record.endTick) { replayed = stepCombat(replayed).state; before690Frames.push([replayed.tick, bytesHash(renumber(replayed))]); }
-    expect(bytesHash(before690Frames)).toBe('686389736962e046f29327e76a5495603bf6a314421e2e7a0e7980edfadc5cb6');
-    expect(bytesHash(renumber(expected.terminal))).toBe('a21b0ae786f2887992a87a38cd8fa7a3a768bd7a32d80f430050ba003aae8205');
+    expect(bytesHash(before690Frames)).toBe('21665e9f85f42d419ab10b0698705b4e0949a9040d7f8cb8c377d9d3ebea1bf3');
+    expect(bytesHash(renumber(expected.terminal))).toBe('27c51c78ea71caf8541c3baec788dd230583e7f3778dfcea706f397679b7ee58');
     // The record with #690 undone (its own ledger and nextEventSeq only; record.context belongs to earlier combats).
     const before690 = { ...record, events: before690Events, nextEventSeq: record.nextEventSeq - ended.length,
       eventHash: digestContent(before690Events), stateHash: digestContent(renumber(expected.terminal)) };
@@ -134,11 +143,12 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // 蔚砸地时刻 v2: contentDigest 946379e4 -> 36e7e2c1 in the record only.
     // 梅尔连发 v1: contentDigest 36e7e2c1 -> 57ffb53e in the record only.
     // 杰斯水晶连锁 v1: contentDigest 57ffb53e -> 33d330e9 in the record only.
-    const newer = JSON.stringify(before628).split('33d330e9').join('57ffb53e').split('57ffb53e').join('36e7e2c1').split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
-    expect(bytesHash(JSON.parse(newer))).toBe('aed1abb50ef0355c3c10be7220af546eec1a795b95e380ff5cc35f6e1154d41d');
+    // 远程普攻前摇 v1: contentDigest 33d330e9 -> d6493c11 in the record only.
+    const newer = JSON.stringify(before628).split('d6493c11').join('33d330e9').split('33d330e9').join('57ffb53e').split('57ffb53e').join('36e7e2c1').split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    expect(bytesHash(JSON.parse(newer))).toBe('2e8c99f41632f1bc97531fb7dc2219404d73b2f395e9b21a871cd59c7b9f2e39');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
-    expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('0c7864258f8aaea4dfb17643ce3af62ab1e9c9e10c75d02d7f4d8662aafccee6');
-    expect(bytesHash(JSON.parse(back))).toBe('4855c22c0529a7622d5d6145178390a1c76a8f1d71b2d6c299d64dd298d61a4c');
+    expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('acb1bd7937a74cc34d6ee7af3f917dbbb8230e08acd0fa59b292168c33fa686a');
+    expect(bytesHash(JSON.parse(back))).toBe('a02e1b1669eaaad458a89697a2c45fdab54928abc4f21bf74bafbef3ca683a0b');
     // #739 save/replay 9 -> 10: record.version carries replayFormatVersion 10 and contentDigest cf212873 (was d94c78f1), so the
     // record hash moves again (was 4a7302a1… with replay 9 / d94c78f1); the chain above substitutes both back, so its pins hold.
     // #795: the record's contentDigest is now the death-keyed rolls' digest, so the record hash moves (was bd21423e…, landing
@@ -161,9 +171,9 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // terminal below are unchanged.
     // #827: the record's contentDigest moves (57ffb53e -> 33d330e9), so the record hash moves again (was b3fbb7f1…); events and
     // terminal below are unchanged.
-    expect(bytesHash(record)).toBe('c148afc01c0e38dd2300dc50904f27011729784ad1c90ad05a4d6ff053260a04');
-    expect(bytesHash(record.events)).toBe('3d9c7fc139b05e5795d4133ffaeff78a9e7084e14912bc9599fa23e69722fa7a');
-    expect(bytesHash(expected.terminal)).toBe('fbf3b60ecf7829825848d88d79ade4df4076b05e2cbbc71a8b5ece3b689ee12e');
+    expect(bytesHash(record)).toBe('2f6f46bc290c771ea21d0293ac021669653681cad700da3bc5d870f618a2523e');
+    expect(bytesHash(record.events)).toBe('cf0fb7160e053b24fa7c8a0edd9eb05ed9a833f9499ccee99f59c2279d08912e');
+    expect(bytesHash(expected.terminal)).toBe('2354ee5cc34b974c22f93879af691c7c0023cf36ae6a3c9d94cc520caa734294');
     // An external JSON record is cold on each constructor, like browser fixtures.
     const imported = JSON.parse(originalBytes) as BattleRecord;
     const playback = new PlaybackSession(imported);

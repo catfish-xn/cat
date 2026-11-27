@@ -28,12 +28,7 @@
   },
   {
     "seed": 531,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 538,
@@ -55,30 +50,15 @@
   },
   {
     "seed": 561,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 562,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 569,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 570,
@@ -91,12 +71,7 @@
   },
   {
     "seed": 577,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 578,
@@ -145,21 +120,11 @@
   },
   {
     "seed": 600,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 609,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 616,
@@ -200,13 +165,11 @@
   {
     "seed": 631,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      205
-    ],
-    "deathTick": 366,
-    "lastLivingPulse": 2
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
   },
   {
     "seed": 639,
@@ -255,30 +218,15 @@
   },
   {
     "seed": 1461,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 1462,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 1469,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 1470,
@@ -318,12 +266,7 @@
   },
   {
     "seed": 2063,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 2070,
@@ -399,12 +342,7 @@
   },
   {
     "seed": 2109,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 2110,
@@ -426,12 +364,7 @@
   },
   {
     "seed": 2125,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 2132,
@@ -471,12 +404,7 @@
   },
   {
     "seed": 2148,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 2156,
@@ -516,12 +444,7 @@
   },
   {
     "seed": 2172,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 2244,
@@ -610,12 +533,7 @@
   },
   {
     "seed": 2993,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 3001,
@@ -638,15 +556,11 @@
   {
     "seed": 4533,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      212,
-      388,
-      505
-    ],
-    "deathTick": 565,
-    "lastLivingPulse": 4
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
   },
   {
     "seed": 4534,
@@ -677,21 +591,11 @@
   },
   {
     "seed": 7691,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7698,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 7699,
@@ -749,12 +653,7 @@
   },
   {
     "seed": 7737,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7738,
@@ -767,12 +666,7 @@
   },
   {
     "seed": 7745,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7746,
@@ -840,20 +734,20 @@
   {
     "seed": 7776,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 224,
+    "firstPulse": 324,
+    "bracerTicks": [
+      285,
+      432,
+      535,
+      658
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
   {
     "seed": 7777,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7784,
@@ -902,12 +796,7 @@
   },
   {
     "seed": 7877,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7878,
@@ -920,12 +809,7 @@
   },
   {
     "seed": 7885,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7886,
@@ -938,21 +822,11 @@
   },
   {
     "seed": 7889,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7895,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 7896,
@@ -983,12 +857,7 @@
   },
   {
     "seed": 7912,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 8206,
@@ -1001,12 +870,7 @@
   },
   {
     "seed": 8207,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 8261,
@@ -1047,14 +911,9 @@
   {
     "seed": 8284,
     "accepted": false,
-    "grantTick": 216,
-    "firstPulse": 316,
-    "bracerTicks": [
-      270,
-      301,
-      412,
-      535
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -1069,26 +928,11 @@
   },
   {
     "seed": 8292,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 8293,
-    "accepted": false,
-    "grantTick": 194,
-    "firstPulse": 294,
-    "bracerTicks": [
-      237,
-      366,
-      483,
-      606
-    ],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 8302,
@@ -1119,12 +963,7 @@
   },
   {
     "seed": 8318,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 8319,
@@ -1146,12 +985,7 @@
   },
   {
     "seed": 9091,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 9099,
@@ -1173,12 +1007,7 @@
   },
   {
     "seed": 9113,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 9114,
@@ -1254,12 +1083,7 @@
   },
   {
     "seed": 9153,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 9168,
@@ -1281,12 +1105,7 @@
   },
   {
     "seed": 9183,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 9192,
@@ -1308,12 +1127,7 @@
   },
   {
     "seed": 9200,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 9207,
@@ -1327,13 +1141,11 @@
   {
     "seed": 10631,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      205
-    ],
-    "deathTick": 362,
-    "lastLivingPulse": 2
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
   },
   {
     "seed": 10638,
@@ -1355,32 +1167,22 @@
   },
   {
     "seed": 10646,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 10647,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
+    "grantTick": 96,
+    "firstPulse": 196,
     "bracerTicks": [
-      203
+      212
     ],
-    "deathTick": 366,
+    "deathTick": 370,
     "lastLivingPulse": 2
   },
   {
     "seed": 10653,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 10654,
@@ -1465,12 +1267,7 @@
   },
   {
     "seed": 10739,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 10740,
@@ -1492,12 +1289,7 @@
   },
   {
     "seed": 10748,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 13827,
@@ -1555,12 +1347,7 @@
   },
   {
     "seed": 13889,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 13897,
@@ -1610,20 +1397,20 @@
   {
     "seed": 13920,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 96,
+    "firstPulse": 196,
+    "bracerTicks": [
+      204,
+      297,
+      419,
+      547
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
   {
     "seed": 13921,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 13928,
@@ -1654,21 +1441,11 @@
   },
   {
     "seed": 13944,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 15360,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 15367,
@@ -1758,41 +1535,28 @@
   {
     "seed": 15445,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "grantTick": 96,
+    "firstPulse": 196,
+    "bracerTicks": [
+      226
+    ],
+    "deathTick": 370,
+    "lastLivingPulse": 2
   },
   {
     "seed": 15452,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 15453,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 15460,
     "accepted": false,
-    "grantTick": 97,
-    "firstPulse": 197,
-    "bracerTicks": [
-      224,
-      288,
-      405,
-      528
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -1861,14 +1625,7 @@
   },
   {
     "seed": 16267,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [
-      266
-    ],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 16274,
@@ -1900,13 +1657,11 @@
   {
     "seed": 16289,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      205
-    ],
-    "deathTick": 366,
-    "lastLivingPulse": 2
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
   },
   {
     "seed": 16290,
@@ -1920,13 +1675,13 @@
   {
     "seed": 16305,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
+    "grantTick": 96,
+    "firstPulse": 196,
     "bracerTicks": [
-      204,
-      286,
-      395,
-      510
+      218,
+      294,
+      408,
+      528
     ],
     "deathTick": null,
     "lastLivingPulse": 0
@@ -2032,12 +1787,7 @@
   },
   {
     "seed": 16681,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 16688,
@@ -2077,12 +1827,7 @@
   },
   {
     "seed": 16782,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 16783,
@@ -2095,12 +1840,7 @@
   },
   {
     "seed": 16789,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 16790,
@@ -2158,12 +1898,7 @@
   },
   {
     "seed": 16821,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 16828,
@@ -2284,12 +2019,7 @@
   },
   {
     "seed": 20044,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 21583,
@@ -2338,21 +2068,11 @@
   },
   {
     "seed": 22309,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 22310,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 22324,
@@ -2401,12 +2121,7 @@
   },
   {
     "seed": 22403,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 22410,
@@ -2438,15 +2153,11 @@
   {
     "seed": 22419,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      234,
-      293,
-      410
-    ],
-    "deathTick": 482,
-    "lastLivingPulse": 3
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
   },
   {
     "seed": 22425,
@@ -2477,21 +2188,11 @@
   },
   {
     "seed": 22434,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 22441,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 22442,
@@ -2540,21 +2241,11 @@
   },
   {
     "seed": 22472,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 22481,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 22488,
@@ -2576,12 +2267,7 @@
   },
   {
     "seed": 22495,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 22496,
@@ -2631,9 +2317,14 @@
   {
     "seed": 22519,
     "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
+    "grantTick": 117,
+    "firstPulse": 217,
+    "bracerTicks": [
+      159,
+      223,
+      450,
+      549
+    ],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -2675,21 +2366,11 @@
   },
   {
     "seed": 23120,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 23121,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 23131,
@@ -2729,12 +2410,7 @@
   },
   {
     "seed": 23146,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 23147,
@@ -2856,13 +2532,11 @@
   {
     "seed": 23997,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      212
-    ],
-    "deathTick": 366,
-    "lastLivingPulse": 2
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
   },
   {
     "seed": 24004,
@@ -2902,21 +2576,11 @@
   },
   {
     "seed": 24020,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 24021,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 24028,
@@ -2956,12 +2620,7 @@
   },
   {
     "seed": 24044,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 24051,
@@ -3010,12 +2669,7 @@
   },
   {
     "seed": 28429,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 28430,
@@ -3055,21 +2709,11 @@
   },
   {
     "seed": 28452,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 28453,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 28460,
@@ -3082,12 +2726,7 @@
   },
   {
     "seed": 28461,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 28468,
@@ -3137,14 +2776,9 @@
   {
     "seed": 28516,
     "accepted": false,
-    "grantTick": 92,
-    "firstPulse": 192,
-    "bracerTicks": [
-      199,
-      287,
-      409,
-      532
-    ],
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
     "deathTick": null,
     "lastLivingPulse": 0
   },
@@ -3168,12 +2802,7 @@
   },
   {
     "seed": 28530,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: Error: Invalid Match save: missing historical evidence / 缺少冠冕、猎头者、家人、梅尔、扭转命运或战后备战席经验历史证据，请提供完整 battles 回放"
   },
   {
     "seed": 28531,
@@ -3222,12 +2851,7 @@
   },
   {
     "seed": 28616,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 28624,
@@ -3258,12 +2882,7 @@
   },
   {
     "seed": 28639,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 28648,
@@ -3285,12 +2904,7 @@
   },
   {
     "seed": 28657,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 28658,
@@ -3366,12 +2980,7 @@
   },
   {
     "seed": 29985,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 29986,
@@ -3420,21 +3029,11 @@
   },
   {
     "seed": 30008,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 30009,
-    "accepted": false,
-    "grantTick": null,
-    "firstPulse": null,
-    "bracerTicks": [],
-    "deathTick": null,
-    "lastLivingPulse": 0
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
   },
   {
     "seed": 30048,
@@ -3510,14 +3109,642 @@
   },
   {
     "seed": 30095,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30101,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30102,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30109,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30148,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30149,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30156,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30157,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30164,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 30172,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30179,
+    "reason": "Error: Public B8 equipment fixture: wrong-phase"
+  },
+  {
+    "seed": 30180,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30195,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 30196,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30203,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 30204,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31493,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 31494,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31501,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 31502,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31509,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31510,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31517,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31525,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31532,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31533,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 31540,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31541,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31548,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31549,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31619,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31626,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31627,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31633,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31634,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31641,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31642,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31649,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31657,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 31658,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31680,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31681,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31688,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31689,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31696,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31697,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 31704,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31705,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31712,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31719,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31720,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 31727,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 31728,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31735,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31736,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31742,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 31743,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34438,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34454,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34461,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 34462,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34469,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34470,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34478,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34484,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 34485,
+    "reason": "opening save does not restore: RangeError: Invalid augment history: replay command equipItem"
+  },
+  {
+    "seed": 34492,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34493,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34563,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34570,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34571,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34578,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34579,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34586,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34587,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34593,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34594,
+    "accepted": false,
+    "grantTick": null,
+    "firstPulse": null,
+    "bracerTicks": [],
+    "deathTick": null,
+    "lastLivingPulse": 0
+  },
+  {
+    "seed": 34601,
     "accepted": true,
-    "grantTick": 92,
-    "firstPulse": 192,
+    "grantTick": 96,
+    "firstPulse": 196,
     "bracerTicks": [
-      212,
-      388
+      226,
+      412
     ],
-    "deathTick": 430,
+    "deathTick": 466,
     "lastLivingPulse": 3
   }
 ]

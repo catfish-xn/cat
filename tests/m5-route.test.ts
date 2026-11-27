@@ -100,8 +100,9 @@ describe('M5 ordinary three-build routes and independent resource ledger',()=>{
    // #739 re-pin (ranged basic attacks settle when the shot lands): the mage route loses 2-7 again. k02 and k03 die, k01
    // survives at 667 HP after 601 ticks (enemyWin, one survivor, 3 player damage: 85 -> 82). Under the current loot rules
    // all six 2-7 drops are still granted (none forfeited), so lost stays empty. Pinned as it is, not re-routed to a win.
-   expect(route.final.roundResults.filter(r=>r.roundKind==='pve'&&r.result!=='playerWin').map(r=>[r.roundId,r.result,r.survivingEnemyCount,r.playerDamage])).toEqual(build==='mage'?[['2-7','enemyWin',1,3]]:[]);
-   expect(route.final.roundResults.find(r=>r.roundId==='2-7')).toMatchObject(build==='mage'?{result:'enemyWin',survivingEnemyCount:1}:{result:'playerWin',survivingEnemyCount:0});
+   // #791 re-pin (ranged attack wind-up): the mage route still loses 2-7, now with two survivors and 4 player damage (was 1 and 3).
+   expect(route.final.roundResults.filter(r=>r.roundKind==='pve'&&r.result!=='playerWin').map(r=>[r.roundId,r.result,r.survivingEnemyCount,r.playerDamage])).toEqual(build==='mage'?[['2-7','enemyWin',2,4]]:[]);
+   expect(route.final.roundResults.find(r=>r.roundId==='2-7')).toMatchObject(build==='mage'?{result:'enemyWin',survivingEnemyCount:2}:{result:'playerWin',survivingEnemyCount:0});
    const planned=independent.filter(d=>d.payload.kind==='item'&&!lost.includes(d));
    expect(loot.map(r=>r.dropId).sort()).toEqual(planned.map(d=>d.dropId).sort());
    const lostValue=0; // was 2 for the mage while 2-7 was lost (see above)

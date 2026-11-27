@@ -10,6 +10,7 @@ import { applyStatusContribution } from '../src/simulation/m8/status';
 import { effectIdentity } from '../src/simulation/m8/identity';
 import type { Unit } from '../src/simulation/unit-types';
 import { battle, freeze, unit } from './combat-helpers';
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 
 function actor(id = 'p', patch: Partial<CombatUnit> = {}): S13Unit {
   return unit(id, 'player', 3, 4, { definitionId: 'draven', ability: resolveAbility('draven-ability', 1),
@@ -25,6 +26,14 @@ const decide = (p: S13Unit, others: S13Unit[], tick = 1, reselect = false) =>
   decideCombatTarget(DEFAULT_BOARD, p, [p, ...others], tick, occupied([p, ...others]), reselect);
 const run = (units: CombatUnit[], tick = 0) => stepCombat(freeze(battle(units, { tick, rngState: 42, rngDraws: 0 })));
 const get = (state: CombatState, id = 'p') => state.units.find(u => u.id === id)!;
+// Ranged attack wind-up (#791, window and tick literals only): Draven's attack event and its crit roll come on the launch, W
+// ticks after the attack starts; `thru` steps W more ticks and keeps every event of the window.
+const W = rangedAttackWindupTicks('draven', 20);
+function thru(r: { state: CombatState; events: readonly CombatEvent[] }, n = W) {
+  let state = r.state; const events = [...r.events];
+  for (let i = 0; i < n; i++) { const step = stepCombat(state); state = step.state; events.push(...step.events); }
+  return { state, events };
+}
 
 describe('P0 target retention', () => {
   it.each([1, 2])('keeps the old in-range tank when a new enemy is at distance %i (closer or tied)', distance => {
@@ -32,10 +41,10 @@ describe('P0 target retention', () => {
     const old = enemy('z-old', 3, 2), near = enemy('a-new', distance === 1 ? 3 : 4, distance === 1 ? 3 : 2);
     expect(hexDistance(p.cell, near.cell)).toBe(distance);
     expect(decide(p, [near, old]).target?.id).toBe(old.id);
-    const result = run([p, old, near]);
+    const result = thru(run([p, old, near]));
     expect(get(result.state).targetId).toBe(old.id);
     expect(result.events.filter(e => e.type === 'targetChanged' && e.unitId === p.id)).toEqual([]);
-    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1, attackerId: p.id, targetId: old.id }]);
+    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1 + W, attackerId: p.id, targetId: old.id }]);
     expect(result.state.rngDraws).toBe(1); // Only the ordinary crit roll.
   });
 
@@ -107,10 +116,10 @@ describe('P0 target retention', () => {
     const still = stepCombat(stunned.state);
     expect(get(still.state).targetId).toBe(old.id);
     expect(still.events.filter(e => e.type === 'attack')).toEqual([]);
-    const release = stepCombat(still.state);
+    const release = thru(stepCombat(still.state));
     expect(get(release.state).targetId).toBe(old.id);
     expect(release.events.filter(e => e.type === 'attack')).toEqual([
-      { type: 'attack', tick: 3, attackerId: p.id, targetId: old.id },
+      { type: 'attack', tick: 3 + W, attackerId: p.id, targetId: old.id },
     ]);
     expect(release.state.rngDraws).toBe(1);
   });
@@ -134,10 +143,10 @@ describe('P0 target retention', () => {
 describe('P0 engaged-target chase', () => {
   it('chases one legal step before considering an already closer in-range enemy', () => {
     const p = actor('p', { targetId: 'old', targetEngaged: true }), old = enemy('old', 3, 2), near = enemy('near', 4, 4);
-    const result = run([p, old, near]);
+    const result = thru(run([p, old, near]));
     expect(get(result.state).cell).toEqual({ col: 2, row: 3 });
     expect(get(result.state).targetId).toBe(old.id);
-    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1, attackerId: p.id, targetId: old.id }]);
+    expect(result.events.filter(e => e.type === 'attack')).toEqual([{ type: 'attack', tick: 1 + W, attackerId: p.id, targetId: old.id }]);
   });
 
   it.each(['two-steps', 'occupied'] as const)('reselects when one-step recovery fails: %s', kind => {
@@ -153,14 +162,14 @@ describe('P0 engaged-target chase', () => {
   it('waits for movement cooldown without dropping the pending one-step chase; JSON resume agrees', () => {
     const p = actor('p', { targetId: 'old', targetEngaged: true, moveCooldownTicks: 3 });
     let state = battle([p, enemy('old', 3, 2), enemy('near', 4, 4)], { rngState: 42, rngDraws: 0 });
-    for (let tick = 1; tick <= 3; tick++) {
+    for (let tick = 1; tick <= 3 + W; tick++) {
       const result = stepCombat(state);
       expect(stepCombat(JSON.parse(JSON.stringify(state)))).toEqual(result);
       state = result.state;
       expect(get(state).targetId).toBe('old');
       expect(get(state).targetEngaged).toBe(true);
       expect(get(state).cell).toEqual(tick < 3 ? p.cell : { col: 2, row: 3 });
-      expect(state.rngDraws).toBe(tick < 3 ? 0 : 1);
+      expect(state.rngDraws).toBe(tick < 3 + W ? 0 : 1);
     }
   });
 
@@ -205,12 +214,12 @@ describe('P0 engaged-target chase', () => {
     const old = enemy('old', 3, 2, { moveCooldownTicks: 0, targetId: 'far' });
     const far = actor('far', { cell: { col: 3, row: 0 }, cooldownTicks: 1000, moveCooldownTicks: 1000, attackDamage: 0 });
     const near = enemy('near', 4, 4);
-    const result = run([p, old, far, near]);
-    expect(get(result.state, 'old').cell).toEqual({ col: 2, row: 1 });
-    expect(get(result.state).cell).toEqual(p.cell);
-    expect(get(result.state).targetId).toBe('near');
+    const first = run([p, old, far, near]), result = thru(first);
+    expect(get(first.state, 'old').cell).toEqual({ col: 2, row: 1 });
+    expect(get(first.state).cell).toEqual(p.cell);
+    expect(get(first.state).targetId).toBe('near');
     expect(result.events.filter(e => e.type === 'attack' && e.attackerId === 'p')).toEqual([
-      { type: 'attack', tick: 1, attackerId: 'p', targetId: 'near' },
+      { type: 'attack', tick: 1 + W, attackerId: 'p', targetId: 'near' },
     ]);
   });
 });

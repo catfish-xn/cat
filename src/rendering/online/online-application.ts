@@ -26,7 +26,7 @@ import { readLegendChoice } from '../legend-choice';
 import { s13AssetUrl } from '../../presentation/s13-assets';
 import { getHeroIdentity } from '../../presentation/hero-identity';
 import { BattleOutcome } from './battle-outcome';
-import { BattleSummaryPanel } from './battle-summary';
+import { LazyBattleSummary } from './battle-summary-loader';
 import { EconomyHint } from './economy-hint';
 import { LeftPanelToggle } from './left-panel-toggle';
 import { OnlineSound, type SoundCue } from './sound';
@@ -98,7 +98,7 @@ export class OnlineApplication implements SceneApplication {
   private carousel: LazyCarouselPanel;
   private carouselHolding: CarouselHoldingSlot;
   /** G5: battle ranking (right column) and the preparation economy hint. */
-  private summary: BattleSummaryPanel;
+  private summary: LazyBattleSummary;
   private economy: EconomyHint;
   private leftToggle: LeftPanelToggle;
   private sound = new OnlineSound();
@@ -161,7 +161,7 @@ export class OnlineApplication implements SceneApplication {
     this.carouselHolding = new CarouselHoldingSlot(frame, unitId => this.session.sell(unitId));
     this.withdrawCarouselControls = provideCarouselControls({ pick: slot => { this.carousel.pickSlot(slot); }, hover: slot => this.carousel.hoverSlot(slot) });
     this.withdrawLegendControls = provideLegendControls({ walk: request => client.walk?.(request) ?? false });
-    this.summary = new BattleSummaryPanel(this.sidebar.root);
+    this.summary = new LazyBattleSummary(this.sidebar.root);
     this.economy = new EconomyHint(mounts?.countdown ?? this.sidebar.root);
     this.leftToggle = new LeftPanelToggle();
     const topbar = this.sidebar.root.querySelector('.online-topbar'); topbar?.insertBefore(this.sound.createToggle(), topbar.querySelector('.online-connection'));

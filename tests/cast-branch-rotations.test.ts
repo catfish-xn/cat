@@ -32,7 +32,9 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // Mel dashes on every normal cast and never on the third (11-21), which changes this mixed combat (was a50c5309…).
 // Mel's normal cast fires a volley of bolts per target, each settling on arrival (11-21), which changes this mixed combat (was
 // 8491e0a6…, Vi's slam; 67e0c368… Mel's dash away from foes).
-const MIXED_DIGEST = 'db0a5dbf5a358efcd1a5f66d7fa5d21813360c0e55d5c3fbb30040a8f537bcd8';
+// Ranged attack wind-up (#791): the ranged heroes' shots launch after their wind-up, which moves this combat again (was
+// db0a5dbf…, Mel's bolt volley).
+const MIXED_DIGEST = '2685a48695d6cb0ea47d4b59d8d41db797fb99ea0d5af235227c090015ffd580';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

@@ -35,7 +35,7 @@ describe('3D scouting shop availability', () => {
     '../src/rendering/strategy-panel', '../src/presentation/help-panel', '../src/presentation/s13-assets',
     '../src/presentation/unit-view', '../src/stats/stats-panel-loader', '../src/stats/combat-feedback-renderer',
     '../src/rendering/online/orb-dock', '../src/rendering/online/online-application'];
-  const mocked = ['lobby', 'players-sidebar', 'carousel-holding', 'carousel-panel-loader', 'battle-summary', 'economy-hint', 'left-panel-toggle', 'sound', 'ranking', 'battle-outcome'];
+  const mocked = ['lobby', 'players-sidebar', 'carousel-holding', 'carousel-panel-loader', 'battle-summary-loader', 'economy-hint', 'left-panel-toggle', 'sound', 'ranking', 'battle-outcome'];
   beforeEach(() => {
     vi.resetModules(); root = new Node(); shop = new Node();
     const body = new Node();
@@ -52,7 +52,7 @@ describe('3D scouting shop availability', () => {
     vi.doMock('../src/rendering/online/players-sidebar', () => ({ PlayersSidebar: Widget }));
     vi.doMock('../src/rendering/online/carousel-holding', () => ({ CarouselHoldingSlot: Widget, readHeldCarouselUnits: () => [] }));
     vi.doMock('../src/rendering/online/carousel-panel-loader', () => ({ LazyCarouselPanel: Widget }));
-    vi.doMock('../src/rendering/online/battle-summary', () => ({ BattleSummaryPanel: Widget }));
+    vi.doMock('../src/rendering/online/battle-summary-loader', () => ({ LazyBattleSummary: Widget }));
     vi.doMock('../src/rendering/online/economy-hint', () => ({ EconomyHint: Widget }));
     vi.doMock('../src/rendering/online/left-panel-toggle', () => ({ LeftPanelToggle: Widget }));
     vi.doMock('../src/rendering/online/sound', () => ({ OnlineSound: Widget }));

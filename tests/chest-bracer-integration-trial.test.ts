@@ -105,7 +105,8 @@ describe('chest-granted Archangel with an originally equipped Seeker’s Armguar
     candidate = structuredClone(candidate);
     expect(candidate.combatInputBasis!.inputs.preparation.units.some(u => u.definitionId === 'training-dummy'), 'premise: a training dummy').toBe(true);
     const grants = receiver(candidate).combatItemGrants!;
-    expect(grants[0].definitionId).toBe('last-whisper'); // this seed's chest grants Last Whisper
+    // #791 (ranged attack wind-up shifts the combat's random draws): this seed's chest now grants Titan's Resolve (was Last Whisper).
+    expect(grants[0].definitionId).toBe('titans-resolve');
     if (warmup === 'restore') expect(restoreMatch(candidate)).toEqual(candidate);
     else expect(JSON.parse(serializeMatch(candidate))).toEqual(candidate);
     (grants[0] as { definitionId: string }).definitionId = 'shojin';

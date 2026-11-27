@@ -1,3 +1,4 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { buildStrategySnapshot } from '../src/simulation/strategy-snapshot';
 import { createMatch, nextRound, startMatchCombat, stepMatch, type MatchState } from '../src/simulation/match';
@@ -95,7 +96,9 @@ describe('M5 exact attack-speed interval arithmetic', () => {
     let combat = createCombatWithEvents(prepared.preparation, buildStrategySnapshot(prepared), 'as-dynamic').state;
     // Isolated combat fixture: keep the target passive while exercising actual onAttack hooks.
     combat = { ...combat, units: combat.units.map(unit => unit.id === 'enemy' ? { ...unit, attackDamage: 0 } : unit) };
-    combat = stepCombat(combat).state;
+    // Ranged attack wind-up (#791, window only): the first attack (and its stack) comes on the launch, a wind-up after the start.
+    const windup = rangedAttackWindupTicks('lux', readCombatStats(combat.units.find(unit => unit.id === 'lux')!, combat).attackIntervalTicks);
+    for (let n = 0; n <= windup; n++) combat = stepCombat(combat).state;
     let lux = combat.units.find(unit => unit.id === 'lux')!;
     expect([lux.runtime?.attackCount, lux.runtime?.attackSpeedBps]).toEqual([1, 500]);
     // .7 × (1 + .10 Bow + .10 Rageblade + .05 stack) = .875; ceil(20/.875)=23.
