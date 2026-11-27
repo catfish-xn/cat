@@ -139,6 +139,27 @@ describe("Jinx's rocket: she turns to where it lands while she fires it, in the 
     expect(headingOf('jinx')).toBeCloseTo(toward(340, 260), 3);
   }, 30000);
 
+  it('every turn of the rocket is monotonic, from where she looked to where she ends up, with no overshoot', async () => {
+    await setUp();
+    const wrap = (a: number) => Math.atan2(Math.sin(a), Math.cos(a));
+    // Frame by frame (60 fps) through a turn: each step moves the same way round, and never past the end heading.
+    const sweep = (milliseconds: number) => {
+      const start = headingOf('jinx'), seen: number[] = [];
+      for (let t = 0; t < milliseconds; t += 16) { advance(16); seen.push(wrap(headingOf('jinx') - start)); }
+      const gap = seen[seen.length - 1]!;
+      expect(Math.abs(gap)).toBeGreaterThan(0.3);
+      seen.reduce((before, now) => { expect((now - before) * Math.sign(gap)).toBeGreaterThanOrEqual(-1e-9); return now; }, 0);
+      for (const angle of seen) expect(Math.abs(angle)).toBeLessThanOrEqual(Math.abs(gap) + 1e-9);
+      return start + gap;
+    };
+    await send([cast(10, 'rocket')]);
+    expect(wrap(sweep(480) - toward(centre.x, centre.z))).toBeCloseTo(0, 3);
+    await send([rocket('abilityProjectileLaunched', 37)]);
+    for (let t = 0; t < 300; t += 16) { advance(16); expect(headingOf('jinx')).toBeCloseTo(toward(centre.x, centre.z), 3); } // no second turn
+    await send([rocket('abilityProjectileLanded', 47)]);
+    expect(wrap(sweep(480) - toward(340, 260))).toBeCloseTo(0, 3);
+  }, 30000);
+
   it('a rocket cast the rules cut short turns her back to her target after a while; a zap cast does not turn her', async () => {
     await setUp();
     await send([cast(10, 'zap')]); advance(500);
