@@ -1032,7 +1032,7 @@
       "previousBytes": 0,
       "currentBytes": 5682,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "351ce4b0d3edbb647968c1333dc5c5883d8b3f934a3d186af60d5dd1ce1f2fed",
+      "currentSha256": "8e34adc9ae4670edce79f5518c3c5db36f99cbccb9ad2637b8b1e264f8d24729",
       "firstDifferentByte": 0
     },
     "tests/five-cost-fixes.test.ts": {
@@ -4061,9 +4061,9 @@
     },
     "tests/stage5-feedback.test.ts": {
       "previousBytes": 10181,
-      "currentBytes": 29834,
+      "currentBytes": 35233,
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
-      "currentSha256": "ba176bcb1c5ad97bac6d0114e88396a476e33c4522eac079cdbd6f82d90a0372",
+      "currentSha256": "45b82facc9f2008361a0a73a7a91797d9b9dfa14ee6efba8b2d3ef4fc096acb4",
       "firstDifferentByte": 216
     },
     "tests/sustain-stops.test.ts": {
