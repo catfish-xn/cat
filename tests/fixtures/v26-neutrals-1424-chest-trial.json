@@ -1,50 +1,50 @@
 {
-  "seed": 30095,
-  "grantTick": 92,
-  "firstPulse": 192,
+  "seed": 34601,
+  "grantTick": 96,
+  "firstPulse": 196,
   "bracerTicks": [
-    212,
-    388
+    226,
+    412
   ],
-  "deathTick": 430,
-  "terminalTick": 430,
+  "deathTick": 466,
+  "terminalTick": 466,
   "checkpoints": [
     [
       "before grant",
-      91
+      95
     ],
     [
       "grant tick",
-      92
+      96
     ],
     [
       "before first pulse",
-      191
+      195
     ],
     [
       "first pulse",
-      192
+      196
     ],
     [
       "first bracer stack",
-      212
+      226
     ],
     [
       "repeated bracer stack",
-      388
+      412
     ],
     [
       "before receiver death",
-      429
+      465
     ],
     [
       "after receiver death",
-      430
+      466
     ]
   ],
-  "initialSha256": "23fecf726e73950fbed1ea4d5794b07e6de2e95f497d4f23e42b6b7e8e5807ba",
-  "terminalSha256": "53b68ceea1d3170589eb3fed9297538281828663180e9b953a554e6258c48e9e",
-  "eventsSha256": "d9f8772c9f183dd5eb5fc77db124b913bc495fab3e62193ae6159f9c1e862500",
+  "initialSha256": "bbf006d99e370fbc3beefa1c740de0a9188529d8baeb4ee06c0c6b88692f2b7b",
+  "terminalSha256": "4c6faa5030b26d4509563ee07779cd79bfd35ea6bb235779ce308c2c028027c2",
+  "eventsSha256": "bfbd75fa22e353007af17f0ab4e6a27290948ece336f5d506f14d4cd0d9a6a79",
   "frames": [
     {
       "tick": 1,
@@ -688,28 +688,28 @@
       "alive": true,
       "stacks": 0,
       "pulse": 0,
-      "holderAlive": false
+      "holderAlive": true
     },
     {
       "tick": 93,
       "alive": true,
       "stacks": 0,
       "pulse": 0,
-      "holderAlive": false
+      "holderAlive": true
     },
     {
       "tick": 94,
       "alive": true,
       "stacks": 0,
       "pulse": 0,
-      "holderAlive": false
+      "holderAlive": true
     },
     {
       "tick": 95,
       "alive": true,
       "stacks": 0,
       "pulse": 0,
-      "holderAlive": false
+      "holderAlive": true
     },
     {
       "tick": 96,
@@ -1387,28 +1387,28 @@
       "tick": 192,
       "alive": true,
       "stacks": 0,
-      "pulse": 1,
+      "pulse": 0,
       "holderAlive": false
     },
     {
       "tick": 193,
       "alive": true,
       "stacks": 0,
-      "pulse": 1,
+      "pulse": 0,
       "holderAlive": false
     },
     {
       "tick": 194,
       "alive": true,
       "stacks": 0,
-      "pulse": 1,
+      "pulse": 0,
       "holderAlive": false
     },
     {
       "tick": 195,
       "alive": true,
       "stacks": 0,
-      "pulse": 1,
+      "pulse": 0,
       "holderAlive": false
     },
     {
@@ -1526,98 +1526,98 @@
     {
       "tick": 212,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 213,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 214,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 215,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 216,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 217,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 218,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 219,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 220,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 221,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 222,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 223,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 224,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 225,
       "alive": true,
-      "stacks": 1,
+      "stacks": 0,
       "pulse": 1,
       "holderAlive": false
     },
@@ -2087,28 +2087,28 @@
       "tick": 292,
       "alive": true,
       "stacks": 1,
-      "pulse": 2,
+      "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 293,
       "alive": true,
       "stacks": 1,
-      "pulse": 2,
+      "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 294,
       "alive": true,
       "stacks": 1,
-      "pulse": 2,
+      "pulse": 1,
       "holderAlive": false
     },
     {
       "tick": 295,
       "alive": true,
       "stacks": 1,
-      "pulse": 2,
+      "pulse": 1,
       "holderAlive": false
     },
     {
@@ -2758,168 +2758,168 @@
     {
       "tick": 388,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 389,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 390,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 391,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 392,
       "alive": true,
-      "stacks": 2,
-      "pulse": 3,
+      "stacks": 1,
+      "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 393,
       "alive": true,
-      "stacks": 2,
-      "pulse": 3,
+      "stacks": 1,
+      "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 394,
       "alive": true,
-      "stacks": 2,
-      "pulse": 3,
+      "stacks": 1,
+      "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 395,
       "alive": true,
-      "stacks": 2,
-      "pulse": 3,
+      "stacks": 1,
+      "pulse": 2,
       "holderAlive": false
     },
     {
       "tick": 396,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 397,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 398,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 399,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 400,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 401,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 402,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 403,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 404,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 405,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 406,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 407,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 408,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 409,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 410,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
     {
       "tick": 411,
       "alive": true,
-      "stacks": 2,
+      "stacks": 1,
       "pulse": 3,
       "holderAlive": false
     },
@@ -3051,6 +3051,258 @@
     },
     {
       "tick": 430,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 431,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 432,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 433,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 434,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 435,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 436,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 437,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 438,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 439,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 440,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 441,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 442,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 443,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 444,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 445,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 446,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 447,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 448,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 449,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 450,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 451,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 452,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 453,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 454,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 455,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 456,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 457,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 458,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 459,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 460,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 461,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 462,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 463,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 464,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 465,
+      "alive": true,
+      "stacks": 2,
+      "pulse": 3,
+      "holderAlive": false
+    },
+    {
+      "tick": 466,
       "alive": false,
       "stacks": 2,
       "pulse": 0,

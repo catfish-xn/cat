@@ -78,7 +78,7 @@ it('retains descriptions for known project-specific rules and missing dynamic va
   expect(augmentPlayerDescription('glass-cannon-i')).toBe('在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得12%的伤害增幅。');
   expect(augmentPlayerDescription('glass-cannon-ii')).toBe('在后排开始战斗的弈子，在战斗开始时的生命值为80%，但会获得20%的伤害增幅。');
   expect(augmentPlayerDescription('bulky-buddies-i')).toBe('开战时恰与一个友军相邻的单位获得100生命；该邻居死亡时，获得10%最大生命的10秒盾。');
-  expect(augmentPlayerDescription('mentorship')).toContain('魔改执行：');
+  expect(augmentPlayerDescription('mentorship')).toContain('具体做法：');
   expect(augmentPlayerDescription('starry-night')).toBe('你商店中的1费和2费弈子有几率成为2星。获得6金币。\n\n当前几率：未确定%\n几率随玩家等级提升。');
   expect(augmentPlayerDescription('bronze-for-life-i')).toBe('每个当前铜级羁绊全队3%增伤；不是所有最低阈值。');
   const allyTemplate = AUGMENT_EXTRA_TEXT['caretakers-ally'].description;

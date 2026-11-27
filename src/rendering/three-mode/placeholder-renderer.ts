@@ -37,7 +37,7 @@ import type { BoardDropHint, BoardFeed, BoardFrame, BoardLegendWalk, BoardPiece,
 import type { DisplayCombatEvent } from '../../presentation/combat-display';
 import { createBatch1VfxEvents, playBatch1Visual, SOFT_STOP_SECONDS } from './vfx-ltk/batch1-events';
 import { createStatusPoseEvents } from './status-pose-events';
-import { createSustainStops } from './vfx-ltk/sustain-stops';
+import { createControlEndStops, createSustainStops } from './vfx-ltk/sustain-stops';
 import { createTimedFormEvents } from './timed-form-events';
 import { createPowderMonkeys } from './powder-monkey';
 import type { TimelineVariant } from './vfx-ltk/timeline';
@@ -71,7 +71,7 @@ import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
 import { attackKey, attackLandings } from './vfx-ltk/attack-landing';
-import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, RUMBLE_MISSILE, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
+import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
 import { createBatch2VfxBridge } from './vfx-ltk/batch2-bridge';
@@ -310,6 +310,8 @@ interface PieceView {
   stars: StarMark | null; starHeight: number;
   /** HP/mana bars and worn items over the head (unit-overhead.ts); a scene child placed each frame like the stars. */
   readonly overhead: UnitOverhead;
+  /** World height of the top of its bar row this frame, while one is drawn (vfx-ltk VfxUnit.overheadTop). */
+  overheadTop?: number;
   body: Object3D | null; lease: ModelLease | null; mixer: UnitAnimationMixer | null; team: BoardPiece['team'];
   definitionId: string; model: UnitModelChoice; bodyRevision: number; target: Vector3; placed: boolean; disposed: boolean;
   /** A summon that appeared or was revived in the shown combat: plays its spawn clip once its mixer is ready. */
@@ -713,6 +715,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const statusPoses = createStatusPoseEvents(id => pieces.get(id)?.lease?.statusPose?.status);
   // Persistent layers ended by a status or a later hit (sustain-stops.ts).
   const sustainStops = createSustainStops(id => pieces.get(id)?.definitionId);
+  const controlEndStops = createControlEndStops();
   // A timed form (Dr. Mundo's ultimate body, Swain's wings) follows its rule events over whatever clip plays (timed-form-events.ts).
   const timedForms = createTimedFormEvents(id => pieces.get(id)?.definitionId, id => pieces.get(id)?.form);
   let batch3: ReturnType<typeof createBatch3Vfx> | null = null;
@@ -1195,7 +1198,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const shakeOffset = new Vector3();
   const clearEffects = (preserveSave = false) => {
     holds.clear(); for (const view of pieces.values()) view.overhead.flashMana(false);
-    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
+    generation++; queued.length = 0; batch3?.clear(); monkeys.clear(); castAt.clear(); ltk?.clear(preserveSave); anvilIdle?.reset(); ltkEvents.clear(); statusPoses.clear(); sustainStops.clear(); controlEndStops.clear(); timedForms.clear(); batch2Vfx.clear(); jayceCrystals.clear();
     for (const effect of live) effect.fx.dispose();
     live.clear();
     for (const item of referenceEffects) item.fx.dispose();
@@ -1439,6 +1442,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const ids = new Set(envelopePending); envelopePending.clear();
       for (const view of pieces.values()) if (view.model.id && ids.has(view.model.id) && view.lease && !view.lease.placeholder) attachBody(view);
     }
+    // A unit no longer stunned in the rules (its control in this frame is gone): its stun's layers end (CUE_RULE_STOPS stunEnded).
+    for (const stop of controlEndStops.frame(frame.pieces, frame.fighting)) ltk?.fadeSystemsOn(stop.id, stop.systems, STUN_END_FADE_SECONDS);
     const seen = new Set<string>();
     const modelPieces = new Map(frame.pieces.map(piece => [piece.id, piece]));
     for (const piece of frame.pieces) {
@@ -1558,6 +1563,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Observe old casts/landings as well; only particle playback uses this window.
       batch2Vfx.event(event, currentEffect);
       batch3?.event(event, currentEffect);
+      // LeBlanc's chain: from her primary target (the first one her cast names) to each other enemy it binds (cue-overrides.ts
+      // LEBLANC_CHAIN_FROM_PRIMARY); never from her, never to the primary itself.
+      if (currentEffect && !reducedMotion() && event.type === 'cast' && event.completed !== false && pieces.get(event.sourceId)?.definitionId === 'leblanc') {
+        const [primary, ...others] = [...new Set(event.targetIds)];
+        if (primary && others.length) ltk?.play('leblanc', primary, others, 'passive');
+      }
       const shieldTarget = currentEffect ? renataShieldTarget(event) : null;
       const recipient = shieldTarget ? pieces.get(shieldTarget) : undefined;
       // Renata's own E_Shield when it is ready; the procedural bubble otherwise.
@@ -1633,14 +1644,22 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // A rule's timed effect is over (display-only signal): end the visuals listed for it (cue-overrides.ts CUE_END_STOPS).
       // Before the animation gate: these events move no unit, so ANIMATION_EVENTS does not list them.
       if (event.type === 'abilityEffectEnded') ltk?.stopSystems(event.unitId, CUE_END_STOPS[event.effect] ?? []);
+      if (event.type === 'abilityEffectEnded' && event.effect === LEBLANC_CHAIN_FROM_PRIMARY.effect)
+        for (const id of event.targetIds ?? []) ltk?.stopSystems(id, [LEBLANC_CHAIN_FROM_PRIMARY.system]);
       // Rule events that already end a state: the visuals listed for them end with it (cue-overrides.ts CUE_RULE_STOPS).
       if (event.type === 'bloodFrenzyChanged' && !event.active) ltk?.stopSystems(event.unitId, CUE_RULE_STOPS.frenzyEnded.systems);
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEnded.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystems(event.targetId, systems);
       if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedFade.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.fadeSystems(event.targetId, systems, SHIELD_END_FADE_SECONDS);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
         for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnHolder.systems))
           if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOn(event.targetId, systems);
+      if (event.type === 'shieldLayerChanged' && event.reason !== 'granted' && event.reason !== 'absorbed' && event.reason !== 'decayed')
+        for (const [ability, systems] of Object.entries(CUE_RULE_STOPS.abilityShieldEndedOnSelf.systems))
+          if (event.key.includes(JSON.stringify(ability))) ltk?.stopSystemsOnSelf(event.targetId, systems);
       if (event.type === 'statusChanged' && event.kind === 'shred' && event.reason !== 'applied' && event.reason !== 'refreshed')
         ltk?.stopSystemsOn(event.targetId, CUE_RULE_STOPS.shredEnded.systems);
       // Persistent layers that end with their rule's status or a later hit (cue-overrides.ts CUE_RULE_STOPS, sustain-stops.ts).
@@ -2215,6 +2234,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       view.overhead.setTier(view.stars ? starUps.level(id, view.starLevel) : null);
       // Above the star row (hidden under an original tier bar, the bar keeps its height); a monster has none.
       view.overhead.object.position.set(overX, over.bar, overZ);
+      view.overheadTop = view.overhead.drawn ? over.bar + view.overhead.top : undefined;
       // The stars circle the head like the client's stun (at head level, under the bars), drawn over the model and bars.
       if (view.halo) {
         view.halo.update(seconds);
