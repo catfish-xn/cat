@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, landingCues } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { attackEventLanding, attackKey, attackLandings, attackOutlivesSource, attackPlayOptions, windupLanding } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
+import { attackEventLanding, attackKey, attackLandings, attackLaunchOf, attackOutlivesSource, attackPlayOptions, windupLanding } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
 import { DEFAULT_ATTACK_FLIGHT_SECONDS, withAttackFlight, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
@@ -67,6 +67,15 @@ describe('a launched ranged attack outlives its attacker', () => {
     expect(attackEventLanding(undefined, true)).toEqual({ seconds: 0, phase: 'launch' }); // launched before its landing is known
     expect(attackEventLanding({ seconds: 0.3 }, false)).toEqual({ seconds: 0.3 }); // an attack without a wind-up keeps its landing
     expect(attackEventLanding(undefined, false)).toBeUndefined(); // melee
+  });
+  // #749 Caitlyn 4-hex capture (11-28): the capture window began after her wind-up started, so its attackWindup was never seen;
+  // the launch tick's attack then played as a whole new swing and its shot left late. The attack's own attackLaunched still
+  // makes it the launch (its shot leaves now); only the swing, unseen, starts on the attack event.
+  it('an attack event is the launch when its wind-up was seen, or when it carries the rules\' landing; the swing starts there only if the wind-up was not seen', () => {
+    expect(attackLaunchOf(15, true, 15)).toEqual({ launch: true, swing: false }); // wind-up seen
+    expect(attackLaunchOf(undefined, true, 15)).toEqual({ launch: true, swing: true }); // wind-up not seen: still the launch
+    expect(attackLaunchOf(undefined, false, 15)).toEqual({ launch: false, swing: true }); // melee, or a shot without a rules landing
+    expect(attackLaunchOf(20, false, 15)).toEqual({ launch: false, swing: true }); // another attack's wind-up
   });
 });
 

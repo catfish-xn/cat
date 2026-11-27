@@ -25,6 +25,16 @@ export const windupLanding = (event: { tick: number; launchTick: number }): Atta
  * or none yet); otherwise the batch's landing, if any (a ranged attack without a wind-up, or none for melee). */
 export const attackEventLanding = (landing: AttackLanding | undefined, launch: boolean): AttackLanding | undefined =>
   launch ? { ...(landing ?? { seconds: 0 }), phase: 'launch' } : landing;
+/**
+ * Whether an attack event is a wound-up attack's launch, and whether it still has to start the swing. Its attackWindup normally
+ * came first (the swing started there); when that was not seen (the view joined, or a capture window began, after the wind-up
+ * started) the attack's own attackLaunched (a rules landing on this tick) still makes it the launch, so its shot leaves now and
+ * lands on the rules' arrival; the swing then starts on the attack event itself.
+ */
+export function attackLaunchOf(windupLaunchTick: number | undefined, landed: boolean, tick: number): { launch: boolean; swing: boolean } {
+  const wound = windupLaunchTick === tick;
+  return { launch: wound || landed, swing: !wound };
+}
 /** The batch's attack key: one attacker's attack on one tick. */
 export const attackKey = (attackerId: string, tick: number): string => `${attackerId}:${tick}`;
 /**

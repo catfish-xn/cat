@@ -70,7 +70,7 @@ import { WINDUP_SECONDS, tracerDelay, castEffectTuning, createSkillFeel, effectC
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
-import { attackEventLanding, attackKey, attackLandings, attackPlayOptions, windupLanding } from './vfx-ltk/attack-landing';
+import { attackEventLanding, attackKey, attackLandings, attackLaunchOf, attackPlayOptions, windupLanding } from './vfx-ltk/attack-landing';
 import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
@@ -1674,9 +1674,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // The rules' wind-up (11-19): the swing starts on attackWindup; its attack event (the launch) only adds the shot.
       if (event.type === 'attackWindup') { windups.set(event.attackerId, event.launchTick); pieces.get(event.attackerId)?.attackCadence.observe(event.tick); }
       else if (event.type === 'attackWindupCancelled') { windups.delete(event.attackerId); if ((tickOf(event) ?? latest) > latest - EFFECT_TICKS) ltk?.stopAction(event.attackerId, 'attack'); }
-      const launch = event.type === 'attack' && windups.get(event.attackerId) === event.tick;
+      const launchOf = event.type === 'attack' ? attackLaunchOf(windups.get(event.attackerId), landings.has(attackKey(event.attackerId, event.tick)), event.tick) : undefined;
+      const launch = !!launchOf?.launch;
       if (launch) windups.delete((event as { attackerId: string }).attackerId);
-      if (event.type === 'attack' && !launch) pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
+      if (event.type === 'attack' && (!launch || launchOf?.swing)) pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
       // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
@@ -1691,7 +1692,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
       if (event.type === 'attackWindup') { for (const view of pieces.values()) view.state.consume({ type: 'attack', attackerId: event.attackerId } as unknown as AnimationEvent); }
-      else if (!launch) for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
+      else if (!launch || launchOf?.swing) for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
       if (event.type === 'attackWindup') {
         face(event.attackerId, event.targetId);
