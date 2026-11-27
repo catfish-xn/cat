@@ -2999,9 +2999,9 @@
     "tests/rendering3d-jinx-rocket-facing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 10924,
+      "currentBytes": 12273,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "09e722ab0bf7f1f1959fdd75e7747713ce6bfd75da4b1ed8434672f25eb4e668",
+      "currentSha256": "428ea5e516ee520a32e87fa50b7603b8180ac6cd58dcc6bc9b8737d2333de760",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-late-game-retention.test.ts": {
