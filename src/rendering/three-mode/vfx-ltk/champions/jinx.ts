@@ -19,6 +19,10 @@ export const JINX_ROCKET_DRAWN = { aimLift: 50 } as const;
  * verified); the pace and the wait are the three samples'. The landing tick is the rules': the flash is timed back from it.
  */
 export const JINX_ROCKET_FLOWN = { leaveAfterFlash: { threeStar: 0.067, belowThree: 0.22 }, cellsPerSecond: 7, wait: 0.23, leastFlying: 0.1 } as const;
+/** RECORDING EXPERIMENT ONLY: the page's `rocketfar` query (a | b; a, the PR's own order, when absent). */
+function rocketFarMode(): 'a' | 'b' {
+  return typeof location !== 'undefined' && new URLSearchParams(location.search).get('rocketfar') === 'b' ? 'b' : 'a';
+}
 /**
  * When, after the rules launch her rocket (`total` seconds before they land it), its muzzle flash plays and it leaves the
  * barrel, how long it is drawn flying in all, and the share of that it takes to reach where it lands (then it waits there):
@@ -26,10 +30,16 @@ export const JINX_ROCKET_FLOWN = { leaveAfterFlash: { threeStar: 0.067, belowThr
  * puts the flash on the launch, then cuts the wait, then flies faster to reach the landing point on the landing tick. It flies
  * at least `leastFlying` (our own floor, 自定): with her cell unknown (`cells` 0) it is not drawn already at the landing point.
  */
-export function jinxRocketTimes(star: number, cells: number, total: number): { flashAt: number; leaves: number; flight: number; arriveShare: number } {
+export function jinxRocketTimes(star: number, cells: number, total: number, far: 'a' | 'b' = rocketFarMode()): { flashAt: number; leaves: number; flight: number; arriveShare: number } {
   const span = Math.max(0, total), { leaveAfterFlash, cellsPerSecond, wait } = JINX_ROCKET_FLOWN;
   const lead = star >= 3 ? leaveAfterFlash.threeStar : leaveAfterFlash.belowThree;
   const flying = Math.max(JINX_ROCKET_FLOWN.leastFlying, Math.max(0, cells) / cellsPerSecond);
+  // RECORDING EXPERIMENT ONLY (claude/rec-jinx-rocket-far, never merged): 'b' squeezes a far rocket's wait first, then its
+  // time from the flash to leaving the barrel down to the three-star's, and only then flies it faster.
+  if (far === 'b' && span < lead + flying + wait) {
+    const leaves = Math.min(span, Math.max(leaveAfterFlash.threeStar, Math.min(lead, span - flying))), flight = span - leaves;
+    return { flashAt: 0, leaves, flight, arriveShare: flight > 0 ? Math.min(1, flying / flight) : 1 };
+  }
   const flashAt = Math.max(0, span - wait - flying - lead), leaves = Math.min(span, flashAt + lead), flight = span - leaves;
   return { flashAt, leaves, flight, arriveShare: flight > 0 ? Math.min(1, flying / flight) : 1 };
 }
