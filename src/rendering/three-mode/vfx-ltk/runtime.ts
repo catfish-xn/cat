@@ -132,7 +132,14 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
    * Give-way cues (TimelineCue.giveWay), by system: not started for want of free room, or ended for a newcomer. Kept apart
    * from `dropped`: such a cue never takes room another run needs (Fable 11-21, as #812's tails give way).
    */
-  gaveWay: {} as Record<string, number> };
+  gaveWay: {} as Record<string, number>,
+  /**
+   * Attack plays split by the rules' landing (LtkPlayOptions.landing) that had no cue in their phase although every cue of the
+   * attack was ready, by `${champion} ${phase}`: a wind-up for an attack whose timeline is only its shot (projectile and hit) is
+   * done (nothing of it plays before the launch; not a refusal, no host fallback); an empty launch is still refused
+   * ('nothing-left') and listed here to be explained. A play whose cues are not all loaded is refused 'not-ready' as before.
+   */
+  emptyPhase: {} as Record<string, number> };
 const countGaveWay = (system: string) => { LTK_RUN_STATS.gaveWay[system] = (LTK_RUN_STATS.gaveWay[system] ?? 0) + 1; };
 /**
  * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
@@ -874,6 +881,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
+      const beforeLanding = selected;
       if (context.landing !== undefined) {
         if (!Number.isFinite(context.landing.seconds) || context.landing.seconds < 0 || context.landing.seconds > 5) return false;
         selected = selected && landingCues(selected, context.landing);
@@ -888,7 +896,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       }
       const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
-      if (!cues) return refuse('not-ready');
+      if (!cues) {
+        // Readiness first: a play whose cues are not all loaded is refused 'not-ready' (the host plays its own effect), as before.
+        // Only when every cue was ready and the landing's phase left none is the phase empty (LTK_RUN_STATS.emptyPhase).
+        const ready = !!available && !!beforeLanding?.length && beforeLanding.every(cue => !!catalog.get(cue.system));
+        if (ready && context.landing !== undefined && selected?.length === 0) {
+          const key = `${champion} ${context.landing.phase ?? 'landing'}`;
+          LTK_RUN_STATS.emptyPhase[key] = (LTK_RUN_STATS.emptyPhase[key] ?? 0) + 1;
+          if (context.landing.phase === 'windup') return true;
+          return refuse('nothing-left');
+        }
+        return refuse('not-ready');
+      }
       const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board);
       const facing = context.boardFacing;
       const faced = facing ? mapped.spawns.map(spawn => spawn.point && spawn.location === 'board' ? { ...spawn, facing } : spawn) : mapped.spawns;
