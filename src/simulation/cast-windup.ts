@@ -115,10 +115,10 @@ export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
  * hit time is not measured) and settle where they land. */
 export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PER_HEX = 2;
 
-/** Violet's combo (11-21, authorization ②): two jabs then an uppercut on the target taken at the cast, each landing on its own
- * tick after the cast (aligned to the original frame by frame; which hit is hers is not fully verified, see
+/** Violet's combo (11-21, authorization ②; re-aligned 11-24): two jabs then an uppercut on the target taken at the cast, each
+ * landing on its own tick after the cast, counted from her mana bar emptying (aligned to the original frame by frame, see
  * docs/S13_RULES_GAP.md 蔚奥莱连击). The uppercut's knock-up starts with it. */
-export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TICKS = 29;
+export const VIOLET_JAB_TICKS: readonly number[] = [1, 5], VIOLET_UPPERCUT_TICKS = 21;
 
 /** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
  * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
