@@ -3,7 +3,7 @@ import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial } from 'three';
 import { BIG_THREE_STAR_COST, FIVE_COST_THREE_STAR_SCALE, STAR_BODY_SCALE, fitModel, starBodyScale, starBodyScaleOf, useUnitCost } from '../src/rendering/three-mode/model-fit';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
 import { readFileSync } from 'node:fs';
-import { unitCostOf } from '../src/rendering/three-mode/unit-cost';
+import { unitCostOf } from '../src/presentation/unit-cost';
 
 /** A plain 10-unit-tall body standing on y=0 in its own units (no skin, no grounding calibration). */
 function body() {
@@ -66,9 +66,9 @@ describe('2026-11-03 star-level body size', () => {
     expect(unitCostOf('jinx')).toBe(5); expect(unitCostOf('malzahar')).toBe(5); expect(unitCostOf('not-a-unit')).toBe(1);
     // Both hosts that mount the renderer hand it this same lookup: the game's loader and the castcmp recording page.
     const loader = readFileSync('src/rendering/three-mode/three-loader.ts', 'utf8'), harness = readFileSync('dev/castcmp/harness.ts', 'utf8');
-    expect(loader).toContain("import { unitCostOf } from './unit-cost';");
+    expect(loader).toContain("import { unitCostOf } from '../../presentation/unit-cost';");
     expect(loader).toMatch(/useUnitCost\?\.\(unitCostOf\)/);
-    expect(harness).toContain("import { unitCostOf } from '../../src/rendering/three-mode/unit-cost';");
+    expect(harness).toContain("import { unitCostOf } from '../../src/presentation/unit-cost';");
     const injected = harness.indexOf('mod.useUnitCost(unitCostOf)'), mounted = harness.indexOf('mod.mountRenderer3d(');
     expect(injected).toBeGreaterThan(-1); expect(mounted).toBeGreaterThan(injected);
     useUnitCost(unitCostOf);

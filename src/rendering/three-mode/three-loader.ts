@@ -13,7 +13,7 @@ import { s13AssetUrl } from '../../presentation/s13-assets';
 import { anvilIconUrl, isAnvilUnit } from '../../presentation/anvil-display';
 import { unitAnomalies } from '../../presentation/anomaly-display';
 import { SHOP_CATALOG_BY_COST } from '../../simulation/match-rules';
-import { unitCostOf } from './unit-cost';
+import { unitCostOf } from '../../presentation/unit-cost';
 
 export interface ThreeModeHandle { dispose(): void }
 

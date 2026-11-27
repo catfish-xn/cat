@@ -5,7 +5,7 @@
  * &assets=/path/ names the 3D asset root (default /assets3d-local/v8/). Keys: A attack, S cast; it also loops on its own.
  */
 import { useBoardFeed, useUnitCost, mountRenderer3d } from '../../src/rendering/three-mode/placeholder-renderer';
-import { unitCostOf } from '../../src/rendering/three-mode/unit-cost';
+import { unitCostOf } from '../../src/presentation/unit-cost';
 import type { BoardFeedListener, BoardPiece, BoardFrame } from '../../src/rendering/board-feed';
 
 const params = new URLSearchParams(location.search);

@@ -23,7 +23,7 @@ function step(ms: number) {
 // are done before the recorded t=0: 8 frames leave 0.125^8 of the distance (17 units -> under 0.0001).
 const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
 function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
-import { unitCostOf } from '../../src/rendering/three-mode/unit-cost';
+import { unitCostOf } from '../../src/presentation/unit-cost';
 import { installProbes } from './probes';
 import { AnimationMixer } from 'three';
 import { createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
