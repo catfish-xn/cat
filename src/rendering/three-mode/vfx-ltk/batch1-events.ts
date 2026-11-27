@@ -5,10 +5,11 @@ import type { TimelineAction, TimelineVariant } from './timeline';
 export const SOFT_STOP_SECONDS = 0.6;
 
 /** Play one extra visual; a `once` visual is skipped while its source already runs that action at full strength. */
-export function playBatch1Visual(ltk: { play(champion: string, sourceId: string, targets: readonly string[], action: TimelineAction, options?: TimelineVariant | { variant?: TimelineVariant; skill?: string; snapshotTargets?: boolean }): boolean; playing(sourceId: string, action: TimelineAction): boolean }, fx: Batch1Visual): boolean {
+export function playBatch1Visual(ltk: { play(champion: string, sourceId: string, targets: readonly string[], action: TimelineAction, options?: TimelineVariant | { variant?: TimelineVariant; skill?: string; snapshotTargets?: boolean; flightSeconds?: number }): boolean; playing(sourceId: string, action: TimelineAction): boolean }, fx: Batch1Visual): boolean {
   if (fx.once && ltk.playing(fx.sourceId, fx.action)) return false;
   return ltk.play(fx.champion, fx.sourceId, fx.targets, fx.action,
-    fx.skill || fx.snapshotTargets ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets } : fx.variant);
+    fx.skill || fx.snapshotTargets || fx.flightSeconds !== undefined ? { variant: fx.variant, skill: fx.skill, snapshotTargets: fx.snapshotTargets,
+      ...(fx.flightSeconds !== undefined ? { flightSeconds: fx.flightSeconds } : {}) } : fx.variant);
 }
 
 export interface Batch1Visual {
@@ -19,6 +20,8 @@ export interface Batch1Visual {
   skill?: string;
   /** Its targets' places are taken when it plays, alive or not (LtkPlayOptions.snapshotTargets): a hit that may have killed them. */
   snapshotTargets?: boolean;
+  /** A projectile cue flies this long (LtkPlayOptions.flightSeconds): the rules' own flight, from their launch. */
+  flightSeconds?: number;
 }
 export interface Batch1EventPlan {
   /** fresh gates batch 1 VFX selection only; animation and lifecycle consumers always receive event. */
@@ -206,9 +209,13 @@ export function createBatch1VfxEvents(definition: (id: string) => string | undef
           plan.extra.push({ champion: 'smeech', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'smeech-stab' });
           smeech.set(event.sourceId, { stabs: seen.stabs + 1, target: event.targetId });
         }
-        // Maddie: one shot per damage packet of her volley, to the enemy it hit.
+        // Maddie: each shot leaves on the rules' launch and flies their flight to the enemy it will hit; its hit plays with its
+        // damage, which the rules settle when it lands.
+        if (event.type === 'abilityProjectileLaunched' && event.skill === 'maddie-shot' && definition(event.sourceId) === 'maddie')
+          plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-shot',
+            flightSeconds: Math.max(0, event.arrivalTick - event.tick) * 0.05 });
         if (event.type === 'packetDamage' && isAbilityDirect(event) && definition(event.sourceId) === 'maddie')
-          plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-shot' });
+          plan.extra.push({ champion: 'maddie', sourceId: event.sourceId, targets: [event.targetId], action: 'passive', skill: 'maddie-hit' });
         // Maddie: her cast list has no cast cues left (they moved to her damage), so her cast plays nothing rather
         // than falling back to the old placeholder cast effect.
         if (event.type === 'cast' && event.completed !== false && definition(event.sourceId) === 'maddie') plan.noCastEffect = true;

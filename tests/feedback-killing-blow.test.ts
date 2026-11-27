@@ -45,7 +45,7 @@ describe('a killing blow\'s number shows where its target fell', () => {
     floats.render(510, new Map([['foe', at(200)]]));
     expect(shown()).toEqual(['50']);
     floats.push([death(12, 'foe')], 600);
-    for (const t of [610, 900, 1200]) { floats.render(t, new Map()); expect(shown(), `at ${t}`).toEqual(['50']); }
+    for (const t of [610, 900, 1150]) { floats.render(t, new Map()); expect(shown(), `at ${t}`).toEqual(['50']); }
     floats.render(10_000, new Map());
     expect(shown()).toEqual([]);
   });
