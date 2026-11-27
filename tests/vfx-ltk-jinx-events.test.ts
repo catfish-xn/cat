@@ -164,6 +164,9 @@ describe("Jinx's rocket from the real rules", () => {
     // Far away it has no time to wait: it flies faster, reaching the landing point on the landing tick.
     const far = jinxRocketTimes(2, 6, total);
     expect(far.flashAt).toBe(0); expect(far.arriveShare).toBe(1); expect(far.leaves + far.flight).toBeCloseTo(total, 9);
+    // Her cell unknown (a zero-cell flight): it still flies the floor, not drawn already at the landing point.
+    const unknown = jinxRocketTimes(3, 0, total);
+    expect(unknown.flight * unknown.arriveShare).toBeCloseTo(JINX_ROCKET_FLOWN.leastFlying, 9);
     // A landing at the launch: nothing before it, nothing to fly.
     const none = jinxRocketTimes(3, 2, 0);
     expect(none).toEqual({ flashAt: 0, leaves: 0, flight: 0, arriveShare: 1 });

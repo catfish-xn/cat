@@ -886,12 +886,13 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         // A flight the rule timed (LtkPlayOptions.flightSeconds), else one by distance (TimelineCue.flightTicks), from where
         // caster and target stand now.
         if (context.flightSeconds !== undefined) spawn = withFlightSeconds(spawn, context.flightSeconds);
-        if (context.arriveShare !== undefined && spawn.event === 'projectile') spawn = { ...spawn, arriveShare: context.arriveShare };
         else if (spawn.flightTicks) {
           const caster = findUnit(spawn.sourceId), aimed = spawn.targetId ? findUnit(spawn.targetId) : undefined;
           const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
           spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
         }
+        // Flown in and waiting (TimelineCue.arriveShare), whatever timed the flight.
+        if (context.arriveShare !== undefined && spawn.event === 'projectile') spawn = { ...spawn, arriveShare: context.arriveShare };
         waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(context.outlivesSource && spawn.event === 'projectile' ? { outlives: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });

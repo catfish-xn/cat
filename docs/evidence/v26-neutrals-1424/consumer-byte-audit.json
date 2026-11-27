@@ -4939,9 +4939,17 @@
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17295,
+      "currentBytes": 17553,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dbfeee6628a66f60c681ca5468ac69b6c25a129db20162fbae7a9fd148c1bc30",
+      "currentSha256": "51afd75e26517d5701cd90356d5c4d15a8ecc8b035845b57b9a48942c995e31d",
+      "firstDifferentByte": 0
+    },
+    "tests/vfx-ltk-jinx-rocket-render.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 3538,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "9e53192691f4cc9bc2664643d0f2c0003d537cf74c807b5edf1de2afec5dcfc2",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-kogmaw-q-flyer.test.ts": {
