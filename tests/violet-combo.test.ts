@@ -31,6 +31,12 @@ describe('Violet combo timing', () => {
     expect(VIOLET_JAB_TICKS.length).toBe(2);
     expect(mine(r.out)).toEqual([...VIOLET_JAB_TICKS.map(at => cast + at), cast + VIOLET_UPPERCUT_TICKS]);
   });
+  // The ticks themselves are pinned (v2, 11-24; measured on official-server footage, not original data: pODUuLLkM9g, counted
+  // from her mana bar emptying). Changing them is a rule change, which this pin makes visible.
+  it('the jab and uppercut ticks are the ones measured on official footage', () => {
+    expect(VIOLET_JAB_TICKS).toEqual([1, 5]);
+    expect(VIOLET_UPPERCUT_TICKS).toBe(21);
+  });
   it('the knock-up starts with the uppercut, not on the cast', () => {
     const stunned = (tick: number) => run(start, tick - start.tick).state.units.find(u => u.id === 'e')!.statuses?.some((x: any) => x.kind === 'stun');
     expect(stunned(cast + VIOLET_UPPERCUT_TICKS - 1)).toBe(false);

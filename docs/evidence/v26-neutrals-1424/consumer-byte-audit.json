@@ -1052,9 +1052,9 @@
     },
     "tests/five-cost-fixes.test.ts": {
       "previousBytes": 10037,
-      "currentBytes": 11340,
+      "currentBytes": 11581,
       "previousSha256": "fe2713cec2f30cb12732f948fb7a72e1307ea8c685527fadc2bfa74de4944bc2",
-      "currentSha256": "81c4829aa970b8d6803fa974fc79adf4348b97c238abfbd6dd44a5d042ec14c4",
+      "currentSha256": "47587925d1dc64e2e39d84bfe884be68d9dbd2a3441e43ac273124f9f86231b6",
       "firstDifferentByte": 502
     },
     "tests/five-cost-geometry.test.ts": {
@@ -5487,9 +5487,9 @@
     "tests/violet-combo.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5852,
+      "currentBytes": 6255,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9c0e5a7e9080acd2414df74747d0c39d6fba70d621bef743c9ff547d49b3558e",
+      "currentSha256": "543f36287d5e530bd87418f059285de77025e05eeab6edc6acfdb8d1d2bddfa5",
       "firstDifferentByte": 0
     }
   }
