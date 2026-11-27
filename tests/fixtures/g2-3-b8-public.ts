@@ -6,7 +6,7 @@ const accepted = (result: api.MatchCommandResult): api.MatchState => {
 };
 
 /** 14.24 stats: publicly swap Leona/Loris so r03 and r04 still die in one real batch. */
-export function simultaneousB8Preparation(initial: api.MatchState, zyraCell: {col:number,row:number} = {col:3, row:4}): api.MatchState {
+export function simultaneousB8Preparation(initial: api.MatchState, zyraCell: {col:number,row:number} = {col:6, row:5}): api.MatchState {
   const leona = initial.preparation.units.find(u => u.team === 'player' && u.definitionId === 'leona')!;
   const loris = initial.preparation.units.find(u => u.team === 'player' && u.definitionId === 'loris')!;
   const slot = Array.from({length: initial.preparation.benchSize}, (_, i) => i).find(i =>
@@ -18,6 +18,9 @@ export function simultaneousB8Preparation(initial: api.MatchState, zyraCell: {co
   // 2026-11-16: Zyra's vines now land CAST_WINDUP_TICKS.zyra after her cast, which broke the old same-tick pair (r02/r03 at
   // tick 127) and the terminal pair. One public deploy of Zyra restores each: on the empty (3,4) r02 and r04 die in one live
   // tick (the default); on the empty (4,7) r00 and r01 die together in the action that ends combat.
+  // 2026-11-25 (#791 ranged attack wind-up) both pairs split; scene re-picked over every player hex: onto Leona's post-swap
+  // (6,5) (the deploy swaps the two) r01 and r04 die in one live tick, now the default; on the empty (3,6) r00 and r03 die
+  // together in the action that ends combat.
   const zyra = state.preparation.units.find(u => u.team === 'player' && u.definitionId === 'zyra')!;
   return accepted(api.deployMatchUnit(state, zyra.id, {kind:'board', cell:{...zyraCell}}));
 }

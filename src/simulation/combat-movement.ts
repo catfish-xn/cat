@@ -20,7 +20,7 @@ export function neverMoves(unit: S13Unit): boolean {
 /** Shared eligibility for ordinary movement and trait dashes; cooldown/range are caller-specific. */
 export function canMove(unit: S13Unit, tick: number): boolean {
   return unit.alive && unit.hp > 0 && !neverMoves(unit) && !(isControlled(unit, tick) && !unit.sixCost?.permanentFrenzy)
-    && active(unit, tick, 'channel').length === 0 && !renniHolding(unit) && !g23Anomaly(unit, 'deep-roots');
+    && active(unit, tick, 'channel').length === 0 && !renniHolding(unit) && !unit.windup && !g23Anomaly(unit, 'deep-roots');
 }
 
 export interface MeleeApproachClaim { readonly targetId: string; readonly cell: HexCell }
