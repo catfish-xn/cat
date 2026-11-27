@@ -823,15 +823,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const envelopePending = new Set<string>();
   /**
    * A champion's envelope measured during a combat (attachBody): one measurement per model at a time, shared by every
-   * piece waiting for it, in slices of about 3 ms at most one a frame, so the combat never gets a long task.
+   * piece waiting for it, in slices of about COMBAT_SLICE_BUDGET_MS at most one a frame, so the combat never gets a long task.
    */
   const combatMeasuring = new Map<string, Promise<Envelope | null>>();
-  const COMBAT_SLICE_PAUSE_MS = 16;
+  const COMBAT_SLICE_PAUSE_MS = 16, COMBAT_SLICE_BUDGET_MS = 2;
   const combatEnvelope = (id: string, lease: ModelLease): Promise<Envelope | null> => {
     let measuring = combatMeasuring.get(id);
     if (!measuring) {
       measuring = animationEnvelopeSliced(lease.scene, envelopeClips(lease), {
-        budgetMs: 3, stop: () => closed, pause: () => new Promise<void>(resolve => setTimeout(resolve, COMBAT_SLICE_PAUSE_MS)),
+        budgetMs: COMBAT_SLICE_BUDGET_MS, stop: () => closed, pause: () => new Promise<void>(resolve => setTimeout(resolve, COMBAT_SLICE_PAUSE_MS)),
       }).finally(() => combatMeasuring.delete(id));
       combatMeasuring.set(id, measuring);
     }

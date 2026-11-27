@@ -69,7 +69,7 @@ it('a champion first loaded mid-combat is measured in frame-spaced slices and fi
   expect(animationEnvelope).not.toHaveBeenCalled();
   expect(animationEnvelopeSliced).toHaveBeenCalledTimes(1);
   const options = vi.mocked(animationEnvelopeSliced).mock.calls[0]![2]!;
-  expect(options.budgetMs).toBe(3);
+  expect(options.budgetMs).toBe(2);
   // Slices are spaced about a frame apart (a timeout, so a hidden page still finishes).
   vi.useFakeTimers();
   try {
