@@ -1,6 +1,7 @@
 import { BATCH3_SUMMON_ABILITIES } from './content/batch3-summons';
 import { B5_G4_SUMMON_ABILITIES } from './content/augment-pool-batch5-g4';
-import { SIX_COST_ABILITIES } from './content/v19-six-cost';
+import { SIX_COST_ABILITIES, SIX_COST_POLICY } from './content/v19-six-cost';
+import { G23_POLICY } from './content/g2-3-policy';
 import { S13_ANOMALY_SUMMON_ABILITIES } from './content/s13-anomaly-summons';
 import { G24_VOIDSPAWN_ABILITIES } from './content/g2-4b-voidspawn';
 import { G23_SUMMON_ABILITIES } from './content/g2-3-summons';
@@ -15,6 +16,20 @@ import { d14UnitBase } from './d14-anomalies/projection';
 import { D14_FOURTH_ABILITY } from './d14-anomalies/fourth-ability';
 import { GLOVES_OFF } from './content/gloves-off';
 
+/**
+ * The Experiment Laboratory bonus each hero donates, at the base tier, in the units of the client tooltips' placeholders.
+ * The same numbers are written in the rules (g2-3-experiment.ts donations, g2-3-programs.ts g23ExperimentProgram,
+ * combat-six-cost.ts / combat-g2-3.ts / g2-3-combat.ts consumers); tests/ability-text-official.test.ts checks them
+ * against a Laboratory snapshot. When the rules change one, change it here too.
+ */
+const EXPERIMENT_LAB_DISPLAY: Readonly<Record<string, Readonly<Record<string, number>>>> = {
+  warwick: { 'TFTUnitProperty.:TFT13_WarwickCurrentExperimentBonus': 1 },
+  nunu: { 'TFTUnitProperty.:TFT13_NunuCurrentExperimentBonus': 3, ExperimentICD: 1 },
+  zyra: { 'TFTUnitProperty.:TFT13_ZyraCurrentExperimentBonus': 50, ExperimentDuration: 2 },
+  urgot: { 'TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusShield': 8, 'TFTUnitProperty.:TFT13_UrgotCurrentExperimentBonusAS': 20, ExperimentDuration: 5 },
+  twitch: { 'TFTUnitProperty.:TFT13_TwitchCurrentExperimentBonus': 20, ExperimentDamageTicks: 5 },
+  drmundo: { 'TFTUnitProperty.:TFT13_DrMundoBaseHealthExperimentBonus': 120, 'TFTUnitProperty.:TFT13_DrMundoCurrentExperimentBonus': 60 },
+};
 export interface AbilityDisplayStats {
   readonly abilityPower?: number;
   readonly attackDamage?: number;
@@ -34,7 +49,7 @@ function sourceFor(id: string): {readonly name:string;readonly variables:Readonl
 export function abilityDisplayName(definitionId: string): string { return sourceFor(definitionId).name; }
 /** Values are per source placeholder (e.g. Maddie's TotalDamage is per bullet).
  * Defaults: base star-scaled AD, 100 AP, no items/traits or persistent growth.
- * Experiment-only values describe the archived tooltip, not an enabled mechanic.
+ * Experiment tokens show our Laboratory bonus at its base tier (EXPERIMENT_LAB_DISPLAY).
  */
 export function abilityDisplayValues(definitionId: string, starLevel: StarLevel,
   stats: AbilityDisplayStats = {}): Readonly<Record<string, number>> {
@@ -147,12 +162,48 @@ function displayValues(definitionId: string, starLevel: StarLevel,
       ModifiedSpecialDamage: amount('PercentAD', undefined, 'FlatDamagePerMissile', undefined, v('SpecialMissileMult')),
       SpecialMissileArmorReduction: v('FlatArmorShred') * v('SpecialMissileMult'),
     }); break;
+    // Six-cost heroes and Sevika's three spells: the 14.24 client tooltips' placeholders, read from our rules (display only).
+    // Counts written as literals here are the ones the combat code uses (combat-six-cost.ts: Mel shields her 2 nearest allies
+    // and hits 3 enemies, 5 on the third cast; Viktor's ray covers 2 hexes and shreds for 100 ticks).
+    case 'mel': Object.assign(values, {
+      ShieldAmount: v('Shield'), ShieldCount: 2, 'DRConvertToUnstableEnergy*100': SIX_COST_POLICY.mel.absorbBps / 100,
+      NormalCastNumEnemies: 3, ModifiedDamage: magic('Damage'), ModifiedSecondaryDamage: magic('ThirdDamage'), ThirdCastNumEnemies: 5,
+    }); break;
+    case 'warwick': {
+      // Per-second Blood Frenzy damage at the frenzied attack speed: base + AD × attack speed × ratio (combat-six-cost.ts).
+      const speed = Math.floor((base.baseAttackSpeedBps ?? 9000) * (10000 + SIX_COST_POLICY.warwick.speedBps) / 10000);
+      Object.assign(values, {
+        PercentOmnivamp: (1000 + Math.floor(Math.round(v('Vamp') * 10000) * ap / 100)) / 100,
+        'BloodfrenzyAS*100': SIX_COST_POLICY.warwick.speedBps / 100, BloodfrenzyDuration: SIX_COST_POLICY.warwick.frenzyTicks / 20,
+        ChampsToDevourTooltipOnly: SIX_COST_POLICY.warwick.permanentKills,
+        ModifiedDamage: v('BaseDamage') + Math.floor(Math.round(v('ADRatio') * 10000) * ad * speed / 100_000_000),
+      });
+      break;
+    }
+    case 'viktor': Object.assign(values, {
+      LaserHexLength: 2, ModifiedDeathRayDamage: magic('RayMagic'), LaserTrueDamage: v('RayTrue'), ShredDuration: 100 / 20,
+      StunDuration: v('StunSeconds'), ModifiedSpellDamage: magic('StormDamage'), 'PercentMaxHealthDamage*100': v('StormHp') * 100,
+    }); break;
+    case 'sevika': {
+      const spell1 = physical('Spell1_ADPercent', 'APBonusDamage'), scaled = (key: string) => Math.floor(spell1 * Math.round(v(key) * 10000) / 10000);
+      const jackpot = G23_POLICY.highRoller;
+      Object.assign(values, {
+        ModifiedSpell1Damage: spell1, 'Spell1_ReducedDamagePercent*100': v('Spell1_ReducedDamagePercent') * 100,
+        ModifiedSpell2Damage: scaled('Spell2_Modifier'), ModifiedSecondarySpell2Damage: scaled('Spell2_SecondaryModifier'),
+        ModifiedSpell3Damage: scaled('Spell3_Modifier'), 'Spell3_ExecutePercentage*100': v('Spell3_ExecutePercentage') * 100,
+        'Spell3_ResetDamageFalloff*100': v('Spell3_ResetDamageFalloff') * 100,
+        'Durability*100': jackpot.durabilityBps / 100, Duration: jackpot.durabilityTicks / 20,
+        ModifiedSpell4Damage: Math.floor((ad * jackpot.jackpotCoinAdBps + ap * Math.round(v('APBonusDamage') * 100)) / 10000),
+      });
+      break;
+    }
     case 'garen': Object.assign(values, {
       ModifiedHeal: amount(undefined, undefined, undefined, 'HealPercentHealth'),
       ModifiedShield: amount(undefined, 'APShield', undefined, 'PercentHealthShield'),
       ModifiedDamage: physical('ADRatio'), ModifiedSecondaryDamage: physical('SecondaryADRatio'),
     }); break;
   }
+  if (Object.hasOwn(EXPERIMENT_LAB_DISPLAY, definitionId)) Object.assign(values, EXPERIMENT_LAB_DISPLAY[definitionId]);
   // Include expression keys so callers never need to perform numeric arithmetic.
   for (const [, expression] of S13_ABILITY_DATA[base.abilityId].description.matchAll(/@([^@]+)@/g)) {
     const [key, ...factors] = expression.split('*');
