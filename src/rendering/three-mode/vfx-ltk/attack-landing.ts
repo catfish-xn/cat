@@ -1,5 +1,6 @@
 import type { DisplayCombatEvent } from '../../../presentation/combat-display';
-import type { AttackLanding } from './runtime';
+import type { AttackLanding, LtkPlayOptions } from './runtime';
+import type { TimelineVariant } from './timeline';
 
 /** Rules ticks per second (combat tick = 0.05 s). */
 const TICKS_PER_SECOND = 20;
@@ -9,6 +10,14 @@ const TICKS_PER_SECOND = 20;
  * so it flies on. Its wind-up part is not launched yet and goes with the attacker, as the rules cancel it then.
  */
 export const attackOutlivesSource = (landing: AttackLanding | undefined): boolean => !!landing && landing.phase !== 'windup';
+/**
+ * The play options of an attack (placeholder-renderer playAction): its swing's release mapping, its rules landing, whether its
+ * projectile outlives the attacker (attackOutlivesSource) and whether it crits; the bare variant when it has none of these.
+ */
+export function attackPlayOptions(variant: TimelineVariant | undefined, release: LtkPlayOptions['release'], landing: AttackLanding | undefined, crit: boolean): LtkPlayOptions | TimelineVariant | undefined {
+  if (!release && !landing && !crit) return variant;
+  return { variant, ...(release ? { release } : {}), ...(landing ? { landing } : {}), ...(attackOutlivesSource(landing) ? { outlivesSource: true } : {}), ...(crit ? { crit } : {}) };
+}
 /** The batch's attack key: one attacker's attack on one tick. */
 export const attackKey = (attackerId: string, tick: number): string => `${attackerId}:${tick}`;
 /**

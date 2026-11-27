@@ -4551,9 +4551,9 @@
     "tests/vfx-ltk-attack-landing.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5951,
+      "currentBytes": 6733,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a1c3f098f75edac702a719c37f2b7d2087d1659ab4fce6d082f57588aa66ffc1",
+      "currentSha256": "f79371169855cfc4976478d8bb2600dbb2d107fc8a38e3096f5a356bdee95223",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attack-release-map.test.ts": {

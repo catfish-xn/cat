@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, landingCues } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { attackKey, attackLandings, attackOutlivesSource } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
+import { attackKey, attackLandings, attackOutlivesSource, attackPlayOptions } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
 import { DEFAULT_ATTACK_FLIGHT_SECONDS, withAttackFlight, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
@@ -48,6 +48,14 @@ describe('a launched ranged attack outlives its attacker', () => {
     expect(attackOutlivesSource({ seconds: 0.4 })).toBe(true);
     expect(attackOutlivesSource({ seconds: 0, phase: 'windup', windupSeconds: 0.3 })).toBe(false);
     expect(attackOutlivesSource(undefined)).toBe(false);
+  });
+  it('the play options the renderer passes: the wind-up play without outlivesSource, the launch play with it', () => {
+    const release = { atSeconds: 0.2, clipSeconds: 0.6, tailSpeed: 1 };
+    const windup = attackPlayOptions(undefined, release, { seconds: 0, phase: 'windup', windupSeconds: 0.3 }, false);
+    const launch = attackPlayOptions(undefined, release, { seconds: 0.4, phase: 'launch' }, true);
+    expect(windup).toEqual({ variant: undefined, release, landing: { seconds: 0, phase: 'windup', windupSeconds: 0.3 } });
+    expect(launch).toEqual({ variant: undefined, release, landing: { seconds: 0.4, phase: 'launch' }, outlivesSource: true, crit: true });
+    expect(attackPlayOptions(undefined, undefined, undefined, false)).toBeUndefined();
   });
 });
 
