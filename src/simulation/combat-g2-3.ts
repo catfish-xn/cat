@@ -130,7 +130,7 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'nunu':{
       const ticks=Math.round(v('DamageDuration')*v('DamageTicksPerSecond'));
       applyStatus(u,origin(u),'damageReduction',Math.round(v('Durability')*10000),Math.round(v('DamageDuration')*20),ctx.tick,ctx.events,true);
-      // 原版对照（用户 2026-11-11 批准）：施法期间锁定 DamageDuration 秒，原地不动、不普攻（channel：禁移动/普攻/施法，被控打断）。
+      // 用户 2026-11-11 批准（自定，非原版数据）：施法期间锁定 DamageDuration 秒，原地不动、不普攻（channel：禁移动/普攻/施法，被控打断）。
       applyStatus(u,origin(u),'channel',0,Math.round(v('DamageDuration')*20),ctx.tick,ctx.events,true,'',seq);
       // The second damage lands NUNU_SECOND_AFTER_PULSE_TICKS after the last periodic one (wind-up batch 2); amounts taken now.
       for(let n=0;n<ticks;n++)for(const x of foes().filter(x=>hexDistance(u.cell,x.cell)<=v('HexRadius')))

@@ -94,7 +94,7 @@ function viewIncludesUnit(event: DisplayCombatEvent, id: string): boolean {
     case 'effectTriggered': return event.ownerId === id || event.targetId === id;
     case 'unitEntered': return event.unit.id === id;
     case 'carryChanged': return event.holderId === id || event.targetId === id;
-    case 'attackLaunched': case 'attackLanded': return event.attackerId === id || event.targetId === id;
+    case 'attackLaunched': case 'attackLanded': case 'attackWindup': case 'attackWindupCancelled': return event.attackerId === id || event.targetId === id;
     case 'jayceCrystal': return event.unitId === id;
     case 'swainAscensionExtended': return event.unitId === id || event.victimId === id;
     case 'abilityProjectileLaunched': case 'abilityProjectileLanded': return event.sourceId === id || event.targetId === id;
