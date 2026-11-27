@@ -480,9 +480,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   // This browser's earlier measurements (envelope-store.ts), by model id and file sha256: a model measured on an earlier
   // visit fits at once, even when it first loads during a combat. Every new measurement is kept there too.
   const envelopeStore = models.cache ? openEnvelopeStore() : null;
-  const keepEnvelope = (id: string, envelope: Envelope) => {
+  // REC ONLY (claude/rec-stand-real, never merged): where each model's envelope came from, each piece's pawn time, combats.
+  const standReal = () => ((globalThis as { __standReal?: { env: Record<string, string>; attach: unknown[]; combats: unknown[] } }).__standReal ??= { env: {}, attach: [], combats: [] });
+  const keepEnvelope = (id: string, envelope: Envelope, how = 'measured') => {
     if (envelopes.has(id)) return; // the first measurement stands (pieces sharing one, a stored one read meanwhile)
-    envelopes.set(id, envelope);
+    envelopes.set(id, envelope); standReal().env[id] ??= how;
     const sha = models.modelSha?.get(id);
     if (sha) void envelopeStore?.then(store => store.keep(id, sha, envelope)).catch(() => undefined); // a store failure never reaches the game
   };
@@ -492,7 +494,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const giveUp = setTimeout(resolve, 2 * ENVELOPE_STORE_TIMEOUT_MS);
     void envelopeStore.then(async store => {
       const wanted = new Map([...models.modelSha ?? []].filter(([id]) => !HOVERING_MODELS.has(id) && !!readUnitScale(models.cache?.manifest.models, id)));
-      for (const [id, envelope] of await store.load(wanted)) if (!envelopes.has(id)) envelopes.set(id, envelope);
+      for (const [id, envelope] of await store.load(wanted)) if (!envelopes.has(id)) { envelopes.set(id, envelope); standReal().env[id] ??= 'stored'; }
     }).catch(() => undefined).finally(() => { clearTimeout(giveUp); resolve(); });
   });
   const envelopeClips = (lease: ModelLease) => {
@@ -508,7 +510,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if ((id.startsWith('pve-') && HOVERING_MODELS.has(id)) || envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
     const envelope = await animationEnvelopeSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop: () => closed || !!fighting });
     if (envelope === null) return false;
-    keepEnvelope(id, envelope);
+    keepEnvelope(id, envelope, 'warmup');
     return true;
   };
   const warmup = retention ? createModelWarmup({ load: id => loadLit!(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
@@ -868,7 +870,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     let envelope = envelopes.get(id);
     if (envelope === undefined && (fighting || id.startsWith('pve-'))) { envelopePending.add(id); return undefined; } // no long task mid-combat
     // Not warmed yet (the warm-up measures in slices ahead of time): measured now, at once.
-    if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); keepEnvelope(id, envelope); }
+    if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); keepEnvelope(id, envelope, fighting ? 'combat-sync' : 'prep-mount'); }
     return envelope;
   };
   // Cast lunges: the world-plane offset (x, z) is turned into the root's frame (it rotates to face) and put on the body
@@ -972,6 +974,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   const attaching = new WeakMap<PieceView, symbol>();
   const attachBody = (view: PieceView) => {
+    const attachRec = { piece: [...pieces].find(([, other]) => other === view)?.[0] ?? null, model: view.model.id, startedAt: performance.now(), fightingAtStart: !!fighting,
+      attachedAt: null as number | null, fightingAtAttach: null as boolean | null }; standReal().attach.push(attachRec); // REC ONLY
     lighting.detachBody(view);
     const request = Symbol(); attaching.set(view, request);
     const revision = ++view.bodyRevision;
@@ -1000,7 +1004,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           });
         } catch (error) { lease.release(); throw error; }
         if (closed || view.disposed || view.definitionId !== originalId || attaching.get(view) !== request) { lease.release(); return; }
-        if (measured) keepEnvelope(definitionId, measured);
+        if (measured) keepEnvelope(definitionId, measured, 'prep-mount');
       }
       // A champion first seen during a combat: measured here once (in slices, at most one a frame) while the stand-in pawn
       // still stands, so its model arrives with the idle's foot calibration instead of its bind box, rather than drawn off
@@ -1014,11 +1018,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           try { measured = await combatEnvelope(definitionId, lease); } catch (error) { lease.release(); throw error; }
         }
         if (closed || view.disposed || attaching.get(view) !== request || view.bodyRevision !== revision || view.definitionId !== originalId) { lease.release(); return; }
-        if (measured) keepEnvelope(definitionId, measured);
+        if (measured) keepEnvelope(definitionId, measured, 'combat');
       }
       championLighting?.apply(lease.scene, definitionId);
       cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
       view.lease = lease;
+      attachRec.attachedAt = performance.now(); attachRec.fightingAtAttach = !!fighting; // REC ONLY
       if (lease.placeholder) {
         // The loader's diagnostic magenta cube is never a player-facing model. Keep the visible, pickable stand-in.
         if (view.dyingFor === 'loading') view.dyingFor = DEATH_FALLBACK_SECONDS;
@@ -1482,6 +1487,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     if (!frame.fighting) joined = false;
     if (fighting !== frame.fighting) rising.clear();
     if (fighting !== null && fighting !== frame.fighting) { if (frame.fighting) starUps.clear(); clearEffects(true); for (const [id, view] of pieces) resetAction(view, id); }
+    if (combatStarted) { // REC ONLY: who is on the board when a combat starts, and 6 s later whether each has its model
+      const at = performance.now(), entry = { at, onBoard: [] as unknown[], later: null as unknown };
+      standReal().combats.push(entry);
+      setTimeout(() => { entry.later = [...pieces].filter(([, view]) => !view.onBench && !view.disposed).map(([id, view]) => ({ id, model: view.model.id,
+        hasModel: !!view.lease && !view.lease.placeholder, source: view.model.id ? standReal().env[view.model.id] ?? null : null })); }, 6000);
+    }
     fighting = frame.fighting;
     // What the room says comes next (board-feed warm hints): queued once per change, after the preload, in a match.
     const hints = feed?.warmHints?.();
