@@ -78,6 +78,12 @@ export interface TimelineCue {
    */
   readonly curve?: StrikeCurve;
   /**
+   * A projectile that flies in at a steady pace and waits there: it reaches its target `arriveShare` of the way through its
+   * flight and stays until travelSeconds runs out (MissileMovement "fixedTimeThenHold"). Set by the play
+   * (LtkPlayOptions.arriveShare), not by a cue list.
+   */
+  readonly arriveShare?: number;
+  /**
    * One row per strike: for a cast whose rules strike several times (its targets list keeps one entry a strike, repeats
    * included; Heimerdinger's rockets), this cue plays once per entry instead of once per distinct target. The k-th of n
    * starts `strikeOffsetTicks(k, n, …)` rule ticks after the cue's delay, and a projectile row with `fan` flies a curve that
