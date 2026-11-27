@@ -175,6 +175,36 @@ describe('mounted 3D pieces turn toward their combat target', () => {
       await publish([], false); await publish([], true);
     }
   });
+  it('through the renderer: a Maddie cast crossfades in no time, a Lux cast at the usual blend, on mounting and after a rebuild', async () => {
+    // Models with a cast clip, so the cast is entered and its output reaches the mixer.
+    vi.mocked(core.ModelCache.prototype.load).mockImplementation(async () => {
+      const body = new three.Group(); body.add(new three.Mesh(new three.BoxGeometry(20, 46, 20)));
+      return { scene: body, placeholder: false, animations: [new three.AnimationClip('idle', 1, []), new three.AnimationClip('spell1', 1, [])],
+        animationNames: { idle: 'idle', cast: 'spell1' }, release: () => body.removeFromParent() } as ModelLease;
+    });
+    const applied: { state: string; blend: number }[] = [];
+    const apply = core.UnitAnimationMixer.prototype.apply;
+    vi.spyOn(core.UnitAnimationMixer.prototype, 'apply').mockImplementation(function (this: InstanceType<typeof core.UnitAnimationMixer>, output) {
+      applied.push({ state: output.state, blend: output.blendSeconds }); return apply.call(this, output);
+    });
+    const castBlend = async (definitionId: string, rebuild: boolean) => {
+      const me = piece({ id: 'me', x: 150, y: 200, definitionId }), foe = piece({ id: 'foe', team: 'enemy', x: 250, y: 200 });
+      await publish([me, foe]);
+      await Promise.all(vi.mocked(core.ModelCache.prototype.load).mock.results.map(result => result.value)); await publish([me, foe]);
+      // A rebuild: out of combat and back in, which makes each piece a new action state and mixer.
+      if (rebuild) { await publish([me, foe], false); await publish([me, foe], true); }
+      applied.length = 0;
+      listener.events([{ type: 'cast', tick: 1, eventSeq: 0, sourceId: 'me', targetIds: ['foe'], completed: true, actionSeq: 1 } as unknown as DisplayCombatEvent]);
+      advance(16);
+      const cast = applied.find(entry => entry.state === 'cast');
+      await publish([], false); await publish([], true);
+      return cast?.blend;
+    };
+    for (const rebuild of [false, true]) {
+      expect(await castBlend('maddie', rebuild), `maddie rebuild=${rebuild}`).toBe(0);
+      expect(await castBlend('lux', rebuild), `lux rebuild=${rebuild}`).toBe(0.12);
+    }
+  });
   it('a cast-aimed unit (Maddie) crossfades into its cast in no time; other units keep the usual blend', async () => {
     const { UnitActionState } = await import('../src/rendering3d/animation-state');
     const { CAST_AIMED_UNITS } = await import('../src/rendering/three-mode/unit-facing');
