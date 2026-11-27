@@ -60,7 +60,7 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScaleOf, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
 import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
@@ -217,6 +217,9 @@ let championIconFor: (id: string) => string | null = () => null;
  */
 let isAnvilPiece: (definitionId: string) => boolean = () => false;
 export function useAnvilTest(next: (definitionId: string) => boolean): void { isAnvilPiece = next; }
+// The shop cost of a definition (simulation/units), injected by three-loader.ts like the anvil test: a five-cost three-star
+// draws bigger (model-fit.ts FIVE_COST_THREE_STAR_SCALE).
+export { useUnitCost } from './model-fit';
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
 type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
@@ -1031,7 +1034,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   /** Rescales an attached champion body from the star factor it carries to its current star level's (feet stay put). */
   const applyStarScale = (view: PieceView, body: Object3D) => {
-    const next = starBodyScale(view.starLevel), ratio = next / view.starScale;
+    const next = starBodyScaleOf(view.definitionId, view.starLevel), ratio = next / view.starScale;
     if (ratio === 1) return;
     body.scale.multiplyScalar(ratio); body.position.multiplyScalar(ratio); rescaleModelGrounding(body, ratio);
     view.starHeight = (view.starHeight - STAR_GAP) * ratio + STAR_GAP;

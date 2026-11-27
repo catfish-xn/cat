@@ -13,6 +13,7 @@ import { s13AssetUrl } from '../../presentation/s13-assets';
 import { anvilIconUrl, isAnvilUnit } from '../../presentation/anvil-display';
 import { unitAnomalies } from '../../presentation/anomaly-display';
 import { SHOP_CATALOG_BY_COST } from '../../simulation/match-rules';
+import { UNIT_DEFINITIONS } from '../../simulation/units';
 
 export interface ThreeModeHandle { dispose(): void }
 
@@ -102,6 +103,7 @@ function mount3d(board: HTMLElement, search: string, exited: () => void): ThreeM
       module.useStarColor?.(starColor); module.useCostColor?.(costColor); module.useMeterColors?.(THEME.color); module.useItemIcon?.(id => s13AssetUrl('item', id));
       module.useAnomalyMark?.((native, items) => unitAnomalies(native, items).length > 0);
       module.useChampionIcon?.(id => anvilIconUrl(id) ?? s13AssetUrl('champion', id)); module.useAnvilTest?.(isAnvilUnit);
+      module.useUnitCost?.(id => UNIT_DEFINITIONS[id]?.cost ?? 1);
       module.useContextRestored?.(remount);
       return module.mountRenderer3d(layer, { assetBase: readAssetBase3d(search) }); })
     .then(mounted => {
