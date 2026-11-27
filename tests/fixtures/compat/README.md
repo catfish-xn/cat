@@ -152,3 +152,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-24 斯特卜治疗 v1: identity-only refresh, `contentDigest` (×2) `eb067864` → `85411c71` (`S13_COMBAT_RULES.stebHeal`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `ee4d7c81071ae346c87a64df48e96344c279d4b4b02c67bb664dae68f9ad255d`.
+
+2026-11-25 金克丝大火箭镜像 v1: identity-only refresh, `contentDigest` (×2) `85411c71` → `190a62ea` (`S13_COMBAT_RULES.jinxRocketMirror`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `d7f70b3cacb28052e6eefbc4899181b54b31321896d2c1ee0214dc09d7d906bb`.
