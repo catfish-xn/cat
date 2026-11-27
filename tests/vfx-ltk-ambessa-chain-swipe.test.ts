@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
-import { AMBESSA_CHAIN_SWIPE_DELAY, CUE_BRANCHES, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
+import { AMBESSA_CHAIN_SWIPE_DELAY, AMBESSA_CHAIN_SWIPE_FADE, CUE_BRANCHES, CUE_OVERRIDES, EMITTER_ALPHA } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import { withCueOverrides } from '../src/rendering/three-mode/vfx-ltk/loader';
 
 // Fable 11-25: Ambessa's chain-stance swipe sits on her (the unit's own anchor, facing her primary target), not on her
@@ -16,6 +16,13 @@ describe("Ambessa's chain swipe anchor", () => {
     expect(swipe[0]).toMatchObject({ action: 'cast', event: 'cast-start', delay: AMBESSA_CHAIN_SWIPE_DELAY });
     expect(AMBESSA_CHAIN_SWIPE_DELAY).toBe(0.1);
     expect(row.map(cue => cue.system).sort()).toEqual(['0f2af66b', '3b4c15e0', '6390530e', '754b6c78', '8a64f4dd', 'a429a900', 'cba05b6e']);
+  });
+  it('draws four of its layers fainter and leaves its arc, edge and short red scratch at full strength', () => {
+    expect(AMBESSA_CHAIN_SWIPE_FADE).toBe(0.25);
+    expect(EMITTER_ALPHA[SWIPE]).toEqual({ Alpha_leadSwipe: AMBESSA_CHAIN_SWIPE_FADE, Alpha_bodySwipe_coreBacker: AMBESSA_CHAIN_SWIPE_FADE,
+      blurChains: AMBESSA_CHAIN_SWIPE_FADE, groundScratch: AMBESSA_CHAIN_SWIPE_FADE });
+    for (const kept of ['Add_leadSwipe', 'Add_edge_highlight', 'Add_groundScratch', 'Add_softSwipe', 'Alpha_softSwipe', 'bottom_dark'])
+      expect(EMITTER_ALPHA[SWIPE]![kept]).toBeUndefined();
   });
   it('still carries the chain and fist branch tags', () => {
     const tagged = withCueOverrides({ version: 1, systems: Object.fromEntries(CUE_OVERRIDES.ambessa!.map(c => [c.system, `systems/${c.system}.json`])),

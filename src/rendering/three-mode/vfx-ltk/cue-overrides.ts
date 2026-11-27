@@ -34,6 +34,8 @@ export const MALZAHAR_GATE_DELAY = 0.2;
  * later than the original's arc. The swipe's own emitters still start after their authored wait.
  */
 export const AMBESSA_CHAIN_SWIPE_DELAY = 0.1;
+/** Alpha factor for the chain swipe's layers the live-server footage does not show (EMITTER_ALPHA). Fitted, not original data. */
+export const AMBESSA_CHAIN_SWIPE_FADE = 0.25;
 /**
  * Seconds a cue that plays out at its end (TimelineCue.playOut) may keep its particles after it, at most: our own cap
  * (自定，非原版, Fable 11-19), only on the cues the 11-19 cut-off evidence found cut while still thick.
@@ -1132,6 +1134,13 @@ export const EMITTER_ALPHA: Readonly<Record<string, Readonly<Record<string, numb
   // Irelia's shield bubble read as a solid ball over her at full strength; half lets her body show through it (Fable 11-20,
   // three-column toggle: this is that column as recorded, the swirl meshes included).
   '67665513': { Add_Shield: 0.5, Swirl_Mesh: 0.5, Swirl_Mesh1: 0.5 },
+  // Ambessa's chain swipe: the original shows only its thin red arc with an orange edge, then a faint trace. Its dark red
+  // under-arc and backing fan, its chain blur and its grey ground scratch drew a solid red fan and dark bands that the
+  // live-server 3-star footage does not show (11-27 layer-by-layer review). Fainter, not off; the arc, its edge and the
+  // short red scratch keep full strength. Fitted, measured on live-server footage, not original data; the cause of the
+  // difference is unknown (known difference, AMBESSA_CHAIN_SWIPE_FADE).
+  '3b4c15e0': { Alpha_leadSwipe: AMBESSA_CHAIN_SWIPE_FADE, Alpha_bodySwipe_coreBacker: AMBESSA_CHAIN_SWIPE_FADE,
+    blurChains: AMBESSA_CHAIN_SWIPE_FADE, groundScratch: AMBESSA_CHAIN_SWIPE_FADE },
 };
 
 /**

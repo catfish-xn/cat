@@ -4519,9 +4519,9 @@
     "tests/vfx-ltk-ambessa-chain-swipe.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 2465,
+      "currentBytes": 3097,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "3b8a3c2ab18790287da01e309370641fc3a19cca021f82cbbfadd7a345650635",
+      "currentSha256": "75ed3f420909e5e47ed93de7de7ae67b3a1aa1c410e1f2e4283320724b06656c",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-attached-caps.test.ts": {
