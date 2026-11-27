@@ -16,6 +16,8 @@ import { ENVELOPE_VERSION, type Envelope } from './model-fit';
 export interface EnvelopeBackend {
   getMany(keys: readonly string[]): Promise<readonly unknown[]>;
   put(key: string, value: unknown): Promise<void>;
+  /** Lets go of the underlying connection (an open that answered only after the timeout). */
+  close?(): void;
 }
 
 export interface EnvelopeStore {
@@ -108,6 +110,7 @@ function openIndexedDbBackend(): Promise<EnvelopeBackend> {
     request.onsuccess = () => {
       const db = request.result;
       resolve({
+        close: () => db.close(),
         async getMany(keys) {
           const store = db.transaction(STORE, 'readonly').objectStore(STORE);
           return Promise.all(keys.map(key => done(store.get(key))));
@@ -126,5 +129,10 @@ function openIndexedDbBackend(): Promise<EnvelopeBackend> {
 
 /** This browser's store, or one that keeps nothing when it cannot be opened. */
 export async function openEnvelopeStore(open: () => Promise<EnvelopeBackend> = openIndexedDbBackend): Promise<EnvelopeStore> {
-  try { return createEnvelopeStore(await timed(open())); } catch { return createEnvelopeStore(null); }
+  const opening = Promise.resolve().then(open);
+  try { return createEnvelopeStore(await timed(opening)); } catch {
+    // Too late or failed: an open that still answers later is closed at once, never kept half-used.
+    void opening.then(late => { try { late.close?.(); } catch { /* already gone */ } }, () => undefined);
+    return createEnvelopeStore(null);
+  }
 }

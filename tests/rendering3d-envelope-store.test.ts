@@ -76,9 +76,14 @@ describe('envelope store', () => {
       await vi.advanceTimersByTimeAsync(ENVELOPE_STORE_TIMEOUT_MS - 1); expect(found).toBeUndefined();
       await vi.advanceTimersByTimeAsync(1); expect(found?.size).toBe(0);
       let opened: Awaited<ReturnType<typeof openEnvelopeStore>> | undefined;
-      void openEnvelopeStore(() => new Promise(() => {})).then(result => { opened = result; });
+      let answer!: (backend: EnvelopeBackend) => void;
+      const late: EnvelopeBackend = { getMany: vi.fn(async () => []), put: vi.fn(async () => {}), close: vi.fn() };
+      void openEnvelopeStore(() => new Promise(resolve => { answer = resolve; })).then(result => { opened = result; });
       await vi.advanceTimersByTimeAsync(ENVELOPE_STORE_TIMEOUT_MS);
       expect(opened).toBeDefined();
+      // The open answers after the timeout: that connection is closed, never used.
+      answer(late); await vi.advanceTimersByTimeAsync(0);
+      expect(late.close).toHaveBeenCalledTimes(1); expect(late.getMany).not.toHaveBeenCalled();
       let none: Map<string, unknown> | undefined;
       void opened!.load(new Map([['twitch', SHA]])).then(result => { none = result; });
       await vi.advanceTimersByTimeAsync(0); expect(none?.size).toBe(0);
