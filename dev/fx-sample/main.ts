@@ -4,7 +4,8 @@
  * &crowd=1 puts all four samples twice against eight enemies casting and attacking nonstop (frame-rate check).
  * &assets=/path/ names the 3D asset root (default /assets3d-local/v8/). Keys: A attack, S cast; it also loops on its own.
  */
-import { useBoardFeed, mountRenderer3d } from '../../src/rendering/three-mode/placeholder-renderer';
+import { useBoardFeed, useUnitCost, mountRenderer3d } from '../../src/rendering/three-mode/placeholder-renderer';
+import { unitCostOf } from '../../src/presentation/unit-cost';
 import type { BoardFeedListener, BoardPiece, BoardFrame } from '../../src/rendering/board-feed';
 
 const params = new URLSearchParams(location.search);
@@ -16,6 +17,7 @@ const unit = (id: string, definitionId: string, team: 'player' | 'enemy', col: n
   ({ id, definitionId, team, starLevel: 2, ...at(col, row), alive: true, visible: true, meters: { hp: 800, maxHp: 1000, mana, maxMana: 60, shield: 0 } });
 const frame = (pieces: BoardPiece[], fighting: boolean): BoardFrame => ({ rows: 8, columns: 7, hexRadius: r, origin, bench: [], pieces, fighting, dragging: null });
 useBoardFeed({ subscribe(next) { listener = next; return () => {}; }, controls: () => null, legendControls: () => null } as never);
+useUnitCost(unitCostOf);
 await mountRenderer3d(document.getElementById('host')!, { assetBase: params.get('assets') ?? '/assets3d-local/v8/' });
 
 const SAMPLES = ['jinx', 'jayce', 'renata', 'vi'];

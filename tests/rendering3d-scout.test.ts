@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Group, Scene, type Texture } from 'three';
+import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial, Scene, type Texture } from 'three';
 import { createScoutStage, readScout } from '../src/rendering/three-mode/scout-stage';
+import { FIVE_COST_THREE_STAR_SCALE, STAR_BODY_SCALE, useUnitCost } from '../src/rendering/three-mode/model-fit';
 import { boardFeedGeneration, publishScout, subscribeBoardFeed, type BoardFrame, type BoardScout } from '../src/rendering/board-feed';
 import { TraitColumn, traitColumnShowRows, type TraitRow } from '../src/rendering/trait-column';
 import type { ModelLease } from '../src/rendering3d';
@@ -145,6 +146,36 @@ describe('3D scouting stage', () => {
     for (const lease of leases) expect(lease.release, lease.id).toHaveBeenCalledTimes(1);
     stage.show(null, null);
     for (const lease of leases) expect(lease.release, lease.id).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('3D scouting: star sizes by cost', () => {
+  it('draws a five-cost three-star about 1.42 times its two-star, and a four-cost three-star at the usual factor', async () => {
+    // Synthetic toy bodies: a 10-unit-tall box per load, at one official scale.
+    const loaded: { id: string; scene: Group }[] = [];
+    const scene = new Scene();
+    useUnitCost(id => id === 'five-a' ? 5 : id === 'four-b' ? 4 : 1);
+    try {
+      const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40,
+        loadModel: id => { const body = new Group(); body.add(new Mesh(new BoxGeometry(4, 10, 4).translate(0, 5, 0), new MeshBasicMaterial()));
+          loaded.push({ id, scene: body }); return Promise.resolve({ scene: body, animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease); },
+        unitScale: () => 1, sourceScale: 0.44, legendModel: () => null, myLegend: () => null, starColor: () => '#ffd34d', itemIcon: () => null,
+        hasAnomaly: () => false, overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
+        own: <T extends { dispose(): void }>(resource: T) => resource });
+      stage.show({ seatId: 'seat-9', name: '机器人 9', orbs: { count: 0, tiers: [] }, board: { bench: [], looseItems: [], augments: [], units: [
+        { definitionId: 'five-a', starLevel: 3, cell: { col: 1, row: 5 }, items: [] },
+        { definitionId: 'five-a', starLevel: 2, cell: { col: 2, row: 5 }, items: [] },
+        { definitionId: 'four-b', starLevel: 3, cell: { col: 3, row: 5 }, items: [] },
+        { definitionId: 'four-b', starLevel: 1, cell: { col: 4, row: 5 }, items: [] },
+      ] } } as unknown as BoardScout, frame);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      const height = (index: number) => { const body = loaded[index]!.scene; body.updateMatrixWorld(true); const box = new Box3().setFromObject(body); return box.max.y - box.min.y; };
+      expect(loaded.map(entry => entry.id)).toEqual(['five-a', 'five-a', 'four-b', 'four-b']);
+      expect(height(0) / height(1)).toBeCloseTo(FIVE_COST_THREE_STAR_SCALE / STAR_BODY_SCALE[2]!, 6);
+      expect(height(0) / height(1)).toBeCloseTo(1.42, 6);
+      expect(height(2) / height(3)).toBeCloseTo(STAR_BODY_SCALE[3]!, 6);
+      stage.show(null, null);
+    } finally { useUnitCost(() => 1); }
   });
 });
 
