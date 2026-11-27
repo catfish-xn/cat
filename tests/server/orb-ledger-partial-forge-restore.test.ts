@@ -32,9 +32,13 @@ import { getMultiplayerRoundById } from '../../src/simulation/multiplayer-round'
  * (seed 75 s0 also does), still in at 6-1's preparation with that forge waiting (the only mixed orb) and the last seat out in 6-1.
  * #791 (ranged attack wind-up; scene change approved by Fable, premises and assertions unchanged): seed 71's s1 is out before 6-1.
  * Searched seeds from 0 (non-streamed rooms, every seat) with the same premises: seed 13 s0 is the first that holds.
+ * Rule chain #877 (2026-11-28; scene change only, premises and assertions unchanged): seed 13's s0 stays in past 6-1 and the room
+ * reaches 6-2. Searched seeds 0..71 in order (non-streamed rooms, every seat) with the same premises (the 4-7 orb [item, forge]
+ * [granted, carried] with its carried row, still in at 6-1's preparation, the last seat out in 6-1, the room ends there with that
+ * forge forfeited): seed 71 s1 is the first from the old seed on that holds (no seed below 13 holds either).
  */
-const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 13, combatStreaming: true });
-const seatId = 's0', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
+const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 71, combatStreaming: true });
+const seatId = 's1', mine = () => room.state.seats.find(s => s.seatId === seatId)!.match;
 afterAll(() => room.dispose());
 const mixedOrbs = (state: MatchState) => state.m8.loot.frozen.rounds.flatMap(r => r.orbs).map(orb => ({ orb,
   statuses: orb.entries.map(e => state.m8.loot.direct.find(d => d.dropId === e.dropId)?.status) })).filter(o => new Set(o.statuses).size > 1);
