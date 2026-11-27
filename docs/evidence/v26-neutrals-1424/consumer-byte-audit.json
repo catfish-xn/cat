@@ -338,9 +338,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 15800,
+      "currentBytes": 15970,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "6ae0095400bab824b4bcd60d60eb6e0e71084b4a341346f3b553b8cacfd46417",
+      "currentSha256": "99d05de559cd779d25f5dd11263f0522a982bd23429fea9e2d41af96952a2b8b",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -1088,9 +1088,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 12427,
+      "currentBytes": 12843,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "ce13872d37ae514d7a6a9a256d5595574160e72f1e0c0ba9405a009d0c1b8913",
+      "currentSha256": "5a44506d3fab835698cf643cad0d6b7016238c476de128c42b2fe5e91d4631b0",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1098,7 +1098,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "964aff5c255073c73575f85e647a48f9fb787c815933504b303cf205a34167a0",
+      "currentSha256": "ee4d7c81071ae346c87a64df48e96344c279d4b4b02c67bb664dae68f9ad255d",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
@@ -1256,7 +1256,7 @@
       "previousBytes": 0,
       "currentBytes": 17784,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "fdd72fa4b69f1c528bb8dd189e8ff81e8979ac56b064cb2ed6824081e4010a3b",
+      "currentSha256": "2282b5cfd0809774e69b30f26546119458006c40b8acb0c1bcae139958bff16f",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
@@ -1264,7 +1264,7 @@
       "previousBytes": 0,
       "currentBytes": 23787,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "883b2847e9d10c94284220047b2758d2b1f1c70893e6590d15ec4db94ff4245c",
+      "currentSha256": "b2650e9ee66636eeb2357cbe48d3bc8afc751cf56dc17de1ee884850eb08733f",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1516,9 +1516,9 @@
     },
     "tests/g2-2-skills.test.ts": {
       "previousBytes": 3718,
-      "currentBytes": 5395,
+      "currentBytes": 5672,
       "previousSha256": "7b64a4592789651488c8c2571fc853c890c5fbb37877d67eb5d765deb7add0b8",
-      "currentSha256": "5e3cf232638f675d6331495d20d41ad912362e6406c1cb4bb46b26d63f11e676",
+      "currentSha256": "2491e1cb62ffef9d23349bacb2d0eb8c922c496461ca5a187be036ff6755becc",
       "firstDifferentByte": 9
     },
     "tests/g2-2-traits.test.ts": {
@@ -1978,9 +1978,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 21836,
+      "currentBytes": 21953,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "99c1b5604fbefba2deadf4c93fccf55159649e46e27bf2d8a45ce441e5bfd2b4",
+      "currentSha256": "c529e905deda10acb9444ba6acaff6a66118160e02aa9aab5c39b4e6a50e547f",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -4137,6 +4137,14 @@
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
       "currentSha256": "45b82facc9f2008361a0a73a7a91797d9b9dfa14ee6efba8b2d3ef4fc096acb4",
       "firstDifferentByte": 216
+    },
+    "tests/steb-heal-timing.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 5029,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "25e802b468a624c85686cbf5121a0ecd145a67f090e7209f87103ce5c3491d32",
+      "firstDifferentByte": 0
     },
     "tests/sustain-stops.test.ts": {
       "previousExists": false,
