@@ -3179,9 +3179,9 @@
     "tests/rendering3d-star-body-scale.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3316,
+      "currentBytes": 4664,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "1b19615715ceac5152c6fe1e87cbf62516c580a437de26ccf8dc2234ff795221",
+      "currentSha256": "ff2b4adb056d4ac0c93c47fe005b5c08c3634e1a59ab5aecd511640cdb59ebd3",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-star-size-by-cost.test.ts": {

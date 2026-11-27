@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial } from 'three';
 import { BIG_THREE_STAR_COST, FIVE_COST_THREE_STAR_SCALE, STAR_BODY_SCALE, fitModel, starBodyScale, starBodyScaleOf, useUnitCost } from '../src/rendering/three-mode/model-fit';
 import { UNIT_DEFINITIONS } from '../src/simulation/units';
+import { readFileSync } from 'node:fs';
+import { unitCostOf } from '../src/rendering/three-mode/unit-cost';
 
 /** A plain 10-unit-tall body standing on y=0 in its own units (no skin, no grounding calibration). */
 function body() {
@@ -57,6 +59,22 @@ describe('2026-11-03 star-level body size', () => {
       const fourCost = Object.values(UNIT_DEFINITIONS).find(definition => definition.cost === 4)!;
       expect(starBodyScaleOf(fourCost.id, 3)).toBe(1.33);
       expect(starBodyScaleOf('not-a-unit', 3)).toBe(1.33);
+    } finally { useUnitCost(() => 1); }
+  });
+
+  it('the recording page injects the game\'s own cost lookup before it mounts, so its five-cost three-stars draw 1.42x too', () => {
+    expect(unitCostOf('jinx')).toBe(5); expect(unitCostOf('malzahar')).toBe(5); expect(unitCostOf('not-a-unit')).toBe(1);
+    // Both hosts that mount the renderer hand it this same lookup: the game's loader and the castcmp recording page.
+    const loader = readFileSync('src/rendering/three-mode/three-loader.ts', 'utf8'), harness = readFileSync('dev/castcmp/harness.ts', 'utf8');
+    expect(loader).toContain("import { unitCostOf } from './unit-cost';");
+    expect(loader).toMatch(/useUnitCost\?\.\(unitCostOf\)/);
+    expect(harness).toContain("import { unitCostOf } from '../../src/rendering/three-mode/unit-cost';");
+    const injected = harness.indexOf('mod.useUnitCost(unitCostOf)'), mounted = harness.indexOf('mod.mountRenderer3d(');
+    expect(injected).toBeGreaterThan(-1); expect(mounted).toBeGreaterThan(injected);
+    useUnitCost(unitCostOf);
+    try {
+      expect(starBodyScaleOf('jinx', 3) / starBodyScaleOf('jinx', 2)).toBeCloseTo(1.42, 9);
+      expect(starBodyScaleOf('malzahar', 3) / starBodyScaleOf('malzahar', 2)).toBeCloseTo(1.42, 9);
     } finally { useUnitCost(() => 1); }
   });
 });

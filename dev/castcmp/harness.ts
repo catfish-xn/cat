@@ -23,6 +23,7 @@ function step(ms: number) {
 // are done before the recorded t=0: 8 frames leave 0.125^8 of the distance (17 units -> under 0.0001).
 const SETTLE_FRAMES = 8, SETTLE_FRAME_MS = 250;
 function settle() { for (let i = 0; i < SETTLE_FRAMES; i++) frameAfter(SETTLE_FRAME_MS); }
+import { unitCostOf } from '../../src/rendering/three-mode/unit-cost';
 import { installProbes } from './probes';
 import { AnimationMixer } from 'three';
 import { createCombatFeedbackRenderer } from '../../src/stats/combat-feedback-renderer';
@@ -50,6 +51,8 @@ const hex = (row: number, col: number) => ({ x: 35 + 34 * Math.sqrt(3) * (col + 
   let listener: any;
   const controls = { hover() {}, select() {}, dragStart: () => false, dragMove: () => ({ allowed: false }), dragEnd() {}, dragCancel() {} };
   mod.useBoardFeed({ subscribe(next: any) { listener = next; return () => {}; }, controls: () => controls } as any);
+  // The game's own cost lookup (three-loader.ts injects the same): a five-cost three-star draws at its own size here too.
+  mod.useUnitCost(unitCostOf);
   const host = document.getElementById('host')!;
   host.style.width = `${w}px`;
   host.style.height = `${h}px`;
