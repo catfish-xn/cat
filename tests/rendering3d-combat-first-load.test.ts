@@ -21,6 +21,14 @@ vi.mock('../src/rendering/three-mode/model-fit', async original => {
     animationEnvelopeSliced: vi.fn(async () => ({ radius: 1, ground: 0, feet: 0 })),
   };
 });
+// This browser's envelope store (envelope-store.ts), as a map the tests fill and read.
+const store = vi.hoisted(() => ({ stored: new Map<string, unknown>(), kept: [] as [string, string, unknown][] }));
+vi.mock('../src/rendering/three-mode/envelope-store', () => ({
+  openEnvelopeStore: async () => ({
+    load: async (models: ReadonlyMap<string, string>) => new Map([...models].filter(([id, sha]) => store.stored.has(`${id}|${sha}`)).map(([id, sha]) => [id, store.stored.get(`${id}|${sha}`)])),
+    keep: (id: string, sha: string, envelope: unknown) => { store.kept.push([id, sha, envelope]); },
+  }),
+}));
 import { BoxGeometry, Group, Mesh, MeshBasicMaterial } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { animationEnvelope, animationEnvelopeSliced, fitModel } from '../src/rendering/three-mode/model-fit';
@@ -28,8 +36,9 @@ import * as renderer from '../src/rendering/three-mode/placeholder-renderer';
 
 let mounted: Renderer3d | undefined, listener: BoardFeedListener;
 const ROOT = 'https://assets.test/combat-first-load/', BODY = 'model', ID = 'twitch';
+const SHA = '0'.repeat(64);
 beforeEach(() => {
-  vi.clearAllMocks();
+  vi.clearAllMocks(); store.stored.clear(); store.kept.length = 0;
   vi.stubGlobal('window', { devicePixelRatio: 1 }); vi.stubGlobal('indexedDB', undefined);
   vi.stubGlobal('requestAnimationFrame', () => 1); vi.stubGlobal('cancelAnimationFrame', () => {});
   vi.stubGlobal('crypto', { subtle: { digest: async () => new Uint8Array(32).buffer } });
@@ -40,12 +49,12 @@ beforeEach(() => {
   vi.stubGlobal('fetch', async (input: RequestInfo | URL) => {
     const url = String(input);
     if (url === `${ROOT}manifest.json`) return Response.json({ schemaVersion: 1, models: { [ID]: { path: 'model.glb', unitScale: 1 } } });
-    if (url === `${ROOT}precache.json`) return Response.json({ schemaVersion: 1, files: [{ path: 'model.glb', bytes: BODY.length, sha256: '0'.repeat(64) }] });
+    if (url === `${ROOT}precache.json`) return Response.json({ schemaVersion: 1, files: [{ path: 'model.glb', bytes: BODY.length, sha256: SHA }] });
     return url.endsWith('model.glb') ? new Response(BODY) : new Response('missing', { status: 404 });
   });
 });
 afterEach(() => { mounted?.dispose(); mounted = undefined; vi.restoreAllMocks(); vi.unstubAllGlobals(); });
-afterAll(() => { vi.doUnmock('three'); vi.doUnmock('../src/rendering/three-mode/model-fit'); vi.resetModules(); });
+afterAll(() => { vi.doUnmock('three'); vi.doUnmock('../src/rendering/three-mode/model-fit'); vi.doUnmock('../src/rendering/three-mode/envelope-store'); vi.resetModules(); });
 
 const mount = async () => {
   let done!: () => void;
@@ -68,6 +77,8 @@ it('a champion first loaded mid-combat is measured in frame-spaced slices and fi
   for (const [, options] of championFits()) expect(options).toMatchObject({ envelopeRadius: 1, ground: 0, feet: 0 });
   expect(animationEnvelope).not.toHaveBeenCalled();
   expect(animationEnvelopeSliced).toHaveBeenCalledTimes(1);
+  // Kept in this browser under the model file's sha256, for the next visit.
+  expect(store.kept).toEqual([[ID, SHA, { radius: 1, ground: 0, feet: 0 }]]);
   const options = vi.mocked(animationEnvelopeSliced).mock.calls[0]![2]!;
   expect(options.budgetMs).toBe(2);
   // Slices are spaced about a frame apart (a timeout, so a hidden page still finishes).
@@ -92,4 +103,24 @@ it('a measurement that cannot finish still shows the model from its bind box and
   listener.frame(frame(false, [piece('a', 150)]));
   await vi.waitFor(() => expect(championFits()).toHaveLength(2));
   expect(championFits()[1]![1]).toMatchObject({ envelopeRadius: 1, ground: 0, feet: 0 });
+});
+
+it('a champion this browser measured before is fitted from its stored envelope, with nothing measured', async () => {
+  store.stored.set(`${ID}|${SHA}`, { radius: 7, ground: -2, feet: 1 });
+  await mount();
+  listener.frame(frame(true, [piece('a', 150)]));
+  await vi.waitFor(() => expect(championFits()).toHaveLength(1));
+  expect(championFits()[0]![1]).toMatchObject({ envelopeRadius: 7, ground: -2, feet: 1 });
+  expect(animationEnvelopeSliced).not.toHaveBeenCalled();
+  expect(animationEnvelope).not.toHaveBeenCalled();
+  expect(store.kept).toEqual([]);
+});
+
+it('a stored envelope for another model file is not used', async () => {
+  store.stored.set(`${ID}|${'f'.repeat(64)}`, { radius: 7, ground: -2, feet: 1 });
+  await mount();
+  listener.frame(frame(true, [piece('a', 150)]));
+  await vi.waitFor(() => expect(championFits()).toHaveLength(1));
+  expect(championFits()[0]![1]).toMatchObject({ envelopeRadius: 1, ground: 0, feet: 0 });
+  expect(animationEnvelopeSliced).toHaveBeenCalledTimes(1);
 });

@@ -46,6 +46,11 @@ const ENVELOPE_SAMPLES = 8, ENVELOPE_STRIDE = 7;
 const ENVELOPE_QUANTILE = 0.98;
 /** The clips a board piece stands, walks and fights in; death, dances and the like do not size its cell. */
 export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
+/**
+ * The measurement's version in the browser's envelope store (envelope-store.ts): raise it whenever envelopeSteps, the
+ * clips it reads or the support sampler (model-grounding.ts) change what an envelope holds, so stored ones are measured again.
+ */
+export const ENVELOPE_VERSION = 1;
 /** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
 export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
 /**
