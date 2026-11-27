@@ -229,3 +229,31 @@ describe('the help dialog chunk (2D bundle budget 11-28)', () => {
     expect(helpPanelChunk()).toBe(helpPanelChunk());
   });
 });
+
+describe('the help button (2D bundle budget 11-28)', () => {
+  it('first click loads the dialog and opens it; a later click opens the same dialog at once; one arriving after the scene closed builds nothing', async () => {
+    const { openHelpOnDemand } = await import('../src/presentation/help-panel-loader');
+    let made = 0; const shown: number[] = [];
+    class HelpPanel { readonly id = ++made; show() { shown.push(this.id); } }
+    const held = heldChunk<{ HelpPanel: typeof HelpPanel }>(), slot = { help: null as never };
+    openHelpOnDemand(slot, () => true, held.chunk as never);
+    expect(held.loads).toHaveBeenCalledTimes(1); expect(shown).toEqual([]);
+    held.arrive({ HelpPanel }); await flush();
+    expect(made).toBe(1); expect(shown).toEqual([1]);
+    held.loads.mockClear();
+    openHelpOnDemand(slot, () => true, held.chunk as never);
+    expect(shown).toEqual([1, 1]); expect(held.loads).not.toHaveBeenCalled(); expect(made).toBe(1);
+    // The scene closed before the chunk arrived: nothing is built or shown.
+    const late = heldChunk<{ HelpPanel: typeof HelpPanel }>(), slot2 = { help: null as never };
+    let alive = true;
+    openHelpOnDemand(slot2, () => alive, late.chunk as never);
+    alive = false; late.arrive({ HelpPanel }); await flush();
+    expect(made).toBe(1); expect(slot2.help).toBeNull();
+  });
+  it('the board scene prefetches the help chunk on creation and wires its help button through openHelpOnDemand', async () => {
+    const { readFileSync } = await import('node:fs');
+    const scene = readFileSync(new URL('../src/rendering/BoardScene.ts', import.meta.url), 'utf8');
+    expect(scene).toMatch(/const helpChunk = helpPanelChunk\(\); helpChunk\.prefetch\(\);/);
+    expect(scene).toMatch(/help: \(\) => openHelpOnDemand\(helpSlot, \(\) => !!this\.strategyPanel, helpChunk\)/);
+  });
+});

@@ -4333,9 +4333,9 @@
     "tests/ui-chunk-split.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 15317,
+      "currentBytes": 17156,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "087a044af4d6c92e3d63d5618c90bc367c92d73838ab9a69882d6f13d7abd0d0",
+      "currentSha256": "7be0646cb1799a95e947beb4b94fe87a97e885b8303968bb6c9d569c26a8e4d3",
       "firstDifferentByte": 0
     },
     "tests/ur-i3-combat-statuses.test.ts": {

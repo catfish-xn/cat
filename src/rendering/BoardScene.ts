@@ -57,7 +57,7 @@ import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, retryRootUiAssets, rootUiAssetsLoaded, s13AssetUrl, championPortraitKey } from '../presentation/s13-assets';
 import { readAssetBase3d } from './render-mode';
 import type { HelpPanel } from '../presentation/help-panel';
-import { helpPanelChunk } from '../presentation/help-panel-loader';
+import { helpPanelChunk, openHelpOnDemand } from '../presentation/help-panel-loader';
 import { reducedMotion } from '../presentation/preferences';
 import { lazyMergeFx } from '../presentation/merge-fx-loader';
 import { battleLoadout, battleLoadoutText, BATTLE_EQUIPMENT_SUBMITTED, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, gearExtras, gearText, NO_GEAR_EXTRAS, wornDefinitions } from '../presentation/equipment-feedback';
@@ -290,8 +290,9 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5, 1).setDepth(30).setVisible(false).setName('loadout-tip');
     // The help dialog loads on demand (help-panel-loader.ts): prefetched once the first screen is idle, made on first open.
     const helpChunk = helpPanelChunk(); helpChunk.prefetch();
+    const scene = this, helpSlot = { get help() { return scene.help; }, set help(panel: HelpPanel | null) { scene.help = panel; } };
     this.strategyPanel = new StrategyPanel({
-      help: () => { if (this.help) { this.help.show(); return; } void helpChunk.load().then(module => { if (!this.strategyPanel) return; (this.help ??= new module.HelpPanel()).show(); }); },
+      help: () => openHelpOnDemand(helpSlot, () => !!this.strategyPanel, helpChunk),
       // Stored only: the next frame's ring sync applies it. Never force layout during a panel rebuild.
       highlight: ids => { this.previewHighlight = new Set(ids); },
       state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), battleItems: () => this.session.phase === 'combat' || this.session.combatView?.units.some(unit => unit.equipment !== undefined) ? null : this.frozenItems(), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
