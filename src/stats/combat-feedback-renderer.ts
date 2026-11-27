@@ -11,8 +11,8 @@ interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, str
 interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; at: number; measured: number; life: number; px: number;
   /** A damage number's place on its first drawn frame: it stays there, its unit may move on (DAMAGE_RIGHT, DAMAGE_JITTER). */
   /** A damage number's first frame (it stays there): its left edge, centre height, and the right edge and half height it had
-   * then, popped, for the same tick's next numbers (DAMAGE_STACK_*). */
-  spawn?: { left: number; y: number; right: number; halfHeight: number; columns: boolean;
+   * then, popped, and how far its bottom edge was below its centre, for the same tick's next numbers (DAMAGE_STACK_*). */
+  spawn?: { left: number; y: number; right: number; bottom: number; columns: boolean;
     /** Its stack column's left edge before its own jitter. */
     base: number };
   /** Its place among damage numbers of one tick on its unit (0 for the first): DAMAGE_STACK_ROWS. */
@@ -79,10 +79,11 @@ const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
  * - A heal stands left of the split: its right edge COLUMN_GAP of its own width left of it (a little left of the original's
  *   midline heal), growing leftward as it pops. HEAL_BELOW_BAR px under its bar's bottom, it rises and follows its unit.
  * - A damage number or crit stands right of the split: its left edge COLUMN_GAP of its own width right of it, plus up to
- *   DAMAGE_JITTER px further right by its own jitter; it grows, slams in, steps and drifts only rightward. Its top edge
+ *   DAMAGE_JITTER px further right by its own jitter (a crit CRIT_SLAM of its size more, so its slam in from up-left stays right
+ *   of the split); it grows, steps and drifts only rightward. Its top edge
  *   (a crit's mark's) DAMAGE_BELOW_BAR px (2–6, by its jitter) under its bar's bottom, plus up to DAMAGE_BELOW_JITTER px.
- * - DAMAGE_STACK_*: the 2nd and 3rd damage numbers of one tick on one unit stand each under the one before (its popped height
- *   apart, plus DAMAGE_STACK_GAP px), keeping their own horizontal jitter; the 4th starts a new column of three, half a number
+ * - DAMAGE_STACK_*: the 2nd and 3rd damage numbers of one tick on one unit stand each under the one before (DAMAGE_STACK_GAP px
+ *   between its popped bottom and this one's popped top edge, a crit's mark's), keeping their own horizontal jitter; the 4th starts a new column of three, half a number
  *   width right of the last one's right edge. Numbers of different ticks do not queue.
  * Without a bar (2D, replays) a number stands on its unit's body as before (BODY_DROP).
  */
@@ -252,13 +253,16 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
             const at = (order: number) => siblings.find(other => other.order === order)?.spawn;
             const row = item.order % DAMAGE_STACK_ROWS, column = Math.floor(item.order / DAMAGE_STACK_ROWS);
             const above = row > 0 ? at(item.order - 1) : undefined, head = row === 0 && column > 0 ? at(item.order - DAMAGE_STACK_ROWS) : undefined;
-            if (above) { cy = above.y + above.halfHeight + DAMAGE_STACK_GAP + size / 2; base = above.base; }
+            // Under the one before: its bottom edge, the gap, then this one's own top edge (a crit's mark's, above its digits).
+            if (above) { cy = above.y + above.bottom + DAMAGE_STACK_GAP + top; base = above.base; }
             if (head) {
               const last = Math.max(...siblings.filter(other => Math.floor(other.order / DAMAGE_STACK_ROWS) === column - 1).map(other => other.spawn!.right));
               cy = head.y; base = last + DAMAGE_STACK_COLUMN_GAP * 2 * half;
             }
-            const jitter = bar ? DAMAGE_JITTER * sx : DAMAGE_JITTER * 2 * sx, left = base + jitter;
-            item.spawn = { left, y: cy, right: left + 2 * w, halfHeight: Math.max(size / 2, top), columns: !!bar, base };
+            // A crit in its column lands CRIT_SLAM of its size further right: room for its slam in from up-left.
+            const room = bar && item.cls === 'crit' ? CRIT_SLAM * item.px : 0;
+            const jitter = bar ? DAMAGE_JITTER * sx : DAMAGE_JITTER * 2 * sx, left = base + jitter + room;
+            item.spawn = { left, y: cy, right: left + 2 * w, bottom: size / 2, columns: !!bar, base };
           }
           const u = Math.min(1, age / Math.max(1, item.life)), still = item.cls === 'crit';
           // In its column it grows rightward from its left edge; without a bar it stays centred where it appeared.
@@ -277,10 +281,11 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         const fadeMs = heal ? HEAL_FADE_MS : FADE_MS;
         const fade = Math.max(0, Math.min(1, (item.life - age) / fadeMs));
         style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
-        // A crit slams in (the user's 11-19 pick): it starts CRIT_SLAM of its size up and to the right, its column's side (it used to
-        // come from up-left), and reaches its spot by CRIT_POP_MS.
-        const slam = item.cls === 'crit' && age < CRIT_POP_MS ? CRIT_SLAM * item.px * (1 - age / CRIT_POP_MS) : 0;
-        const moved = slam ? ` translate(${slam.toFixed(1)}px, ${(-slam).toFixed(1)}px)` : '';
+        // A crit slams in from up-left (the user's 11-19 pick, along its mark's wedge): it starts CRIT_SLAM of its size up and left
+        // and reaches its spot by CRIT_POP_MS. In its column its spot sits that far further right (CRIT_SLAM), so the slam never
+        // crosses the split.
+        const slam = item.cls === 'crit' && age < CRIT_POP_MS ? -CRIT_SLAM * item.px * (1 - age / CRIT_POP_MS) : 0;
+        const moved = slam ? ` translate(${slam.toFixed(1)}px, ${slam.toFixed(1)}px)` : '';
         style(item, 'transform', pop === 1 && !moved ? 'translate(-50%, -50%)' : `translate(-50%, -50%)${moved}${pop === 1 ? '' : ` scale(${pop.toFixed(3)})`}`);
         style(item, 'opacity', String(Number(fade.toFixed(3))));
       }

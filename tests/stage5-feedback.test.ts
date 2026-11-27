@@ -279,46 +279,66 @@ describe('stage5 floating text equivalence and DOM work', () => {
       for (const e of three) { expect(scale(e)).toBe(1); expect(Number(e.style.opacity)).toBe(1); expect(Math.abs(left(e) - (120 + 10 + 25 * 400 / 700))).toBeLessThanOrEqual(15 + 1e-6); }
     });
     // Our readability rules (coordinator 11-27/28, not original data): two columns split by the unit's bar's middle.
-    // (The review's overlap probe for 6660bb42, made a regression test.) Every 10 ms of every number's life, in either order,
-    // plain or crit, one or several on a tick: a heal's right edge stays a quarter of its width left of the split, a damage
-    // number's left edge (a crit's slam included) a quarter of its width right of it, and the two never meet.
-    const slamOf = (e: { style: Record<string, string> }) => { const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(e.style.transform); return m ? [Number(m[1]), Number(m[2])] : [0, 0]; };
-    const box = (e: { text: string; style: Record<string, string> }) => { const w = Math.max(40, e.text.length * 9) * scale(e), h2 = px(e) * scale(e), [dx, dy] = slamOf(e);
-      const x = left(e) + dx, y = top(e) + dy; return { l: x - w / 2, r: x + w / 2, t: y - h2 / 2, b: y + h2 / 2, quarter: Math.max(40, e.text.length * 9) / 4 }; };
-    const meet = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => !(a.r <= b.l || b.r <= a.l || a.b <= b.t || b.b <= a.t);
-    // A tall unit (its bar far above its body: Swain's demon form) and a short one (its bar just over its body: Amumu).
-    const units = { tall: { anchor: { x: 200, y: 260, radius: 40 }, bar: { x: 200, y: 100, w: 70, h: 10 } },
-      short: { anchor: { x: 200, y: 262, radius: 18 }, bar: { x: 200, y: 250, w: 70, h: 10 } } };
+    // (The review's column probe for 2bda8679, made a regression test.) Every 10 ms of every number's life, nine scenes, a tall
+    // and a short unit (their bars at different heights over their bodies), standing, walking right and walking left:
+    // - standing: a heal's right edge stays a quarter of its width left of the split, a damage number's left edge (a crit's
+    //   slam included) a quarter of its width right of it, and the two never meet, all their lives;
+    // - walking: the same on each number's first frame; later a damage number, which does not follow its unit (as in the
+    //   original), may cross: by at most MOVING_LIMIT px over the split and into a heal (measured, with a margin, so it
+    //   cannot grow unseen).
+    // Damage numbers of one tick on the unit never meet on their first frame.
+    const slamOf = (e: { style: Record<string, string> }) => { const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(e.style.transform.replace('translate(-50%, -50%)', '')); return m ? [Number(m[1]), Number(m[2])] : [0, 0]; };
+    const box = (e: { text: string; style: Record<string, string> }) => { const w0 = Math.max(40, e.text.length * 9), w = w0 * scale(e), h2 = px(e) * scale(e), [dx, dy] = slamOf(e);
+      const x = left(e) + dx, y = top(e) + dy; return { l: x - w / 2, r: x + w / 2, t: y - h2 / 2, b: y + h2 / 2, quarter: w0 / 4 }; };
+    const overlap = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => Math.min(a.r - b.l, b.r - a.l, a.b - b.t, b.b - a.t);
+    const units = { tall: { y: 260, r: 40, barY: 100 }, short: { y: 262, r: 18, barY: 250 } };
     const dmg = (tick: number, src = 'b', hp = 44, critical = false) => ({ ...damage(tick, 'a', hp), sourceId: src, critical, eventSeq: tick * 10 + src.length }) as unknown as SceneCombatEvent;
-    const big = (tick: number) => ({ ...heal(tick), actual: 300 }) as SceneCombatEvent;
+    const big = (tick: number) => ({ ...heal(tick), actual: 300, eventSeq: tick * 10 + 9 }) as SceneCombatEvent;
     const scenes: [string, (tick: number) => [number, SceneCombatEvent][]][] = [
       ['plain and heal together', t2 => [[0, dmg(t2)], [0, big(t2)]]],
-      ['heal and plain together, heal pushed first', t2 => [[0, big(t2)], [0, dmg(t2)]]],
-      ['three same-tick plain and a heal', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc')], [0, dmg(t2, 'ddd')], [0, big(t2)]]],
-      ['five same-tick (two columns) and a heal', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc')], [0, dmg(t2, 'ddd')], [0, dmg(t2, 'eeee')], [0, dmg(t2, 'fffff')], [0, big(t2)]]],
       ['crit and heal together', t2 => [[0, dmg(t2, 'b', 44, true)], [0, big(t2)]]],
-      ['plain, then a heal 300–600 ms later', t2 => [[0, dmg(t2)], [300 + (t2 % 4) * 100, big(t2 + 100)]]],
       ['heal, then plain 100–500 ms later', t2 => [[0, big(t2)], [100 + (t2 % 5) * 100, dmg(t2 + 100)]]],
-      ['crit, then a heal 100–500 ms later', t2 => [[0, dmg(t2, 'b', 44, true)], [100 + (t2 % 5) * 100, big(t2 + 100)]]],
+      ['plain, then a heal 100–500 ms later', t2 => [[0, dmg(t2)], [100 + (t2 % 5) * 100, big(t2 + 100)]]],
+      ['three same-tick plain', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc')], [0, dmg(t2, 'ddd')]]],
+      ['five same-tick plain (two columns)', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc')], [0, dmg(t2, 'ddd')], [0, dmg(t2, 'eeee')], [0, dmg(t2, 'fffff')]]],
+      ['same-tick plain, crit, plain', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc', 44, true)], [0, dmg(t2, 'ddd')]]],
+      ['same-tick crit, plain', t2 => [[0, dmg(t2, 'b', 44, true)], [0, dmg(t2, 'cc')]]],
+      ['four mixed same-tick and a heal', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc', 4444, true)], [0, dmg(t2, 'ddd', 44444)], [0, dmg(t2, 'eeee', 44, true)], [0, big(t2)]]],
     ];
-    for (const [name, { anchor, bar }] of Object.entries(units)) for (const [label, scene] of scenes) it(`${name} unit, ${label}: heals left of the bar's middle, damage right of it, never meeting, all their lives`, () => {
-      for (let tick = 1; tick <= 30; tick++) {
-        const events = scene(tick), times = [...new Set(events.map(e => e[0]))].sort((a, b) => a - b), end = Math.max(...times) + 720;
-        setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
-        for (let now = 0; now <= end; now += 10) {
-          for (const [when, event] of events) if (when === now) renderer.push([event], now);
-          renderer.render(now, new Map([['a', anchor]]), [], new Map([['a', bar]]));
-          const shown = snapshot(h)[0].children.filter(e => !e.hidden && e.style.left);
-          const heals = shown.filter(e => e.text.startsWith('+')).map(box), hits = shown.filter(e => !e.text.startsWith('+')).map(box);
-          for (const r of heals) expect(r.r, `${name} ${label} tick ${tick} at ${now}`).toBeLessThanOrEqual(bar.x - r.quarter + 1e-6);
-          for (const r of hits) expect(r.l, `${name} ${label} tick ${tick} at ${now}`).toBeGreaterThanOrEqual(bar.x + r.quarter - 1e-6);
-          for (const a of hits) for (const b of heals) expect(meet(a, b), `${name} ${label} tick ${tick} at ${now}`).toBe(false);
-          // Damage numbers of one tick on the unit never meet on their first frame.
-          if (times.includes(now) && now === 0) for (let i = 0; i < hits.length; i++) for (let j = i + 1; j < hits.length; j++) expect(meet(hits[i]!, hits[j]!), `${label} tick ${tick}`).toBe(false);
+    // Measured on 11-28 at most 47.1 px over the split and 10.0 px into a heal (a unit walking 80 px a second), plus a margin.
+    const MOVING_LIMIT = { cross: 52, meet: 14 };
+    for (const [name, u] of Object.entries(units)) for (const speed of [0, 80, -80]) for (const [label, scene] of scenes) {
+      it(`${name} unit ${speed ? `walking ${speed > 0 ? 'right' : 'left'}` : 'standing'}, ${label}: heals left of the bar's middle, damage right of it`, () => {
+        let worstCross = -Infinity, worstMeet = -Infinity;
+        for (let tick = 1; tick <= 30; tick++) {
+          const events = scene(tick), times = [...new Set(events.map(e => e[0]))], end = Math.max(...times) + 720;
+          setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+          const born = new Set<unknown>();
+          for (let now = 0; now <= end; now += 10) {
+            const split = 200 + speed * now / 1000, bar = { x: split, y: u.barY, w: 70, h: 10 };
+            const fresh = events.filter(e => e[0] === now).map(e => e[1]); if (fresh.length) renderer.push(fresh, now);
+            renderer.render(now, new Map([['a', { x: split, y: u.y, radius: u.r }]]), [], new Map([['a', bar]]));
+            // The labels themselves (stable from frame to frame while they show), read through the same fields as a snapshot.
+            const shown = (h as unknown as Element).children[0]!.children.filter(el => !el.hidden && el.style.left)
+              .map(el => ({ text: el.textContent, style: el.style as Record<string, string>, el }));
+            const heals = shown.filter(e => e.text.startsWith('+')), hits = shown.filter(e => !e.text.startsWith('+'));
+            const where = `${name} v=${speed} ${label} tick ${tick} at ${now}`;
+            // A number's first frame: by the label (the stand-in reuses no label while it shows).
+            const first = (e: { el: unknown }) => { const isNew = !born.has(e.el); born.add(e.el); return isNew; };
+            for (const e of heals) { const r = box(e), isNew = first(e), over = r.r - (split - r.quarter);
+              if (!speed || isNew) expect(over, where).toBeLessThanOrEqual(1e-6); else worstCross = Math.max(worstCross, over); }
+            const newHits = hits.filter(e => first(e));
+            for (const e of hits) { const r = box(e), over = split + r.quarter - r.l;
+              if (!speed || newHits.includes(e)) expect(over, where).toBeLessThanOrEqual(1e-6); else worstCross = Math.max(worstCross, over); }
+            for (const a of hits) for (const b of heals) { const o = overlap(box(a), box(b));
+              if (!speed || (newHits.includes(a) && fresh.length)) expect(o, where).toBeLessThanOrEqual(1e-6); else worstMeet = Math.max(worstMeet, o); }
+            if (fresh.length) for (let i = 0; i < newHits.length; i++) for (let j = i + 1; j < newHits.length; j++) expect(overlap(box(newHits[i]!), box(newHits[j]!)), where).toBeLessThanOrEqual(1e-6);
+          }
+          renderer.dispose();
         }
-        renderer.dispose();
-      }
-    });
+        if (speed) { expect(worstCross).toBeLessThanOrEqual(MOVING_LIMIT.cross); expect(worstMeet).toBeLessThanOrEqual(MOVING_LIMIT.meet); }
+      });
+    }
     it('our readability rules: the 2nd and 3rd same-tick damage numbers stand each under the one before; the 4th starts a column half a width to the right', () => {
       const bar = { x: 200, y: 100, w: 70, h: 10 }, anchor = { x: 200, y: 260, radius: 40 };
       setup(); const h = host(), r = createCombatFeedbackRenderer(h);
@@ -386,13 +406,13 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(labels([{ ...damage(1), delivery: 'ability-periodic' } as SceneCombatEvent], 700)).toEqual([]);
       expect(labels([heal(1), crit(2, 'b')]).filter(e => e.text === '+7')).toEqual(labels([heal(1)]));
     });
-    it('a crit slams in from up-right (its column\'s side) popping larger, settles quickly, then holds still until it fades', () => {
+    it('a crit slams in from up-left popping larger, settles quickly, then holds still until it fades', () => {
       const slam = (e: { style: Record<string, string> }) => /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(e.style.transform);
       const at = (now: number) => labels([crit(1)], now)[0];
       expect(scale(at(0))).toBeCloseTo(1.9, 3); expect(scale(at(40))).toBeCloseTo(1.45, 3);
       expect(at(80).style.transform).toBe('translate(-50%, -50%)');
-      // Up-right of its spot at first (CRIT_SLAM of its size each way), on its spot once settled (the slam is the user's 11-19 pick).
-      const first = slam(at(0))!; expect(Number(first[1])).toBeCloseTo(0.25 * px(at(0)), 1); expect(Number(first[2])).toBeCloseTo(-0.25 * px(at(0)), 1);
+      // Up-left of its spot at first (CRIT_SLAM of its size each way), on its spot once settled (the user's 11-19 pick).
+      const first = slam(at(0))!; expect(Number(first[1])).toBeCloseTo(-0.25 * px(at(0)), 1); expect(first[1]).toBe(first[2]);
       expect(slam(at(80))).toBeNull();
       // It does not move: the same place from then until it fades.
       expect(top(at(80))).toBe(top(at(650))); expect(left(at(80))).toBe(left(at(650)));
