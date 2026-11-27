@@ -227,6 +227,8 @@ export interface LtkPlayOptions {
    * and spanFlight cues last it, in place of a flight estimated from the distance (TimelineCue.flightTicks).
    */
   flightSeconds?: number;
+  /** Its projectile cues reach their target this share of the way through their flight and wait there (TimelineCue.arriveShare). */
+  arriveShare?: number;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its projectile flies on without its caster (LtkPlayOptions.outlivesSource). */
@@ -889,6 +891,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
           spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
         }
+        // Flown in and waiting (TimelineCue.arriveShare), whatever timed the flight.
+        if (context.arriveShare !== undefined && spawn.event === 'projectile') spawn = { ...spawn, arriveShare: context.arriveShare };
         waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(context.outlivesSource && spawn.event === 'projectile' ? { outlives: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
@@ -1229,6 +1233,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
           curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
+          arriveShare: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arriveShare : undefined,
           brightness: spawn.brightness,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom,
           // A cue (not a projectile) that plays out past its end still fades, as a plain cue would, the emitters whose
