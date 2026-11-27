@@ -483,12 +483,15 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const keepEnvelope = (id: string, envelope: Envelope) => {
     if (envelopes.has(id)) return; // the first measurement stands (pieces sharing one, a stored one read meanwhile)
     envelopes.set(id, envelope);
+    ((globalThis as { __standSource?: unknown[] }).__standSource ??= []).push({ id, source: 'measured', fighting: !!fighting, at: performance.now() }); // REC ONLY
     const sha = models.modelSha?.get(id);
     if (sha) void envelopeStore?.then(store => store.keep(id, sha, envelope));
   };
   const storedEnvelopes = envelopeStore?.then(async store => {
     const wanted = new Map([...models.modelSha ?? []].filter(([id]) => !HOVERING_MODELS.has(id) && !!readUnitScale(models.cache?.manifest.models, id)));
-    for (const [id, envelope] of await store.load(wanted)) if (!envelopes.has(id)) envelopes.set(id, envelope);
+    const loadedAt = performance.now(), found = await store.load(wanted); // REC ONLY timing
+    ((globalThis as { __standSource?: unknown[] }).__standSource ??= []).push({ id: '*store', source: 'store-read', count: found.size, ms: performance.now() - loadedAt, at: performance.now() }); // REC ONLY
+    for (const [id, envelope] of found) if (!envelopes.has(id)) { envelopes.set(id, envelope); ((globalThis as { __standSource?: unknown[] }).__standSource ??= []).push({ id, source: 'stored', at: performance.now() }); }
   }).catch(() => undefined);
   const envelopeClips = (lease: ModelLease) => {
     const nameOf = (action: string) => lease.animationNames[action as keyof typeof lease.animationNames] ?? action;
@@ -850,9 +853,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   const combatEnvelope = (id: string, lease: ModelLease): Promise<Envelope | null> => {
     let measuring = combatMeasuring.get(id);
     if (!measuring) {
+      // REC ONLY (claude/rec-stand-3l, never merged): wall time, busy time, slice count and longest slice (castcmp stand-log.json).
+      const rec = { id, startedAt: performance.now(), busyMs: 0, slices: 0, maxSliceMs: 0, wallMs: 0 }; let sliceAt = performance.now();
+      const slice = () => { const d = performance.now() - sliceAt; rec.busyMs += d; rec.slices++; rec.maxSliceMs = Math.max(rec.maxSliceMs, d); };
       measuring = animationEnvelopeSliced(lease.scene, envelopeClips(lease), {
-        budgetMs: COMBAT_SLICE_BUDGET_MS, stop: () => closed, pause: () => new Promise<void>(resolve => setTimeout(resolve, COMBAT_SLICE_PAUSE_MS)),
-      }).finally(() => combatMeasuring.delete(id));
+        budgetMs: COMBAT_SLICE_BUDGET_MS, stop: () => closed, pause: () => { slice(); return new Promise<void>(resolve => setTimeout(() => { sliceAt = performance.now(); resolve(); }, COMBAT_SLICE_PAUSE_MS)); },
+      }).finally(() => { combatMeasuring.delete(id); slice(); rec.wallMs = performance.now() - rec.startedAt; ((globalThis as { __standMeasure?: unknown[] }).__standMeasure ??= []).push(rec); });
       combatMeasuring.set(id, measuring);
     }
     return measuring;

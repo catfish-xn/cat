@@ -67,7 +67,24 @@ async function unbind(page, tick, rebind) {
   const page = await browser.newPage({ viewport: { width: 1920, height: 1080 } });
   if (opt('only')) await page.addInitScript(id => { window.__only = id; }, opt('only'));
   const errors = []; page.on('pageerror', e => errors.push(e.message)); page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
-  await page.goto(`http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','critstyle','attached','nfoes','foestar','ally','allystar','ally2','ally2star','mute','solo','nocolor','noerode','preload'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('as-scale') !== undefined ? `asscale=${encodeURIComponent(opt('as-scale'))}&` : ''}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') || opt('render-probe') === '1' ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['me-cell', 'mecell'], ['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell'], ['ally2-cell', 'ally2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}${opt('items') !== undefined ? `items=${encodeURIComponent(opt('items'))}&` : ''}${opt('foe-items') !== undefined ? `foeitems=${encodeURIComponent(opt('foe-items'))}&` : ''}${opt('after-end-ms') !== undefined ? `afterend=${encodeURIComponent(opt('after-end-ms'))}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`);
+  const pageUrl = `http://127.0.0.1:${port}/dev/castcmp/index.html?unit=${unit}&dist=${dist}&target=${target}&${opt('one') ? 'one=1&' : ''}${['form','move','outcome','star','real','numbers','critstyle','attached','nfoes','foestar','ally','allystar','ally2','ally2star','mute','solo','nocolor','noerode','preload'].filter(k => opt(k)).map(k => k + '=' + opt(k) + '&').join('')}${opt('as-scale') !== undefined ? `asscale=${encodeURIComponent(opt('as-scale'))}&` : ''}${opt('hide-units') === '1' ? 'hideunits=1&debug3d=1&' : (opt('probe') ?? '').includes('emitters') || opt('render-probe') === '1' ? 'debug3d=1&' : ''}${opt('pin-foe') ? `pinfoe=${opt('pin-foe')}&` : ''}${opt('pin-foe2') ? `pinfoe2=${opt('pin-foe2')}&` : ''}${opt('from-start') === '1' ? 'fromstart=1&' : ''}${opt('lead-ms') !== undefined ? `leadms=${opt('lead-ms')}&` : ''}${opt('cast-index') !== undefined ? `castindex=${opt('cast-index')}&` : ''}${opt('anchor') !== undefined ? `anchor=${encodeURIComponent(opt('anchor'))}&` : ''}${opt('foe-offset') !== undefined ? `foeoffset=${opt('foe-offset')}&` : ''}${[['me-cell', 'mecell'], ['ally-cell', 'allycell'], ['foe-cell', 'foecell'], ['foe2', 'foe2'], ['foe2star', 'foe2star'], ['foe2-cell', 'foe2cell'], ['ally2-cell', 'ally2cell']].filter(([k]) => opt(k) !== undefined).map(([k, q]) => `${q}=${opt(k)}&`).join('')}${opt('items') !== undefined ? `items=${encodeURIComponent(opt('items'))}&` : ''}${opt('foe-items') !== undefined ? `foeitems=${encodeURIComponent(opt('foe-items'))}&` : ''}${opt('after-end-ms') !== undefined ? `afterend=${encodeURIComponent(opt('after-end-ms'))}&` : ''}window=${times[times.length - 1]}&assets=${encodeURIComponent(`http://127.0.0.1:${assetPort}/`)}`;
+  // REC ONLY (claude/rec-stand-3l): --prime 1 opens the same page once first, in this same browser context, and waits until
+  // the renderer has kept the champions' envelopes in IndexedDB (key count steady for 3 s, at most 90 s): the recorded visit
+  // then reads them from this browser's store ("cache already there").
+  let primeInfo = null;
+  if (opt('prime') === '1') {
+    const t0 = Date.now(); await page.goto(pageUrl);
+    await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
+    const count = () => page.evaluate(() => new Promise(resolve => { try { const r = indexedDB.open('set13-model-envelopes', 1);
+      r.onupgradeneeded = () => { if (!r.result.objectStoreNames.contains('envelopes')) r.result.createObjectStore('envelopes'); };
+      r.onsuccess = () => { const q = r.result.transaction('envelopes', 'readonly').objectStore('envelopes').getAllKeys(); q.onsuccess = () => { const keys = q.result.map(String); r.result.close(); resolve(keys); }; q.onerror = () => resolve([]); };
+      r.onerror = () => resolve([]); } catch { resolve([]); } }));
+    let keys = [], steadySince = Date.now();
+    while (Date.now() - t0 < 90000) { const next = await count(); if (next.length !== keys.length) { keys = next; steadySince = Date.now(); } if (keys.length && Date.now() - steadySince >= 3000) break; await new Promise(r => setTimeout(r, 500)); }
+    primeInfo = { keys, waitedMs: Date.now() - t0 };
+    console.log('prime', JSON.stringify(primeInfo));
+  }
+  await page.goto(pageUrl);
   await page.waitForFunction(() => window.__h || window.__err, null, { timeout: 120000, polling: 500 });
   const err = await page.evaluate(() => window.__err); if (err) throw new Error(err);
   // --real 1 must replay a combat that went through combat start (harness.ts startRealCombat); refuse to record otherwise.
@@ -165,7 +182,7 @@ async function unbind(page, tick, rebind) {
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
   }
   // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
-  fs.writeFileSync(path.join(out, 'stand-log.json'), JSON.stringify(await page.evaluate(() => ({ preload: globalThis.__standPreload ?? null, log: globalThis.__standLog ?? null })), null, 1)); // REC ONLY
+  fs.writeFileSync(path.join(out, 'stand-log.json'), JSON.stringify(await page.evaluate(prime => ({ prime, preload: globalThis.__standPreload ?? null, log: globalThis.__standLog ?? null, source: globalThis.__standSource ?? null, measure: globalThis.__standMeasure ?? null }), primeInfo), null, 1)); // REC ONLY
   fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
   // The overlay counts of the recorded window (vfx-ltk runtime.ts ATTACHED_LAYER_STATS, cleared before the recorded cast; null on builds before it).
