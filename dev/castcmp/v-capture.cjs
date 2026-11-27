@@ -163,7 +163,14 @@ async function unbind(page, tick, rebind) {
     await g.frame(t);
     await page.waitForTimeout(t === times[0] ? 400 : 40);
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
+    // --ltk-probe (recording branch only, #749 Caitlyn check): per frame, the LTK run counters and the recorded unit's attack runs.
+    if (args.includes('--ltk-probe')) fs.appendFileSync(path.join(out, 'ltk-probe.jsonl'), JSON.stringify(await page.evaluate(frameMs => {
+      const stats = window.__ltkStats, sys = window.__h.systems?.();
+      return { frameMs, clock: window.__h.clock?.(), started: (sys?.started ?? []).filter(s => s.source === 'me' && s.action === 'attack'), live: sys?.live ?? [],
+        refused: stats ? { ...stats.refused } : null, startedCount: stats ? { ...stats.started } : null };
+    }, t)) + '\n');
   }
+  if (args.includes('--ltk-probe')) fs.writeFileSync(path.join(out, 'real.json'), JSON.stringify(await page.evaluate(() => window.__h.real ?? null), null, 2));
   // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
   fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
