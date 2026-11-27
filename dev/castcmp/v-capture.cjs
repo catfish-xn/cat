@@ -156,15 +156,21 @@ async function unbind(page, tick, rebind) {
   await (opt('unbind') ? unbind(page, 900000, false) : page.evaluate(() => window.__h.cast()));
   // LOCAL: Viktor's slam lands on his own ability-direct magic packet after the cast
   if (opt('slam')) await page.evaluate(() => window.__h.events([{ type: 'packetDamage', tick: 900000, eventSeq: 900000, sourceId: 'me', targetId: 'foe', damageType: 'magic', sourceKind: 'ability', definitionId: 'viktor-ability', delivery: 'ability-direct', amount: 10, mitigated: 10 }]));
-  let at = 0; const files = [];
+  let at = 0; const files = []; const headings = [];
   for (const t of times) {
     await g.beforeStep();
     await page.evaluate(ms => window.__h.step(ms), t - at); at = t;
     await g.frame(t);
+    headings.push(await page.evaluate(t => { const r = window.__render3d; const v = r?.pieces?.get('me'); if (!v) return { t, none: true };
+      const THREE_V = v.root.position.constructor; const yawOf = o => { const e = o.matrixWorld.elements; return Math.atan2(e[8], e[10]); };
+      v.root.updateMatrixWorld(true); const bones = {}; v.root.traverse(o => { if (o.isBone) bones[o.name] = Math.round(yawOf(o) * 1000) / 1000; });
+      const running = (v.mixer?.mixer?._actions ?? []).filter(x => x.isRunning()).map(x => ({ clip: x.getClip().name, time: Math.round(x.time * 1000) / 1000, w: Math.round(x.getEffectiveWeight() * 100) / 100 }));
+      return { t, rootY: Math.round(v.root.rotation.y * 10000) / 10000, facePoint: v.facePoint ?? null, facing: v.facing ?? null, bones, running }; }, t));
     await page.waitForTimeout(t === times[0] ? 400 : 40);
     const f = path.join(out, `${unit}-${String(t).padStart(4, '0')}.jpg`); await page.screenshot({ path: f, type: "jpeg", quality: 90, clip: fullClip, timeout: 180000 }); files.push([t, f]);
   }
   // Which in-repo cue overrides the page applied / skipped (vfx-ltk cue-overrides.ts, dev builds): proof a code-side cue fix played.
+  fs.writeFileSync(path.join(out, 'headings.json'), JSON.stringify(headings, null, 1));
   fs.writeFileSync(path.join(out, 'cue-overrides.json'), JSON.stringify(await page.evaluate(() => globalThis.__vfxCueOverrides ?? null)));
   fs.writeFileSync(path.join(out, `${unit}-errors.txt`), errors.join('\n'));
   // The overlay counts of the recorded window (vfx-ltk runtime.ts ATTACHED_LAYER_STATS, cleared before the recorded cast; null on builds before it).
