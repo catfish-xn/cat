@@ -3011,6 +3011,13 @@
       "currentSha256": "7a6829069f056eaaea335b1b5b966bff008f901cbe6fc51f853848625b462bcf",
       "firstDifferentByte": 174
     },
+    "tests/rendering3d-mode.test.ts": {
+      "previousBytes": 11429,
+      "currentBytes": 12202,
+      "previousSha256": "3263ffd4cdc285cfa02d0538e470826bb855c3001092dae37dbca3fc01f453a2",
+      "currentSha256": "3ddfb300b2b59ef0fa3cb3150d30a3deb5bf948feac9baed3da84c230fbf942b",
+      "firstDifferentByte": 1151
+    },
     "tests/rendering3d-monster-grounding.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -3135,10 +3142,10 @@
     },
     "tests/rendering3d-scout.test.ts": {
       "previousBytes": 13330,
-      "currentBytes": 14937,
+      "currentBytes": 17584,
       "previousSha256": "0b40231a96e8292087bce64fbcb52b8bd4edc5c75248106a40560cc4865cef90",
-      "currentSha256": "22e5f821bc44744c68b8788c641206ddd0034b3af057f51f22558b0b057aa05e",
-      "firstDifferentByte": 476
+      "currentSha256": "81cdace56e137920466275fc494432e4b9495ac713a811ad35e37418c6e1e640",
+      "firstDifferentByte": 60
     },
     "tests/rendering3d-shop-original-skin.test.ts": {
       "previousExists": false,
@@ -3175,6 +3182,14 @@
       "currentBytes": 3316,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
       "currentSha256": "1b19615715ceac5152c6fe1e87cbf62516c580a437de26ccf8dc2234ff795221",
+      "firstDifferentByte": 0
+    },
+    "tests/rendering3d-star-size-by-cost.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 6804,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "0ee524eba3b6106faa2a8279c7cd949e45443f0fad3f94f5b7f05fd70889006d",
       "firstDifferentByte": 0
     },
     "tests/rendering3d-star-up.test.ts": {
