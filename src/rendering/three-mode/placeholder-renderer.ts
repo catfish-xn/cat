@@ -60,10 +60,10 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScaleOf, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
-import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
+import { CAST_AIMED_UNITS, HeadingTurn, desiredHeading, headingToward, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
@@ -218,6 +218,9 @@ let championIconFor: (id: string) => string | null = () => null;
  */
 let isAnvilPiece: (definitionId: string) => boolean = () => false;
 export function useAnvilTest(next: (definitionId: string) => boolean): void { isAnvilPiece = next; }
+// The shop cost of a definition (simulation/units), injected by three-loader.ts like the anvil test: a five-cost three-star
+// draws bigger (model-fit.ts FIVE_COST_THREE_STAR_SCALE).
+export { useUnitCost } from './model-fit';
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
 /** `modelSha`: each model's envelope source (envelope-store.ts: file sha256 from precache.json + clip settings), by model id. */
@@ -1089,7 +1092,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   /** Rescales an attached champion body from the star factor it carries to its current star level's (feet stay put). */
   const applyStarScale = (view: PieceView, body: Object3D) => {
-    const next = starBodyScale(view.starLevel), ratio = next / view.starScale;
+    const next = starBodyScaleOf(view.definitionId, view.starLevel), ratio = next / view.starScale;
     if (ratio === 1) return;
     body.scale.multiplyScalar(ratio); body.position.multiplyScalar(ratio); rescaleModelGrounding(body, ratio);
     view.starHeight = (view.starHeight - STAR_GAP) * ratio + STAR_GAP;
@@ -1119,6 +1122,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     attachBody(view); syncStars(view, piece);
     view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
+    view.state.setCastBlend(CAST_AIMED_UNITS.has(view.definitionId) ? 0 : undefined);
     return view;
   };
   // Time a piece's mixer held while nobody could see it (the tick below), with the action revision and mixer it is for:
@@ -1133,6 +1137,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
+    view.state.setCastBlend(CAST_AIMED_UNITS.has(view.definitionId) ? 0 : undefined);
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
@@ -1556,6 +1561,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Every attack or cast replaces the target: one on itself, on nobody or on a unit not drawn leaves none to follow.
     if (source) source.facing = targetId && targetId !== sourceId && pieces.has(targetId) ? targetId : null;
   };
+  const aimAtOnce = (sourceId: string, targetId: string | undefined) => {
+    const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
+    if (!source || !target || !CAST_AIMED_UNITS.has(source.definitionId) || !source.alive) return;
+    const heading = headingToward({ x: source.root.position.x, z: source.root.position.z }, { x: target.root.position.x, z: target.root.position.z });
+    if (heading !== null) { source.turn.set(heading); source.root.rotation.y = heading; }
+  };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     // A batch spanning many ticks is the replay catching up after dropped frames: every event still moves the action
     // states, but only its last EFFECT_TICKS start effects (the earlier ones would all burst in this one frame).
@@ -1746,6 +1757,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
         face(event.sourceId, event.targetIds[0]);
+        // A cast that fires on its own first tick faces its target at once (unit-facing.ts CAST_AIMED_UNITS).
+        if (current) aimAtOnce(event.sourceId, event.targetIds[0]);
         if (current) { if (planned.fresh && !planned.noCastEffect) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
         // A holder's cast is its lift: its hold pose runs from here until the rules let go (or no lift comes).
         const caster = pieces.get(event.sourceId);

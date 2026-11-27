@@ -20,7 +20,9 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 
 // LtkPlayOptions.outlivesSource: a projectile the rules already fired flies even if its caster dies before or while it is
 // drawn flying. Off by default, where a projectile from a caster who dies still goes with the caster.
-const skills: Record<string, TimelineCue[]> = { missile: [{ system: 'shot', action: 'cast', event: 'projectile', delay: 0, duration: 0.5, travelSeconds: 0.5 }] };
+const skills: Record<string, TimelineCue[]> = { missile: [{ system: 'shot', action: 'cast', event: 'projectile', delay: 0, duration: 0.5, travelSeconds: 0.5 }],
+  // TimelineCue.flightOutlivesSource: once flying it flies on; not started yet it goes with the caster.
+  rocket: [{ system: 'shot', action: 'cast', event: 'projectile', delay: 0, duration: 0.5, travelSeconds: 0.5, flightOutlivesSource: true }] };
 const toSystem = (p: { x: number; y: number; z: number }) => [p.x * AXIS_SIGN[0] / FX_SCALE, p.y / FX_SCALE, p.z / FX_SCALE];
 
 async function setup() {
@@ -31,7 +33,7 @@ async function setup() {
   const scene = new Scene(), units = new Map<string, { root: Group; body: null; alive: boolean; disposed?: boolean }>();
   ['caster', 'a'].forEach((id, i) => { const root = new Group(); root.position.set(10 + i * 60, 0, 20 + i * 30); scene.add(root); root.updateMatrixWorld(); units.set(id, { root, body: null, alive: true }); });
   const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
-  await runtime.warm('missile');
+  await runtime.warm('missile'); await runtime.warm('rocket');
   const camera = new Camera(), step = (seconds: number) => { for (let t = 0; t < seconds - 1e-9; t += 1 / 60) runtime.update(1 / 60, camera); };
   const dies = (id: string) => { units.get(id)!.alive = false; runtime.stopUnit(id); };
   return { runtime, units, step, dies };
@@ -76,5 +78,35 @@ describe('outlivesSource: a fired projectile flies without its caster', () => {
     runtime.play('missile', 'caster', ['a'], 'cast', { delay: 0.3, board, snapshotTargets: true, outlivesSource: true, cancelWithSource: true });
     step(0.1); dies('caster'); step(0.5);
     expect(built).toHaveLength(0);
+  });
+});
+
+describe('flightOutlivesSource (cue): only a projectile already flying outlives its caster', () => {
+  it('a projectile not started yet still goes with its caster', async () => {
+    const { runtime, step, dies } = await setup();
+    expect(runtime.play('rocket', 'caster', ['a'], 'cast', { delay: 0.3, board, snapshotTargets: true })).toBe(true);
+    step(0.1); dies('caster'); step(0.5);
+    expect(built).toHaveLength(0);
+  });
+  it('a projectile in flight flies on when its caster dies', async () => {
+    const { runtime, step, dies } = await setup();
+    runtime.play('rocket', 'caster', ['a'], 'cast', { board, snapshotTargets: true });
+    step(0.1); dies('caster');
+    expect(runtime.playing('caster')).toBe(true);
+    step(0.5); expect(runtime.playing('caster')).toBe(false);
+  });
+});
+
+describe('which cues outlive their caster in flight (rule receipts: tests/landing-settle, tests/cast-windup-batch3)', () => {
+  it("Heimerdinger's rockets and Renata's missiles, each drawn leaving on the rules' launch tick", async () => {
+    const { CUE_OVERRIDES, HEIMER_ROCKETS, CAST_WINDUP_TICKS } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    const { RENATA_MISSILE_FLIGHT_TICKS, HEIMER_ROCKET_TIMING } = await import('../src/simulation/cast-windup');
+    const flying = Object.entries(CUE_OVERRIDES).flatMap(([champion, cues]) => cues.filter(c => c.flightOutlivesSource).map(c => [champion, c] as const));
+    expect(flying.map(([champion, c]) => `${champion}:${c.system}`).sort()).toEqual(['heimerdinger:c8d6ee2e', 'renata:faf1aeac']);
+    const [, rocket] = flying.find(([champion]) => champion === 'heimerdinger')!, [, missile] = flying.find(([champion]) => champion === 'renata')!;
+    // Drawn leaving when the rules launch it: what the rules settle without the caster is what flies on.
+    expect(rocket.delay).toBeCloseTo(HEIMER_ROCKET_TIMING.launchTicks * 0.05, 9); expect(HEIMER_ROCKETS.launchTicks).toBe(HEIMER_ROCKET_TIMING.launchTicks);
+    expect(missile.travelSeconds).toBeCloseTo(RENATA_MISSILE_FLIGHT_TICKS * 0.05, 9);
+    expect(missile.delay).toBeCloseTo((CAST_WINDUP_TICKS.renata - RENATA_MISSILE_FLIGHT_TICKS) * 0.05, 9);
   });
 });
