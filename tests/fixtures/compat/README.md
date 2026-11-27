@@ -144,3 +144,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-24 塞薇卡重拳 v1: identity-only refresh, `contentDigest` (×2) `8bb37864` → `64c5e278` (`S13_COMBAT_RULES.sevikaPunch`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `b7a2743fc7093deeea21eccc5d190dd64de6d715434357eaf6ce8e1821418aad`.
+
+2026-11-24 卡西奥佩娅主弹 v1: identity-only refresh, `contentDigest` (×2) `64c5e278` → `eb067864` (`S13_COMBAT_RULES.cassiopeiaBolt`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `964aff5c255073c73575f85e647a48f9fb787c815933504b303cf205a34167a0`.

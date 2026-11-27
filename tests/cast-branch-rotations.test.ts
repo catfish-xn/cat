@@ -34,7 +34,8 @@ function run(unit: string, star: number, foes: number, foeStar: number, casts: n
 // 8491e0a6…, Vi's slam; 67e0c368… Mel's dash away from foes).
 // Ranged attack wind-up (#791): the ranged heroes' shots launch after their wind-up, which moves this combat again (was
 // db0a5dbf…, Mel's bolt volley).
-const MIXED_DIGEST = '2685a48695d6cb0ea47d4b59d8d41db797fb99ea0d5af235227c090015ffd580';
+// Cassiopeia's main bolt settles where it lands (11-24), which moves this combat again (was 2685a486…, the ranged attack wind-up).
+const MIXED_DIGEST = '46f145c08b595d886a5f0bbd954d7ecf16a37eaddaa6f29d3de49a861d44991f';
 const hitTargets = (events: readonly CombatEvent[]) => new Set(events.flatMap(e => e.type === 'packetDamage'
   && e.outcome.context.source.ownerId === 'me' && e.outcome.context.delivery !== 'basic-attack' ? [e.outcome.context.targetId] : []));
 

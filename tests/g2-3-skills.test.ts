@@ -4,16 +4,23 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME, variable } from '../src/simulation/combat-s13-state';
 import { battle,unit,freeze } from './combat-helpers';
 import { packets,heals } from './helpers/replay2-views';
-import { JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick } from '../src/simulation/cast-windup';
+import { CASSIOPEIA_BOLT_LAUNCH_TICKS, cassiopeiaBoltFlightTicks, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick } from '../src/simulation/cast-windup';
 function hero(name:string,patch:Partial<CombatUnit>={}):CombatUnit{return unit('p','player',1,3,{definitionId:name,ability:resolveAbility(name+'-ability',1),hp:4000,maxHp:5000,armor:0,magicResist:0,mana:100,maxMana:100,attackDamage:100,attackRange:6,abilityPower:100,baseAttackSpeedBps:1,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],...patch});}
 function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'enemy',2,3,{definitionId:'neutral-stage-2',ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,mana:0,maxMana:1,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],...patch});}
 const raw=(events:readonly CombatEvent[])=>packets(events).filter(x=>x.source.ownerId==='p').map(x=>x.raw);
 it.each([
- ['cassiopeia',[230]],['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
+ ['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
  ['gangplank',[680]],['gangplank-ranged',[305]],['smeech',[190]],['jayce',[500]],
 ] as const)('%s source-backed first-cast coefficients',(name,expected)=>{
  const initial=freeze(battle([hero(name),dummy()],{rngState:42})),saved=JSON.stringify(initial);
  expect(raw(stepCombat(initial).events)).toEqual(expected);expect(JSON.stringify(initial)).toBe(saved);
+});
+// Cassiopeia's main bolt (11-24): it leaves CASSIOPEIA_BOLT_LAUNCH_TICKS after the cast and lands cassiopeiaBoltFlightTicks(1)
+// later on the dummy one hex away (was [230] on the cast, in the table above).
+it('cassiopeia source-backed first-cast coefficients: the main bolt lands after its launch and flight',()=>{
+ let state=freeze(battle([hero('cassiopeia'),dummy()],{rngState:42}));const at:[number,number][]=[],land=CASSIOPEIA_BOLT_LAUNCH_TICKS+cassiopeiaBoltFlightTicks(1);
+ for(let i=0;i<=land+1;i++){const step=stepCombat(freeze(state));state=step.state;for(const p of packets(step.events).filter(p=>p.source.ownerId==='p'))at.push([i,p.raw]);}
+ expect(at).toEqual([[land,230]]);
 });
 // Jayce's ranged cast (11-21): the main hit lands JAYCE_MAIN_HIT_TICKS after the cast and the crystals explode later, one after
 // another (cast-windup.ts). Against one enemy every crystal is thrown at it, and the nearest enemy takes no explosion of its own
@@ -30,7 +37,11 @@ it('renata source-backed first-cast coefficients, landing CAST_WINDUP_TICKS.rena
  expect(at).toEqual([[CAST_WINDUP_TICKS.renata,310]]);
 });
 it('Cassiopeia every third cast splashes only two other targets',()=>{
- const r=stepCombat(battle([hero('cassiopeia',{runtime:{...EMPTY_RUNTIME,castCount:2}}),dummy(),dummy('a',{cell:{col:3,row:3}}),dummy('b',{cell:{col:2,row:2}}),dummy('c',{cell:{col:3,row:2}})],{rngState:42}));
+ // Cassiopeia's main bolt (11-24, window only): the splash settles on the cast, the main bolt after its launch and flight; the window
+ // runs to its landing and keeps every event.
+ let first=stepCombat(battle([hero('cassiopeia',{runtime:{...EMPTY_RUNTIME,castCount:2}}),dummy(),dummy('a',{cell:{col:3,row:3}}),dummy('b',{cell:{col:2,row:2}}),dummy('c',{cell:{col:3,row:2}})],{rngState:42}));
+ const all=[...first.events];for(let i=0;i<CASSIOPEIA_BOLT_LAUNCH_TICKS+cassiopeiaBoltFlightTicks(1);i++){first=stepCombat(first.state);all.push(...first.events);}
+ const r={state:first.state,events:all};
  // targeting-p1 (8106acee): e and b are both adjacent, so the equal-distance tie now draws the combat lcg32 stream.
  // With rngState 42 the draw picks e (v25 always took b, giving [230 on b, 160 on c, 160 on e]). The primary still
  // takes 230 (ordinal 0) and exactly two other targets 160; events list the packets in target order.

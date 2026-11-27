@@ -1,5 +1,5 @@
 import { hexDistance } from './board';
-import { HEIMER_ROCKET_TIMING, JINX_ROCKET_FLIGHT_TICKS, maddieShotFlightTicks, MEL_BOLT_TICKS_PER_HEX, MORDEKAISER_CLAW_TICKS } from './cast-windup';
+import { cassiopeiaBoltFlightTicks, HEIMER_ROCKET_TIMING, JINX_ROCKET_FLIGHT_TICKS, maddieShotFlightTicks, MEL_BOLT_TICKS_PER_HEX, MORDEKAISER_CLAW_TICKS } from './cast-windup';
 import { melBolts } from './combat-six-cost';
 import type { CombatTask } from './combat-types';
 import type { AbilityContext } from './combat-s13-abilities';
@@ -11,11 +11,11 @@ import { byDistance, enemies, grantShield, origin, path, variable, type S13Unit 
  * (abilityProjectileLaunched) and settles on its arrival tick (abilityProjectileLanded, then its effect). A target that died
  * in flight takes nothing and no other one is picked (hit false), as ranged basic attacks do.
  */
-export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw' | 'mel-barrage' | 'jinx-rocket' | 'mel-bolt';
-export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw', 'mel-barrage', 'jinx-rocket', 'mel-bolt'];
+export type AbilityProjectileSkill = 'maddie-shot' | 'heimerdinger-rocket' | 'lux-shield' | 'mordekaiser-claw' | 'mel-barrage' | 'jinx-rocket' | 'mel-bolt' | 'cassiopeia-bolt';
+export const ABILITY_PROJECTILE_SKILLS: readonly AbilityProjectileSkill[] = ['maddie-shot', 'heimerdinger-rocket', 'lux-shield', 'mordekaiser-claw', 'mel-barrage', 'jinx-rocket', 'mel-bolt', 'cassiopeia-bolt'];
 /** The champion each projectile belongs to. */
 export const ABILITY_PROJECTILE_OWNER: Readonly<Record<AbilityProjectileSkill, string>> =
-  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser', 'mel-barrage': 'mel', 'jinx-rocket': 'jinx', 'mel-bolt': 'mel' };
+  { 'maddie-shot': 'maddie', 'heimerdinger-rocket': 'heimerdinger', 'lux-shield': 'lux', 'mordekaiser-claw': 'mordekaiser', 'mel-barrage': 'mel', 'jinx-rocket': 'jinx', 'mel-bolt': 'mel', 'cassiopeia-bolt': 'cassiopeia' };
 /** A skillShot task: before launch (arrivalTick absent) it runs on its launch tick; after, on arrivalTick (= executeAtTick). */
 export interface SkillShotState { readonly skill: AbilityProjectileSkill; readonly arrivalTick?: number }
 
@@ -59,6 +59,7 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
       launchShot(ctx, unit, task, task.targetId!, ctx.tick + Math.max(1, (aim ? hexDistance(unit.cell, aim.cell) : 1) * MEL_BOLT_TICKS_PER_HEX)); return;
     }
     if (shot.skill === 'jinx-rocket') { launchShot(ctx, unit, task, task.targetId!, ctx.tick + JINX_ROCKET_FLIGHT_TICKS); return; }
+    if (shot.skill === 'cassiopeia-bolt') { const aim = ctx.units.find(u => u.id === task.targetId); launchShot(ctx, unit, task, task.targetId!, ctx.tick + cassiopeiaBoltFlightTicks(aim ? hexDistance(unit.cell, aim.cell) : 1)); return; }
     throw new RangeError('unlaunched skill shot ' + shot.skill);
   }
   // Jinx's rocket explodes at the board's centre whoever it was aimed at: every enemy there now takes the amount taken on the
@@ -85,6 +86,8 @@ export function executeSkillShot(ctx: AbilityContext, unit: S13Unit, task: Comba
     case 'mel-barrage': melBolts(ctx, target, task.amount, task.actionSeq, task.source); break;
     // One bolt of a normal cast: one magic packet (ordinal = the bolt's place in the cast).
     case 'mel-bolt': damage('magic', true); break;
+    // Cassiopeia's main bolt (11-24): its magic damage on the target it was cast at, where it lands.
+    case 'cassiopeia-bolt': damage('magic', false); break;
     case 'lux-shield': grantShield(target, task.source, task.amount, ctx.tick + luxShieldTicks(unit), ctx.tick, ctx.events); break;
   }
 }

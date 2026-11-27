@@ -81,7 +81,9 @@ it.each([
   // Sion kill of enemy-r4-2 at tick 410 (same seed and Cassiopeia/Vladimir cells).
   // Ranged attack wind-up (#791, scene change): Morgana (5,7) no longer gives it; on the same seed and Cassiopeia/Vladimir cells,
   // Morgana (6,7) does, Sion kills the same enemy-r4-2 at tick 420 (searched all Morgana cells, seeds 0..19).
-  { contribution: true, seed: 5, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 420, targetId: 'enemy-r4-2' },
+  // Cassiopeia's main bolt settles where it lands (11-24, scene change): seed 5 at (6,7) no longer gives it. Searched seeds from 0
+  // over all Morgana cells (same Cassiopeia/Vladimir cells): seed 1, Morgana (3,5) is the first; Sion kills enemy-r4-2 at tick 333.
+  { contribution: true, seed: 1, cells: [{ col: 3, row: 5 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 333, targetId: 'enemy-r4-2' },
 ])('a holder-owned summon kills as itself; holder contribution=$contribution controls only assists, with identical restored ticks', ({ contribution, seed, cells, tick, targetId }) => withB1Offers([contribution ? 'sentinel-crest' : 'watcher-crest'], () => {
   // Script only the draw; the augment equality is a fixture self-check. All commands,
   // summon kills, contribution facts and restore checks remain real.

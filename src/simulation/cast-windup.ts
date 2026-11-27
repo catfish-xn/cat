@@ -166,3 +166,9 @@ export function rangedAttackWindupTicks(championId: string, intervalTicks: numbe
  * (G23_POLICY.highRoller.slotTicks after the cast); the punch's damage, knock-back, leap, area damage and stun settle on that
  * tick. Aligned to original footage frame by frame (one sample; see docs/S13_RULES_GAP.md 塞薇卡重拳). */
 export const SEVIKA_PUNCH_HIT_TICKS = 20;
+
+/** Cassiopeia's main bolt (11-24, authorization ②, timing only): it leaves CASSIOPEIA_BOLT_LAUNCH_TICKS after her cast (measured
+ * on official footage, not original data) and settles where it lands, flying CASSIOPEIA_BOLT_TICKS_PER_HEX a hex to the target
+ * (its speed from the skill data, rounded to ticks; see docs/S13_RULES_GAP.md 卡西奥佩娅主弹). */
+export const CASSIOPEIA_BOLT_LAUNCH_TICKS = 10, CASSIOPEIA_BOLT_TICKS_PER_HEX = 2;
+export const cassiopeiaBoltFlightTicks = (hexes: number): number => Math.max(1, Math.ceil(hexes * CASSIOPEIA_BOLT_TICKS_PER_HEX));
