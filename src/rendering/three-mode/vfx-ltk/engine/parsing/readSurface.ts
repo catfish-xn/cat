@@ -19,6 +19,7 @@ import type {
 } from "../model/model";
 import {
   channelsOr,
+  constant,
   curve,
   DEFAULT,
   enumByte,
@@ -271,6 +272,14 @@ function isNoMesh(path: string): boolean {
 }
 
 /** The palette an emitter reads its colour off, and null for one carrying none. */
+/**
+ * RECORDING EXPERIMENT ONLY (claude/rec-palette-default, never merged): the weights an emitter that writes none looks its
+ * palette up by, switched by the page's `paldef` query (luma | red | alpha; luma, the current default, when absent).
+ */
+function unsetPaletteMix() {
+  const pick = typeof location === 'undefined' ? null : new URLSearchParams(location.search).get('paldef');
+  return pick === 'red' ? constant([1, 0, 0, 0]) : pick === 'alpha' ? DEFAULT.alpha : DEFAULT.luma;
+}
 export function readPalette(node: VfxValue | null): PaletteModel | null {
   if (node?.type !== "struct") return null;
 
@@ -280,7 +289,7 @@ export function readPalette(node: VfxValue | null): PaletteModel | null {
     selector: curve(field(node, PALETTE.selector), DEFAULT.zero3),
     scrollU: curve(field(node, PALETTE.scrollU), DEFAULT.zero),
     scrollV: curve(field(node, PALETTE.scrollV), DEFAULT.zero),
-    mix: curve(field(node, PALETTE.mix), DEFAULT.luma),
+    mix: curve(field(node, PALETTE.mix), unsetPaletteMix()),
     addressMode: enumByte(field(node, PALETTE.addressMode), ADDRESS_MODE, ADDRESS_MODE.mirror),
   };
 }
