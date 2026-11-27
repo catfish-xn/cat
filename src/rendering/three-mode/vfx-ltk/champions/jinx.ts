@@ -15,10 +15,12 @@ export const JINX_ROCKET_DRAWN = { aimLift: 50 } as const;
 /**
  * Her rocket as the official game draws it (量自正式服画面，非原版数据): after its muzzle flash it leaves the barrel, flies
  * straight at a steady pace to where it lands, waits there a moment, and explodes. The time from the flash to leaving the
- * barrel is the three-star's at three stars (single sample) and the two-star's below (two samples whose live build is not
- * verified); the pace and the wait are the three samples'. The landing tick is the rules': the flash is timed back from it.
+ * barrel is when the footage first shows the rocket less the rocket's own pop-in (the asset's scale curve grows it from
+ * nothing to half its size in about 0.075 s): at once at three stars (single sample), and later below (two samples whose
+ * live build is not verified). The pace and the wait are the three samples'. The landing tick is the rules': the flash is
+ * timed back from it.
  */
-export const JINX_ROCKET_FLOWN = { leaveAfterFlash: { threeStar: 0.067, belowThree: 0.22 }, cellsPerSecond: 7, wait: 0.23, leastFlying: 0.1 } as const;
+export const JINX_ROCKET_FLOWN = { leaveAfterFlash: { threeStar: 0, belowThree: 0.13 }, cellsPerSecond: 7, wait: 0.23, leastFlying: 0.1 } as const;
 /**
  * When, after the rules launch her rocket (`total` seconds before they land it), its muzzle flash plays and it leaves the
  * barrel, how long it is drawn flying in all, and the share of that it takes to reach where it lands (then it waits there):
