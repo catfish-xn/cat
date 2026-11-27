@@ -119,9 +119,9 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
     console.info('solo JS gzip-9:', soloChunks.reduce((sum, chunk) => sum + gzipSync(chunk.code, { level: 9 }).length, 0));
     const uiChunks = chunks.filter(chunk => chunk.fileName.startsWith('assets/ui/'));
     expect(uiChunks.length, 'pure UI data must actually be emitted').toBeGreaterThan(0);
-    // 2D bundle split (11-19): the stats and carousel panels are UI chunks of their own code; they may import only what the
-    // static entry already holds, and never rules or simulation code.
-    const PANEL_CHUNK = /\/src\/(?:stats\/stats-panel|rendering\/online\/carousel-panel)\.ts$/;
+    // 2D bundle split (11-19, 11-28): the stats and carousel panels, the help dialog and the online battle stats are UI chunks of their own code; they
+    // may import only what the static entry already holds, and never rules or simulation code.
+    const PANEL_CHUNK = /\/src\/(?:stats\/stats-panel|rendering\/online\/carousel-panel|presentation\/help-panel|rendering\/online\/battle-summary)\.ts$/;
     for (const chunk of uiChunks) {
       expect(staticPaths.has(chunk.fileName), 'UI text must never be eagerly imported').toBe(false);
       if (chunk.moduleIds.some(id => PANEL_CHUNK.test(normalize(id)))) {
@@ -139,7 +139,7 @@ test('the 2D HTML entry loads 3D implementation only through dynamic imports', a
       expect(allPaths.has(chunk.fileName), 'UI data must be reachable on demand').toBe(true);
       expect(chunk.moduleIds.every(id => /\/src\/presentation\//.test(normalize(id)))).toBe(true);
     }
-    for (const module of ['/src/stats/stats-panel.ts', '/src/rendering/online/carousel-panel.ts', '/src/presentation/s13-g23-items.ts']) {
+    for (const module of ['/src/stats/stats-panel.ts', '/src/rendering/online/carousel-panel.ts', '/src/presentation/s13-g23-items.ts', '/src/presentation/help-panel.ts', '/src/rendering/online/battle-summary.ts']) {
       const owner = chunks.filter(chunk => chunk.moduleIds.some(id => normalize(id).endsWith(module)));
       expect(owner.map(chunk => chunk.fileName.startsWith('assets/ui/')), `${module} must be in one on-demand UI chunk`).toEqual([true]);
     }

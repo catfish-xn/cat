@@ -15,7 +15,7 @@ vi.mock('../src/rendering/online/opponent-board', () => ({ OpponentBoardPanel: w
 vi.mock('../src/rendering/online/scout-minimap', () => ({ ScoutMinimap: widgets.Widget }));
 vi.mock('../src/rendering/online/carousel-holding', () => ({ CarouselHoldingSlot: widgets.Widget, readHeldCarouselUnits: () => [] }));
 vi.mock('../src/rendering/online/carousel-panel-loader', () => ({ LazyCarouselPanel: widgets.Widget }));
-vi.mock('../src/rendering/online/battle-summary', () => ({ BattleSummaryPanel: widgets.Widget }));
+vi.mock('../src/rendering/online/battle-summary-loader', () => ({ LazyBattleSummary: widgets.Widget }));
 vi.mock('../src/rendering/online/economy-hint', () => ({ EconomyHint: widgets.Widget }));
 vi.mock('../src/rendering/online/left-panel-toggle', () => ({ LeftPanelToggle: widgets.Widget }));
 vi.mock('../src/rendering/online/sound', () => ({ OnlineSound: widgets.Widget }));
