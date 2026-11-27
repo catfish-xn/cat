@@ -65,6 +65,27 @@ describe('an attack phase with nothing to play', () => {
     expect(LTK_RUN_STATS.refused).toEqual({ 'not-ready': 1 });
     expect(LTK_RUN_STATS.emptyPhase).toEqual({});
   });
+  // The case the readiness check guards (review 11-28): the index is read but this attack's effect files are still loading.
+  // Its wind-up then also selects nothing, yet it must be refused 'not-ready' (the host falls back), never counted as empty.
+  it('index read, effect files still loading: the wind-up is refused not-ready, not counted as an empty phase', async () => {
+    built.length = 0;
+    for (const key of Object.keys(LTK_RUN_STATS.refused)) delete LTK_RUN_STATS.refused[key];
+    for (const key of Object.keys(LTK_RUN_STATS.emptyPhase)) delete LTK_RUN_STATS.emptyPhase[key];
+    let indexRead = false;
+    const library = createVfxLibrary('/root/', { readJson: url => url.endsWith('index.json')
+      ? (indexRead = true, Promise.resolve({ version: 1, systems: { shot: 's.json', hit: 'h.json' }, assets: { 'synthetic.tex': 'texture.png' }, skills: { gun: shotOnly } }))
+      : new Promise(() => {}), readTexture: async () => new Texture() }); // the effect files never finish loading here
+    const scene = new Scene(), units = new Map<string, any>();
+    ['caster', 'a'].forEach((id, i) => { const root = new Group(); root.position.set(10 + i * 60, 0, 20); scene.add(root); root.updateMatrixWorld(); units.set(id, { root, body: null, alive: true }); });
+    const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
+    void runtime.warm('gun');
+    for (let i = 0; i < 20 && !indexRead; i++) await Promise.resolve();
+    for (let i = 0; i < 20; i++) await Promise.resolve(); // let the index settle into the catalogue
+    expect(indexRead).toBe(true);
+    expect(runtime.play('gun', 'caster', ['a'], 'attack', windup())).toBe(false);
+    expect(LTK_RUN_STATS.refused).toEqual({ 'not-ready': 1 });
+    expect(LTK_RUN_STATS.emptyPhase).toEqual({});
+  });
   it('an empty launch (an attack with no shot) is still refused, and listed to be explained', async () => {
     const { runtime } = await setup();
     expect(runtime.play('flasher', 'caster', ['a'], 'attack', launch())).toBe(false);

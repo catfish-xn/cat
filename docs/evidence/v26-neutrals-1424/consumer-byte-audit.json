@@ -4837,9 +4837,9 @@
     "tests/vfx-ltk-empty-phase.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5104,
+      "currentBytes": 6893,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "7b7b8d0f13cdc13c7d2acf924e4e3e20a75f39a69db20e320b30d9ef88dedf03",
+      "currentSha256": "83c4392f6b8f3022908ac4dbc1f4bb3691bd00e1c77576e3949a20243c2c077f",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-fade-out.test.ts": {
