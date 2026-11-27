@@ -199,7 +199,9 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
       restore();
     }
   } finally {
-    mixer.stopAllAction(); mixer.uncacheRoot(body);
+    // No uncacheRoot: this mixer is local and dropped here, so its caches go with it, while uncaching them ran 10-20 ms
+    // in one step on the largest rigs (a frame-long stall in the sliced form). restore() puts every node back.
+    mixer.stopAllAction();
     restore();
   }
   const low = Number.isFinite(ground) ? ground : null, plain = Number.isFinite(feet) ? feet : null;
