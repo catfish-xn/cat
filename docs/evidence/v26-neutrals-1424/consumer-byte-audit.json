@@ -4061,9 +4061,9 @@
     },
     "tests/stage5-feedback.test.ts": {
       "previousBytes": 10181,
-      "currentBytes": 26345,
+      "currentBytes": 26505,
       "previousSha256": "015ddd4237d2567c320cd970bf47e81795b176a5208fa654c597dfa8b8757857",
-      "currentSha256": "1a6645923e9ef3d952c181897cf4995343e427f236197c0f2dad06e75ed9b9fb",
+      "currentSha256": "77eca82c14cc69266d1d8360e2cd7bcd14145681b781ac7306ad588078779f7f",
       "firstDifferentByte": 216
     },
     "tests/sustain-stops.test.ts": {

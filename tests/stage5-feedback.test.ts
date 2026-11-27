@@ -246,7 +246,7 @@ describe('stage5 floating text equivalence and DOM work', () => {
     });
     const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
     const scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
-    it('a damage number appears on the struck body toward its right, with its own jitter, the same every replay', () => {
+    it('a damage number appears on the struck body toward its right, with its own jitter, the same every replay, its top under its bar', () => {
       // Anchor: x 120, y 300, radius 20. Without a bar it lands 0.25 × the body's width right of the midline, ±15 px either way.
       const [first] = labels([damage(1)], 0), [again] = labels([damage(1)], 0);
       expect(left(first)).toBe(left(again)); expect(top(first)).toBe(top(again));
@@ -258,7 +258,8 @@ describe('stage5 floating text equivalence and DOM work', () => {
       setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
       renderer.push([damage(1)], 0); renderer.render(0, new Map([['a', { x: 120, y: 280, radius: 10 }]]), [], new Map([['a', { x: 120, y: 300, w: 60, h: 10 }]]));
       const [barred] = snapshot(h)[0].children;
-      expect(Math.abs(left(barred) - 135)).toBeLessThanOrEqual(15); expect(top(barred)).toBeGreaterThanOrEqual(305);
+      // Its top edge, at its popped first-frame size, is no higher than its bar's bottom (305).
+      expect(Math.abs(left(barred) - 135)).toBeLessThanOrEqual(15); expect(top(barred) - px(barred) * scale(barred) / 2).toBeGreaterThanOrEqual(305 - 1e-6);
       renderer.dispose();
     });
     it('a damage number does not follow its unit: it drifts right in a small arc, up a little and then down', () => {

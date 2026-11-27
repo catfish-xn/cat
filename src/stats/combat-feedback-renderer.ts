@@ -63,7 +63,7 @@ const PER_UNIT = 6, ALL = 40;
 const BODY_DROP = 0.35;
 /**
  * Where a damage number appears (official-server footage, 11-25): on the struck body, from its bar's centre toward its right
- * end, never above the bar. DAMAGE_RIGHT of the bar's width (or of the unit's radius without a bar) to the right, and a jitter
+ * end, its top edge no higher than its own bar's bottom. DAMAGE_RIGHT of the bar's width (or of the unit's radius without a bar) to the right, and a jitter
  * of up to DAMAGE_JITTER px either way, the same every time a recording is replayed (it comes from the hit, not a random
  * draw). Numbers on one unit do not queue or take turns: a new one lands near the last and may cover it, as in the original.
  */
@@ -214,9 +214,11 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           x = anchor.x; y = Math.max(anchor.y + anchor.radius * BODY_DROP - HEAL_RISE_PER_S * age / 1000, floor);
         } else {
           if (!item.spawn) {
-            // Its first frame: on the body, toward the bar's right end, with its own jitter; never above its bar.
+            // Its first frame: on the body, toward the bar's right end, with its own jitter; its top edge (at its popped size) no
+            // higher than its own bar's bottom, so it never appears on its bar (coordinator 11-27). Its arc may then touch the bar a
+            // little; other units' bars are not avoided.
             const [jx, jy] = jitterOf(item.key), right = bar ? bar.w * DAMAGE_RIGHT : anchor.radius * DAMAGE_RIGHT * 2;
-            const below = bar ? bar.y + bar.h / 2 : -Infinity;
+            const below = bar ? bar.y + bar.h / 2 + size / 2 : -Infinity;
             item.spawn = { x: anchor.x + right + jx * DAMAGE_JITTER, y: Math.max(anchor.y + anchor.radius * BODY_DROP + jy * DAMAGE_JITTER, below) };
           }
           const u = Math.min(1, age / Math.max(1, item.life)), still = item.cls === 'crit';
