@@ -70,7 +70,7 @@ import { WINDUP_SECONDS, tracerDelay, castEffectTuning, createSkillFeel, effectC
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
-import { attackKey, attackLandings, attackPlayOptions } from './vfx-ltk/attack-landing';
+import { attackEventLanding, attackKey, attackLandings, attackPlayOptions, windupLanding } from './vfx-ltk/attack-landing';
 import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
@@ -1696,7 +1696,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'attackWindup') {
         face(event.attackerId, event.targetId);
         if (current && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, event.targetId, [event.targetId],
-          { landing: { seconds: 0, phase: 'windup', windupSeconds: Math.max(0, event.launchTick - event.tick) / 20 } });
+          { landing: windupLanding(event) });
       }
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
@@ -1704,8 +1704,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
         // she holds (#737), and should one come it draws no swing.
         if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets,
-          { variant: planned.variant, landing: launch ? { ...(landings.get(attackKey(event.attackerId, event.tick)) ?? { seconds: 0 }), phase: 'launch' }
-            : landings.get(attackKey(event.attackerId, event.tick)) }, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
+          { variant: planned.variant, landing: attackEventLanding(landings.get(attackKey(event.attackerId, event.tick)), launch) }, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;

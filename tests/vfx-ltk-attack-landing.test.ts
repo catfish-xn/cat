@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, landingCues } from '../src/rendering/three-mode/vfx-ltk/runtime';
-import { attackKey, attackLandings, attackOutlivesSource, attackPlayOptions } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
+import { attackEventLanding, attackKey, attackLandings, attackOutlivesSource, attackPlayOptions, windupLanding } from '../src/rendering/three-mode/vfx-ltk/attack-landing';
 import { DEFAULT_ATTACK_FLIGHT_SECONDS, withAttackFlight, type TimelineCue } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
@@ -56,6 +56,17 @@ describe('a launched ranged attack outlives its attacker', () => {
     expect(windup).toEqual({ variant: undefined, release, landing: { seconds: 0, phase: 'windup', windupSeconds: 0.3 } });
     expect(launch).toEqual({ variant: undefined, release, landing: { seconds: 0.4, phase: 'launch' }, outlivesSource: true, crit: true });
     expect(attackPlayOptions(undefined, undefined, undefined, false)).toBeUndefined();
+  });
+  it('the renderer\'s two call sites: the wind-up event plays a wind-up landing (no outlivesSource), the launch tick a launch landing (outlivesSource)', () => {
+    const windup = windupLanding({ tick: 10, launchTick: 15 });
+    expect(windup).toEqual({ seconds: 0, phase: 'windup', windupSeconds: 0.25 });
+    expect(attackPlayOptions(undefined, undefined, windup, false)).not.toHaveProperty('outlivesSource');
+    const launch = attackEventLanding({ seconds: 0.4 }, true);
+    expect(launch).toEqual({ seconds: 0.4, phase: 'launch' });
+    expect(attackPlayOptions(undefined, undefined, launch, false)).toMatchObject({ outlivesSource: true });
+    expect(attackEventLanding(undefined, true)).toEqual({ seconds: 0, phase: 'launch' }); // launched before its landing is known
+    expect(attackEventLanding({ seconds: 0.3 }, false)).toEqual({ seconds: 0.3 }); // an attack without a wind-up keeps its landing
+    expect(attackEventLanding(undefined, false)).toBeUndefined(); // melee
   });
 });
 

@@ -18,6 +18,13 @@ export function attackPlayOptions(variant: TimelineVariant | undefined, release:
   if (!release && !landing && !crit) return variant;
   return { variant, ...(release ? { release } : {}), ...(landing ? { landing } : {}), ...(attackOutlivesSource(landing) ? { outlivesSource: true } : {}), ...(crit ? { crit } : {}) };
 }
+/** The landing a ranged attack's wind-up play carries (attackWindup display event): its swing only, timed to the launch tick. */
+export const windupLanding = (event: { tick: number; launchTick: number }): AttackLanding =>
+  ({ seconds: 0, phase: 'windup', windupSeconds: Math.max(0, event.launchTick - event.tick) / TICKS_PER_SECOND });
+/** The landing an attack event's play carries: on a wound-up attack's launch tick, its shot (phase launch, the rules' landing
+ * or none yet); otherwise the batch's landing, if any (a ranged attack without a wind-up, or none for melee). */
+export const attackEventLanding = (landing: AttackLanding | undefined, launch: boolean): AttackLanding | undefined =>
+  launch ? { ...(landing ?? { seconds: 0 }), phase: 'launch' } : landing;
 /** The batch's attack key: one attacker's attack on one tick. */
 export const attackKey = (attackerId: string, tick: number): string => `${attackerId}:${tick}`;
 /**
