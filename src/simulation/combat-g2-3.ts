@@ -2,6 +2,7 @@ import { CASSIOPEIA_BOLT_LAUNCH_TICKS, SEVIKA_PUNCH_HIT_TICKS, SWAIN_PULSE_TICKS
 import { scheduleShot } from './ability-projectile';
 import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
+import { SMEECH_RELEAP_AFTER_KILL_TICKS, SMEECH_RELEAP_FLIGHT_TICKS } from './cast-windup';
 import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, jayceCrystalChainPlace, jayceCrystalLandTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
@@ -11,6 +12,7 @@ import { g23State } from './g2-3-combat';
 /** Fixed-form, finite hex execution. All delayed work is part of the combat snapshot. */
 import { contains, hexDistance, type HexCell } from './board';
 import type { CombatTask } from './combat-types';
+import type { CombatEvent } from './combat';
 import type { S13Unit } from './combat-s13-state';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, heroLive, origin, path, variable } from './combat-s13-state';
@@ -46,9 +48,14 @@ function flame(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordi
 function split(total:number,n:number,i:number){return Math.floor(total/n)+(i<total%n?1:0);}
 /** 约定值: instant leap to the nearest unoccupied adjacent hex; no movement animation. */
 function leapG23(ctx:AbilityContext,u:S13Unit,t:S13Unit):void{
- if(hexDistance(u.cell,t.cell)<=1)return;
+ const cell=leapCell(ctx,u,t);
+ if(cell){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cell}); recordAerialMovement(ctx, u, cell);u.cell=cell;}
+}
+/** Where leapG23 puts u next to t now: undefined if already adjacent or no free hex. */
+function leapCell(ctx:AbilityContext,u:S13Unit,t:S13Unit):{col:number;row:number}|undefined{
+ if(hexDistance(u.cell,t.cell)<=1)return undefined;
  const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(c,t.cell)===1&&!ctx.units.some(x=>occupiesCell(x,ctx.tick)&&x.cell.col===c.col&&x.cell.row===c.row)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
- if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
+ return cells[0];
 }
 const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)].filter(id=>!isSupportAuraInstance(id))).size;
 /** One leap's stabs: the first now, the rest SMEECH_STAB_TICKS apart (amounts taken now); SMEECH_STAB_TICKS after the last,
@@ -57,12 +64,22 @@ const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.s
  * 2000+leap*n+i as before. */
 function smeechStabs(ctx:AbilityContext,u:S13Unit,target:S13Unit,raw:number,seq:number,leap:number,total:number):void{
  const n=variable(u,'BaseNumStabs'),ordinal=(i:number)=>leap===0?i:2000+leap*n+i;
- hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');
+ hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');ctx.packets.at(-1)!.smeechStab=true;
  for(let i=1;i<n;i++)later(ctx,u,target,'g23Stab',i*SMEECH_STAB_TICKS,split(raw,n,i),seq,ordinal(i),n);
  later(ctx,u,target,'g23Smeech',n*SMEECH_STAB_TICKS,raw,seq,leap+1,total);
 }
 function smeechTarget(ctx:AbilityContext,u:S13Unit):S13Unit|undefined{
  return enemies(u,ctx.units).filter(x=>hexDistance(u.cell,x.cell)<=variable(u,'LeapHexRange')).sort((a,b)=>g23ItemCount(a)-g23ItemCount(b)||hexDistance(u.cell,a.cell)-hexDistance(u.cell,b.cell)||compareText(a.id,b.id))[0];
+}
+/** One of Smeech's stabs killed its target (combat-s13 damage resolution): his remaining stabs on it are dropped, he stands
+ * still, and his re-leap check runs SMEECH_RELEAP_AFTER_KILL_TICKS later (11-25, footage qC7Z). A target killed by anything
+ * else is still found dead by his next stab, as before. */
+export function smeechKilled(u:S13Unit,targetId:string,seq:number,tick:number,events:CombatEvent[]):void{
+ const round=(x:CombatTask)=>x.actionSeq===seq&&x.targetId===targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
+ const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech'&&!x.cell);if(!check)return;
+ u.tasks=[...u.tasks.filter(x=>!round(x)),{...check,executeAtTick:tick+SMEECH_RELEAP_AFTER_KILL_TICKS}];
+ // Held through the re-leap's own tick too, so he does not take a step in it before the leap runs.
+ applyStatus(u,origin(u),'channel',0,SMEECH_RELEAP_AFTER_KILL_TICKS+1,tick,events,true,'',seq);
 }
 /** The rolled High Roller spell, once the slot machine has stopped. */
 function sevikaSpell(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number,spell:number,mod:string,mods=true):void{
@@ -301,13 +318,33 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
    const blue=g23State(u).highRoller.some(r=>r.actionSeq===task.actionSeq&&r.mod==='blue-flamethrower');
    flame(ctx,u,target,task.amount,task.actionSeq,task.ordinal,blue?Math.round(variable(u,'Spell1_Bonus_DamagePercentPerSecond')*10000)*task.ordinal:0);return;
   }
+  // Smeech's re-leap landing (task.cell, 11-25): he lands now, next to his new target, and strikes (task.amount is the amount
+  // before this leap's reduction). If that target died in the air he lands on the hex he aimed at and goes the way of a stab
+  // kill (self-chosen): he stands still and his re-leap check runs SMEECH_RELEAP_AFTER_KILL_TICKS later.
+  if(task.kind==='g23Smeech'&&task.cell){
+   const free=!ctx.units.some(x=>x.id!==u.id&&occupiesCell(x,ctx.tick)&&x.cell.col===task.cell!.col&&x.cell.row===task.cell!.row);
+   const next=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0&&x.team!==u.team);
+   const to=free?task.cell:next?leapCell(ctx,u,next):undefined;
+   if(to&&(to.col!==u.cell.col||to.row!==u.cell.row)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:{...to}});recordAerialMovement(ctx,u,to);u.cell={...to};}
+   if(next){smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;}
+   const {cell:_landed,...check}=task;
+   u.tasks.push({...check,key:JSON.stringify([u.id,task.actionSeq,'g23Smeech',task.ordinal,task.targetId]),executeAtTick:ctx.tick+SMEECH_RELEAP_AFTER_KILL_TICKS});
+   applyStatus(u,origin(u),'channel',0,SMEECH_RELEAP_AFTER_KILL_TICKS+1,ctx.tick,ctx.events,true,'',task.actionSeq);return;
+  }
   if(task.kind==='g23Smeech'){
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;
    const next=smeechTarget(ctx,u);if(!next)return;
-   leapG23(ctx,u,next);
-   // Display only (authorization ①): marks this tick's movement as the re-leap, so the renderer plays a leap, not a walk.
-   ctx.events.push({type:'abilityMarker',tick:ctx.tick,unitId:u.id,marker:'smeech-leap-again',cell:{...u.cell},arrivalTick:ctx.tick});
-   smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
+   // Already next to him (11-25): no flight and no hex change; he strikes it now, and no leap marker is sent.
+   if(hexDistance(u.cell,next.cell)<=1){smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;}
+   // Else the re-leap (11-25): he takes off now and lands SMEECH_RELEAP_FLIGHT_TICKS later next to `next` (the hex chosen now),
+   // where he strikes; in the air he stays on his hex for the rules, taking no step and no attack.
+   const cell=leapCell(ctx,u,next)??{...u.cell},landing=ctx.tick+SMEECH_RELEAP_FLIGHT_TICKS;
+   applyStatus(u,origin(u),'channel',0,SMEECH_RELEAP_FLIGHT_TICKS+1,ctx.tick,ctx.events,true,'',task.actionSeq);
+   u.tasks.push({key:JSON.stringify([u.id,task.actionSeq,'g23SmeechLand',task.ordinal,next.id]),kind:'g23Smeech',source:origin(u),executeAtTick:landing,targetId:next.id,
+     amount:task.amount,actionSeq:task.actionSeq,ordinal:task.ordinal,total:task.total,cancellable:false,cell:{...cell}});
+   // Display only (authorization ①): the re-leap takes off now; it lands on `cell` at arrivalTick, where the movement event is.
+   ctx.events.push({type:'abilityMarker',tick:ctx.tick,unitId:u.id,marker:'smeech-leap-again',cell:{...cell},arrivalTick:landing});
+   return;
   }
   // Jayce's crystals (display only): one lands, or one explodes, at its cell.
   if(task.kind==='g23CrystalLand'||task.kind==='g23CrystalBlast'){
@@ -322,10 +359,10 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   // A later stab: its target, if still alive, takes the amount taken on the cast (a dead one takes nothing; no other is picked).
   if(task.kind==='g23Stab'){
    const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);
-   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');return;}
+   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');ctx.packets.at(-1)!.smeechStab=true;return;}
    const round=(x:CombatTask)=>x.actionSeq===task.actionSeq&&x.targetId===task.targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
-   const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech');if(!check)return;
-   u.tasks=u.tasks.filter(x=>!round(x));executeG23Task(ctx,u,check);return;
+   const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech'&&!x.cell);if(!check)return;
+   u.tasks=u.tasks.filter(x=>!(round(x)&&!x.cell));executeG23Task(ctx,u,check);return;
   }
   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
   if(task.kind==='g23Heal')ctx.heals.push({source:task.source,targetId:target.id,amount:task.amount});

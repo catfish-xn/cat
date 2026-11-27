@@ -156,3 +156,7 @@ skipped as above; the export equals the old file with that one substitution. SHA
 2026-11-25 金克丝大火箭镜像 v1: identity-only refresh, `contentDigest` (×2) `85411c71` → `190a62ea` (`S13_COMBAT_RULES.jinxRocketMirror`);
 `m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
 skipped as above; the export equals the old file with that one substitution. SHA-256: `d7f70b3cacb28052e6eefbc4899181b54b31321896d2c1ee0214dc09d7d906bb`.
+
+2026-11-25 史密奇击杀后再跳 v2 与刀间隔 v1: identity-only refresh, `contentDigest` (×2) `190a62ea` → `8ba38fcc` (`S13_COMBAT_RULES.smeechReleapAfterKill`, `smeechStabInterval`);
+`m8.loot.frozen.replayDigest` unchanged (`9c98c8ef`); no other byte changed. Exported with the same command, v24 gameplay check
+skipped as above; the export equals the old file with that one substitution. SHA-256: `7e897b1043fbcc73f31dbe1b6420b5a77358fe86cffe6e2b2568449cdd1639a4`.

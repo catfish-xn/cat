@@ -73,8 +73,13 @@ export const S13_COMBAT_RULES = Object.freeze({
   jayceCrystals: 'jayce-crystals-land-then-chain-explode-v1',
   // Ranged attack wind-up (11-19): a ranged attack starts, then launches RANGED_ATTACK_WINDUP_TICKS later (cast-windup.ts).
   rangedAttackWindup: 'ranged-attack-start-then-launch-after-windup-v1',
-  // Its cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
-  // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
+  // Smeech after a kill (11-25, user decision): when his stab kills the target he stands still, and SMEECH_RELEAP_AFTER_KILL_TICKS
+  // later strikes the next one at once if it is next to him, else takes off and strikes on landing, SMEECH_RELEAP_FLIGHT_TICKS
+  // after (cast-windup.ts). v2 (11-25 Fable): no flight to an adjacent target, the flight before landing otherwise (v1 struck on
+  // take-off).
+  smeechReleapAfterKill: 'smeech-stands-then-strikes-adjacent-or-flies-to-next-v2',
+  // Smeech's stab interval (11-25, authorization ②): SMEECH_STAB_TICKS measured on official-server footage, fixed.
+  smeechStabInterval: 'smeech-stab-interval-from-official-footage-v1',
   // Jinx's Death Rocket (11-25, user decision): it explodes on the board's centre hex on her enemies' side, mirrored for an
   // enemy-side Jinx (ability-projectile.ts jinxRocketEpicenter), so both sides' rockets fall alike.
   jinxRocketMirror: 'jinx-death-rocket-epicenter-mirrors-to-caster-side-v1',
@@ -84,5 +89,7 @@ export const S13_COMBAT_RULES = Object.freeze({
   cassiopeiaBolt: 'cassiopeia-main-bolt-settles-on-landing-v1',
   // Sevika's punch (11-24): it lands SEVIKA_PUNCH_HIT_TICKS after her slot machine stops (cast-windup.ts).
   sevikaPunch: 'sevika-punch-lands-on-fist-hit-after-slot-stop-v1',
+  // The ranged attack wind-up's cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
+  // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
   rangedAttackWindupCancel: 'ranged-attack-windup-cancels-when-current-target-changes-or-attacker-idle-v1',
 });

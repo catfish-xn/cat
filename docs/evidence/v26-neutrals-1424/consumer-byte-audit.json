@@ -338,9 +338,9 @@
     },
     "tests/augment-pool-batch5-g4-swarm.test.ts": {
       "previousBytes": 11599,
-      "currentBytes": 16158,
+      "currentBytes": 16378,
       "previousSha256": "6de4ab0abe4dec13ff7a5c7067c40998128e721b01c266802e979da77a7be653",
-      "currentSha256": "340683dcadaf779afa632a1211a28fc2122c38f75e1b12d02da1401c237c4767",
+      "currentSha256": "32ea6c4b24995c839eb0e745d04ca8e3d863aa6d84b91e140589ffae91417e98",
       "firstDifferentByte": 1726
     },
     "tests/augment-pool-batch5-g5-pipeline-claims.test.ts": {
@@ -1088,9 +1088,9 @@
     },
     "tests/fixtures/compat/README.md": {
       "previousBytes": 3112,
-      "currentBytes": 13276,
+      "currentBytes": 13752,
       "previousSha256": "de949903c9e6ce684a551c7df84b1feede2aed3c8bff84aa13196c5bee89ec4d",
-      "currentSha256": "015b01dc38d0ae607d780c3ce6cafc58fcfb2a9ba461130b9523a34d866ca1b4",
+      "currentSha256": "038db33021ee72df556fa2c20edcf3c751d7cd16a310a1d0d16d58709b3bd557",
       "firstDifferentByte": 3112
     },
     "tests/fixtures/compat/pre-spoils-v26-seed42.json": {
@@ -1098,7 +1098,7 @@
       "previousBytes": 0,
       "currentBytes": 28449,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "d7f70b3cacb28052e6eefbc4899181b54b31321896d2c1ee0214dc09d7d906bb",
+      "currentSha256": "7e897b1043fbcc73f31dbe1b6420b5a77358fe86cffe6e2b2568449cdd1639a4",
       "firstDifferentByte": 0
     },
     "tests/fixtures/cue-dropped-systems.ts": {
@@ -1254,9 +1254,9 @@
     "tests/fixtures/m8-b8-terminal-2146.json.gz": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 17782,
+      "currentBytes": 17784,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "a0f1074f5d0ebe1b4a68560ee9aea440b22af5abcf9e79434a6ac0ede4d21eaf",
+      "currentSha256": "eaf9bccf4d942a14e6ccc7d03da376bbbcdb8ab21b15e59398804fc0b2cfffe2",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-b8-terminal-2253.json.gz": {
@@ -1264,7 +1264,7 @@
       "previousBytes": 0,
       "currentBytes": 23787,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6514dc62c5e1c844af153850323fa882cfdf855f6e89b60f5512cdf92885aaee",
+      "currentSha256": "8e36ee74ef1e40f86dbf881f9debc46c9d11cd1e82f7d2c09eda6ac05504b089",
       "firstDifferentByte": 0
     },
     "tests/fixtures/m8-golden-states.cjs": {
@@ -1566,9 +1566,9 @@
     },
     "tests/g2-3-skills.test.ts": {
       "previousBytes": 6326,
-      "currentBytes": 13231,
+      "currentBytes": 13938,
       "previousSha256": "4259725477b019d557df481c0cc99e35044c57f6b25bdf466e4f019e8d283f0e",
-      "currentSha256": "da1f0e387f34c7d83bbe9bb3b1ef79d50f6e7d30dba33a444835b35319488fc8",
+      "currentSha256": "8de5780ff3eedb518350998e646f1017d6cbe99d1c4211afa1b9ad56d7e6ee47",
       "firstDifferentByte": 215
     },
     "tests/g2-3-traits.test.ts": {
@@ -1994,9 +1994,9 @@
     },
     "tests/m6-playback-checkpoints.test.ts": {
       "previousBytes": 7455,
-      "currentBytes": 22079,
+      "currentBytes": 22221,
       "previousSha256": "081c1baa395fb4be4a879018c09a577893092f6a508254c8b2a1da01c6af0ab7",
-      "currentSha256": "ceca3ecfa874a366a98f9fea4270d7182bba6931efec7a2f2e45e2d36276dbb7",
+      "currentSha256": "4a66e688b4fa5e7b3fa52eb013b88f661fc511701510be1e4679cf356d1dcd18",
       "firstDifferentByte": 732
     },
     "tests/m6-save-format-v9.test.ts": {
@@ -4150,9 +4150,17 @@
     "tests/smeech-leap-marker.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3137,
+      "currentBytes": 3388,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "dc897654aa199e43d29070c4d380cbb1f6a8f203e12d22f51731d725b220ef76",
+      "currentSha256": "fceab36f35789b0b919b777254556b17c2a01cddf2bb5bb5beefc8f919093a92",
+      "firstDifferentByte": 0
+    },
+    "tests/smeech-releap-after-kill.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 11289,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "2d1a99780e7cdf419603a2fa5f6b279b2a19ade86612e924db5279028eefb5c9",
       "firstDifferentByte": 0
     },
     "tests/stage5-feedback.test.ts": {

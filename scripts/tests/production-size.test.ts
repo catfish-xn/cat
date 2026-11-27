@@ -133,7 +133,8 @@ describe('production representation preserves runtime semantics', () => {
     // 卡西奥佩娅主弹 v1 (2026-11-24): 64c5e278 → eb067864 (S13_COMBAT_RULES.cassiopeiaBolt).
     // 斯特卜治疗 v1 (2026-11-24): eb067864 → 85411c71 (S13_COMBAT_RULES.stebHeal).
     // 金克丝大火箭镜像 v1 (2026-11-25): 85411c71 → 190a62ea (S13_COMBAT_RULES.jinxRocketMirror).
-    expect(parsed.content).toBe('fnv1a32-utf16:190a62ea');
+    // 史密奇击杀后再跳 v2 与刀间隔 v1 (2026-11-25): 190a62ea → 8ba38fcc (S13_COMBAT_RULES.smeechReleapAfterKill).
+    expect(parsed.content).toBe('fnv1a32-utf16:8ba38fcc');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

@@ -698,6 +698,7 @@ export function validateM5Runtime(unit: import('./combat-types').CombatUnit, tic
     else if (task.kind === 'melDash') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && champion(owner) === 'mel'
       && task.source.ownerId === unit.id && task.source.sourceKind === 'ability' && task.targetId === null && task.amount === 0 && task.total === 1 && task.cancellable === false, 'Mel dash'); }
     else if (task.kind === 'g23CrystalLand' || task.kind === 'g23CrystalBlast') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && champion(owner) === 'jayce-ranged' && task.amount === 0 && task.ordinal < task.total && task.targetId !== null, 'Jayce crystal cell'); }
+    else if (task.kind === 'g23Smeech' && task.cell !== undefined) { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8 && task.targetId !== null && task.cancellable === false, 'Smeech re-leap landing'); }
     else if (task.kind === 'g22Vex') { record(task.cell); integer(task.cell!.col); integer(task.cell!.row); requireValue(task.cell!.col < 7 && task.cell!.row < 8, 'G22 zone cell'); }
     else requireValue(task.cell === undefined, 'Unexpected task zone');
     if (task.kind === 'tristanaBounce') {
