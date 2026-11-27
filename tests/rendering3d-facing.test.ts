@@ -160,6 +160,35 @@ describe('mounted 3D pieces turn toward their combat target', () => {
     near(root().rotation.y, restHeading('player'));
   });
 
+  it('a cast that fires on its own first tick (Maddie) faces its target at once; other casts still turn', async () => {
+    for (const [definitionId, atOnce] of [['maddie', true], ['lux', false]] as const) {
+      const me = piece({ id: 'me', x: 150, y: 200, definitionId }), foe = piece({ id: 'foe', team: 'enemy', x: 250, y: 200 });
+      await publish([me, foe]);
+      const loads = vi.mocked(core.ModelCache.prototype.load).mock.results;
+      const [mine] = await Promise.all(loads.slice(-2).map(result => result.value as Promise<ModelLease>));
+      const root = () => mine.scene.parent as Group;
+      listener.events([{ type: 'cast', tick: 1, eventSeq: 0, sourceId: 'me', targetIds: ['foe'], completed: true, actionSeq: 1 } as unknown as DisplayCombatEvent]);
+      advance(16);
+      const gap = Math.abs(Math.atan2(Math.sin(root().rotation.y - Math.PI / 2), Math.cos(root().rotation.y - Math.PI / 2)));
+      if (atOnce) expect(gap, definitionId).toBeLessThan(0.02); else expect(gap, definitionId).toBeGreaterThan(0.3);
+      advance(400); near(root().rotation.y, Math.PI / 2);
+      await publish([], false); await publish([], true);
+    }
+  });
+  it('a cast-aimed unit (Maddie) crossfades into its cast in no time; other units keep the usual blend', async () => {
+    const { UnitActionState } = await import('../src/rendering3d/animation-state');
+    const { CAST_AIMED_UNITS } = await import('../src/rendering/three-mode/unit-facing');
+    expect([...CAST_AIMED_UNITS]).toEqual(['maddie']);
+    const state = new UnitActionState('me', { resolvePlayback: () => ({ clips: ['spell1'], durationSeconds: 1 }) });
+    state.setCastBlend(0);
+    expect(state.consume({ type: 'cast', sourceId: 'me' } as never).blendSeconds).toBe(0);
+    const usual = new UnitActionState('me', { resolvePlayback: () => ({ clips: ['spell1'], durationSeconds: 1 }) });
+    expect(usual.consume({ type: 'cast', sourceId: 'me' } as never).blendSeconds).toBe(0.12);
+    // Only the cast: an attack keeps the usual blend.
+    const attack = new UnitActionState('me', { resolvePlayback: () => ({ clips: ['auto1'], durationSeconds: 1 }) }); attack.setCastBlend(0);
+    expect(attack.consume({ type: 'attack', attackerId: 'me' } as never).blendSeconds).toBe(0.12);
+    expect(() => state.setCastBlend(-1)).toThrow('invalid-action-config');
+  });
   it('stops following its old target once an attack or cast has no other unit to look at', async () => {
     const me = piece({ id: 'me', x: 150, y: 200 }), foe = piece({ id: 'foe', team: 'enemy', x: 250, y: 200 });
     await publish([me, foe]);
