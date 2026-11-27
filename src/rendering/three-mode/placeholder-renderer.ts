@@ -63,7 +63,7 @@ import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOv
 import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
-import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
+import { CAST_AIMED_UNITS, HeadingTurn, desiredHeading, headingToward, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
 import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
@@ -1061,6 +1061,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     attachBody(view); syncStars(view, piece);
     view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
+    view.state.setCastBlend(CAST_AIMED_UNITS.has(view.definitionId) ? 0 : undefined);
     return view;
   };
   // Time a piece's mixer held while nobody could see it (the tick below), with the action revision and mixer it is for:
@@ -1075,6 +1076,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
     view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
+    view.state.setCastBlend(CAST_AIMED_UNITS.has(view.definitionId) ? 0 : undefined);
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
@@ -1498,6 +1500,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Every attack or cast replaces the target: one on itself, on nobody or on a unit not drawn leaves none to follow.
     if (source) source.facing = targetId && targetId !== sourceId && pieces.has(targetId) ? targetId : null;
   };
+  const aimAtOnce = (sourceId: string, targetId: string | undefined) => {
+    const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
+    if (!source || !target || !CAST_AIMED_UNITS.has(source.definitionId) || !source.alive) return;
+    const heading = headingToward({ x: source.root.position.x, z: source.root.position.z }, { x: target.root.position.x, z: target.root.position.z });
+    if (heading !== null) { source.turn.set(heading); source.root.rotation.y = heading; }
+  };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     // A batch spanning many ticks is the replay catching up after dropped frames: every event still moves the action
     // states, but only its last EFFECT_TICKS start effects (the earlier ones would all burst in this one frame).
@@ -1688,6 +1696,8 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
         face(event.sourceId, event.targetIds[0]);
+        // A cast that fires on its own first tick faces its target at once (unit-facing.ts CAST_AIMED_UNITS).
+        if (current) aimAtOnce(event.sourceId, event.targetIds[0]);
         if (current) { if (planned.fresh && !planned.noCastEffect) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
         // A holder's cast is its lift: its hold pose runs from here until the rules let go (or no lift comes).
         const caster = pieces.get(event.sourceId);

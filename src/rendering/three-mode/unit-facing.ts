@@ -9,6 +9,12 @@
  * to where it slides. Every change is a TURN_SECONDS turn the short way round, never a jump.
  */
 
+/**
+ * Units whose cast fires on its own first tick (the rules' first shot leaves on the cast tick: Maddie's volley): on the cast
+ * they face its target at once instead of turning over TURN_SECONDS, and their cast clip shows its first pose with no
+ * crossfade, so the first shot leaves an aimed, levelled weapon (coordinator 11-28; a display choice, not original data).
+ */
+export const CAST_AIMED_UNITS: ReadonlySet<string> = new Set(['maddie']);
 /** Board units a piece must still have to go this frame to count as moving (the renderer's glide step). */
 export const MOVE_EPSILON = 0.5;
 /** Seconds a turn takes, whatever its angle: it lands exactly on the heading at the end. */

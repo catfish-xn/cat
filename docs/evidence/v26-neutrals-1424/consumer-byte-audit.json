@@ -2946,9 +2946,9 @@
     },
     "tests/rendering3d-facing.test.ts": {
       "previousBytes": 9973,
-      "currentBytes": 10881,
+      "currentBytes": 15415,
       "previousSha256": "7ec7b45359a732688dea3449c29ea2b4d239878ed1f2646f66d03e5d279da9d8",
-      "currentSha256": "7f3ef077ed3d8aff39e517262427913d2f139f607fddb6d2a1464de5bf2abceb",
+      "currentSha256": "8d9b21eae8430626b5c1930e3e7c13d2e9617b78e04347e01585618c153e8381",
       "firstDifferentByte": 1539
     },
     "tests/rendering3d-foot-support.test.ts": {
