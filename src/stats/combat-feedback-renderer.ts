@@ -76,11 +76,12 @@ const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
 /**
  * Our own readability rules on where numbers appear (coordinator 11-27/28, not original data). With a bar (3D), a unit's
  * numbers stand in two columns split by its bar's middle, so a heal and a damage number never meet, whatever comes first:
- * - A heal stands left of the split: its right edge COLUMN_GAP of its own width left of it (a little left of the original's
- *   midline heal), growing leftward as it pops. HEAL_BELOW_BAR px under its bar's bottom, it rises and follows its unit.
- * - A damage number or crit stands right of the split: its left edge COLUMN_GAP of its own width right of it, plus up to
- *   DAMAGE_JITTER px further right by its own jitter (a crit CRIT_SLAM of its size more, so its slam in from up-left stays right
- *   of the split); it grows, steps and drifts only rightward. Its top edge
+ * - A heal stands left of the split: its right edge COLUMN_GAP_PX left of it (a quarter of a plain two-digit number's
+ *   width; a little left of the original's midline heal), growing leftward as it pops. HEAL_BELOW_BAR px under its bar's
+ *   bottom, it rises and follows its unit.
+ * - A damage number stands right of the split: its left edge COLUMN_GAP_PX right of it, plus up to DAMAGE_JITTER px further
+ *   right by its own jitter. A crit takes no jitter: its left edge sits COLUMN_GAP_PX plus CRIT_SLAM of its size (room for its
+ *   slam in from up-left) right of the split. Each grows, steps and drifts only rightward. Its top edge
  *   (a crit's mark's) DAMAGE_BELOW_BAR px (2–6, by its jitter) under its bar's bottom, plus up to DAMAGE_BELOW_JITTER px.
  * - DAMAGE_STACK_*: the 2nd and 3rd damage numbers of one tick on one unit stand each under the one before (DAMAGE_STACK_GAP px
  *   between its popped bottom and this one's popped top edge, a crit's mark's), keeping their own horizontal jitter; the 4th starts a new column of three, half a number
@@ -88,7 +89,7 @@ const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
  * Without a bar (2D, replays) a number stands on its unit's body as before (BODY_DROP).
  */
 const DAMAGE_BELOW_BAR = [2, 6] as const, DAMAGE_BELOW_JITTER = 20, HEAL_BELOW_BAR = 85;
-const COLUMN_GAP = 0.25, DAMAGE_STACK_ROWS = 3, DAMAGE_STACK_GAP = 4, DAMAGE_STACK_COLUMN_GAP = 0.5;
+const COLUMN_GAP_PX = 10, DAMAGE_STACK_ROWS = 3, DAMAGE_STACK_GAP = 4, DAMAGE_STACK_COLUMN_GAP = 0.5;
 /** Three numbers in [0, 1) from a number's key: the same hit always lands on the same spot. */
 function spotOf(key: string): [number, number, number] {
   let h = 2166136261;
@@ -238,13 +239,13 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           // Left column (a bar) or the body's midline (no bar); rising from its first frame, following its unit; it never rises
           // past half its height below its bar.
           const floor = bar ? barBottom + size / 2 : -Infinity, from = bar ? barBottom + HEAL_BELOW_BAR : anchor.y + anchor.radius * BODY_DROP;
-          x = bar ? bar.x - COLUMN_GAP * 2 * half - w : anchor.x; y = Math.max(from - HEAL_RISE_PER_S * age / 1000, floor);
+          x = bar ? bar.x - COLUMN_GAP_PX - w : anchor.x; y = Math.max(from - HEAL_RISE_PER_S * age / 1000, floor);
         } else {
           if (!item.spawn) {
             // Its first frame, in the right column under its bar (or on the body without one); its other edges then follow from
             // its popped size. The arc may touch the bar a little; other units' bars are not avoided.
             const [sx, sy, sd] = spotOf(item.key), top = item.cls === 'crit' ? CRIT_TOP_EM * item.px * pop : size / 2;
-            let base = bar ? bar.x + COLUMN_GAP * 2 * half : anchor.x + anchor.radius * DAMAGE_RIGHT * 2 - DAMAGE_JITTER - w;
+            let base = bar ? bar.x + COLUMN_GAP_PX : anchor.x + anchor.radius * DAMAGE_RIGHT * 2 - DAMAGE_JITTER - w;
             let cy = bar ? barBottom + DAMAGE_BELOW_BAR[0] + (DAMAGE_BELOW_BAR[1] - DAMAGE_BELOW_BAR[0]) * sy + DAMAGE_BELOW_JITTER * sd + top
               : anchor.y + anchor.radius * BODY_DROP + (sy * 2 - 1) * DAMAGE_JITTER;
             // The same tick's earlier damage numbers on this unit (popped alike: one tick): stack under them, three to a column.
@@ -260,8 +261,10 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
               cy = head.y; base = last + DAMAGE_STACK_COLUMN_GAP * 2 * half;
             }
             // A crit in its column lands CRIT_SLAM of its size further right: room for its slam in from up-left.
-            const room = bar && item.cls === 'crit' ? CRIT_SLAM * item.px : 0;
-            const jitter = bar ? DAMAGE_JITTER * sx : DAMAGE_JITTER * 2 * sx, left = base + jitter + room;
+            // (Rounded up as the slam's translate is written, to a tenth of a px.)
+            const crit = bar && item.cls === 'crit', room = crit ? Math.ceil(CRIT_SLAM * item.px * 10) / 10 : 0;
+            // No jitter for a crit in its column (it sits by the split); a plain number keeps its rightward jitter.
+            const jitter = crit ? 0 : bar ? DAMAGE_JITTER * sx : DAMAGE_JITTER * 2 * sx, left = base + jitter + room;
             item.spawn = { left, y: cy, right: left + 2 * w, bottom: size / 2, columns: !!bar, base };
           }
           const u = Math.min(1, age / Math.max(1, item.life)), still = item.cls === 'crit';

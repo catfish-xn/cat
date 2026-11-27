@@ -281,15 +281,15 @@ describe('stage5 floating text equivalence and DOM work', () => {
     // Our readability rules (coordinator 11-27/28, not original data): two columns split by the unit's bar's middle.
     // (The review's column probe for 2bda8679, made a regression test.) Every 10 ms of every number's life, nine scenes, a tall
     // and a short unit (their bars at different heights over their bodies), standing, walking right and walking left:
-    // - standing: a heal's right edge stays a quarter of its width left of the split, a damage number's left edge (a crit's
-    //   slam included) a quarter of its width right of it, and the two never meet, all their lives;
+    // - standing: a heal's right edge stays COLUMN_GAP_PX (10 px) left of the split, a damage number's left edge (a crit's
+    //   slam included) COLUMN_GAP_PX (10 px) right of it, and the two never meet, all their lives;
     // - walking: the same on each number's first frame; later a damage number, which does not follow its unit (as in the
     //   original), may cross: by at most MOVING_LIMIT px over the split and into a heal (measured, with a margin, so it
     //   cannot grow unseen).
     // Damage numbers of one tick on the unit never meet on their first frame.
     const slamOf = (e: { style: Record<string, string> }) => { const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(e.style.transform.replace('translate(-50%, -50%)', '')); return m ? [Number(m[1]), Number(m[2])] : [0, 0]; };
     const box = (e: { text: string; style: Record<string, string> }) => { const w0 = Math.max(40, e.text.length * 9), w = w0 * scale(e), h2 = px(e) * scale(e), [dx, dy] = slamOf(e);
-      const x = left(e) + dx, y = top(e) + dy; return { l: x - w / 2, r: x + w / 2, t: y - h2 / 2, b: y + h2 / 2, quarter: w0 / 4 }; };
+      const x = left(e) + dx, y = top(e) + dy; return { l: x - w / 2, r: x + w / 2, t: y - h2 / 2, b: y + h2 / 2, quarter: 10 }; };
     const overlap = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => Math.min(a.r - b.l, b.r - a.l, a.b - b.t, b.b - a.t);
     const units = { tall: { y: 260, r: 40, barY: 100 }, short: { y: 262, r: 18, barY: 250 } };
     const dmg = (tick: number, src = 'b', hp = 44, critical = false) => ({ ...damage(tick, 'a', hp), sourceId: src, critical, eventSeq: tick * 10 + src.length }) as unknown as SceneCombatEvent;
@@ -352,6 +352,15 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(leftOf(four) - Math.max(rightOf(one), rightOf(two), rightOf(three))).toBeGreaterThanOrEqual(20 - 1e-6);
       expect(leftOf(four) - Math.max(rightOf(one), rightOf(two), rightOf(three))).toBeLessThanOrEqual(20 + 15 + 1e-6);
       r.dispose();
+      // A crit takes no jitter: once settled its left edge sits 10 px plus its slam's room (a quarter of its 31 px, 7.8) right of
+      // the split, for every hit.
+      for (let tick = 1; tick <= 20; tick++) {
+        setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3);
+        r3.push([dmg(tick, 'b', 56, true)], 0); r3.render(200, new Map([['a', anchor]]), [], new Map([['a', bar]]));
+        const [c] = snapshot(h3)[0].children;
+        expect(left(c) - Math.max(40, c.text.length * 9) / 2).toBeCloseTo(200 + 10 + 7.8, 5);
+        r3.dispose();
+      }
       // A crit's mark reaches above its digits: its mark's top, not its digits', starts under its own bar's bottom (105).
       setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2);
       r2.push([crit(1)], 0); r2.render(0, new Map([['a', anchor]]), [], new Map([['a', bar]]));
