@@ -199,6 +199,13 @@ export interface TimelineCue {
    * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
    */
   readonly livingTarget?: boolean;
+  /**
+   * A projectile the rules settle on landing once it has left, even if its caster dies (rule receipt: the rules launch it and
+   * its landing no longer needs the caster): one already flying when the caster dies flies on to its landing. One not yet
+   * started still goes with the caster, as the rules do not launch it then. Only for cues drawn leaving on the rules' own
+   * launch tick (Heimerdinger's rockets, Renata's missiles); LtkPlayOptions.outlivesSource covers a flight drawn later.
+   */
+  readonly flightOutlivesSource?: boolean;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

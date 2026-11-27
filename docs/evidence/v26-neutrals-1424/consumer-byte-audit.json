@@ -1756,9 +1756,9 @@
     "tests/landing-settle.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 15156,
+      "currentBytes": 16295,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "6ca846ead89e6bbbcc7d49517efaa529d6c23a319608561d7fd68add50d6cba0",
+      "currentSha256": "08e95bf035f9c6841cf7ec1753f0ba2759d60dca98f33d4c61b22a24e4515be6",
       "firstDifferentByte": 0
     },
     "tests/late-lag-effects.test.ts": {
@@ -4995,9 +4995,9 @@
     "tests/vfx-ltk-outlives-source.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 5045,
+      "currentBytes": 7506,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "83c25d0a3ae243aeb1bfb3ac45fc52c69a9788d5db70399bdd78efa4b562d248",
+      "currentSha256": "df1e46f97383dffb26f356ca1451e20ddb951ef9f573ded03ad2e96d0a4b3c2b",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-own-life.test.ts": {
