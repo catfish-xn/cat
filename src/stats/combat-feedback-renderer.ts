@@ -76,8 +76,8 @@ const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
  * - DAMAGE_SAME_TICK_STEP: the 2nd, 3rd… damage number of one tick on one unit lands that many of its own heights further
  *   down per place, and right of the ones before it with a gap of at least DAMAGE_GAP of its own width.
  * - A damage number keeps at least DAMAGE_GAP of its own width clear of a heal still showing on its unit, moving right (at most
- *   DAMAGE_HEAL_CLEAR of its widths) when it would come closer. The heal counts at its largest popped size (HEAL_POP_SCALE),
- *   whatever its age. A heal never moves for a damage number.
+ *   DAMAGE_HEAL_CLEAR of its widths) when it would come closer. The heal counts at its largest popped size (HEAL_POP_SCALE)
+ *   while it pops, at its own size once settled. A heal never moves for a damage number.
  * - A crit's top edge is its mark's (CRIT_TOP_EM of its font size above its centre), not its digits'.
  */
 const DAMAGE_SAME_TICK_STEP = 0.6, DAMAGE_GAP = 0.5, DAMAGE_HEAL_CLEAR = 3;
@@ -233,8 +233,9 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
           // On the body's midline, rising from its first frame; it never rises past half its height below its bar.
           const floor = bar ? bar.y + bar.h / 2 + size / 2 : -Infinity;
           x = anchor.x; y = Math.max(anchor.y + anchor.radius * BODY_DROP - HEAL_RISE_PER_S * age / 1000, floor);
-          // Kept clear of at its largest popped size, even once it has settled.
-          const list = heals.get(item.unitId) ?? []; list.push({ x, y, w: 2 * half * HEAL_POP_SCALE, h: item.px * HEAL_POP_SCALE }); heals.set(item.unitId, list);
+          // Kept clear of at its largest popped size while it pops, at its size then once it has settled.
+          const kept = age < HEAL_POP_MS ? HEAL_POP_SCALE : pop;
+          const list = heals.get(item.unitId) ?? []; list.push({ x, y, w: 2 * half * kept, h: item.px * kept }); heals.set(item.unitId, list);
         } else {
           if (!item.spawn) {
             // Its first frame: on the body, toward the bar's right end, with its own jitter; its top edge (at its popped size) no

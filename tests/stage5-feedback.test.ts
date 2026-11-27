@@ -297,6 +297,22 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(left(hit) - 20 * scale(hit) - (120 + 40)).toBeGreaterThanOrEqual(20 - 1e-6);
       renderer.render(400, anchors);
       const [settledHeal, settledHit] = ['+7', '10'].map(text => snapshot(h)[0].children.find(e => e.text === text)!);
+      // A heal that has settled (300 ms on) counts at its own size: a damage number arriving then keeps half its width clear of
+      // that, and no more than needed (it would not have to move as far as from a popped heal).
+      setup(); const h5 = host(), r5 = createCombatFeedbackRenderer(h5), still = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
+      r5.push([heal(1)], 0); r5.push([damage(7)], 300); r5.render(300, still);
+      const [settled5, hit5] = ['+7', '10'].map(text => snapshot(h5)[0].children.find(e => e.text === text)!);
+      expect(scale(settled5)).toBe(1);
+      const alone5 = left(labels([damage(7)], 0)[0]), need = left(settled5) + 20 + 20 * scale(hit5) + 20;
+      expect(left(hit5)).toBeCloseTo(Math.max(alone5, need), 5);
+      expect(left(hit5)).toBeLessThan(left(settled5) + 40 + 20 * scale(hit5) + 20);
+      r5.dispose();
+      // Far inside a wide heal, the move needed is more than DAMAGE_HEAL_CLEAR (3) of its widths: it stops there.
+      setup(); const h6 = host(), r6 = createCombatFeedbackRenderer(h6);
+      r6.push([{ ...heal(1), actual: 123456789012 } as SceneCombatEvent, damage(1)], 0); r6.render(0, still);
+      const hit6 = snapshot(h6)[0].children.find(e => e.text === '10')!;
+      expect(left(hit6) - left(labels([damage(1)], 0)[0])).toBeCloseTo(3 * 40, 5);
+      r6.dispose();
       // Pushed damage first, heal second (one push): the damage number still keeps clear of the heal.
       setup(); const h4 = host(), r4 = createCombatFeedbackRenderer(h4);
       r4.push([damage(1), heal(1)], 0); r4.render(0, anchors);
