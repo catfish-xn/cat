@@ -8,9 +8,9 @@
     "scripts/loot-replay-digest.ts": "cdfa7aae2cfde8f071a87ff9898cdfef80802f1900af6d4608ebe3996a2070d0",
     "scripts/m5-route-hash.cjs": "bdc279df8a1a3953638c1df7e347681aee3b6ffa32b75ba3434d81b0951ec1cf",
     "scripts/offline-process-output.cjs": "79c6aa7f224d905b59fe257597996da54324e02fedc1b044ac78a389f06a2705",
-    "scripts/record-v26-neutrals-1424-battle-start.cjs": "dd6965305276ff8aa002e2c088752daeb137321effb828b45e6a9f905aa3bf94",
+    "scripts/record-v26-neutrals-1424-battle-start.cjs": "67f58b456ef793cb4cef4ea0cbc66f99fcf64689ed60f230f607fbcc76df7019",
     "scripts/record-v26-neutrals-1424-inputs.cjs": "a5ba229b14c0ef4689a7ef4f8e7ed7d3988341a63637f8efddb7d3f21b974291",
-    "scripts/record-v26-neutrals-1424-live-reveal.cjs": "500f2fdd518d8d4df8f51d4b67242bd125f57ef43287525113713cd8a4c3e381",
+    "scripts/record-v26-neutrals-1424-live-reveal.cjs": "69195ec6ca9ea539fef0c51ef20b44ef4d231f6735126d6940d58b06af47288c",
     "scripts/record-v26-neutrals-1424-release.cjs": "2231b41a60126bb5943b4543cc3ab1f13c24b5a60eb55fdbffcec7ce20659d08",
     "scripts/record-v26-neutrals-1424-transfer.cjs": "62948d5cb84d2209d89087fe19b510ff316fd39f3b74f4a14c1f341fcf758ca9",
     "scripts/v26-neutrals-1424-fixture-audit.cjs": "72c6468d2315799a6944b813ca69f768ae301394fe04fbe008eb5137042c90ab",
@@ -163,7 +163,7 @@
     "src/simulation/carousel-types.ts": "055372e4fa7e86b9321c354902ffb4e3a789999e3914b913abca960572e8ebae",
     "src/simulation/carousel-units.ts": "543124b87b5274a7b78431b014281b7f41db8b35fcc78940bde868ffcad7e845",
     "src/simulation/carousel.ts": "173001302eacd2630bed172a71734a66371112498dacd576e873120a2f2eec7e",
-    "src/simulation/cast-windup.ts": "c69adc9dcc6980e54bfcfce9672ec5492e626f0fe84a210845738805a37724be",
+    "src/simulation/cast-windup.ts": "6231e6bd62934c20c32147c74bf86aae99a18bc431d596d6ac36816cce7b5f54",
     "src/simulation/choice-acquisition.ts": "0cadd1023ff0425aa00da94847237339fc21d10645aea64d5160f1901744c57b",
     "src/simulation/choices.ts": "f78264b8e97c450c8a7407c89d4cdc0758e36ea13e5dc422e38e26f660288961",
     "src/simulation/combat-abilities.ts": "2a485296e0ca8425f19afe9211f47630af196604efa30ae26dbf98ea8efd7dae",
@@ -177,21 +177,21 @@
     "src/simulation/combat-g2-2.ts": "cdc8fde6662d809a9e84ca3bced94b52e50f7ab548c41310b16fc40e707cf30b",
     "src/simulation/combat-g2-3-junker.ts": "09e21c43eafa52219e0c1022ab15e8dfe92a2b8d8fd524ffbd8020578bc97241",
     "src/simulation/combat-g2-3-summons.ts": "674da09bfb74f3cf835acf4a53837c22ca753993d840595fdaea60039d4af57d",
-    "src/simulation/combat-g2-3.ts": "0285b53f4e5d75e69c995c369f85b0dceb9fd736ea540e686c120d20036c2480",
+    "src/simulation/combat-g2-3.ts": "deeb7067d635f6dddf85cc90d90f03a5efe072e8e86ef9768f82756b1340602b",
     "src/simulation/combat-g2-4b-trench.ts": "88b303a594cac374d5fb9ed10f20adcddad7e632006933cf0b63c812b007d659",
     "src/simulation/combat-g2-4b.ts": "dd3028d2977f1d31ab0a4064740ffde11cf51bbbeedb33bf24a20d0b66dc32b7",
     "src/simulation/combat-g2.ts": "e9a82e0724772b72c5782e7deef104e857cdae4d1909cc12bfb30d4e811409c3",
     "src/simulation/combat-initialization.ts": "335003b45209b6aeb93266abe7e988f7a3c5f7a45687281146372a6bdfca0a9f",
-    "src/simulation/combat-input.ts": "707e0cac76b18b12bc7157182cb18a119f9ad22967bfc5d0e0771f7f8f55e300",
+    "src/simulation/combat-input.ts": "4f8dfe2eb7a7c75f07d1c66377591dda13c1580b353c371fdfe592fc1f52ad51",
     "src/simulation/combat-ledger.ts": "71a2e894d3abe537bfc55b43464fb6cd356c1ac649503ea7de45e8c8b4f90d74",
-    "src/simulation/combat-movement.ts": "1ceab03ca6d39bbf31e82a5fdbee2e7898f06763409ab6366d9f240f4908a54a",
+    "src/simulation/combat-movement.ts": "41c3672b88c2e47b560964a0fa1c5a310478ca2a1cd24af767bb19ec849dfa0e",
     "src/simulation/combat-opening-crabs.ts": "c1d00a0a86a411c35a744f45587a89dd350dddfd5ee8d801247ab1e15c8c793f",
     "src/simulation/combat-overtime.ts": "d0fc70ea91bb542106b2a0f15d107dfb2b1d65dc036594311d006133dc1e3660",
-    "src/simulation/combat-replay-view.ts": "e03d4f1022d986fec6627d69db05799d168818eceb036a3aa50eefda718c3732",
+    "src/simulation/combat-replay-view.ts": "0b6d61b9ccf899c0fae292826852ef2deda360288663d9ff06e5935907abf5d4",
     "src/simulation/combat-runtime-facts.ts": "85c302e788c1b4b311066c1dff5f37a11bd1f84eabf18b9454c9a45785f48b6d",
     "src/simulation/combat-s13-abilities.ts": "78a94856bc8ba862059d044d1e5f52c47a42babaaa4bc81b5663311f09efd835",
     "src/simulation/combat-s13-state.ts": "74355dd524a62a597dcb057f7938e834b2185f778f8f0444a11c22e4b14c8123",
-    "src/simulation/combat-s13.ts": "fae5bd5fba07b866ecf4013dbc01fc00fed4caaf522cc513ebd49ea4746ac548",
+    "src/simulation/combat-s13.ts": "ae6cbcb04ec5c76919387ac199b7a744cbe869b9b17cdc3ed2c5e6585c12fe54",
     "src/simulation/combat-six-cost.ts": "04c46180f9f883aaefb99b11750fa521541088f9ba0baa470b0c2deb918fffb8",
     "src/simulation/combat-skill-lines.ts": "f4d0ad24426f392fae085fad0c4b86240c772b17259992b33898ba093f9585c1",
     "src/simulation/combat-static.ts": "a6c5ee286fde279f313a56ce6a43aae3c9e280dca0f2ce27aeb59bac6829fd16",
@@ -199,7 +199,7 @@
     "src/simulation/combat-summary.ts": "35203c097ff09c1a92a982df89a37d58cf14443c001f506ae21a034eceebc93d",
     "src/simulation/combat-targeting.ts": "88392e74ecad17c1f8813ad581edaa52aea41c003c35701c0558471731723b3d",
     "src/simulation/combat-tick.ts": "35e1663fb67c49d39a02cea1d4c19e859d1faef4ad53310a37734d37c5a0e486",
-    "src/simulation/combat-types.ts": "8f9b3cc25dc89350044c90408dcbfe50296ea8d8031fbda8531d0cb8b0feb42f",
+    "src/simulation/combat-types.ts": "08dcc5df3ce4802338517e3a6cfa7a45deefaa49d878078db7f1a56a893c1d77",
     "src/simulation/combat-v19.ts": "ef5d9f4b57557e3f0b849f8273275181e9f330691a09f0d96237b97e494f74ba",
     "src/simulation/combat-v20-traits.ts": "b1427e6b7d1e21ab11d602a1b965332d23c86748ed2cfb056b93e352d8317c98",
     "src/simulation/combat.ts": "812792cf31746e20006da6c8efd1b9db814c92b2ab7e22f58dd09c12e47bd559",
@@ -308,7 +308,7 @@
     "src/simulation/content/g2-traits.ts": "c201f87f21a57f0d9d42137aca95341e040b67c71fe3769b5dbac4dffabd6f1b",
     "src/simulation/content/g2-units.ts": "6816656cf1a55347e9d1dcc7cd83483e036013de2cd8aaf15cf1ffc08ed7dc54",
     "src/simulation/content/gloves-off.ts": "af4a4997518fc0a188663ea81094aebb4cf3993395a1cab4bcf8f828e3c8da54",
-    "src/simulation/content/identity-constants.ts": "55f51e47cf7b2cb7b246431cf929e6eabb092064fd8e4e9b61e56118edd839f7",
+    "src/simulation/content/identity-constants.ts": "dc636423f01ad2cfe4735f1f325fe30616b454f0efb72518d6e8c1da61852c01",
     "src/simulation/content/index.ts": "e3757680ec002ca4e64bf747279df57e0a6fa5a77c5675691137259651fd9ccf",
     "src/simulation/content/item-programs.ts": "d07fa79d4f5281373c344ca558d87348ac654461723f900cfdfcfce3daea0f64",
     "src/simulation/content/items-belt.ts": "56079211a8d570d6aaea5e02f7c4d411b215203d70162424f86609e7e88dd342",
@@ -573,11 +573,11 @@
     "src/simulation/restore-checks/shop-history-check.ts": "14c510304e6a0f1afc02d4fcd3d8ed4d033ff50f5efad090603d25b6c52dc229",
     "src/simulation/restore-checks/survivor-gold-check.ts": "61589552846c8d4b118713274a137b390fc8d91fa094cf418bf6049447a7827c",
     "src/simulation/restore-checks/tomb-raider-check.ts": "b1d6cee0b32a9d6eba79f6905491ae0f71180f20eb17888f5d49b77333443387",
-    "src/simulation/restore-combat-replay.ts": "1d44c575ed571948aacae0c16b38b78c3685f1247224e332162e92325c755d25",
+    "src/simulation/restore-combat-replay.ts": "e1a8855d82ba5c844be57c473c98a5f3329a15e68940e5fcb31b8ee940975d9c",
     "src/simulation/rewards.ts": "42ed20b01f6abc5897f2b546acc8c7ab93a8722d65701e5ea9978652e0e8c5dd",
     "src/simulation/rng.ts": "adb06e124b9f314aa4404e7108cc8aa4496e70f2289d8dab7c4aa116012a200e",
     "src/simulation/round-economy.ts": "6c72758b47694f283bf746cd9c684ada382be3889c7da7cb3de7da94368b8356",
-    "src/simulation/round-enemies.ts": "f57e0ae080131d480c0d8ad348b20096efae2e7d4eefce0833a7199676651bec",
+    "src/simulation/round-enemies.ts": "74a81bca58d824ad9f0f8a4ea987a6eb260e74f17f7467e3aab51cce560fdbc5",
     "src/simulation/round-schedule.ts": "d7f268d4e72dd0aa9fd62d4088b7ce0e95dd5203247fb98e73b477b9c3025f37",
     "src/simulation/round-selectors.ts": "927b08f1f456bc2400e9674c80349abf2e8b3ffced7817035702d6474e92fbd8",
     "src/simulation/round-settlement.ts": "4f87772b3ea2e2bd5eaad807e8aa0b884be325c3184cc22307c404cd4807e24b",
@@ -586,9 +586,9 @@
     "src/simulation/s13-augments-p2-strategy.ts": "a38577954f2a3a53617df55963ca01c1db1a8b2ddd4d0c64478c3d0304c68eeb",
     "src/simulation/s13-p3-combat.ts": "9796af159ea92ceb29f22d28261cc916aa8308769f99ac882eec24ac5ed2044a",
     "src/simulation/s13-p3-programs.ts": "5368142348225dfe8d63b5913481192c4bf49d8fc7028b534d93e2e28c467769",
-    "src/simulation/s13-rules.ts": "0598c6f197d7f8cd60f23dea8d103285043b4e8f91b72d202aa770a910e016ab",
+    "src/simulation/s13-rules.ts": "1570b7dbe76da4549c51279abc02fecccab60f69feb2fed872f3463efec39254",
     "src/simulation/seat-mechanics/choices.ts": "f68964fa36561844dc5524632ef78fb4c86cc22f305579d62fcc08c5ba7d2c60",
-    "src/simulation/seat-mechanics/combat-events.ts": "f380667b49edb13dd57830d7e6374f1d88d2b476911a3650dc2115fe6c297bf2",
+    "src/simulation/seat-mechanics/combat-events.ts": "6134e32bcde3e47dc7ba70f3cc5954b18dfb19674cbebe0495d740ed45099ea0",
     "src/simulation/seat-mechanics/forms.ts": "4d6e378e85e942d5922cfb75d2c09a5d4e242f97af26728aba51b7f69eb2b90a",
     "src/simulation/seat-mechanics/grants.ts": "bd52f4a2c36074b81ebd80b2d4006b8decae95a20a23f369ab1d0c0d1f5fc48e",
     "src/simulation/seat-mechanics/index.ts": "ef94f045bdaf1944daed9329d2297514c3bc56f005c348c8480fa3d44dfa610b",
@@ -596,7 +596,7 @@
     "src/simulation/seat-mechanics/replay-units.ts": "9e73e8cf4a7f2d21e5a10e62674a31771b0ea90e10fe9817726337109b3035fb",
     "src/simulation/seat-mechanics/state.ts": "313391d455f813f223797bccc92360a0dc4ae1be0c87ad838dbda0ed0b14427e",
     "src/simulation/seat-mechanics/types.ts": "ab5406abf6544fb533c49eb7ee30ac6a2fb17bb79819ff4ac702c8a502cd0c6f",
-    "src/simulation/serialization-structure.ts": "a0a97a69230df8ef2f71b197d1f6953532615ac252584d9eca006fdb239ab940",
+    "src/simulation/serialization-structure.ts": "eeeb647bd68136ecde91ddcf6ded3536d3550f927b85a23f029fc20f3e62a36b",
     "src/simulation/serialization.ts": "2a80600b71ef2d1a228c3798986f0c2d140f4899a2f8fcacde9c6d1539af316a",
     "src/simulation/setup-work.ts": "e7832d5d78d5f5b477de28ccf63ac2521870b45c1bde10a93fe012ee24e81ef9",
     "src/simulation/shared-pool-ledger.ts": "3e06e304056d7b42f3bbc6dd9445d4972014fad60d4e111185cceee99c8722df",
@@ -608,9 +608,9 @@
     "src/simulation/shop-orbs.ts": "682d60f572d6292f8c8fe80ec6a858774b017cf95a84da33f1eda0cee4394a0a",
     "src/simulation/shop.ts": "40b8c8f379a9cd1d4d7362a07eafc0354d8b838289e2df7e65f14f7d0c7d3031",
     "src/simulation/six-cost-shop.ts": "56df681f640f3fa58e30407668fe20165f832896d949f5b63c7b0f2b680fe722",
-    "src/simulation/strategy-g2-2.ts": "64006209185c090003a6c53251bcfb530bbd3a9287f6e7e63d2bc8d9ac1e4055",
-    "src/simulation/strategy-membership.ts": "9ac2149c1c1b04861335a13f494a3343fa58cb958dee4d813adda2cb9e1041d6",
-    "src/simulation/strategy-snapshot.ts": "581c0f303de645eaba6929d7259c83e10cbeae544d3fbcd6066def2d8cc1ab89",
+    "src/simulation/strategy-g2-2.ts": "a191fbff560bdc75614d9a2019dca7e7b08fa49771b3fd708333ab6c97df1f46",
+    "src/simulation/strategy-membership.ts": "2319b6f3b726bb255650814d7da5254ae86c7c705b1e6c3050fde023249672cb",
+    "src/simulation/strategy-snapshot.ts": "1aec5d94a283c358608c482460f481c431c45f75e1a3b5dd004214573d065d2f",
     "src/simulation/strategy-types.ts": "59a765f20185836a9ec7329b8ba09c3c8ecc1a596b217a931ee049b341d8ad8c",
     "src/simulation/survivor-bound.ts": "aa46d9386590a266549847a9a7057a12f7af9cccacc15ff9d2c3a533ef1f189d",
     "src/simulation/temporary-equipment.ts": "ba254a16b7634f9f7b8c0757007530175c13d2ada2bf89916f2b27cf93707bc0",
@@ -663,12 +663,12 @@
     "tests/fixtures/record-v26-neutrals-1424-herald.cjs": "62fcd9f162fe2ed8a0589afe61af5c2a97f48745888c599f6c22d76d68de9241",
     "tests/fixtures/v26-neutrals-1424-herald-support/generate.ts": "5c7eb340c3f59a1aed2c399a9663a44f6f64416f14d1c3b795b21c0e05f53a04"
   },
-  "contentDigest": "fnv1a32-utf16:33d330e9",
+  "contentDigest": "fnv1a32-utf16:d6493c11",
   "route": "mage",
   "seed": 15972,
   "partialSeed": 54239,
   "roundId": "4-7",
-  "prefixHash": "296e4185637cafac2deddf77d5bb9557d79b8e6c32bdb210d41588526c3c0fa6",
+  "prefixHash": "48cd90aa30c120e2d810e66eb02779fe8dc62a902a34e61577c43dc29891cc44",
   "previousAssertions": {
     "simultaneous": [
       {
@@ -699,26 +699,26 @@
   "currentAssertions": {
     "simultaneous": [
       {
-        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
-        "tick": 56,
-        "eventSeq": 525
+        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+        "tick": 124,
+        "eventSeq": 1398
       },
       {
         "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
-        "tick": 56,
-        "eventSeq": 526
+        "tick": 124,
+        "eventSeq": 1399
       }
     ],
     "terminal": [
       {
         "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
-        "tick": 165,
-        "eventSeq": 1560
+        "tick": 177,
+        "eventSeq": 1546
       },
       {
-        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
-        "tick": 165,
-        "eventSeq": 1561
+        "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+        "tick": 177,
+        "eventSeq": 1547
       }
     ],
     "partialDrops": [
@@ -738,8 +738,8 @@
     "unloadedCarrier": {
       "roundId": "1-4",
       "unitId": "[\"pve\",\"1-4\",\"minions-c-v1\",\"r02\"]",
-      "tick": 142,
-      "eventSeq": 203,
+      "tick": 152,
+      "eventSeq": 226,
       "newReveals": 0,
       "newEarnedEvidence": 0,
       "terminalReceipts": 2
@@ -751,8 +751,8 @@
       "sha256": "15b10c30eb1fd8869dcdbfdb5e93830f1217760f2f568d01b91d2594ae9c2d84"
     },
     "current": {
-      "bytes": 682,
-      "sha256": "76af79e6e314bda9dd9108b7ab28161885867779a4c273040d08d7a8460949d7"
+      "bytes": 686,
+      "sha256": "c750fd14411fba500a0e19eb72c08d55d9975d22c84ec2866072acf9a635163c"
     }
   },
   "drift": {
@@ -767,13 +767,13 @@
   "byteEvidence": {
     "previousCommit": "e9384c02fe352c7da3e672d2f1a2eb61754e1f5b",
     "previousBytes": 13403,
-    "currentBytes": 20132,
+    "currentBytes": 20791,
     "previousSha256": "f1b0aa9a11ff07cd57acadfd64d260f23a5148101ea4e22772e48b7eb3a5baa9",
-    "currentSha256": "1d92f9ef2880e62a9760de1fb35868ab40e3aeb05e75f56df27cbf00690132f6",
+    "currentSha256": "5f51ea09e540b593dd679f9e9cb9ace830242bf2c4895c0aec5424768137985c",
     "firstDifferentByte": 527
   },
-  "helperSha256": "c42e8c8f9ae8d944b2fb52d990de06249f6ab94f3f83726b4f7661577393b8b8",
-  "routesSha256": "23b1f89134613eff95487cfdd30543f91dc0e715132fdc97e3b59651b6136bd5",
+  "helperSha256": "2c659bdad7dd0719cd059402a935394edef7c9e0bf5a56cd39ad3c9f2b77ad48",
+  "routesSha256": "3c75b7a31d5127a284af015cff8e1243599080973cdd3ef79170887c38a3cf24",
   "neutralRouteSha256": "a8df0c49781ff7712cc2d83aa856901ff9a12bc4e37e2281dd07b6b694478682",
   "driverSha256": "406d35fc00b42d089bb03fac70fc6a475450569bf3337a6c40ef74c570bf6586",
   "branches": {
@@ -781,28 +781,28 @@
       "deaths": [
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
-          "tick": 84,
-          "eventSeq": 578
+          "tick": 97,
+          "eventSeq": 664
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
-          "tick": 88,
-          "eventSeq": 613
+          "tick": 115,
+          "eventSeq": 816
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
-          "tick": 118,
-          "eventSeq": 777
+          "tick": 124,
+          "eventSeq": 885
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
-          "tick": 131,
-          "eventSeq": 859
+          "tick": 124,
+          "eventSeq": 886
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
-          "tick": 160,
-          "eventSeq": 1013
+          "tick": 145,
+          "eventSeq": 1005
         }
       ],
       "reveals": [
@@ -810,72 +810,72 @@
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r03\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 84,
-            "eventSeq": 578
+            "tick": 97,
+            "eventSeq": 664
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r04\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 88,
-            "eventSeq": 613
+            "tick": 115,
+            "eventSeq": 816
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r04\\\\\\\"]\\\",0]\",1]",
           "death": {
             "combatId": "round-24",
-            "tick": 88,
-            "eventSeq": 613
+            "tick": 115,
+            "eventSeq": 816
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r04\\\\\\\"]\\\",0]\",2]",
           "death": {
             "combatId": "round-24",
-            "tick": 88,
-            "eventSeq": 613
+            "tick": 115,
+            "eventSeq": 816
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 118,
-            "eventSeq": 777
+            "tick": 124,
+            "eventSeq": 885
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 131,
-            "eventSeq": 859
+            "tick": 124,
+            "eventSeq": 886
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",1]",
           "death": {
             "combatId": "round-24",
-            "tick": 131,
-            "eventSeq": 859
+            "tick": 124,
+            "eventSeq": 886
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 160,
-            "eventSeq": 1013
+            "tick": 145,
+            "eventSeq": 1005
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",1]",
           "death": {
             "combatId": "round-24",
-            "tick": 160,
-            "eventSeq": 1013
+            "tick": 145,
+            "eventSeq": 1005
           }
         }
       ],
@@ -885,12 +885,12 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
-              "tick": 84,
-              "eventSeq": 578
+              "tick": 97,
+              "eventSeq": 664
             }
           ],
           "reveals": [
-            578
+            664
           ]
         },
         {
@@ -898,14 +898,14 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
-              "tick": 88,
-              "eventSeq": 613
+              "tick": 115,
+              "eventSeq": 816
             }
           ],
           "reveals": [
-            613,
-            613,
-            613
+            816,
+            816,
+            816
           ]
         },
         {
@@ -913,26 +913,19 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
-              "tick": 118,
-              "eventSeq": 777
-            }
-          ],
-          "reveals": [
-            777
-          ]
-        },
-        {
-          "terminal": false,
-          "deaths": [
+              "tick": 124,
+              "eventSeq": 885
+            },
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
-              "tick": 131,
-              "eventSeq": 859
+              "tick": 124,
+              "eventSeq": 886
             }
           ],
           "reveals": [
-            859,
-            859
+            885,
+            886,
+            886
           ]
         },
         {
@@ -940,20 +933,20 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
-              "tick": 160,
-              "eventSeq": 1013
+              "tick": 145,
+              "eventSeq": 1005
             }
           ],
           "reveals": [
-            1013,
-            1013
+            1005,
+            1005
           ]
         }
       ],
       "result": "playerWin",
       "phase": "settlement",
-      "eventHash": "aba39829f2cd874cd9821285187fd32e214b3f08edef928c934c7f1aa0b9c105",
-      "terminalHash": "0663c7db8ab41cdf275a6dbcc960d98ed4784c179239030fc0bf3b85da16e3aa",
+      "eventHash": "36ed4ed219c957098e870ead8aaa685142f9f83ab2e659d414c48cbb327c3d64",
+      "terminalHash": "ff1736cd5f89be048f8f0ec4a5d4ffb3d43d1d8a51672e133fd45cb5672ea5f5",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -961,102 +954,102 @@
     "simultaneous": {
       "deaths": [
         {
-          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
-          "tick": 56,
-          "eventSeq": 525
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+          "tick": 124,
+          "eventSeq": 1398
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
-          "tick": 56,
-          "eventSeq": 526
+          "tick": 124,
+          "eventSeq": 1399
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
-          "tick": 86,
-          "eventSeq": 730
+          "tick": 128,
+          "eventSeq": 1452
         },
         {
-          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
-          "tick": 130,
-          "eventSeq": 968
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+          "tick": 137,
+          "eventSeq": 1535
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
-          "tick": 147,
-          "eventSeq": 1072
+          "tick": 192,
+          "eventSeq": 1782
         }
       ],
       "reveals": [
         {
-          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",0]",
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 56,
-            "eventSeq": 525
-          }
-        },
-        {
-          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",1]",
-          "death": {
-            "combatId": "round-24",
-            "tick": 56,
-            "eventSeq": 525
+            "tick": 124,
+            "eventSeq": 1398
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r04\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 56,
-            "eventSeq": 526
+            "tick": 124,
+            "eventSeq": 1399
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r04\\\\\\\"]\\\",0]\",1]",
           "death": {
             "combatId": "round-24",
-            "tick": 56,
-            "eventSeq": 526
+            "tick": 124,
+            "eventSeq": 1399
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r04\\\\\\\"]\\\",0]\",2]",
           "death": {
             "combatId": "round-24",
-            "tick": 56,
-            "eventSeq": 526
+            "tick": 124,
+            "eventSeq": 1399
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r03\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 86,
-            "eventSeq": 730
+            "tick": 128,
+            "eventSeq": 1452
           }
         },
         {
-          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 130,
-            "eventSeq": 968
+            "tick": 137,
+            "eventSeq": 1535
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",1]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 137,
+            "eventSeq": 1535
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 147,
-            "eventSeq": 1072
+            "tick": 192,
+            "eventSeq": 1782
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",1]",
           "death": {
             "combatId": "round-24",
-            "tick": 147,
-            "eventSeq": 1072
+            "tick": 192,
+            "eventSeq": 1782
           }
         }
       ],
@@ -1065,22 +1058,21 @@
           "terminal": false,
           "deaths": [
             {
-              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
-              "tick": 56,
-              "eventSeq": 525
+              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+              "tick": 124,
+              "eventSeq": 1398
             },
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
-              "tick": 56,
-              "eventSeq": 526
+              "tick": 124,
+              "eventSeq": 1399
             }
           ],
           "reveals": [
-            525,
-            525,
-            526,
-            526,
-            526
+            1398,
+            1399,
+            1399,
+            1399
           ]
         },
         {
@@ -1088,25 +1080,26 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
-              "tick": 86,
-              "eventSeq": 730
+              "tick": 128,
+              "eventSeq": 1452
             }
           ],
           "reveals": [
-            730
+            1452
           ]
         },
         {
           "terminal": false,
           "deaths": [
             {
-              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
-              "tick": 130,
-              "eventSeq": 968
+              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
+              "tick": 137,
+              "eventSeq": 1535
             }
           ],
           "reveals": [
-            968
+            1535,
+            1535
           ]
         },
         {
@@ -1114,20 +1107,20 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
-              "tick": 147,
-              "eventSeq": 1072
+              "tick": 192,
+              "eventSeq": 1782
             }
           ],
           "reveals": [
-            1072,
-            1072
+            1782,
+            1782
           ]
         }
       ],
       "result": "playerWin",
       "phase": "settlement",
-      "eventHash": "9abf80f86edbabc33dfba02e10c15796e6102d277f16604b834c76710197591b",
-      "terminalHash": "e0266673c0d140795ee6d5f265ad87bbb5327e6e0bd1252f68fa368e0a11f955",
+      "eventHash": "ac4ce7d344516832ec9559ffce3aa23ac66ba2eedab191f57ad7f2f2e39e7eb7",
+      "terminalHash": "6060d267441733c10e5d34dc76b99fbb36d815397b2df2ca2f6633483b5dcc42",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1137,27 +1130,27 @@
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
           "tick": 40,
-          "eventSeq": 463
+          "eventSeq": 468
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
-          "tick": 131,
-          "eventSeq": 1291
-        },
-        {
-          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
-          "tick": 135,
-          "eventSeq": 1325
-        },
-        {
-          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
-          "tick": 165,
-          "eventSeq": 1560
+          "tick": 115,
+          "eventSeq": 1142
         },
         {
           "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
-          "tick": 165,
-          "eventSeq": 1561
+          "tick": 139,
+          "eventSeq": 1342
+        },
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
+          "tick": 177,
+          "eventSeq": 1546
+        },
+        {
+          "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+          "tick": 177,
+          "eventSeq": 1547
         }
       ],
       "reveals": [
@@ -1166,7 +1159,7 @@
           "death": {
             "combatId": "round-24",
             "tick": 40,
-            "eventSeq": 463
+            "eventSeq": 468
           }
         },
         {
@@ -1174,7 +1167,7 @@
           "death": {
             "combatId": "round-24",
             "tick": 40,
-            "eventSeq": 463
+            "eventSeq": 468
           }
         },
         {
@@ -1182,55 +1175,55 @@
           "death": {
             "combatId": "round-24",
             "tick": 40,
-            "eventSeq": 463
+            "eventSeq": 468
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 131,
-            "eventSeq": 1291
+            "tick": 115,
+            "eventSeq": 1142
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r02\\\\\\\"]\\\",0]\",1]",
           "death": {
             "combatId": "round-24",
-            "tick": 131,
-            "eventSeq": 1291
-          }
-        },
-        {
-          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r03\\\\\\\"]\\\",0]\",0]",
-          "death": {
-            "combatId": "round-24",
-            "tick": 135,
-            "eventSeq": 1325
-          }
-        },
-        {
-          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",0]",
-          "death": {
-            "combatId": "round-24",
-            "tick": 165,
-            "eventSeq": 1560
-          }
-        },
-        {
-          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",1]",
-          "death": {
-            "combatId": "round-24",
-            "tick": 165,
-            "eventSeq": 1560
+            "tick": 115,
+            "eventSeq": 1142
           }
         },
         {
           "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r01\\\\\\\"]\\\",0]\",0]",
           "death": {
             "combatId": "round-24",
-            "tick": 165,
-            "eventSeq": 1561
+            "tick": 139,
+            "eventSeq": 1342
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",0]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 177,
+            "eventSeq": 1546
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r00\\\\\\\"]\\\",0]\",1]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 177,
+            "eventSeq": 1546
+          }
+        },
+        {
+          "dropId": "[\"[\\\"orb\\\",\\\"4-7\\\",\\\"razorbeaks-v1\\\",\\\"[\\\\\\\"pve\\\\\\\",\\\\\\\"4-7\\\\\\\",\\\\\\\"razorbeaks-v1\\\\\\\",\\\\\\\"r03\\\\\\\"]\\\",0]\",0]",
+          "death": {
+            "combatId": "round-24",
+            "tick": 177,
+            "eventSeq": 1547
           }
         }
       ],
@@ -1241,13 +1234,13 @@
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r04\"]",
               "tick": 40,
-              "eventSeq": 463
+              "eventSeq": 468
             }
           ],
           "reveals": [
-            463,
-            463,
-            463
+            468,
+            468,
+            468
           ]
         },
         {
@@ -1255,26 +1248,26 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r02\"]",
-              "tick": 131,
-              "eventSeq": 1291
+              "tick": 115,
+              "eventSeq": 1142
             }
           ],
           "reveals": [
-            1291,
-            1291
+            1142,
+            1142
           ]
         },
         {
           "terminal": false,
           "deaths": [
             {
-              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
-              "tick": 135,
-              "eventSeq": 1325
+              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
+              "tick": 139,
+              "eventSeq": 1342
             }
           ],
           "reveals": [
-            1325
+            1342
           ]
         },
         {
@@ -1282,26 +1275,26 @@
           "deaths": [
             {
               "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r00\"]",
-              "tick": 165,
-              "eventSeq": 1560
+              "tick": 177,
+              "eventSeq": 1546
             },
             {
-              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r01\"]",
-              "tick": 165,
-              "eventSeq": 1561
+              "unitId": "[\"pve\",\"4-7\",\"razorbeaks-v1\",\"r03\"]",
+              "tick": 177,
+              "eventSeq": 1547
             }
           ],
           "reveals": [
-            1560,
-            1560,
-            1561
+            1546,
+            1546,
+            1547
           ]
         }
       ],
       "result": "playerWin",
       "phase": "settlement",
-      "eventHash": "73598480f5c190ff55950d9c13df0c27cffaa8a4fb1cb48af7ffba229d7673b0",
-      "terminalHash": "677772b87c33082f6d8841a290ecbdb60a5c2d073777b5079b6e5de3f7c7fb9f",
+      "eventHash": "ce2698ab59f10610489455fadf5c8eb7f8151de71ebc52dedf306965774473ea",
+      "terminalHash": "c6868409705c84e9956f1568937e0561727d25727deebc955372e7a4d765a5e9",
       "receipts": 9,
       "unitSerialDelta": 5,
       "itemSerialDelta": 2
@@ -1361,8 +1354,8 @@
       ],
       "result": "enemyWin",
       "phase": "settlement",
-      "eventHash": "5e687912d549d469d662f7ceebeb8e1dcc2647723f2f980657f1affddd5ce1a2",
-      "terminalHash": "19f41d7bf7f6c7a141d17a184475a80df4efd4d879ebbfd7deb176acffc704c5",
+      "eventHash": "6d9788bfad9e987699cc282aafb043000b3af873741a8aa83f5f833517dfa653",
+      "terminalHash": "ef5a2d882aa04031034df316eddd7a6a91a77d6bdd709e67703ec5e43f03ec8c",
       "receipts": 2,
       "unitSerialDelta": 1,
       "itemSerialDelta": 0,
@@ -1371,7 +1364,7 @@
         "col": 6,
         "row": 7
       },
-      "prefixHash": "70f6b7ed3b48caa8f57b3da0212efa3072737a3f137a9f9bd5c53501438aeb60"
+      "prefixHash": "c0e1d45ace3119b1e92ea88fa3fbdee5040c454bef724527b5c96666dc91fa93"
     },
     "loris-r01": {
       "deaths": [
@@ -1419,8 +1412,8 @@
       ],
       "result": "enemyWin",
       "phase": "settlement",
-      "eventHash": "c523e5b3b6f29abf9e90755e6ea22760303fb1efd4429a3f8f08e5b2f8519372",
-      "terminalHash": "6c24449f95cf8caf96df46981b3cf1e9577531ec3d191e3b6c2d37b0f2c3d609",
+      "eventHash": "b61fabe855869105aed958aa95527bd09410bc093041c4d5bc79d06b0a3c64c8",
+      "terminalHash": "c2fb47251a97f5095ee2af38ff4628da93f686aff17016b7c27fc20ea73eab2e",
       "receipts": 1,
       "unitSerialDelta": 0,
       "itemSerialDelta": 1,
@@ -1429,13 +1422,13 @@
         "col": 0,
         "row": 6
       },
-      "prefixHash": "70f6b7ed3b48caa8f57b3da0212efa3072737a3f137a9f9bd5c53501438aeb60"
+      "prefixHash": "c0e1d45ace3119b1e92ea88fa3fbdee5040c454bef724527b5c96666dc91fa93"
     },
     "unloadedCarrier": {
       "roundId": "1-4",
       "unitId": "[\"pve\",\"1-4\",\"minions-c-v1\",\"r02\"]",
-      "tick": 142,
-      "eventSeq": 203,
+      "tick": 152,
+      "eventSeq": 226,
       "newReveals": 0,
       "newEarnedEvidence": 0,
       "terminalReceipts": 2

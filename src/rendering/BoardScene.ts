@@ -1,4 +1,5 @@
 import type { MultiplayerCommandResult } from '../simulation/round-settlement';
+import { getUnitForm } from '../simulation/seat-mechanics/forms';
 import { usableBenchSlots, isOverflowUnit } from '../simulation/bench-capacity';
 import { installUnitInspect } from '../presentation/unit-panel-loader';
 import type { UnitPanelData } from '../presentation/unit-panel';
@@ -55,7 +56,8 @@ import { CombatFx } from '../presentation/combat-fx';
 import { canvasLabelRects } from '../presentation/label-layout';
 import { buildPortraitTextures, loadRootUiAssets, loadS13Portraits, retryRootUiAssets, rootUiAssetsLoaded, s13AssetUrl, championPortraitKey } from '../presentation/s13-assets';
 import { readAssetBase3d } from './render-mode';
-import { HelpPanel } from '../presentation/help-panel';
+import type { HelpPanel } from '../presentation/help-panel';
+import { helpPanelChunk, openHelpOnDemand } from '../presentation/help-panel-loader';
 import { reducedMotion } from '../presentation/preferences';
 import { lazyMergeFx } from '../presentation/merge-fx-loader';
 import { battleLoadout, battleLoadoutText, BATTLE_EQUIPMENT_SUBMITTED, EQUIPMENT_COMMAND_FAILURES, EQUIPMENT_FAILURE_TEXT, equipSuccessText, equipmentFailureText, gearExtras, gearText, NO_GEAR_EXTRAS, wornDefinitions } from '../presentation/equipment-feedback';
@@ -286,9 +288,11 @@ export class BoardScene extends Phaser.Scene {
     this.status = this.add.text(-2000, 754, '准备就绪 · 购买或部署棋子，再点击 开始战斗', { fontSize: '14px', color: '#9aaeb9', wordWrap: { width: 865 } }).setName('status');
     this.loadoutTip = this.add.text(0, 0, '', { fontSize: '12px', color: '#9ff0e4', backgroundColor: '#0b151fe6', padding: { x: 5, y: 3 }, resolution: 2 })
       .setOrigin(0.5, 1).setDepth(30).setVisible(false).setName('loadout-tip');
-    this.help = new HelpPanel();
+    // The help dialog loads on demand (help-panel-loader.ts): prefetched once the first screen is idle, made on first open.
+    const helpChunk = helpPanelChunk(); helpChunk.prefetch();
+    const scene = this, helpSlot = { get help() { return scene.help; }, set help(panel: HelpPanel | null) { scene.help = panel; } };
     this.strategyPanel = new StrategyPanel({
-      help: () => this.help?.show(),
+      help: () => openHelpOnDemand(helpSlot, () => !!this.strategyPanel, helpChunk),
       // Stored only: the next frame's ring sync applies it. Never force layout during a panel rebuild.
       highlight: ids => { this.previewHighlight = new Set(ids); },
       state: () => this.session.state, combat: () => ({ view: this.session.combatView, runtime: this.session.combatRuntime }), battleItems: () => this.session.phase === 'combat' || this.session.combatView?.units.some(unit => unit.equipment !== undefined) ? null : this.frozenItems(), shopLock: (locked, generation) => this.command(this.session.shopLock(locked, generation), locked ? '商店已锁定，跨轮保留' : '商店已解锁'), selectedUnit: () => this.selectedId,
@@ -1378,12 +1382,19 @@ export class BoardScene extends Phaser.Scene {
     // v16: a promoted Ultimate Hero shows 4★ and the rules' D14 lines of my own unit (none in a battle replay).
     const star = displayStarLevel(this.session.state, unit), notes = [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])];
     const itemStacks = this.session.combatView?.units.find(entry => entry.id === id)?.itemStacks;
-    const heroAbility = this.heroAbilityOf(unit);
-    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}:${heroAbility}`,
-      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks, heroAbility)!);
+    const heroAbility = this.heroAbilityOf(unit), form = this.unitFormOf(unit);
+    unitHoverCard().showAt(box, `unit:${unit.definitionId}:${star}:${unitBattleStatsKey(battle)}:${gear}:${notes.join('|')}:${JSON.stringify(itemStacks)}:${heroAbility}:${form}`,
+      () => unitCardBody(unit.definitionId, star, battle, gear, notes, itemStacks, heroAbility, form)!);
     this.unitCardOpen = true;
   }
   private inspect?: ReturnType<typeof installUnitInspect>;
+  /** A form swapper's form for its ability text: frozen in combat, else from its preparation board row (rules: forms.ts). */
+  private unitFormOf(unit: { id: string }): 'melee' | 'ranged' | null {
+    const combat = this.session.combatView?.units.find(entry => entry.id === unit.id);
+    if (combat) return combat.form ?? null;
+    const prep = this.state.units.find(entry => entry.id === unit.id);
+    return prep ? getUnitForm(prep, this.state.board) : null;
+  }
   /** 卯足全力: my strongest board Vander shows the hero spell (never a scouted or watched seat's unit). */
   private heroAbilityOf(unit: { id: string; team: string }): boolean {
     const remote = this.session instanceof RemoteSession ? this.session : null;
@@ -1408,7 +1419,7 @@ export class BoardScene extends Phaser.Scene {
     const remote = this.session instanceof RemoteSession ? this.session : null, history = remote?.battleHistory ?? [];
     const view = this.views.get(id);
     return { id, definitionId: unit.definitionId, starLevel: displayStarLevel(this.session.state, unit), team: remote?.watchedSeat != null ? 'enemy' : unit.team,
-      combat, items: view ? [...view.equipped, ...view.extras.temporary] : [], heroAbility: this.heroAbilityOf(unit),
+      combat, items: view ? [...view.equipped, ...view.extras.temporary] : [], heroAbility: this.heroAbilityOf(unit), form: this.unitFormOf(unit),
       notes: [...anomalyNotes(view?.anomalies ?? []), ...(unit.team === 'player' ? d14UnitNotes(this.session.state, this.equipmentOwner(unit.id)) : [])],
       battle: history.length ? unitBattleStats(history, unit, history.length - (remote!.playingBack ? 1 : 0)) : null };
   }
@@ -1650,7 +1661,7 @@ export class BoardScene extends Phaser.Scene {
   /** ?render=3d: outside combat the 3D bar still shows the piece's full HP blocks and starting mana (2D keeps its bars hidden). */
   private planningMetersOf(id: string) {
     const unit = this.state.units.find(entry => entry.id === id) ?? this.summonOf(id)?.unit;
-    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit));
+    return unit && planningMetersFor(unit, displayStarLevel(this.session.state, unit), this.heroAbilityOf(unit), this.unitFormOf(unit));
   }
   /** ?render=3d: the piece's combat meters and worn items as its 2D view draws them (the 3D layer covers that view). */
   private feedGear(id: string): Pick<BoardFrame['pieces'][number], 'meters' | 'items' | 'enforcerWanted' | 'itemsConfiscated' | 'anomalies'> {

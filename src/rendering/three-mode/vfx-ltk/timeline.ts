@@ -4,6 +4,11 @@ export const CHEST = 'C_BUFFBONE_GLB_CHEST_LOC';
 export type TimelineAction = 'cast' | 'attack' | 'passive' | 'end';
 /** `empowered-alt`: an empowered attack thrown from the other hand (Draven's every second empowered attack). */
 export type TimelineVariant = 'empowered' | 'empowered-alt' | 'self' | 'single';
+/**
+ * A cue `bone` that is no bone: the top of the unit's overhead bar row, straight over the unit (VfxUnit.overheadTop), so a
+ * cue on it follows the bar wherever the host draws it, at every star level. Without a bar, the unit's overhead locator.
+ */
+export const OVERHEAD_TOP = 'render3d-overhead-top';
 export interface TimelineCue {
   readonly system: string;
   readonly action?: TimelineAction;
@@ -13,6 +18,11 @@ export interface TimelineCue {
   readonly delay: number;
   readonly duration: number;
   readonly bone?: string;
+  /**
+   * Board units the cue's anchor is raised by (lowered when negative), straight up. A display choice fitted to footage, never
+   * a value from the original.
+   */
+  readonly lift?: number;
   readonly targetBone?: string;
   /** The rule's branch for this cast (cast event `branch`, written where the rule picks it); a branched cue plays only when the cast names it. */
   readonly branch?: string;
@@ -61,6 +71,12 @@ export interface TimelineCue {
    * travelSeconds.
    */
   readonly arc?: { readonly gravity: number; readonly targetOffset: number };
+  /**
+   * A projectile's flight as a fixed curve instead of a straight line (the engine's fixed-time Hermite spline, as a perStrike
+   * fan's strikes fly): its start and end tangents in the target-facing frame, as shares of the distance. Its ends and its
+   * flight time stay the cue's own. A perStrike fan's own curve takes its place.
+   */
+  readonly curve?: StrikeCurve;
   /**
    * One row per strike: for a cast whose rules strike several times (its targets list keeps one entry a strike, repeats
    * included; Heimerdinger's rockets), this cue plays once per entry instead of once per distinct target. The k-th of n
@@ -183,6 +199,15 @@ export interface TimelineCue {
    * cast's other hits and projectiles are (runtime placeTargets). Fable 11-13: Morgana's curse and Lux's shield.
    */
   readonly livingTarget?: boolean;
+}
+/** An attack projectile's flight when no landing event times it (LtkPlayOptions.landing is absent: a dummy target, an older
+ * replay, a ranged unit the rules still settle on the attack tick). Fitted, not original; with the event the rules' arrival
+ * tick decides (runtime.ts landingCues). */
+export const DEFAULT_ATTACK_FLIGHT_SECONDS = 0.3;
+/** An attack's flying projectile written without a flight gets DEFAULT_ATTACK_FLIGHT_SECONDS; every other cue is unchanged. */
+export function withAttackFlight<T extends TimelineCue>(cue: T): T {
+  return (cue.action ?? 'cast') === 'attack' && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds === undefined
+    ? { ...cue, travelSeconds: DEFAULT_ATTACK_FLIGHT_SECONDS } : cue;
 }
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {

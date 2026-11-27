@@ -1,9 +1,17 @@
 import { AnimationClip, BoxGeometry, Group, Mesh, MeshStandardMaterial, Texture, type BufferGeometry, type Object3D } from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { clone } from 'three/addons/utils/SkeletonUtils.js';
-import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility } from './contracts';
-import { HELD_SUBMESHES, TIMED_FORMS, hideInitialSubmeshes, unswitchedClips, withoutHeld } from './submesh-visibility';
+import { assertManifest, assetUrl, DEFAULT_ASSET_ROOT, type AssetManifest, type AnimationNames, type CastMetadata, type SubmeshVisibility, type TimedFormClips, type TimedFormAnimations } from './contracts';
+import { CUTOUT_SUBMESHES, HELD_SUBMESHES, TIMED_FORMS, cutOutSubmeshes, hideInitialSubmeshes, unswitchedClips, withoutHeld } from './submesh-visibility';
 import { holdRootInPlace, trimClip } from './clip-range';
+/**
+ * The rules cap a ranged wind-up at 7 ticks (cast-windup.ts RANGED_ATTACK_WINDUP_MAX, Fable 11-19); a hero whose swing fires later
+ * plays its head sped up so it fires on the launch (AttackRelease: the clip's fire frame reached at windupRatio of the interval).
+ * Self-chosen, not original: Malzahar fires 0.867 s into his clip; 7 ticks of his base 25-tick interval is a ratio of 0.28.
+ */
+const WINDUP_ATTACK_RELEASE: Readonly<Record<string, import('./contracts').AttackRelease>> = Object.freeze({
+  malzahar: { clipSeconds: 0.8666666666666667, windupRatio: 7 / 25, baseIntervalSeconds: 25 / 20 },
+});
 import { IN_PLACE_CLIPS, ROOT_BONE } from './in-place-clips';
 
 export interface ModelTemplate { scene: Object3D; animations: AnimationClip[] }
@@ -12,8 +20,10 @@ export interface ModelLease extends ModelTemplate, CastMetadata {
   animationNames: AnimationNames;
   /** The manifest's submesh visibility; the lease's scene already hides its `initiallyHidden` submeshes. */
   submeshVisibility?: SubmeshVisibility;
-  /** The model's timed form (TIMED_FORMS), when it has one. */
+  /** The model's timed form (TIMED_FORMS), when it has one, and the manifest's clips that enter and leave it. */
   timedForm?: (typeof TIMED_FORMS)[string];
+  timedFormClips?: TimedFormClips;
+  timedFormAnimations?: TimedFormAnimations;
   release(): void;
 }
 interface Entry { promise: Promise<ModelTemplate>; model?: ModelTemplate; refs: number; retired: boolean; placeholder: boolean }
@@ -132,6 +142,7 @@ export class ModelCache {
           const missing = [...new Set(unswitched.flatMap(entry => entry.missing))].join(', ');
           console.warn(`[submesh-visibility] ${id}: ${unswitched.length} clip(s) switch nothing, model lacks ${missing}: ${unswitched.map(entry => entry.clip).join(', ')}`);
         }
+        if (!created.placeholder && Object.hasOwn(CUTOUT_SUBMESHES, id)) cutOutSubmeshes(model.scene, CUTOUT_SUBMESHES[id]);
         created.model = model;
         return model;
       });
@@ -149,10 +160,10 @@ export class ModelCache {
       castSequence: this.manifest.models[id]?.castSequence, castVariants: this.manifest.models[id]?.castVariants,
       formAnimations: this.manifest.models[id]?.formAnimations,
       attackSequence: this.manifest.models[id]?.attackSequence,
-      attackRelease: this.manifest.models[id]?.attackRelease,
+      attackRelease: this.manifest.models[id]?.attackRelease ?? (Object.hasOwn(WINDUP_ATTACK_RELEASE, id) ? WINDUP_ATTACK_RELEASE[id] : undefined),
       statusPose: this.manifest.models[id]?.statusPose,
       submeshVisibility,
-      ...(Object.hasOwn(TIMED_FORMS, id) ? { timedForm: TIMED_FORMS[id] } : {}),
+      ...(Object.hasOwn(TIMED_FORMS, id) ? { timedForm: TIMED_FORMS[id], timedFormClips: this.manifest.models[id]?.timedFormClips, timedFormAnimations: this.manifest.models[id]?.timedFormAnimations } : {}),
       animationNames: { ...(Object.hasOwn(this.manifest.models, id) ? this.manifest.models[id].animations : {}) },
       release: () => {
         if (released) return;

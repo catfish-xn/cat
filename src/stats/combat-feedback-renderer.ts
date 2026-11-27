@@ -8,7 +8,15 @@ type FloatKind = 'physical' | 'magic' | 'true' | 'heal';
 type FloatClass = 'plain' | 'crit' | 'tick';
 type LabelStyle = 'color' | 'fontSize' | 'fontWeight' | 'fontFamily' | 'textShadow' | 'backgroundImage' | 'paddingLeft' | 'paddingTop' | 'paddingBottom' | 'backgroundPosition' | 'backgroundSize' | 'left' | 'top' | 'transform' | 'opacity';
 interface Label { label: HTMLSpanElement; styles: Partial<Record<LabelStyle, string>> }
-interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; at: number; measured: number; life: number; px: number }
+interface Float extends Label { key: string; unitId: string; kind: FloatKind; cls: FloatClass; amount: number; at: number; measured: number; life: number; px: number;
+  /** A damage number's place on its first drawn frame: it stays there, its unit may move on (DAMAGE_RIGHT, DAMAGE_JITTER). */
+  /** A damage number's first frame (it stays there): its left edge, centre height, and the right edge and half height it had
+   * then, popped, and how far its bottom edge was below its centre, for the same tick's next numbers (DAMAGE_STACK_*). */
+  spawn?: { left: number; y: number; right: number; bottom: number; columns: boolean;
+    /** Its stack column's left edge before its own jitter. */
+    base: number };
+  /** Its place among damage numbers of one tick on its unit (0 for the first): DAMAGE_STACK_ROWS. */
+  order: number }
 /** Remember requested CSS values: CSSOM can round fractional px when reading them back. */
 function style(item: Label, key: LabelStyle, value: string): void {
   if ((item.styles[key] ?? item.label.style[key]) !== value) item.label.style[key] = value;
@@ -18,14 +26,19 @@ function hidden(label: HTMLSpanElement, value: boolean): void { if (label.hidden
 /**
  * Damage floats (the user's 8 points, 11-19). Numbers only, coloured by damage type: physical orange, magic cyan-blue, true
  * damage white, heals green with "+"; a basic attack takes its type's colour too. A crit is the same colour, CRIT_SCALE larger,
- * with a wedge mark slammed in at its lower left (CRIT_MARK_PATH); a damage-over-time tick is a little smaller (a burn white). Every colour, size,
- * scale and timing here is our own choice, not original data.
+ * with a wedge mark slammed in at its lower left (CRIT_MARK_PATH); a damage-over-time tick is a little smaller (a burn white). Where a number appears, how it moves, how long
+ * it lives and the crit's size follow the original's look (11-27, the user: look at the original, sum up its rules, then build):
+ * those values are measured from official-server footage and marked so; no value here is original data.
  */
 const COLORS: Readonly<Record<FloatKind, string>> = { physical: '#ff8a24', magic: '#36c4ff', true: '#ffffff', heal: '#4fdc84' };
 /** A burn's tick is white whatever its damage type. */
 const BURN_COLOR = '#ffffff';
-/** Sizes (own choice, not original): a plain number reads on both a close-up and the whole board; a crit about 1.9× it (42 px), a tick 0.8×. */
-const FONT_PX = 22, CRIT_SCALE = 1.9, TICK_SCALE = 0.8;
+/**
+ * Sizes: a plain number reads on both a close-up and the whole board (own choice); a crit CRIT_SCALE of it once settled, as
+ * the original draws a crit beside a plain hit on one target (fitted to official-server footage, not original data); a tick
+ * TICK_SCALE of it (own choice).
+ */
+const FONT_PX = 22, CRIT_SCALE = 1.4, TICK_SCALE = 0.8;
 /** A bold rounded sans-serif from the system (no font file is shipped), never a serif face. */
 const FONT_FAMILY = '"Arial Rounded MT Bold", "Nunito", "Varela Round", "Trebuchet MS", "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
 /** A dark edge all round (eight directions) and a drop shadow, so the number holds on a bright floor. */
@@ -33,30 +46,61 @@ const FONT_FAMILY = '"Arial Rounded MT Bold", "Nunito", "Varela Round", "Trebuch
 const HARD_SHADOW_EM = 0.065;
 const OUTLINE = `1px 0 0 rgba(0,0,0,.9), -1px 0 0 rgba(0,0,0,.9), 0 1px 0 rgba(0,0,0,.9), 0 -1px 0 rgba(0,0,0,.9), 1px 1px 0 rgba(0,0,0,.9), -1px 1px 0 rgba(0,0,0,.9), 1px -1px 0 rgba(0,0,0,.9), -1px -1px 0 rgba(0,0,0,.9), ${HARD_SHADOW_EM}em ${HARD_SHADOW_EM}em 0 #000`;
 /**
- * The motion (own rhythm, not original): a number pops in at POP_SCALE and drops back to its size over POP_MS, then rises
- * RISE_PX over the rest of its life; it stays fully opaque until its last FADE_MS and only then fades out.
+ * The motion, after the original's look (every pixel and time below is fitted to official-server footage, not original
+ * data):
+ * - Damage pops in at its largest (POP_SCALE) and drops back over POP_MS, and drifts a little from where it appeared, not
+ *   following its unit: DAMAGE_DRIFT_X to the right over its life, up DAMAGE_RISE_PX and then down to DAMAGE_FALL_PX below
+ *   where it appeared, as a small arc. It lives LIFE_MS and fades out linearly over its last FADE_MS.
+ * - A crit pops at CRIT_POP and settles within CRIT_POP_MS, slamming in from up-left (CRIT_SLAM, the user's 11-19 pick, not the
+ *   original's), then holds still until it fades.
+ * - A heal stays on its unit and rises straight up at HEAL_RISE_PER_S from its first frame; it pops at HEAL_POP_SCALE and drops
+ *   back over HEAL_POP_MS, and lives HEAL_LIFE_MS, fading over its last HEAL_FADE_MS.
  */
-const POP_SCALE = 1.6, POP_MS = 160, RISE_PX = 28, FADE_MS = 300;
-/** A crit's scale over its first CRIT_POP_MS: 1.3 at once, 1.6 at 30 ms, 0.92 at 70 ms, 1 from 100 ms (own values, not original). */
-const CRIT_POP_MS = 100, CRIT_SLAM = 0.25;
-const critPop = (age: number) => age >= CRIT_POP_MS ? 1 : age < 30 ? 1.3 + 0.3 * age / 30 : age < 70 ? 1.6 - 0.68 * (age - 30) / 40 : 0.92 + 0.08 * (age - 70) / 30;
-const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 900, crit: 900, tick: 700 };
+const POP_SCALE = 1.6, POP_MS = 160, FADE_MS = 300;
+const DAMAGE_DRIFT_X = 25, DAMAGE_RISE_PX = 8, DAMAGE_FALL_PX = 20;
+/** The arc's height at `u` of its life (screen px, down is +): up to −DAMAGE_RISE_PX at about a third, +DAMAGE_FALL_PX at the end. */
+const damageArc = (u: number) => { const b = -2 * (DAMAGE_RISE_PX + Math.sqrt(DAMAGE_RISE_PX * (DAMAGE_RISE_PX + DAMAGE_FALL_PX))); return b * u + (DAMAGE_FALL_PX - b) * u * u; };
+const CRIT_POP = 1.9, CRIT_POP_MS = 80, CRIT_SLAM = 0.25;
+const critPop = (age: number) => age >= CRIT_POP_MS ? 1 : CRIT_POP - (CRIT_POP - 1) * age / CRIT_POP_MS;
+const HEAL_POP_SCALE = 2, HEAL_POP_MS = 200, HEAL_RISE_PER_S = 80, HEAL_LIFE_MS = 620, HEAL_FADE_MS = 170;
+const LIFE_MS: Readonly<Record<FloatClass, number>> = { plain: 700, crit: 700, tick: 700 };
 const PER_UNIT = 6, ALL = 40;
 /** Where a number appears: on its unit's body, chest to waist, BODY_DROP radii below the anchor (own fit). */
 const BODY_DROP = 0.35;
 /**
- * A unit's numbers at once: the newest on its body, each older one pushed up above the one after it, STACK_SHRINK smaller and
- * STACK_FADE fainter per place; at most SHOWN, and a newer one makes the earliest past that fade out within EARLY_FADE_MS.
+ * Where a damage number appears (official-server footage, 11-25): on the struck body, from its bar's centre toward its right
+ * end, never above the bar, with a jitter that comes from the hit, not a random draw (the same on every replay). Numbers on
+ * one unit do not queue or take turns. Without a bar: DAMAGE_RIGHT of the unit's width right of it, ±DAMAGE_JITTER px.
  */
-const SHOWN = 4, STACK_SHRINK = 0.15, STACK_FADE = 0.1, STACK_GAP = 6, EARLY_FADE_MS = 200;
+const DAMAGE_RIGHT = 0.25, DAMAGE_JITTER = 15;
 /**
- * Overhead bars (own rule, not original): a number never covers any unit's bar, by where it stands, never by fading. It starts
- * at least half its height below its own unit's bar (a short unit's body point moves down) and rises no closer than that; one
- * the stack pushes into a bar, or that would stand on another unit's bar, steps sideways out past that bar's end.
+ * Our own readability rules on where numbers appear (coordinator 11-27/28, not original data). With a bar (3D), a unit's
+ * numbers stand in two columns split by its bar's middle, so a heal and a damage number never meet, whatever comes first:
+ * - A heal stands left of the split: its right edge COLUMN_GAP_PX left of it (a quarter of a plain two-digit number's
+ *   width; a little left of the original's midline heal), growing leftward as it pops. HEAL_BELOW_BAR px under its bar's
+ *   bottom, it rises and follows its unit.
+ * - A damage number stands right of the split: its left edge COLUMN_GAP_PX right of it, plus up to DAMAGE_JITTER px further
+ *   right by its own jitter. A crit takes no jitter: its left edge sits COLUMN_GAP_PX plus CRIT_SLAM of its size (room for its
+ *   slam in from up-left) right of the split. Each grows, steps and drifts only rightward. Its top edge
+ *   (a crit's mark's) DAMAGE_BELOW_BAR px (2–6, by its jitter) under its bar's bottom, plus up to DAMAGE_BELOW_JITTER px.
+ * - DAMAGE_STACK_*: the 2nd and 3rd damage numbers of one tick on one unit stand each under the one before (DAMAGE_STACK_GAP px
+ *   between its popped bottom and this one's popped top edge, a crit's mark's), keeping their own horizontal jitter; the 4th starts a new column of three, half a number
+ *   width right of the last one's right edge. Numbers of different ticks do not queue.
+ * Without a bar (2D, replays) a number stands on its unit's body as before (BODY_DROP).
  */
+const DAMAGE_BELOW_BAR = [2, 6] as const, DAMAGE_BELOW_JITTER = 20, HEAL_BELOW_BAR = 85;
+const COLUMN_GAP_PX = 10, DAMAGE_STACK_ROWS = 3, DAMAGE_STACK_GAP = 4, DAMAGE_STACK_COLUMN_GAP = 0.5;
+/** Three numbers in [0, 1) from a number's key: the same hit always lands on the same spot. */
+function spotOf(key: string): [number, number, number] {
+  let h = 2166136261;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ key.charCodeAt(i), 16777619);
+  const a = Math.imul(h ^ (h >>> 15), 2246822507) >>> 0, b = Math.imul(a ^ (a >>> 13), 3266489909) >>> 0, c = Math.imul(b ^ (b >>> 16), 2654435761) >>> 0;
+  return [a / 4294967296, b / 4294967296, c / 4294967296];
+}
+/** The digits' half height in em (own fit for the rounded faces used) and so how far a crit's mark reaches above its centre. */
+const DIGITS_HALF_EM = 0.35;
+/** Canvas labels (2D) a number steps sideways past, BAR_SIDESTEP_GAP px clear of their ends (own rule). Bars are not avoided. */
 const BAR_SIDESTEP_GAP = 3;
-/** How far past its bar-free spot a number may step aside for other units' numbers, in its own widths (own value). */
-const NUMBER_SHIFT_WIDTHS = 1.5;
 /**
  * The crit mark left of a crit (自绘，非原版素材; its shape, colours and sizes are our own, the user's pick E5): a heavy wedge
  * slammed in at the number's lower left, its right angle at the bottom-right against the number, one long thick spike and a
@@ -66,6 +110,8 @@ const NUMBER_SHIFT_WIDTHS = 1.5;
  */
 const CRIT_MARK_PATH = 'M24 9L24 24 11 24 11 22.5 6.5 22 11 20.5 11 17.5 4.5 16.5 11 15 11.5 14.5 1 1 16.2 9.8 17 9 18 9 18.5 4 21.5 9Z';
 const MARK_EM = 1.27, MARK_PAD_EM = 0.42, DIGITS_BOTTOM_EM = 0.93;
+/** A crit's mark hangs from the digits' bottom (MARK_EM tall), so its top is this far above the label's centre, in em. */
+const CRIT_TOP_EM = MARK_EM - DIGITS_HALF_EM;
 const channels = (color: string) => [1, 3, 5].map(i => parseInt(color.slice(i, i + 2), 16));
 const hex = (values: number[]) => `#${values.map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0')).join('')}`;
 const lightTone = (color: string) => { const [r, g, b] = channels(color); return hex([r * 0.86 + 30, g * 0.7, b * 0.78]); };
@@ -84,10 +130,14 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
   const root = document.createElement('div'); root.className = 'm6-combat-feedback'; root.setAttribute('aria-hidden', 'true');
   Object.assign(root.style, { position: 'absolute', inset: '0', overflow: 'hidden', pointerEvents: 'none' }); host.append(root);
   let floats: Float[] = [], disposed = false;
+  // A unit that died keeps its numbers where it last stood: its piece is hidden the frame it dies (BoardScene syncCombat),
+  // before this frame's events reach push, so without this its killing blow's number never showed (11-24). Only a death
+  // does this; a unit hidden for any other reason still shows nothing.
+  const fallen = new Set<string>(), gone = new Set<string>(), lastAnchor = new Map<string, FeedbackAnchor>();
   // Detached nodes do not change the active DOM/order or keep expired text on the board. At most ALL are retained.
   const pool: Label[] = [];
   function release(item: Label): void { item.label.remove(); pool.push({ label: item.label, styles: item.styles }); }
-  function reset(): void { for (const item of floats) release(item); floats = []; }
+  function reset(): void { for (const item of floats) release(item); floats = []; fallen.clear(); gone.clear(); lastAnchor.clear(); }
   const look = (kind: FloatKind, cls: FloatClass, burn: boolean) => {
     const color = cls === 'tick' && burn ? BURN_COLOR : COLORS[kind];
     const px = Math.round(FONT_PX * (cls === 'crit' ? CRIT_SCALE : cls === 'tick' ? TICK_SCALE : 1));
@@ -125,13 +175,11 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
     const old = floats.find(item => item.key === key);
     if (old) { old.amount += amount; return; }
     const perUnit = floats.filter(item => item.unitId === unitId);
-    // One number more than SHOWN on a unit: its earliest one fades out now.
-    const showing = perUnit.filter(item => item.at + item.life > at);
-    if (showing.length >= SHOWN) { const first = showing[0]; first.life = Math.min(first.life, Math.max(0, at - first.at) + EARLY_FADE_MS); }
     if (perUnit.length >= PER_UNIT) { const first = perUnit.find(item => item.cls !== 'crit') ?? perUnit[0]; release(first); floats = floats.filter(item => item !== first); }
     while (floats.length >= ALL) release(floats.shift()!);
     const l = look(kind, cls, burn);
-    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, at, measured: Number.NaN, life: LIFE_MS[cls], px: l.px });
+    const order = kind === 'heal' ? 0 : floats.filter(item => item.unitId === unitId && item.kind !== 'heal' && item.key.startsWith(`${tick}/`)).length;
+    floats.push({ ...acquire(l), key, unitId, kind, cls, amount, at, measured: Number.NaN, life: kind === 'heal' ? HEAL_LIFE_MS : LIFE_MS[cls], px: l.px, order });
   }
   return {
     push(events, at) {
@@ -141,10 +189,15 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         // Absorbed damage shows on the bar's shield segment, not as a number.
         if (event.type === 'packetDamage') {
           const tick = event.delivery === 'ability-periodic' || event.delivery === 'item-burn';
-          add(event.tick, event.targetId, event.damageType, event.hpDamage, at, event.critical ? 'crit' : tick ? 'tick' : 'plain', event.sourceId, event.delivery === 'item-burn');
+          // The killing packet shows its full amount, as the original does, not the target's last HP: the rest is the
+          // packet's overkill (replay view, killing packets only). An event without it (an older server or replay) shows the HP it took.
+          const overkill = event.killingPacket ? event.overkill ?? 0 : 0;
+          add(event.tick, event.targetId, event.damageType, event.hpDamage + overkill, at, event.critical ? 'crit' : tick ? 'tick' : 'plain', event.sourceId, event.delivery === 'item-burn');
         }
         // Only damage and heals float, as in the original; a status (stun, knock-up, shred, sunder, burn…) shows no word.
         else if (event.type === 'heal') add(event.tick, event.targetId, 'heal', event.actual, at);
+        if (event.type === 'death') fallen.add(event.unitId);
+        else if (event.type === 'packetDamage' && event.killingPacket) fallen.add(event.targetId);
       }
     },
     render(now, anchors, obstacles = [], bars = new Map()) {
@@ -155,9 +208,14 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
       floats = active;
       // Text and visibility writes finish before any geometry read. A label whose text did not change
       // keeps its measured half-width, so a steady frame reads the container once and then only writes positions.
+      // Where each unit stands now; a fallen unit with no piece left stands where it was last seen. A fallen unit seen again
+      // after its piece was gone (a new combat, a revive) is no longer fallen.
+      for (const [id, anchor] of anchors) { lastAnchor.set(id, anchor); if (gone.has(id)) { fallen.delete(id); gone.delete(id); } }
+      for (const id of fallen) if (!anchors.has(id)) gone.add(id);
+      const anchorOf = (id: string) => anchors.get(id) ?? (fallen.has(id) ? lastAnchor.get(id) : undefined);
       const visible: { item: Float; anchor: FeedbackAnchor }[] = [];
       for (const item of floats) {
-        const anchor = anchors.get(item.unitId); hidden(item.label, !anchor); if (!anchor) continue;
+        const anchor = anchorOf(item.unitId); hidden(item.label, !anchor); if (!anchor) continue;
         const text = `${item.kind === 'heal' ? '+' : ''}${item.amount}`;
         if (item.label.textContent !== text) { item.label.textContent = text; item.measured = Number.NaN; }
         visible.push({ item, anchor });
@@ -169,53 +227,70 @@ export function createCombatFeedbackRenderer(host: HTMLElement): CombatFeedbackR
         return { item, anchor, half: item.measured };
       });
       for (const item of expired) release(item);
-      // Per unit, newest first: the newest number on the body, each older one above the one after it.
-      const byUnit = new Map<string, { item: Float; anchor: FeedbackAnchor; half: number }[]>();
-      for (const entry of measured) { const list = byUnit.get(entry.item.unitId); if (list) list.unshift(entry); else byUnit.set(entry.item.unitId, [entry]); }
-      // Numbers placed so far this frame, so a later unit's number keeps clear of an earlier unit's.
-      const placed: { unitId: string; rect: FeedbackObstacle }[] = [];
-      for (const list of byUnit.values()) {
-        let above = Infinity;
-        list.forEach(({ item, anchor, half }, place) => {
-          const age = Math.max(0, now - item.at);
-          // Pop in, drop back, then rise; an older number also stays above the newer one below it (spaced by drawn sizes).
-          // A crit snaps big, overshoots below its size and settles within CRIT_POP_MS, then holds still until it fades (own values).
-          const pop = item.cls === 'crit' ? critPop(age) : age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
-          const shrink = Math.max(0.5, 1 - STACK_SHRINK * place), size = item.px * shrink * pop;
-          const rise = item.cls === 'crit' || age < POP_MS ? 0 : RISE_PX * Math.min(1, (age - POP_MS) / Math.max(1, item.life - POP_MS));
-          // Its own bar: the number's top stays at least half its height below the bar's bottom (start and rise alike).
-          const ownBar = bars.get(item.unitId), floor = ownBar ? ownBar.y + ownBar.h / 2 + size : -Infinity;
-          const own = Math.max(anchor.y + anchor.radius * BODY_DROP - rise, floor);
-          const y = Math.max(12 + size / 2, Math.min(height - 12, Math.min(own, above - size / 2 - STACK_GAP)));
-          above = y - size / 2;
-          const scale = pop * shrink, w = half * scale;
-          // A canvas label or any unit's bar in the way: the number steps sideways (never up) to the spot nearest its unit past
-          // an end of one of them that no bar or label covers, so bars side by side are cleared together. Another unit's
-          // number already placed is then avoided too, but only within NUMBER_SHIFT_WIDTHS of its own width of that spot; past
-          // that it stays on the spot and may overlap that number a little (never a bar), so it keeps near its unit.
-          const fit = (at: number) => Math.max(w, Math.min(width - w, at));
-          const inRow = (rect: FeedbackObstacle) => Math.abs(rect.y - y) < rect.h / 2 + size / 2;
-          const hard = [...obstacles, ...bars.values()].filter(inRow);
-          const soft = placed.filter(other => other.unitId !== item.unitId && inRow(other.rect)).map(other => other.rect);
-          const free = (rects: readonly FeedbackObstacle[]) => (at: number) => !rects.some(rect => Math.abs(rect.x - at) < rect.w / 2 + w);
-          const clearHard = free(hard), clearSoft = free(soft);
-          const ends = (rects: readonly FeedbackObstacle[]) => rects.flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit);
-          const nearest = (spots: readonly number[], to: number) => spots.reduce((best, at) => Math.abs(at - to) < Math.abs(best - to) ? at : best);
-          let x = fit(anchor.x);
-          if (!clearHard(x)) { const spots = ends(hard).filter(clearHard); if (spots.length) x = nearest(spots, anchor.x); }
-          if (!clearSoft(x)) {
-            const spots = ends([...hard, ...soft]).filter(at => clearHard(at) && clearSoft(at) && Math.abs(at - x) <= NUMBER_SHIFT_WIDTHS * 2 * w);
-            if (spots.length) x = nearest(spots, x);
+      // Each number on its own (no queue, no turns, as in the original): a heal on its unit's body, rising; a damage number where it
+      // first appeared, drifting. Canvas labels (2D) it would cover make it step sideways; bars do not.
+      for (const { item, anchor, half } of measured) {
+        const age = Math.max(0, now - item.at), heal = item.kind === 'heal';
+        const pop = heal ? (age < HEAL_POP_MS ? HEAL_POP_SCALE - (HEAL_POP_SCALE - 1) * (age / HEAL_POP_MS) : 1)
+          : item.cls === 'crit' ? critPop(age) : age < POP_MS ? POP_SCALE - (POP_SCALE - 1) * (age / POP_MS) : 1;
+        const size = item.px * pop, w = half * pop, bar = bars.get(item.unitId), barBottom = bar ? bar.y + bar.h / 2 : 0;
+        let x: number, y: number;
+        if (heal) {
+          // Left column (a bar) or the body's midline (no bar); rising from its first frame, following its unit; it never rises
+          // past half its height below its bar.
+          const floor = bar ? barBottom + size / 2 : -Infinity, from = bar ? barBottom + HEAL_BELOW_BAR : anchor.y + anchor.radius * BODY_DROP;
+          x = bar ? bar.x - COLUMN_GAP_PX - w : anchor.x; y = Math.max(from - HEAL_RISE_PER_S * age / 1000, floor);
+        } else {
+          if (!item.spawn) {
+            // Its first frame, in the right column under its bar (or on the body without one); its other edges then follow from
+            // its popped size. The arc may touch the bar a little; other units' bars are not avoided.
+            const [sx, sy, sd] = spotOf(item.key), top = item.cls === 'crit' ? CRIT_TOP_EM * item.px * pop : size / 2;
+            let base = bar ? bar.x + COLUMN_GAP_PX : anchor.x + anchor.radius * DAMAGE_RIGHT * 2 - DAMAGE_JITTER - w;
+            let cy = bar ? barBottom + DAMAGE_BELOW_BAR[0] + (DAMAGE_BELOW_BAR[1] - DAMAGE_BELOW_BAR[0]) * sy + DAMAGE_BELOW_JITTER * sd + top
+              : anchor.y + anchor.radius * BODY_DROP + (sy * 2 - 1) * DAMAGE_JITTER;
+            // The same tick's earlier damage numbers on this unit (popped alike: one tick): stack under them, three to a column.
+            const tick = item.key.slice(0, item.key.indexOf('/') + 1);
+            const siblings = floats.filter(other => other !== item && other.spawn && other.unitId === item.unitId && other.kind !== 'heal' && other.order < item.order && other.key.startsWith(tick));
+            const at = (order: number) => siblings.find(other => other.order === order)?.spawn;
+            const row = item.order % DAMAGE_STACK_ROWS, column = Math.floor(item.order / DAMAGE_STACK_ROWS);
+            const above = row > 0 ? at(item.order - 1) : undefined, head = row === 0 && column > 0 ? at(item.order - DAMAGE_STACK_ROWS) : undefined;
+            // Under the one before: its bottom edge, the gap, then this one's own top edge (a crit's mark's, above its digits).
+            if (above) { cy = above.y + above.bottom + DAMAGE_STACK_GAP + top; base = above.base; }
+            if (head) {
+              const last = Math.max(...siblings.filter(other => Math.floor(other.order / DAMAGE_STACK_ROWS) === column - 1).map(other => other.spawn!.right));
+              cy = head.y; base = last + DAMAGE_STACK_COLUMN_GAP * 2 * half;
+            }
+            // A crit in its column lands CRIT_SLAM of its size further right: room for its slam in from up-left.
+            // (Rounded up as the slam's translate is written, to a tenth of a px.)
+            const crit = bar && item.cls === 'crit', room = crit ? Math.ceil(CRIT_SLAM * item.px * 10) / 10 : 0;
+            // No jitter for a crit in its column (it sits by the split); a plain number keeps its rightward jitter.
+            const jitter = crit ? 0 : bar ? DAMAGE_JITTER * sx : DAMAGE_JITTER * 2 * sx, left = base + jitter + room;
+            item.spawn = { left, y: cy, right: left + 2 * w, bottom: size / 2, columns: !!bar, base };
           }
-          placed.push({ unitId: item.unitId, rect: { x, y, w: 2 * w, h: size } });
-          const fade = Math.max(0, Math.min(1, (item.life - age) / FADE_MS)) * Math.max(0.6, 1 - STACK_FADE * place);
-          style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
-          // A crit slams in from up-left: it starts CRIT_SLAM of its size up and left and reaches its spot by CRIT_POP_MS (own values).
-          const slam = item.cls === 'crit' && age < CRIT_POP_MS ? -CRIT_SLAM * item.px * (1 - age / CRIT_POP_MS) : 0;
-          const moved = slam ? ` translate(${slam.toFixed(1)}px, ${slam.toFixed(1)}px)` : '';
-          style(item, 'transform', scale === 1 && !moved ? 'translate(-50%, -50%)' : `translate(-50%, -50%)${moved}${scale === 1 ? '' : ` scale(${scale.toFixed(3)})`}`);
-          style(item, 'opacity', String(Number(fade.toFixed(3))));
-        });
+          const u = Math.min(1, age / Math.max(1, item.life)), still = item.cls === 'crit';
+          // In its column it grows rightward from its left edge; without a bar it stays centred where it appeared.
+          x = (item.spawn.columns ? item.spawn.left + w : (item.spawn.left + item.spawn.right) / 2) + (still ? 0 : DAMAGE_DRIFT_X * u);
+          y = item.spawn.y + (still ? 0 : damageArc(u));
+        }
+        y = Math.max(12 + size / 2, Math.min(height - 12, y));
+        const fit = (at: number) => Math.max(w, Math.min(width - w, at));
+        x = fit(x);
+        const hard = obstacles.filter(rect => Math.abs(rect.y - y) < rect.h / 2 + size / 2);
+        const clear = (at: number) => !hard.some(rect => Math.abs(rect.x - at) < rect.w / 2 + w);
+        if (!clear(x)) {
+          const spots = hard.flatMap(rect => [rect.x + rect.w / 2 + w + BAR_SIDESTEP_GAP, rect.x - rect.w / 2 - w - BAR_SIDESTEP_GAP]).map(fit).filter(clear);
+          if (spots.length) x = spots.reduce((best, at) => Math.abs(at - x) < Math.abs(best - x) ? at : best);
+        }
+        const fadeMs = heal ? HEAL_FADE_MS : FADE_MS;
+        const fade = Math.max(0, Math.min(1, (item.life - age) / fadeMs));
+        style(item, 'left', `${x}px`); style(item, 'top', `${y}px`);
+        // A crit slams in from up-left (the user's 11-19 pick, along its mark's wedge): it starts CRIT_SLAM of its size up and left
+        // and reaches its spot by CRIT_POP_MS. In its column its spot sits that far further right (CRIT_SLAM), so the slam never
+        // crosses the split.
+        const slam = item.cls === 'crit' && age < CRIT_POP_MS ? -CRIT_SLAM * item.px * (1 - age / CRIT_POP_MS) : 0;
+        const moved = slam ? ` translate(${slam.toFixed(1)}px, ${slam.toFixed(1)}px)` : '';
+        style(item, 'transform', pop === 1 && !moved ? 'translate(-50%, -50%)' : `translate(-50%, -50%)${moved}${pop === 1 ? '' : ` scale(${pop.toFixed(3)})`}`);
+        style(item, 'opacity', String(Number(fade.toFixed(3))));
       }
     },
     reset,

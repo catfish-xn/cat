@@ -231,10 +231,17 @@ async function createRealReplay(unit: string, star: number, form: string | null,
   const ally2 = params.get('ally2'), ally2star = params.get('ally2star'), ally2Cell = cellParam('ally2cell'), itemsText = params.get('items');
   const parsedItems = itemsText !== null ? rc.parseItems(itemsText) : null;
   if (parsedItems && 'why' in parsedItems) throw new Error(parsedItems.why);
+  // ?foeitems=foe=a+b,foe2=c (v-capture --foe-items): items on the foes, given to the rules as recording-only enemy items.
+  const foeItemsText = params.get('foeitems'), parsedFoeItems = foeItemsText !== null ? rc.parseFoeItems(foeItemsText) : null;
+  if (parsedFoeItems && 'why' in parsedFoeItems) throw new Error(parsedFoeItems.why);
   // ?asscale=X (v-capture --as-scale X): the caster's attack speed times X, recording only; its frames carry a corner tag.
   const asScaleText = params.get('asscale'), parsedAsScale = asScaleText !== null ? rc.parseAsScale(asScaleText) : null;
   if (parsedAsScale && 'why' in parsedAsScale) throw new Error(parsedAsScale.why);
   const asScale = parsedAsScale ? parsedAsScale.asScale : 1, asTag = rc.asScaleLabel(asScale);
+  // ?afterend=MS (v-capture --after-end-ms MS): the window may run MS past the combat's last tick (rules held, effects play on).
+  const parsedAfterEnd = rc.parseAfterEndMs(params.get('afterend'));
+  if ('why' in parsedAfterEnd) throw new Error(parsedAfterEnd.why);
+  const afterEndMs = parsedAfterEnd.afterEndMs;
   if (asTag) {
     const tag = document.createElement('div'); tag.textContent = asTag; tag.dataset.castcmp = 'as-scale';
     Object.assign(tag.style, { position: 'fixed', right: '12px', top: '12px', zIndex: '1000', padding: '4px 10px', background: '#8a0000', color: '#fff',
@@ -245,7 +252,7 @@ async function createRealReplay(unit: string, star: number, form: string | null,
     ...(ally ? { ally, allystar: Number(params.get('allystar') ?? 2) } : {}), ...(allyCell ? { allyCell } : {}), ...(meCell ? { meCell } : {}), ...(foeCell ? { foeCell } : {}),
     ...(foe2 ? { foe2 } : {}), ...(foe2star !== null ? { foe2star: Number(foe2star) } : {}), ...(foe2Cell ? { foe2Cell } : {}),
     ...(ally2 ? { ally2 } : {}), ...(ally2star !== null ? { ally2star: Number(ally2star) } : {}), ...(ally2Cell ? { ally2Cell } : {}),
-    ...(parsedItems ? { items: parsedItems.items } : {}), ...(asScale !== 1 ? { asScale } : {}) };
+    ...(parsedItems ? { items: parsedItems.items } : {}), ...(parsedFoeItems ? { foeItems: parsedFoeItems.items } : {}), ...(asScale !== 1 ? { asScale } : {}) };
   const units = rc.realUnits(setup);
   const frames: Piece[][] = [], events: any[][] = [], alive: Record<string, boolean>[] = [];
   // Ticks kept after the first cast: the recorded window (?window=ms, from LEAD_TICKS before the cast unless asked) or 3 s.
@@ -259,10 +266,10 @@ async function createRealReplay(unit: string, star: number, form: string | null,
       ...(control.unitControl(state, u) ? { control: control.unitControl(state, u) } : {}),
     })));
     events.push(shown); alive.push(Object.fromEntries(state.units.map((u: any) => [u.id, !!u.alive])));
-  }, start.castNumber ?? 1, anchor, rc.realItems(setup), asScale);
+  }, start.castNumber ?? 1, anchor, rc.realItems(setup), asScale, rc.realFoeItems(setup));
   if (run.castIndex < 0) throw new Error(`real combat: ${unit} never had its ${rc.anchorName(anchor)}${(start.castNumber ?? 1) !== 1 ? ` ${start.castNumber} times` : ''} in ${frames.length} ticks`);
   const lead = rc.leadTicksFor(run.castIndex, window);
-  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, catchUp: (from: number) => rc.catchUpBatch(events, from), audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor) };
+  return { frames, events, castIndex: run.castIndex, lead, combatStart: run.combatStart, catchUp: (from: number) => rc.catchUpBatch(events, from), audit: (ms: number) => rc.auditWindow(events, alive, run.castIndex, ms, lead, anchor, afterEndMs) };
 }
 /** ?board=: both teams placed in two rows each (player rows 4 and 6, enemy rows 3 and 1); up to 60 s of real combat. */
 async function createBoardReplay(mine: string[], theirs: string[], star: number) {

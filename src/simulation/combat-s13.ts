@@ -1,4 +1,4 @@
-import { rangedAttackFlightTicks, releasedLanding } from './cast-windup';
+import { rangedAttackFlightTicks, rangedAttackWindupTicks, releasedLanding } from './cast-windup';
 import { settleH11Deaths } from './augment-pool-batch5-h11';
 import { tracksCabalTakedowns, sampleCabalTakedowns } from './augment-pool-batch5-h9-cabal';
 import { startR2PortableCopies } from './augment-pool-batch5-r2-combat';
@@ -32,7 +32,7 @@ import {splitExperimentClones} from './combat-experiment-clone';
 import { hallOfMirrorsDamage, hallOfMirrorsExecution } from './augment-pool-batch5-r3-mirrors';
 import { castAnomaly, tickAnomalies, takedownAnomalies, deathAnomalies, attackAnomaly } from './anomalies/runtime';
 import { isAttackProxy, scheduleAnomalyAttacks, removeBoundAnomalySummons, recordAnomalyProxyHit } from './anomalies/summons';
-import { isAbsent, occupiesCell } from './anomalies/availability';
+import { isAbsent, isSelectable, occupiesCell } from './anomalies/availability';
 import {advanceG23Junker,g23RumbleDeath} from './combat-g2-3-junker';
 import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-kernel';
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
@@ -210,7 +210,9 @@ function launchAttack(ctx: AbilityContext, unit: S13Unit, firstPacket: number, s
   const targets = [...new Set([...packets.map(p => p.targetId), ...(shot?.effects ?? []).map(e => e.targetId)])];
   targets.forEach((targetId, ordinal) => {
     const target = ctx.units.find(u => u.id === targetId)!, arrivalTick = ctx.tick + rangedAttackFlightTicks(hexDistance(unit.cell, target.cell), champion(unit));
-    ctx.events.push({ type: 'attackLaunched', tick: ctx.tick, attackerId: unit.id, targetId, arrivalTick, projectile: 'flight' });
+    // Display only: whether this shot crits (its basic-attack packet's crit was rolled on this attack tick).
+    const critical = packets.some(p => p.targetId === targetId && p.delivery === 'basic-attack' && p.critical === true);
+    ctx.events.push({ type: 'attackLaunched', tick: ctx.tick, attackerId: unit.id, targetId, arrivalTick, projectile: 'flight', critical });
     unit.tasks.push({ key: JSON.stringify(['attack-landing', unit.id, seq, targetId]), kind: 'attackLanding', source: { ...origin(unit), sourceKind: 'attack' },
       executeAtTick: arrivalTick, targetId, amount: 0, actionSeq: seq, ordinal, total: targets.length,
       cancellable: false, landing: { packets: packets.filter(p => p.targetId === targetId), effects: (shot?.effects ?? []).filter(e => e.targetId === targetId).map(e => e.effect) } });
@@ -457,7 +459,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
     // Every action reads pre-damage HP/life. New control has startsAtTick=tick+1.
     for (const unit of units) {
       const firstPacket = ctx.packets.length;
-      let shotSeq: number | undefined;
+      let shotSeq: number | undefined, critEvents: { seq: number; targetId: string; events: { critical: boolean }[] } | undefined;
       if(isAttackProxy(unit))continue;
       let guaranteedAttackSeq: number | undefined;
       const prior = targets.get(unit.id);
@@ -483,11 +485,27 @@ export function advanceS13Tick(state: CombatState): CombatStep {
       for (const task of due) if ((!task.cancellable || (unit.alive && unit.hp>0 && !blocked.has(unit.id))) && (unit.alive&&unit.hp>0 || task.attachedDot || task.kind === 'tristanaBounce' || releasedLanding(task, tick))) executeTask(ctx, unit, task);
       advanceMadChemist(ctx, unit, () => actionSeq++);
       if(isOpeningCrab(unit)){if(unit.alive&&!blocked.has(unit.id))crabJump(ctx,unit,()=>actionSeq++);rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);continue;}
+      // A winding-up ranged attack (remote wind-up, 11-19, cancel semantics inferred, not original): it is cancelled when its
+      // attacker cannot act this tick (dead, controlled, bound, channelling, holding, or without a target) or its target is no longer
+      // its current target (11-24 Fable: it died, became unselectable, e.g. Edge of Night, or was forced away, e.g. by a taunt) or
+      // left range, with the cooldown cleared so the next attack can start at once (this tick, on the new current target) with a
+      // full wind-up of its own.
+      if (unit.windup) {
+        const w = unit.windup, windupTarget = units.find(u => u.id === w.targetId && u.alive && u.hp > 0);
+        if (!unit.alive || blocked.has(unit.id) || !target || target.id !== w.targetId || g23Bound(unit) || active(unit, tick, 'channel').length > 0 || renniHolding(unit)
+          || !windupTarget || !isSelectable(windupTarget, tick) || hexDistance(unit.cell, windupTarget.cell) > range(unit)) {
+          if (unit.alive) events.push({ type: 'attackWindupCancelled', tick, attackerId: unit.id, targetId: w.targetId });
+          delete unit.windup; unit.cooldownTicks = 0;
+        }
+      }
       if (unit.definitionId==='g23-forge'||unit.definitionId==='training-dummy'||unit.definitionId==='forming-dummy'||unit.anomalySummon?.kind==='crab'||g23Bound(unit)||!unit.alive || !target || blocked.has(unit.id) || active(unit, tick, 'channel').length > 0 || renniHolding(unit)) { rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq); continue; }
+      // While it winds up, it neither moves (canMove) nor casts; the launch tick plays the attack itself.
+      const launching = unit.windup !== undefined && tick >= unit.windup.launchTick;
+      if (unit.windup && !launching) { rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq); continue; }
       const inRange = hexDistance(unit.cell, target.cell) <= range(unit);
       const selfCast = isMadChemist(unit) || ['irelia', 'leona', 'vander', 'kogmaw', 'lux', 'loris', 'scar', 'caitlyn', 'maddie','warwick','viktor','mel'].includes(champion(unit));
       const pendingVanderStrike = champion(unit) === 'vander' && unit.runtime.nextAttackPhysical > 0;
-      if ((unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (hexDistance(unit.cell,target.cell)<=range(unit,false) || selfCast)) {
+      if (!launching && (unit.g23?.ascension?.untilTick??0)<tick && !['neutral', 'amumu', 'zeri'].includes(champion(unit)) && unit.maxMana > 0 && !pendingVanderStrike && unit.mana >= unit.maxMana && (hexDistance(unit.cell,target.cell)<=range(unit,false) || selfCast)) {
         const seq = actionSeq++, beforeCount = events.length;
         const cost = planManaCost({ unitId: unit.id, current: unit.mana, maximum: unit.maxMana, lockedUntilTick: unit.manaLockedUntilTick ?? 0 }, unit.maxMana)!;
         spent.set(unit.id, cost.actualManaSpent); unit.mana = cost.after.current; unit.runtime.castCount++;
@@ -515,9 +533,17 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         hooks(unit, 'onCast', seq);
         p3Cast(ctx, unit, target, seq, cost.actualManaSpent);
         emitMechanismSignal(ctx, { event: 'cast-completed', tick, actionSeq: seq, actorId: unit.id, targetId: target.id, cast: receipt });
-      } else if (!isMadChemist(unit) && inRange && unit.cooldownTicks === 0) {
+      } else if (!launching && !isMadChemist(unit) && inRange && unit.cooldownTicks === 0 && (shotKind(unit) !== undefined || champion(unit) === 'viktor')
+        && rangedAttackWindupTicks(champion(unit), interval(unit, tick, units)) > 0) {
+        // A ranged hero starts its attack: animation and cooldown now, the shot (and everything the attack does) on launch.
+        const oldInterval = interval(unit, tick, units), launchTick = tick + rangedAttackWindupTicks(champion(unit), oldInterval);
+        unit.windup = { targetId: target.id, launchTick }; unit.cooldownTicks = oldInterval;
+        events.push({ type: 'attackWindup', tick, attackerId: unit.id, targetId: target.id, launchTick });
+      } else if (launching || (!isMadChemist(unit) && inRange && unit.cooldownTicks === 0)) {
         const seq = actionSeq++, neutral = champion(unit) === 'neutral';
-        let attackTarget = target;
+        let attackTarget = launching ? units.find(u => u.id === unit.windup!.targetId)! : target;
+        const windupCooldown = launching ? unit.cooldownTicks : undefined;
+        delete unit.windup;
         if (unit.mechanics?.some(m=>m.mechanic==='g24Fishbones')) {
           if (!itemRandomStreams) throw new RangeError('Missing item random streams');
           const selected = chooseFishbonesTarget(itemRandomStreams, enemies(unit, units)
@@ -532,13 +558,16 @@ export function advanceS13Tick(state: CombatState): CombatStep {
             emitMechanismSignal(ctx, {event:'target-changed',tick,actionSeq:seq,actorId:unit.id,targetId:attackTarget.id,cast:null});
           }
         }
-        unit.runtime.attackCount++; events.push({ type: 'attack', tick, attackerId: unit.id, targetId: attackTarget.id });
+        // critical is display only, filled in once this tick's packets are rolled (below).
+        const attackEvent = { type: 'attack' as const, tick, attackerId: unit.id, targetId: attackTarget.id, critical: false };
+        unit.runtime.attackCount++; events.push(attackEvent); critEvents = { seq, targetId: attackTarget.id, events: [attackEvent] };
         const shot = shotKind(unit);
         if (shot === 'flight') { shotSeq = seq; ctx.attackLanding = { seq, attackerId: unit.id, effects: [] }; }
-        else if (shot) events.push({ type: 'attackLaunched', tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: shot });
+        else if (shot) { const beam = { type: 'attackLaunched' as const, tick, attackerId: unit.id, targetId: attackTarget.id, arrivalTick: tick, projectile: shot, critical: false }; events.push(beam); critEvents.events.push(beam); }
         if(unit.anomalyState?.critReady){guaranteedAttackSeq=seq;unit.anomalyState.critReady=false;}
         batch2Attack(ctx,unit,attackTarget,seq,defenses(unit,true,tick,units)+defenses(unit,false,tick,units));
         const oldInterval = interval(unit, tick, units); planS13Attack(ctx, unit, attackTarget, seq); recordG23Attack(ctx,unit,attackTarget,seq); attackAnomaly(ctx,unit,attackTarget,seq); if(p3Attack(ctx,unit,attackTarget,seq))p3ChargedAttacks.add(seq); unit.cooldownTicks = oldInterval;
+        if (windupCooldown !== undefined) unit.cooldownTicks = windupCooldown; // its cadence runs from the attack start
         const gambler=unit.mechanics?.find(m=>m.mechanic==='g24Gambler');
         if(gambler)awardItemGold(unit,gambler,'gamblers-blade',unit.runtime.attackCount-1);
         attackB4Combat(ctx,unit,attackTarget,seq);
@@ -547,6 +576,9 @@ export function advanceS13Tick(state: CombatState): CombatStep {
         if (!neutral) attackMana.set(unit.id, S13_COMBAT_RULES.attackMana + mechanic(unit, 'extraAttackMana', 'amount'));
       }
       rollPlannedPackets(ctx, unit, firstPacket, p3ChargedAttacks, guaranteedAttackSeq);
+      // Display only: the attack (and a beam's launch) carry whether its basic-attack packet on the target crits, as rolled now.
+      if (critEvents) { const c = critEvents, crit = ctx.packets.slice(firstPacket).some(p => p.actionSeq === c.seq && p.source.ownerId === unit.id && p.targetId === c.targetId && p.delivery === 'basic-attack' && p.critical === true);
+        for (const e of c.events) e.critical = crit; }
       if (shotSeq !== undefined) launchAttack(ctx, unit, firstPacket, shotSeq);
     }
   }
@@ -907,7 +939,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
   cleanupMechanisms(ctx);
   for (const unit of units) {
     if (unit.alive && unit.hp === 0) {
-      unit.alive = false; unit.targetId = null; delete unit.targetEngaged; delete unit.meleeApproach; unit.cooldownTicks = 0; unit.moveCooldownTicks = 0; unit.mana = 0;
+      unit.alive = false; unit.targetId = null; delete unit.targetEngaged; delete unit.meleeApproach; delete unit.windup; unit.cooldownTicks = 0; unit.moveCooldownTicks = 0; unit.mana = 0;
       unit.shieldLayers = []; unit.shield = 0; unit.shieldExpiresAtTick = null; unit.statuses = [];
       if (unit.deferredItemDamage) unit.deferredItemDamage=[];
       // Display only: a Renni lift in progress (stun started, its per-tick pulses still pending) ends at once when its holder or

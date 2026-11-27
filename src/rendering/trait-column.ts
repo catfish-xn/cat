@@ -19,7 +19,7 @@ import { isOnlineMode } from './online/mode';
 import { readSeatMechanic } from '../simulation/seat-mechanics/state';
 import { G23_CONQUEROR_CHESTS, G23_POLICY } from '../simulation/content/g2-3-policy';
 import { g23RewardLines } from '../presentation/g23-reward-text';
-import { traitSummary, traitTierText } from '../presentation/trait-text';
+import { familyRewardName, traitSummary, traitTierText } from '../presentation/trait-text';
 import { getHeroIdentity, heroEmblemSvg, traitDisplayName } from '../presentation/hero-identity';
 import { attachHoverCards, type HoverCard } from '../presentation/hover-card';
 import { heroPortraitHtml, s13IconHtml } from '../presentation/s13-assets';
@@ -75,9 +75,9 @@ export function g23TraitRuntime(state: MatchState): TraitRuntime | undefined {
     ['chem-baron', [{ label: '微光', value: market ? `${shimmer}/${market}` : String(shimmer) }]],
   ]);
   // 家人 5 (v19): the rules' current reward and progress toward it, as the seat view carries them; the reunion marker on the row.
-  const heist = readSeatMechanic<{ currentRewardName: string; CurrentProgress: number; CurrentRewardValue: number }>(state, 'familyHeist');
+  const heist = readSeatMechanic<{ CurrentReward: string; currentRewardName: string; CurrentProgress: number; CurrentRewardValue: number }>(state, 'familyHeist');
   const family: TraitRuntimeLine[] = familyReunionDancers(state).length ? [{ label: '家人团聚', value: '♪' }] : [];
-  if (heist) family.push({ label: '当前奖励', value: heist.currentRewardName, cardOnly: true }, { label: '进度', value: `${heist.CurrentProgress}/${heist.CurrentRewardValue}`, cardOnly: true });
+  if (heist) family.push({ label: '当前奖励', value: familyRewardName(heist.CurrentReward, heist.currentRewardName), cardOnly: true }, { label: '进度', value: `${heist.CurrentProgress}/${heist.CurrentRewardValue}`, cardOnly: true });
   if (family.length) lines.set('family', family);
   return lines;
 }

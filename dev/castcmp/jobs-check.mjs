@@ -60,7 +60,7 @@ for (const line of lines) {
   const hideWhy = o('hide-units') === undefined || o('hide-units') === '1' ? [] : [`--hide-units takes 1, got ${o('hide-units')}`];
   const modeTags = { ...(o('pin-foe') !== undefined ? { pinFoe: Number(o('pin-foe')) } : {}), ...(o('pin-foe2') !== undefined ? { pinFoe2: Number(o('pin-foe2')) } : {}), ...(o('hide-units') !== undefined ? { hideUnits: true } : {}) };
   if (pinWhy.length || hideWhy.length) { results.push({ name, unit, mode: o('real') ? 'real' : 'dummy', ok: false, why: [...pinWhy, ...hideWhy] }); continue; }
-  const realOnly = ['me-cell', 'from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell', 'ally2', 'ally2star', 'ally2-cell', 'items', 'as-scale'];
+  const realOnly = ['me-cell', 'from-start', 'lead-ms', 'cast-index', 'anchor', 'foe-offset', 'ally', 'ally-cell', 'foe-cell', 'foe2', 'foe2star', 'foe2-cell', 'ally2', 'ally2star', 'ally2-cell', 'items', 'foe-items', 'as-scale', 'after-end-ms'];
   if (realOnly.some(k => o(k) !== undefined) && (script !== 'v-capture.cjs' || !o('real'))) { results.push({ name, unit, mode: 'dummy', ok: false, why: [`${realOnly.map(k => '--' + k).join(' / ')} are for v-capture.cjs --real only`] }); continue; }
   if (script !== 'v-capture.cjs' || !o('real')) { results.push({ name, unit, mode: 'dummy', ok: true, ...(o('kill') ? { kill: o('kill') } : {}), ...modeTags }); continue; }
   // The recorded window's length, as v-capture.cjs takes it: the last --times point, else --ms (default 3000).
@@ -81,6 +81,9 @@ for (const line of lines) {
     ...['me-cell', 'ally-cell', 'foe-cell', 'foe2-cell', 'ally2-cell'].filter(k => o(k) !== undefined && !rc.parseCell(o(k))).map(k => `--${k} must be R,C (row,column), got ${o(k)}`),
     // --items me=a+b,ally=c: known item ids on the caster's side only, at most 3 per unit (real-combat.ts parseItems).
     ...(o('items') !== undefined && 'why' in rc.parseItems(o('items')) ? [rc.parseItems(o('items')).why] : []),
+    // --foe-items foe=a+b,foe2=c: known item ids on the foes (real-combat.ts parseFoeItems), into the combat through the rules'
+    // recording-only enemy items.
+    ...(o('foe-items') !== undefined && 'why' in rc.parseFoeItems(o('foe-items')) ? [rc.parseFoeItems(o('foe-items')).why] : []),
     ...(o('as-scale') !== undefined && 'why' in rc.parseAsScale(o('as-scale')) ? [rc.parseAsScale(o('as-scale')).why] : []),
     ...(o('foe-cell') !== undefined && o('foe-offset') !== undefined ? ['--foe-cell and --foe-offset: give one'] : []),
     // Rule (11-15): a real recording names the systems its gate judges (--systems), so a row whose effects never start fails.
@@ -99,23 +102,28 @@ for (const line of lines) {
     ...(o('ally2') !== undefined ? { ally2: o('ally2') } : {}), ...(o('ally2star') !== undefined ? { ally2star: Number(o('ally2star')) } : {}),
     ...(o('ally2-cell') !== undefined ? { ally2Cell: rc.parseCell(o('ally2-cell')) } : {}),
     ...(o('items') !== undefined ? { items: rc.parseItems(o('items')).items } : {}),
+    ...(o('foe-items') !== undefined && 'items' in rc.parseFoeItems(o('foe-items')) ? { foeItems: rc.parseFoeItems(o('foe-items')).items } : {}),
     ...(o('as-scale') !== undefined && Number(o('as-scale')) !== 1 ? { asScale: Number(o('as-scale')) } : {}) };
   const events = [], alive = [], cells = [];
   let run;
   try {
     run = rc.runRealCombat(rc.realUnits(setup), rc.afterTicksFor(ms, start), (state, shown) => {
       events.push(shown); alive.push(Object.fromEntries(state.units.map(u => [u.id, !!u.alive]))); cells.push(rc.cellsOf(state));
-    }, start.castNumber, anchor, rc.realItems(setup), setup.asScale ?? 1);
+    }, start.castNumber, anchor, rc.realItems(setup), setup.asScale ?? 1, rc.realFoeItems(setup));
   } catch (e) { results.push({ name, unit, mode: 'real', ok: false, why: [String(e.message ?? e)] }); continue; }
   if (run.castIndex < 0) { results.push({ name, unit, mode: 'real', ok: false, why: [anchor.kind === 'cast' ? `never cast${start.castNumber !== 1 ? ` ${start.castNumber} times` : ''} in ${run.ticks} ticks` : `no ${rc.anchorName(anchor)}${start.castNumber !== 1 ? ` #${start.castNumber}` : ''} in ${run.ticks} ticks`] }); continue; }
-  const a = rc.auditWindow(events, alive, run.castIndex, ms, rc.leadTicksFor(run.castIndex, start), anchor);
+  // --after-end-ms N: the window may run N ms past the combat's last tick (real-combat.ts parseAfterEndMs).
+  const afterEnd = rc.parseAfterEndMs(o('after-end-ms'));
+  if ('why' in afterEnd) { results.push({ name, unit, mode: 'real', ok: false, why: [afterEnd.why] }); continue; }
+  const a = rc.auditWindow(events, alive, run.castIndex, ms, rc.leadTicksFor(run.castIndex, start), anchor, afterEnd.afterEndMs);
   const why = [];
   if (!run.combatStart) why.push('combat start not applied');
   // The event the window is about must happen inside it (an attack or event anchor has no cast to show instead).
   if (anchor.kind !== 'cast' && !a.anchorInWindow) why.push(`anchor ${rc.anchorName(anchor)} #${start.castNumber} at tick ${a.castTick} is outside the window (ticks ${a.from}-${a.to})`);
   if (!a.coversWindow) why.push(`combat ends at tick ${a.replayEnds}, window ends at ${a.to}`);
   const dead = Object.entries(a.targetsAliveAtEnd).filter(([, up]) => !up).map(([id]) => id);
-  if (dead.length) why.push(`target dead by window end: ${dead.join(',')}`);
+  // A window run past the combat's end (--after-end-ms) records how it ends: a fallen target is expected there.
+  if (dead.length && !a.pastEnd) why.push(`target dead by window end: ${dead.join(',')}`);
   if (a.otherCasts.length) why.push(`others cast in window: ${a.otherCasts.map(c => `${c.id}@${c.tick}`).join(' ')}`);
   // A foe next to the caster on its row or nearer the camera may cover it (the browser gate measures
   // the real screen boxes; this is the node stand-in, checked at the cast and through the window).

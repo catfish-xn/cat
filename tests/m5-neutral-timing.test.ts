@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {createCombat,stepCombat} from '../src/simulation/combat';
 import {readCombatStats} from '../src/simulation/combat-s13';
 import {DEFAULT_BOARD} from '../src/simulation/board';
+import {rangedAttackWindupTicks} from '../src/simulation/cast-windup';
 
 // R7 publishes exact integer neutral intervals, not rounded attacks/second.
 // This is a small numerical fixture, not a normal-acquisition route.
@@ -15,10 +16,12 @@ describe('M5 PvE authored integer attack timing',()=>{
   const neutral=state.units.find(u=>u.id==='e')!;
   expect(readCombatStats(neutral,state).attackIntervalTicks).toBe(period);
   const attacks:number[]=[];
-  for(let i=0;i<period*2+1;i++){
+  // Ranged attack wind-up (#791, window and tick literals only): a ranged neutral's attack event comes on its launch, a wind-up after the start.
+  const w=neutral.attackRange>=2?rangedAttackWindupTicks('neutral',period):0;
+  for(let i=0;i<period*2+1+w;i++){
    const step=stepCombat(state);state=step.state;
    for(const event of step.events)if(event.type==='attack'&&event.attackerId==='e')attacks.push(event.tick);
   }
-  expect(attacks).toEqual([1,1+period,1+2*period]);
+  expect(attacks).toEqual([1+w,1+w+period,1+w+2*period]);
  });
 });

@@ -14,6 +14,8 @@ import { THEME, toNumber } from './theme';
 export type StatusIconKind = StatusKind | CombatActivity['kind'] | 'shield' | 'enforcer-wanted';
 export interface StatusIcon { readonly kind: StatusIconKind; readonly harmful: boolean; readonly badge: string }
 
+/** Statuses drawn as no icon over a piece: armour and magic-resist cuts (the original shows none). */
+export const RESIST_CUTS: readonly string[] = ['sunder', 'shred'];
 /** Icons per piece; harmful first, the rest are still listed in the unit panel. */
 export const STATUS_ICON_MAX = 6;
 export const STATUS_ICON_RADIUS = 6.5;
@@ -39,6 +41,8 @@ export function statusIcons(runtime: CombatState | null, unit: DisplayUnit | Vie
       .map(status => ({ kind: status.kind as StatusIconKind, harmful: status.harmful === true, badge: statusBadge(status.kind), state: 'effective' as const }));
   for (const row of rows) {
     if (row.state === 'pending' || row.state === 'suppressed') continue;
+    // A cut to armour or magic resist shows nothing over a unit in the original (11-25); the unit panel still lists it.
+    if (RESIST_CUTS.includes(row.kind)) continue;
     const key = `${row.harmful}:${row.kind}`;
     if (seen.has(key)) continue;
     seen.add(key);

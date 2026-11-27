@@ -5,6 +5,7 @@ import type { LtkPlayOptions } from './runtime';
 import type { TimelineVariant, WorldPoint } from './timeline';
 import { CUE_RULE_STOPS, VI_HAND_TRAIL } from './cue-overrides';
 import { jayceSkill } from './champions/jayce';
+import { JINX_ROCKET_DRAWN, jinxRocketFlightSeconds } from './champions/jinx';
 import { SEVIKA_SLOT_SECONDS, sevikaSkill, sevikaSlotSkills } from './champions/sevika';
 import { melSkill } from './champions/mel';
 
@@ -20,9 +21,28 @@ interface Host {
 }
 export function batch2BoardPoint(frame: ReturnType<Host['board']>): WorldPoint | undefined {
   if (!frame) return;
-  const row = Math.floor((frame.rows - 1) / 2), col = Math.floor((frame.columns - 1) / 2);
-  return [frame.origin.x + Math.sqrt(3) * frame.hexRadius * (col + (row % 2) / 2), 0, frame.origin.y + frame.hexRadius * 1.5 * row];
+  return batch2CellPoint(frame, { row: Math.floor((frame.rows - 1) / 2), col: Math.floor((frame.columns - 1) / 2) });
 }
+/** A board cell's centre on the ground, as the board lays pieces out (odd rows half a cell right). */
+export function batch2CellPoint(frame: ReturnType<Host['board']>, cell: { readonly row: number; readonly col: number }): WorldPoint | undefined {
+  if (!frame) return;
+  return [frame.origin.x + Math.sqrt(3) * frame.hexRadius * (cell.col + (cell.row % 2) / 2), 0, frame.origin.y + frame.hexRadius * 1.5 * cell.row];
+}
+type Cell = { readonly row: number; readonly col: number };
+/** The board's centre cell (the rules' rocket landing before they name a cell). */
+const boardCentre = (frame: ReturnType<Host['board']>): Cell | undefined => frame ? { row: Math.floor((frame.rows - 1) / 2), col: Math.floor((frame.columns - 1) / 2) } : undefined;
+/** Hex steps between two cells of the board (odd rows half a cell right). */
+function hexCells(a: Cell, b: Cell): number {
+  const cube = (c: Cell) => { const x = c.col - (c.row - (c.row & 1)) / 2, z = c.row; return [x, z, -x - z]; };
+  const [p, q] = [cube(a), cube(b)];
+  return Math.max(Math.abs(p[0]! - q[0]!), Math.abs(p[1]! - q[1]!), Math.abs(p[2]! - q[2]!));
+}
+/**
+ * The rules' marker naming where Jinx's Death Rocket explodes: on its launch tick, the cell and the landing tick. It comes
+ * with the rules change that adds it (same name and fields); until then no event carries it, and the rocket lands at the
+ * board's centre, where the rules explode it today.
+ */
+export const JINX_ROCKET_EPICENTER = 'jinx-rocket-epicenter';
 /** No target search, RNG or rule calculation: branches and recipients come from display receipts. */
 export function createBatch2VfxBridge(host: Host) {
   const outcomes = new Map<string, Outcome>();
@@ -41,19 +61,26 @@ export function createBatch2VfxBridge(host: Host) {
   // Vi casters' grabbed target (the cast's first target), for her slam; and the tick each slam was drawn on (one per tick).
   const viTargets = new Map<string, string>();
   const viSlamTicks = new Map<string, number>();
+  // Jinx casters' cells at their latest cast (cast.completionCell): where her rocket is drawn leaving from.
+  const jinxCells = new Map<string, Cell>();
+  // Where each Jinx rocket explodes, by `<jinx>:<landing tick>`: the rules' 'jinx-rocket-epicenter' marker, which comes on its
+  // launch tick (read in begin(), so the launch already knows it) and is kept until the rocket lands.
+  const rocketCells = new Map<string, Cell>();
   // Warwicks whose frenzy runs (the rules' bloodFrenzyChanged), with the frenzied attacks drawn so far: their strikes take turns.
   const frenzied = new Map<string, number>();
   // The timeline variant of the attack being played (Warwick's frenzy strikes); only attack plays carry it.
   let variant: TimelineVariant | undefined;
   // The swing's release timing (AttackRelease) for the attack being played; only attack plays carry it.
   let release: LtkPlayOptions['release'];
+  // The rules' landing of the attack being played (LtkPlayOptions.landing); only ranged attack plays carry it.
+  let landing: LtkPlayOptions['landing'];
   // The attack being played crits (LtkPlayOptions.crit); only attack plays carry it.
   let crit = false;
   // The rule branch of the cast being played (cast.branch.branch); a branched cue plays only with its own branch.
   let branch: string | undefined;
   const play = (champion: string, source: string, targets: readonly string[], skill: string, action: 'cast' | 'attack' = 'cast', snapshotTargets = false, channelSeconds?: number, boardOnly = false, delay?: number) =>
     host.play(champion, source, targets, action, { skill, board: batch2BoardPoint(host.board()), snapshotTargets, channelSeconds, boardOnly, persistAcrossPhase: skill === 'mel-save', ...(delay ? { delay, cancelWithSource: true } : {}),
-      ...(action === 'attack' && release ? { release } : {}), ...(action === 'attack' && crit ? { crit } : {}), ...(action === 'attack' && variant ? { variant } : {}), ...(action === 'cast' && branch ? { branch } : {}) });
+      ...(action === 'attack' && release ? { release } : {}), ...(action === 'attack' && landing ? { landing } : {}), ...(action === 'attack' && crit ? { crit } : {}), ...(action === 'attack' && variant ? { variant } : {}), ...(action === 'cast' && branch ? { branch } : {}) });
   const bridge = {
     branch(cast: Cast): string | undefined {
       // The rule's own branch output (cast event `branch`) wins; Sevika's roll still comes from her castOutcome.
@@ -68,19 +95,21 @@ export function createBatch2VfxBridge(host: Host) {
         if (event.type === 'attackLaunched') launchers.add(event.attackerId);
         if (event.type === 'castOutcome' && event.castVariant) outcomes.set(`${event.unitId}:${event.castVariant.actionSeq}`, event);
         if (event.type === 'attack') attacks.add(`${event.attackerId}:${event.tick}`);
+        if (event.type === 'abilityMarker' && (event.marker as string) === JINX_ROCKET_EPICENTER) rocketCells.set(`${event.unitId}:${event.arrivalTick}`, event.cell);
         if (event.type !== 'cast') return;
         let end = at + 1;
         while (end < events.length && events[end].type !== 'cast' && events[end].type !== 'attack') end++;
         consequences.set(`${event.sourceId}:${event.actionSeq}`, events.slice(at + 1, end));
       });
     },
-    /** `timing`: the attack's release mapping (LtkPlayOptions.release) when the mixer retimed this swing; `critical`: the attack
-     * crits (LtkPlayOptions.crit). Casts ignore both. */
-    action(action: 'cast' | 'attack', source: string, targets: readonly string[], cast?: Cast, timing?: LtkPlayOptions['release'], critical = false): boolean | undefined {
+    /** `timing`: the attack's release mapping (LtkPlayOptions.release) when the mixer retimed this swing; `lands`: the rules'
+     * landing of a ranged attack (LtkPlayOptions.landing); `critical`: the attack crits (LtkPlayOptions.crit). Casts ignore them. */
+    action(action: 'cast' | 'attack', source: string, targets: readonly string[], cast?: Cast, timing?: LtkPlayOptions['release'], lands?: LtkPlayOptions['landing'], critical = false): boolean | undefined {
       release = action === 'attack' ? timing : undefined;
+      landing = action === 'attack' ? lands : undefined;
       crit = action === 'attack' && critical;
       branch = action === 'cast' ? cast?.branch?.branch : undefined;
-      try { return bridge.dispatch(action, source, targets, cast); } finally { release = undefined; branch = undefined; crit = false; }
+      try { return bridge.dispatch(action, source, targets, cast); } finally { release = undefined; landing = undefined; branch = undefined; crit = false; }
     },
     dispatch(action: 'cast' | 'attack', source: string, targets: readonly string[], cast?: Cast): boolean | undefined {
       const unit = host.unit(source); if (!unit) return;
@@ -159,6 +188,8 @@ export function createBatch2VfxBridge(host: Host) {
           }
         }
       }
+      // Where each Jinx stands when she casts (its completion cell), for her rocket's drawn flight.
+      if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'jinx') jinxCells.set(event.sourceId, event.completionCell);
       // Mel (rules 'mel-barrage'): her dash lands, then her bolts leave and land, each reported by the rules; observed in
       // catch-up too, so a later bolt still knows its cast.
       if (event.type === 'cast' && host.unit(event.sourceId)?.definitionId === 'mel') {
@@ -194,7 +225,8 @@ export function createBatch2VfxBridge(host: Host) {
         const record = melCasts.get(event.sourceId)?.get(event.actionSeq), third = record?.third === true;
         // Each bolt flies the rules' own flight (champions/mel.ts MEL_BOLT_FLIGHT) from where she stands as it leaves: one
         // small arc per bolt of her plain cast.
-        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : 'mel-bolt');
+        // Consecutive plain-cast bolts swing to opposite sides (champions/mel.ts MEL_BOLT_CURVE), by their place in the cast.
+        if (event.type === 'abilityProjectileLaunched') play('mel', event.sourceId, [event.targetId], third ? 'mel-third-bolt' : event.ordinal % 2 ? 'mel-bolt-alt' : 'mel-bolt');
         // Its hit when it lands on a target still there (a bolt whose target died in flight lands on nothing). A plain cast's
         // hit plays once per target, as its first bolt lands; its later bolts land with their arcs only (self-chosen: a hit
         // for every bolt would crowd the board: self-chosen, not original, for the on-screen cap; a known-difference candidate, Fable 11-21).
@@ -212,6 +244,27 @@ export function createBatch2VfxBridge(host: Host) {
         host.stopSystems?.(event.sourceId, [VI_HAND_TRAIL]);
         play('vi', event.sourceId, [viTargets.get(event.sourceId) ?? event.targetId], 'vi-slam', 'cast', true);
       }
+      // Jinx (11-21, rules 'jinx-rocket'): her rocket plays from the rules' launch and landing, to and on the cell the rules land
+      // it on (the rules' 'jinx-rocket-epicenter' marker; a replay without one lands at the board's centre, as the rules did). The landing tick is the
+      // rules'; how long the rocket is drawn flying, and so when it leaves the barrel, is drawn by distance (JINX_ROCKET_DRAWN).
+      if ((event.type === 'abilityProjectileLaunched' || event.type === 'abilityProjectileLanded') && event.skill === 'jinx-rocket') {
+        const key = `${event.sourceId}:${event.type === 'abilityProjectileLaunched' ? event.arrivalTick : event.tick}`;
+        const frame = host.board(), landing = rocketCells.get(key) ?? boardCentre(frame);
+        if (event.type === 'abilityProjectileLanded') rocketCells.delete(key);
+        const board = landing ? batch2CellPoint(frame, landing) : undefined;
+        if (event.type === 'abilityProjectileLanded') host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-boom', board, snapshotTargets: true });
+        else {
+          const from = jinxCells.get(event.sourceId), total = Math.max(0, event.arrivalTick - event.tick) * 0.05;
+          const flight = Math.min(total, jinxRocketFlightSeconds(from && landing ? hexCells(from, landing) : 0));
+          const leaves = total - flight, flashAt = Math.max(0, leaves - JINX_ROCKET_DRAWN.flashLead);
+          const delayed = (seconds: number) => seconds > 0 ? { delay: seconds, cancelWithSource: true } : {};
+          host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flash', board, snapshotTargets: true, ...delayed(flashAt) });
+          // The rules fired it already and resolve it on landing: it flies even if she dies before it is drawn leaving, from
+          // where her barrel was (outlivesSource). Only its muzzle flash goes with her.
+          host.play('jinx', event.sourceId, [event.targetId], 'cast', { skill: 'jinx-rocket-flight', snapshotTargets: true, flightSeconds: flight,
+            board: board ? [board[0], JINX_ROCKET_DRAWN.aimLift, board[2]] : undefined, outlivesSource: true, ...(leaves > 0 ? { delay: leaves } : {}) });
+        }
+      }
       if (event.type === 'devoured' && host.unit(event.unitId)?.definitionId === 'warwick') play('warwick', event.unitId, [event.targetId], 'warwick-devour', 'cast', true);
       if (event.type === 'bloodFrenzyChanged' && event.active && event.permanent) play('warwick', event.unitId, [], 'warwick-permanent');
       // Mel's energy gain plays nothing: its stack visual drew a flat disc at her feet on our board. Held off as a known
@@ -227,7 +280,7 @@ export function createBatch2VfxBridge(host: Host) {
       }
     },
     save(battleId: string) { return play('mel', `@mel-save:${battleId}`, [], 'mel-save'); },
-    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); },
+    clear() { outcomes.clear(); consequences.clear(); attacks.clear(); storms.clear(); frenzied.clear(); melCasts.clear(); melDashing.clear(); viTargets.clear(); viSlamTicks.clear(); jinxCells.clear(); rocketCells.clear(); },
   };
   return bridge;
 }

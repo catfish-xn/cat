@@ -1,3 +1,5 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
+const W = rangedAttackWindupTicks('lux', 20);
 import { expect, it } from 'vitest';
 import { stepCombat } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -36,8 +38,10 @@ it('the discrete orbit expands by250millihex/tick toward the current target and 
 it('Mini Mees counts every third owner attack: three traced30% AD hits after10ticks, stacking permanent5armor reductions', () => {
   let state = quiet(startAnomaly('DeftHands'));
   const armor = readCombatStats(state.units.find(u => u.id === 'e')!, state).armor;
+  // Ranged attack wind-up (#791, window and tick literals only): each forced attack starts, then launches W ticks later.
   const fire = () => {
-    const step = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) });
+    let step = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) });
+    for (let n = 0; n < W; n++) step = stepCombat(step.state);
     state = step.state; return step;
   };
   expect(state.units.filter(u => u.anomalySummon?.kind === 'mini')).toHaveLength(3);
@@ -46,7 +50,7 @@ it('Mini Mees counts every third owner attack: three traced30% AD hits after10ti
   fire();
   expect(state.units.find(u => u.id === 'p')!.runtime!.attackCount).toBe(3);
   for (const proxy of state.units.filter(u => u.anomalySummon))
-    expect(proxy.anomalyState?.pendingAttacks).toEqual([{ targetId: 'e', executeAtTick: 13, rootActionSeq: 2, raw: 9 }]);
+    expect(proxy.anomalyState?.pendingAttacks).toEqual([{ targetId: 'e', executeAtTick: 3 * (1 + W) + 10, rootActionSeq: 2, raw: 9 }]);
   state = quiet(state);
   const damage: number[] = [];
   for (let i = 0; i < 10; i++) {

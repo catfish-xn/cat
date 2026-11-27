@@ -10,7 +10,7 @@ import { mapSkillTimeline } from '../src/rendering/three-mode/vfx-ltk/timeline';
 import { readEmissionMesh } from '../src/rendering/three-mode/vfx-ltk/assets/emissionMesh';
 import { Rng } from '../src/rendering/three-mode/vfx-ltk/engine/utils/Rng';
 import { jayceSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jayce';
-import { SEVIKA_SLOT_SECONDS, sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
+import { SEVIKA_SLOT_SECONDS, SLOT_BONE, SLOT_LIFT, sevikaSkills, sevikaSlotSkills } from '../src/rendering/three-mode/vfx-ltk/champions/sevika';
 import { G23_POLICY } from '../src/simulation/content/g2-3-policy';
 import { viktorSkills } from '../src/rendering/three-mode/vfx-ltk/champions/viktor';
 import { jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
@@ -81,7 +81,8 @@ describe('batch 2 exact display stages', () => {
     expect(sevikaSlotSkills('jackpot','jackpot')).toEqual(['sevika-slots','sevika-slots-jackpot']);
     for (const [name, cues] of Object.entries(sevikaSkills).filter(([n]) => n.startsWith('sevika-slots-') && !n.endsWith('-pair')))
       // Each layer stands 167 units up on its own (EmitterPosition); borrowing the frame's 169-unit transform doubled it.
-      expect(cues, name).toEqual([{ system: expect.any(String), event: 'cast-start', delay: 0, duration: 2.3 }]);
+      // Over her bar, as the frame (11-25, vfx-ltk-sevika-slot-height.test.ts).
+      expect(cues, name).toEqual([{ system: expect.any(String), event: 'cast-start', bone: SLOT_BONE, lift: SLOT_LIFT, delay: 0, duration: 2.3 }]);
     // Under a mod, the spell layer leaves its right reel to the mod's layer (11-09 e85a856a: the spell's icon showed round it).
     for (const spell of ['flamethrower','punch','thrash']) {
       const [pair] = sevikaSkills[`sevika-slots-${spell}-pair`], [whole] = sevikaSkills[`sevika-slots-${spell}`];
@@ -110,11 +111,13 @@ describe('batch 2 exact display stages', () => {
     expect(w.spawns.some(c=>c.system==='40140250')).toBe(true);
     const e = mapSkillTimeline(of('chompers'),'j',['a','b','c','d'],point);
     expect(e.spawns.filter(c=>c.system==='9bd80364').map(c=>c.targetId)).toEqual(['a','b','c']);
-    const r = mapSkillTimeline(of('rocket', jinxSkills.jinx.filter(c=>!c.action)),'j',['a','b'],point);
+    // 11-21: the rocket's flight and explosion play from the rules' launch and landing (their own branches, batch2-bridge.ts).
+    const rocketCues = [...jinxSkills['jinx-rocket-flash']!, ...jinxSkills['jinx-rocket-flight']!, ...jinxSkills['jinx-rocket-boom']!];
+    const r = mapSkillTimeline(rocketCues,'j',['a','b'],point);
     expect(r.spawns.filter(c=>c.location==='board')).toHaveLength(2);
     expect(r.spawns.find(c=>c.system==='809da1b1')).toMatchObject({point});
     expect(r.spawns.find(c=>c.system==='809da1b1')?.targetId).toBeUndefined();
-    expect(mapSkillTimeline(of('rocket'),'j',['a']).unsupported.map(c=>c.reason)).toContain('missing-point');
+    expect(mapSkillTimeline(rocketCues,'j',['a']).unsupported.map(c=>c.reason)).toContain('missing-point');
   });
   it('distinguishes Mel normal/third cast, throttles energy only within the same tick, and keeps confirmed save independent of a living caster', () => {
     const {bridge:b,play}=bridge('mel');

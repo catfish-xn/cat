@@ -1,10 +1,19 @@
-import type { TimelineCue } from '../timeline';
+import type { StrikeCurve, TimelineCue } from '../timeline';
 import { CHEST } from '../timeline';
 /**
  * The rules' MEL_BOLT_TICKS_PER_HEX (src/simulation/cast-windup.ts), mirrored like CAST_WINDUP_TICKS in cue-overrides.ts (importing
  * the rules module from the 3D code pulls it into the render3d chunk); tests/vfx-ltk-mel-barrage.test.ts checks they stay equal.
  */
 export const MEL_BOLT_TICKS_PER_HEX = 2;
+/**
+ * A plain-cast bolt's curve (TimelineCue.curve: start and end tangents, right/up/forward shares of the distance): out to its
+ * right and up as it leaves, back in and down as it arrives, so its middle swings out to the side with a little lift.
+ * Fitted to the look of the original footage, not original data.
+ */
+export const MEL_BOLT_CURVE: StrikeCurve = { control1: [1.4, 0.4, 1], control2: [-1.4, -0.4, 1] };
+/** The same curve swung to the other side. */
+export const mirrored = (curve: StrikeCurve): StrikeCurve =>
+  ({ control1: [-curve.control1[0], curve.control1[1], curve.control1[2]], control2: [-curve.control2[0], curve.control2[1], curve.control2[2]] });
 /** The rules' bolt flight (ability-projectile.ts mel-barrage): MEL_BOLT_TICKS_PER_HEX a cell, at least one tick. */
 const MEL_BOLT_FLIGHT = { perCell: MEL_BOLT_TICKS_PER_HEX, min: 1 } as const;
 // Attack: no 14.24 Mel record on hand; the chest, as every S13 basic attack we have data for (inferred).
@@ -24,7 +33,11 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
   // The flight takes the rules' own time (MEL_BOLT_TICKS_PER_HEX a cell, at least one tick), from where she stands at release.
   // Each bolt's arc only gives way (Fable 11-21): with the board full it does not play, and it never ends another run's
   // place; any newcomer may end it.
-  'mel-bolt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true }],
+  // Each plain-cast bolt flies a curve, not a straight line (11-24): it swings out to one side mid-flight with a little lift and
+  // comes back onto its target; consecutive bolts swing to opposite sides ('mel-bolt' / 'mel-bolt-alt', batch2-bridge.ts by the
+  // bolt's place in the cast). Its ends and its flight time stay the rules' own. MEL_BOLT_CURVE is fitted, not original data.
+  'mel-bolt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true, curve: MEL_BOLT_CURVE }],
+  'mel-bolt-alt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true, curve: mirrored(MEL_BOLT_CURVE) }],
   'mel-bolt-hit': [{ system: '801006a8', event: 'hit', delay: 0, duration: .6 }],
   // Her third cast: its own cast effects on her (no rule event ends them: each plays to its system's own end, 11-15); its
   // beams leave and land with the rules' bolts as above, and its explosion plays on the main target when that bolt lands.
@@ -47,4 +60,4 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
 /** The rule reports Mel's third cast as branch `third` (combat-six-cost.ts); any other cast, or none reported, is plain. */
 export const melSkill = (branch: string | undefined) => branch === 'third' ? 'mel-third' : 'mel';
 /** The display branches her bolts and dash play from (batch2-bridge.ts), all repository-built (cue-overrides.ts CUE_EXTRA_SKILLS). */
-export const MEL_EVENT_SKILLS = ['mel-dash', 'mel-bolt', 'mel-bolt-hit', 'mel-third-bolt', 'mel-third-hit', 'mel-third-blast'] as const;
+export const MEL_EVENT_SKILLS = ['mel-dash', 'mel-bolt', 'mel-bolt-alt', 'mel-bolt-hit', 'mel-third-bolt', 'mel-third-hit', 'mel-third-blast'] as const;

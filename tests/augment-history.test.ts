@@ -469,7 +469,8 @@ it('keeps the real battle ledger and terminal save identical to the independent 
   // pathing (c64a756a; m01@155). Same values as tests/v26-anomaly-identity-audit.test.ts. Were
   // 0039c483da70364e45f0758d45caa5f28374b148740ee3409d0a1de315ff0324 and 99174cbf08013d1ee651990be6036b6ab0ddba8a6a4f1cd5660acd35decee431.
   expect(s.combat!.tick).toBe(274);expect(events).toHaveLength(153);
-  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('f7e27bc0bb88aa0289c0268bee4aa19e3d7d19a904b90f738a527380ec0b7a8e');
+  // Display only (11-21): attack and attackLaunched carry critical, so the event bytes move (was f7e27bc0…); ticks and counts above hold.
+  expect(createHash('sha256').update(canonicalContent(events)).digest('hex')).toBe('efaaf26165fa68ff9fba9e518cd6fcb07918b3addda00e6d4110f880d4951729');
   expect(createHash('sha256').update(baselineIdentity(baselineBytes(serializeMatch(s)))).digest('hex')).toBe('fc3de4605395549c665e4cbbb9a2f50fee4d9bd97806f8f6320bbe2c87ac6c8f');
 });
 it('records a Forge death, a real Jayce revival and its second death with equipment at each death',()=>{

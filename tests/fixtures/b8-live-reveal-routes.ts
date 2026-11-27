@@ -17,7 +17,8 @@ export const PARTIAL_REVEAL_SEEDS = {loris:54239,zyra:29} as const;
 // is a no-opening route with the same nine-entry 4-7 plan (r03 one hero, r04 three
 // entries including a hero). The board below is the pre-swap placement: the suite's
 // Leona/Loris exchange then kills r02+r03 together, and r00+r01 together as the
-// terminal batch. Five current birds are all loaded; unloaded-source coverage uses the actual 1-4 minions.
+// terminal batch. 2026-11-25 (#791 ranged attack wind-up) the Zyra deploy in simultaneousB8Preparation was re-picked:
+// (6,5) gives the live r01+r04 pair, (3,6) the terminal r00+r03 pair. Five current birds are all loaded; unloaded-source coverage uses the actual 1-4 minions.
 export const SIMULTANEOUS_REVEAL_SEED=15972;
 export async function simultaneousPrefix(seed=SIMULTANEOUS_REVEAL_SEED):Promise<api.MatchState>{
  const equipmentTargets={'sunfire-cape':{definitionId:'irelia'},'ionic-spark':{definitionId:'loris'},gunblade:{definitionId:'zoe'},shojin:{definitionId:'zoe'}};

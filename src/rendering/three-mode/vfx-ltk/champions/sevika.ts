@@ -1,5 +1,5 @@
 import type { TimelineCue } from '../timeline';
-import { CHEST } from '../timeline';
+import { CHEST, OVERHEAD_TOP } from '../timeline';
 // Attack: no 14.24 Sevika record on hand; the chest, as every S13 basic attack we have data for (inferred).
 /** High Roller shield mod: 500 shield for 4 s (14.24b Bonus2ShieldDuration). */
 const SHIELD_SECONDS = 4;
@@ -9,6 +9,19 @@ const SHIELD_SECONDS = 4;
  * stopping right to left), so the twin that keeps the right reel on the right is the mirrored one.
  */
 const SLOTS = '5ee3f587', SLOT_SECONDS = 2.3;
+/**
+ * Where the slot machine and its result layers stand: on the top of her bar row, so the stack reads her, her bar and
+ * items, then the machine, whole, as in the original (11-25 footage 0BBf), and it follows her bar at every star level. On
+ * her feet, as before, it covered her upper body; on her head it still sat on her bar (11-25 Windows rows).
+ */
+export const SLOT_BONE = OVERHEAD_TOP;
+/**
+ * Board units the machine's anchor sits under her bar's top: its own rise (its transform) lifts it clear of the bar, and
+ * this brings its lower edge down to just clear of it, a few pixels. Any higher and, when she fights the row above (her
+ * usual place, a melee unit), that row's bars cross the reels (11-25 Windows rows); this way they only graze its top frame.
+ * Fitted to live footage (按正式服画面拟合，非原版数据).
+ */
+export const SLOT_LIFT = -19;
 /** The rolled spell lands when the right reel stops: G23_POLICY.highRoller.slotTicks (25) × 0.05 s. */
 export const SEVIKA_SLOT_SECONDS = 1.25;
 const SLOT_LAYERS = { flamethrower: '75cc1285', punch: '5875fa39', thrash: '85a3c691',
@@ -53,13 +66,13 @@ export const sevikaSkills: Record<string, readonly TimelineCue[]> = {
   // High Roller slot machine (14.24 map22.bin Maps/Shipping/Map22/Particles/set13/TFT13_Lieutenant_Base_Slots*_Mirrored): the
   // frame high over her (its transform), the reels locking one after another and the result flash last, all gone soon
   // after. The result layers place their own emitters as high up (EmitterPosition), so they play on her as they are.
-  'sevika-slots': [{ system: SLOTS, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }],
+  'sevika-slots': [{ system: SLOTS, event: 'cast-start', bone: SLOT_BONE, lift: SLOT_LIFT, delay: 0, duration: SLOT_SECONDS }],
   ...Object.fromEntries(Object.entries(SLOT_LAYERS).map(([result, system]) =>
-    [`sevika-slots-${result}`, [{ system, event: 'cast-start', delay: 0, duration: SLOT_SECONDS }] as const])),
+    [`sevika-slots-${result}`, [{ system, event: 'cast-start', bone: SLOT_BONE, lift: SLOT_LIFT, delay: 0, duration: SLOT_SECONDS }] as const])),
   // A plain roll's spell on the left and middle reels only: the mod's layer draws the right reel (its own back, icon and
   // flash), and the spell's larger right icon showed round the mod's smaller back (11-09 e85a856a recording).
   ...Object.fromEntries((['flamethrower', 'punch', 'thrash'] as const).map(spell =>
-    [`sevika-slots-${spell}-pair`, [{ system: SLOT_LAYERS[spell], event: 'cast-start', delay: 0, duration: SLOT_SECONDS, hide: SPELL_RIGHT_REEL }] as const])),
+    [`sevika-slots-${spell}-pair`, [{ system: SLOT_LAYERS[spell], event: 'cast-start', bone: SLOT_BONE, lift: SLOT_LIFT, delay: 0, duration: SLOT_SECONDS, hide: SPELL_RIGHT_REEL }] as const])),
 };
 /**
  * The slot layers one cast shows: the rolled spell on the reels; a plain roll's mod replaces the right reel, a Triple is

@@ -79,7 +79,9 @@ export const CAST_START_RANKS: Readonly<Record<string, Readonly<Record<string, '
   // Nami: water spell
   'nami': { 'e4b6f1a3': 'body' },
   // Jinx: cast flash, muzzle flash
-  'jinx': { 'a6a2b1cc': 'decorative', '449d6617': 'decorative' },
+  'jinx': { 'a6a2b1cc': 'decorative' },
+  // Her rocket's muzzle flash plays just before the rocket leaves (11-21, 'jinx-rocket-flash', batch2-bridge.ts).
+  'jinx-rocket-flash': { '449d6617': 'decorative' },
   // Jayce front form: cast dust
   'jayce-front': { '2143d86a': 'decorative' },
   // Jayce back form: build-up, blast

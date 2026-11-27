@@ -28,7 +28,7 @@ async function main(){
   if(deaths.length)batches.push({terminal:state.phase!=='combat',deaths,reveals:step.events.filter(e=>e.type==='lootRevealed').map(e=>e.death.eventSeq)});}
  return {deaths:state.combat.neutralReceipts.deaths,reveals:events.filter(e=>e.type==='lootRevealed').map(e=>({dropId:e.dropId,death:e.death})),batches,result:state.combat.result,phase:state.phase,eventHash:sha(events),terminalHash:sha(state),receipts:state.m8.loot.receipts.length-base.m8.loot.receipts.length,unitSerialDelta:state.nextUnitSerial-base.nextUnitSerial,itemSerialDelta:state.nextItemSerial-base.nextItemSerial};
  }
- const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix)),terminal:resolve(helpers.simultaneousB8Preparation(prefix,{col:4,row:7}))};
+ const branches={full:resolve(prefix),simultaneous:resolve(helpers.simultaneousB8Preparation(prefix)),terminal:resolve(helpers.simultaneousB8Preparation(prefix,{col:3,row:6}))};
  // 2026-11-16 (#693: Zyra's vines land CAST_WINDUP_TICKS.zyra after her cast) the old board lost its same-tick pairs. Seed 15972
  // after the lawful Leona/Loris swap and one public deploy of Zyra, as tests/m8-b8-live-reveal.test.ts: from (3,4) r02/r04 die in
  // the live tick-56 batch; from (4,7) r00/r01 die in the terminal tick-165 batch.
@@ -37,22 +37,25 @@ async function main(){
  // their attack. Table in the #739 description.
  // 2026-11-20 landing batch (re-pin, same deaths, ticks, killers and order): the new display events (abilityProjectileLaunched/
  // abilityProjectileLanded) move every later eventSeq: 523/524/728/964/1068 -> 525/526/730/968/1072. Table in the #787 description.
- const expectedDeaths=[{unitId:bird('r02'),tick:56,eventSeq:525},{unitId:bird('r04'),tick:56,eventSeq:526},{unitId:bird('r03'),tick:86,eventSeq:730},{unitId:bird('r01'),tick:130,eventSeq:968},{unitId:bird('r00'),tick:147,eventSeq:1072}];
+ // 2026-11-25 scene re-pick (#791 ranged attack wind-up split both pairs; scene only, same assertions), as tests/m8-b8-live-reveal.test.ts:
+ // Zyra onto Leona's post-swap (6,5) (the deploy swaps the two): r01/r04 die in the live tick-124 batch; Zyra to the empty (3,6):
+ // r00/r03 die in the terminal tick-177 batch. Was (3,4) r02/r04@56 525/526, r03@86 730, r01@130 968, r00@147 1072.
+ const expectedDeaths=[{unitId:bird('r01'),tick:124,eventSeq:1398},{unitId:bird('r04'),tick:124,eventSeq:1399},{unitId:bird('r03'),tick:128,eventSeq:1452},{unitId:bird('r02'),tick:137,eventSeq:1535},{unitId:bird('r00'),tick:192,eventSeq:1782}];
  assert.deepEqual(branches.simultaneous.deaths,expectedDeaths);
  const sameTick=branches.simultaneous.deaths.slice(0,2);
  const batches=branches.simultaneous.batches;
  assert.deepEqual(batches.map(b=>b.deaths),[sameTick,expectedDeaths.slice(2,3),expectedDeaths.slice(3,4),expectedDeaths.slice(4)]);
  assert.deepEqual(batches.map(b=>b.terminal),[false,false,false,true]);
- assert.deepEqual(batches[0].reveals,[525,525,526,526,526]); // landing batch: was 523/524
+ assert.deepEqual(batches[0].reveals,[1398,1399,1399,1399]); // re-pick: was [525,525,526,526,526]
  assert.equal(branches.simultaneous.phase,'settlement');
- // Landing batch: terminal branch likewise 1289/1323/1558/1559 -> 1291/1325/1560/1561 (r04's 463 unchanged).
- const expectedTerminalDeaths=[{unitId:bird('r04'),tick:40,eventSeq:463},{unitId:bird('r02'),tick:131,eventSeq:1291},{unitId:bird('r03'),tick:135,eventSeq:1325},{unitId:bird('r00'),tick:165,eventSeq:1560},{unitId:bird('r01'),tick:165,eventSeq:1561}];
+ // Re-pick: terminal was (4,7) r04@40 463, r02@131 1291, r03@135 1325, r00/r01@165 1560/1561.
+ const expectedTerminalDeaths=[{unitId:bird('r04'),tick:40,eventSeq:468},{unitId:bird('r02'),tick:115,eventSeq:1142},{unitId:bird('r01'),tick:139,eventSeq:1342},{unitId:bird('r00'),tick:177,eventSeq:1546},{unitId:bird('r03'),tick:177,eventSeq:1547}];
  assert.deepEqual(branches.terminal.deaths,expectedTerminalDeaths);
  const terminalBatch=branches.terminal.deaths.slice(3);
  const terminalBatches=branches.terminal.batches;
  assert.deepEqual(terminalBatches.map(b=>b.deaths),[expectedTerminalDeaths.slice(0,1),expectedTerminalDeaths.slice(1,2),expectedTerminalDeaths.slice(2,3),terminalBatch]);
  assert.deepEqual(terminalBatches.map(b=>b.terminal),[false,false,false,true]);
- assert.deepEqual(terminalBatches[3].reveals,[1560,1560,1561]); // landing batch: was 1558/1559
+ assert.deepEqual(terminalBatches[3].reveals,[1546,1546,1547]); // re-pick: was [1560,1560,1561]
  assert.equal(branches.terminal.phase,'settlement');
  // Seed 54239 inventory Shojin/Gargoyle/Crownguard on bare two-star Loris: (6,7) kills only r04, (0,6) only r01.
  for(const [source,cell,deathTick,directReceipts,itemBirths,unitBirths] of [['r04',{col:6,row:7},520,2,0,1],['r01',{col:0,row:6},353,1,1,0]]){

@@ -5,19 +5,24 @@ import { readVfxSystem } from './engine/parsing/readVfxSystem';
 import { drawnEmitters, type DrawnEmitter } from './rendering/utils/definitions';
 import { drawsAsBeam, drawsAsMesh, drawsAsProjection, drawsAsQuad, drawsAsTrail, drawsTheAttachment } from './rendering/utils/drawKind';
 import type { EmitterSamplers } from './rendering/hooks/useVfxTextures';
-import type { TimelineCue } from './timeline';
+import { withAttackFlight, type TimelineCue } from './timeline';
 import { readConvertedMesh, type ConvertedMesh } from './assets/mesh';
 import type { Pose } from './assets/pose';
 import { reflectionCube } from './assets/reflectionCube';
 import { ATTACK_HIT_SECONDS, ATTACK_HIT_SYSTEM, CAST_START_RANKS } from './cue-ranks';
-import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
+import { ATTACHED_HELD_BACK, ATTACHED_WHOLE_BODY, CRIT_SKILL_HIT, CUE_EXTRA_SKILLS, SUSTAIN_CAPS, SUSTAIN_RANKS, SUSTAIN_REFRESH, SUSTAIN_SKILL_CAPS, cueAdditions, cueOverride, DISABLED_EMITTERS, EMITTER_ALPHA, EMITTERS_HELD_ON, EMITTER_BLEND, WORLD_ACCELERATION_OFF, MUTED_EMITTERS, PLAY_OUT_SYSTEMS, TRAIL_END_FADE, withCueBranches, type PlayOut, LINGER_PLAY_OUT } from './cue-overrides';
 import { convertedTimelines } from './s13-timelines';
-import { QUAD_TYPE, RENDER_PHASE } from './engine/model/enums';
+import { QUAD_TYPE, RENDER_PHASE, type BlendMode } from './engine/model/enums';
 import { readEmissionMesh } from './assets/emissionMesh';
 import { readMeshBuffer } from './assets/meshBuffer';
 import { meshEmission } from './assets/emission';
 import type { EmissionSampler, EmissionSurfaces, EmitterSurfaces } from './engine/simulation/emissionSurface';
 
+/** The emitter with the blend mode cue-overrides.ts EMITTER_BLEND sets for it, when it sets one; else as it is. */
+function reblended<T extends { readonly name?: string | null; readonly blendMode: BlendMode }>(e: T, blended: Readonly<Record<string, BlendMode>> | undefined): T {
+  const mode = blended?.[e.name ?? ''];
+  return mode === undefined ? e : { ...e, blendMode: mode };
+}
 /** An emitter's colour modulation with its alpha scaled (cue-overrides.ts EMITTER_ALPHA). */
 function fainter(modulation: readonly [number, number, number, number], factor: number): readonly [number, number, number, number] {
   return [modulation[0], modulation[1], modulation[2], modulation[3] * factor];
@@ -189,6 +194,7 @@ export function parseIndex(raw: unknown): VfxIndex {
         || !finite(cue.duration) || Number(cue.duration) <= 0 || Number(cue.duration) > 10
         || (cue.bone !== undefined && typeof cue.bone !== 'string')
         || (cue.targetBone !== undefined && typeof cue.targetBone !== 'string')
+        || (cue.lift !== undefined && !(finite(cue.lift) && Math.abs(Number(cue.lift)) <= 200))
         || (cue.primary !== undefined && typeof cue.primary !== 'boolean')
         || (cue.location !== undefined && cue.location !== 'board')
         || (cue.targetLimit !== undefined && (!Number.isInteger(cue.targetLimit) || Number(cue.targetLimit) < 1 || Number(cue.targetLimit) > 8))
@@ -198,6 +204,9 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.selfFlight !== undefined && (typeof cue.selfFlight !== 'boolean' || cue.event !== 'projectile'))
         || (cue.playOut !== undefined && (typeof cue.playOut !== 'number' || !(cue.playOut > 0) || cue.playOut > 2))
         || (cue.giveWay !== undefined && typeof cue.giveWay !== 'boolean')
+        || (cue.curve !== undefined && (cue.event !== 'projectile' || typeof cue.curve !== 'object' || cue.curve === null
+          || ![(cue.curve as { control1?: unknown }).control1, (cue.curve as { control2?: unknown }).control2].every(v => Array.isArray(v) && v.length === 3
+            && v.every(x => finite(x) && Math.abs(Number(x)) <= 4))))
         || (cue.action !== undefined && (typeof cue.action !== 'string' || !['attack', 'cast', 'passive', 'end'].includes(cue.action)))
         || (cue.variant !== undefined && (typeof cue.variant !== 'string' || !(TIMELINE_VARIANTS as readonly string[]).includes(cue.variant)))
         || (cue.branch !== undefined && (typeof cue.branch !== 'string' || !/^[a-zA-Z0-9_-]{1,32}$/.test(cue.branch)))
@@ -224,7 +233,9 @@ export function parseIndex(raw: unknown): VfxIndex {
         || (cue.lineBack !== undefined && (cue.lineCells === undefined || !finite(cue.lineBack) || Number(cue.lineBack) < 0 || Number(cue.lineBack) > 2))
         || (cue.hide !== undefined && (!Array.isArray(cue.hide) || cue.hide.length === 0 || cue.hide.length > 8 || !cue.hide.every(name => typeof name === 'string' && name.length > 0 && name.length <= 64)))
         || (cue.scale !== undefined && !(finite(cue.scale) && Number(cue.scale) >= 0.05 && Number(cue.scale) <= 5))
-        || (cue.event === 'projectile' && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
+        // An attack's flying projectile may leave its flight out: the landing event or the default times it (withAttackFlight).
+        || (cue.event === 'projectile' && (cue.travelSeconds !== undefined || cue.action !== 'attack' || cue.stationary === true)
+          && (!finite(cue.travelSeconds) || Number(cue.travelSeconds) <= 0 || Number(cue.travelSeconds) > Number(cue.duration)))) {
         throw new VfxLoadError('invalid', 'timeline-cue');
       }
     }
@@ -265,10 +276,18 @@ export function withCueOverrides(index: VfxIndex): VfxIndex {
     const key = CRIT_SKILL_HIT.skill(champion);
     if (!champion.includes('-') && !Object.hasOwn(index.skills, key)) (skills ??= { ...index.skills })[key] = [CRIT_SKILL_HIT.cue];
   }
-  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name.
+  // Repository display branches (CUE_EXTRA_SKILLS) join an index that has their champion and every system they name. A
+  // champion whose lists are all branches (Jayce's front and back forms) counts by any of them.
+  const champions = new Set(Object.keys(index.skills).map(key => key.split('-')[0]!));
   for (const [key, cues] of Object.entries(CUE_EXTRA_SKILLS)) {
-    if (Object.hasOwn(index.skills, key) || !Object.hasOwn(index.skills, key.split('-')[0]!)) continue;
+    if (Object.hasOwn(index.skills, key) || !champions.has(key.split('-')[0]!)) continue;
     if (cues.every(cue => Object.hasOwn(index.systems, cue.system))) (skills ??= { ...index.skills })[key] = cues;
+  }
+  // An attack projectile without its own flight takes the default one (DEFAULT_ATTACK_FLIGHT_SECONDS): the landing event
+  // times it when there is one.
+  const lists = skills ?? index.skills;
+  for (const [key, cues] of Object.entries(lists)) {
+    if (cues?.some(cue => withAttackFlight(cue) !== cue)) (skills ??= { ...index.skills })[key] = cues.map(withAttackFlight);
   }
   // The generic basic-attack hit holds its run only as long as it shows (cue-ranks.ts ATTACK_HIT_SECONDS).
   for (const [key, cues] of Object.entries(skills ?? index.skills)) {
@@ -337,11 +356,13 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
       const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
-      const faint = EMITTER_ALPHA[id];
-      const model = disabled || whole || heldOn || faint ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
+      const faint = EMITTER_ALPHA[id], unpushed = WORLD_ACCELERATION_OFF[id], blended = EMITTER_BLEND[id];
+      const model = disabled || whole || heldOn || faint || unpushed || blended ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
         : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null }
         : heldOn?.includes(e.name ?? '') ? { ...e, lifetime: null }
-        : faint?.[e.name ?? ''] !== undefined ? { ...e, modulation: fainter(e.modulation, faint[e.name ?? '']!) } : e) } : parsed;
+        : unpushed?.includes(e.name ?? '') ? reblended({ ...e, worldAcceleration: { ...e.worldAcceleration, constant: [0, 0, 0], keys: [], tables: [] } }, blended)
+        : faint?.[e.name ?? ''] !== undefined ? reblended({ ...e, modulation: fainter(e.modulation, faint[e.name ?? '']!) }, blended)
+        : reblended(e, blended)) } : parsed;
       const listed = drawnEmitters(model, true);
       // A mesh primitive that names no mesh draws nothing in the game either (Darius's Q_Heal FunnelTop1, 11-06).
       // After the phase checks below, it is left undrawn instead of failing the whole system back to the legacy ring.

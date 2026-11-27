@@ -4,10 +4,10 @@ import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
 import type { Anchor } from './engine/model/rig';
 import { AXIS_SIGN } from './space';
-import { CRIT_ATTACK_HIT, SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
+import { CRIT_ATTACK_HIT, ROOT_ROOM_MOST, SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
-import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
+import { DEFAULT_ATTACK_FLIGHT_SECONDS, mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
@@ -167,7 +167,11 @@ export function ltkRenderNeeds(systems: readonly { readonly passes: LtkPassFlags
   if (slots >= LTK_PASS_DEGRADE_AT) return { early: needs.early, late: false, soft: false };
   return needs;
 }
-export interface VfxUnit { root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean }
+export interface VfxUnit {
+  root: Object3D; body: Object3D | null; alive: boolean; disposed?: boolean;
+  /** World height of the top of the unit's overhead bar row, where the host draws one (OVERHEAD_TOP anchors on it). */
+  overheadTop?: number;
+}
 export interface LtkPlayOptions {
   /** Exact display branch in this champion's catalogue; each branch retains the 12-cue limit. */
   skill?: string;
@@ -205,8 +209,20 @@ export interface LtkPlayOptions {
    * moves at most 2 s either way and never before the start. The default ltk.play path and the batch2 bridge take it.
    */
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
+  /**
+   * A ranged attack's landing as the rules time it (attackLaunched / attackLanded display events): its projectile lands and its
+   * hit plays `seconds` after the attack event, on the arrival tick (landingCues). Applied after `release`.
+   */
+  landing?: AttackLanding;
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
+  /**
+   * Its projectiles fly even if the caster dies after the play came: one not started yet leaves from where its cue bone
+   * stood as the caster went, and one in flight flies on. For a projectile the rules already fired and resolve on landing
+   * (Jinx's rocket), so a caster killed in between does not leave its landing without a flight. Off by default: every other
+   * projectile from the caster still goes with the caster.
+   */
+  outlivesSource?: boolean;
   /** This attack crits (its packetDamage, same tick and target): its shared hit plays as the crit flash (CRIT_ATTACK_HIT). */
   crit?: boolean;
   /** This play is a crit flash of its own (CRIT_SKILL_HIT): refused while CRIT_FLASH_MAX of them are out. */
@@ -218,9 +234,12 @@ export interface LtkPlayOptions {
   flightSeconds?: number;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
+  /** Its projectile flies on without its caster (LtkPlayOptions.outlivesSource). */
+  outlives?: boolean;
   /** Its random seed, fixed when it was queued (seedOf). */
   seed: number;
-  /** Where a projectile from its play's primary target starts (TimelineCue.fromPrimary), taken when the play came. */
+  /** Where a projectile from its play's primary target starts (TimelineCue.fromPrimary), taken when the play came; or where an
+   * outliving projectile's caster bone stood as the caster went (Waiting.outlives). */
   from?: WorldPoint;
   /** Where its target stood when the cast played (a cast's hit or projectile at a living target): it plays there once that target is dead. */
   place?: WorldPoint;
@@ -360,6 +379,70 @@ export function withFlightSeconds<T extends TimelineCue>(cue: T, seconds: number
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
 }
+/** A ranged attack's landing (LtkPlayOptions.landing): seconds from the attack event to the rules' arrival tick, and
+ * whether the shot is an instant beam (the rules land it on the attack tick itself). */
+/**
+ * A ranged attack as the rules time it. With the rules' wind-up (attackWindup, 11-19) it plays in two phases: 'windup' on the
+ * attack start (the swing and its own cues, no shot; `windupSeconds` to the launch) and 'launch' on the attack itself (only the
+ * shot and its hit: the shot leaves now and lands `seconds` later). Without a phase (no wind-up), the whole attack as before.
+ */
+export interface AttackLanding { seconds: number; beam?: boolean; phase?: 'windup' | 'launch'; windupSeconds?: number }
+/** The shortest flight a projectile is drawn with, so a near shot never jumps across in one frame. Fitted (Fable 11-18),
+ * not original: a target too near for it is hit up to this much after its damage number. */
+export const MIN_FLIGHT_SECONDS = 0.1;
+/** A beam's missile (the rules land it on the attack tick): drawn for one tick, its hit on the attack event with it. */
+export const BEAM_FLIGHT_SECONDS = 0.05;
+/** Where an attack's projectile leaves: at its release frame (the default) or on the attack event itself, the rules'
+ * launch tick, which flies exactly the rules' ticks but leaves before the hand does. Kept to compare the two (Fable 11-18). */
+export const LANDING_DEPART: 'release' | 'event' = 'release';
+/**
+ * Attack cues timed by the rules' landing instead of a fixed flight: each projectile leaves at its own (release-mapped)
+ * delay (or on the attack event, LANDING_DEPART) and lands on the arrival tick, flying at least MIN_FLIGHT_SECONDS, and keeps
+ * what it plays after landing; the attack's hits start when its projectile lands. A beam's projectile and hits play at the
+ * arrival, the attack event itself (a missile drawn for BEAM_FLIGHT_SECONDS). An attack without a projectile (melee) is
+ * returned as it is, and so is a stationary beam the rules give a flight.
+ */
+export function landingCues<T extends Pick<TimelineCue, 'action' | 'event' | 'delay' | 'duration' | 'travelSeconds' | 'stationary'>>(cues: readonly T[], landing: AttackLanding,
+  depart: 'release' | 'event' = LANDING_DEPART): T[] {
+  const attack = (cue: T) => (cue.action ?? 'cast') === 'attack';
+  const shotCue = (cue: T) => attack(cue) && (cue.event === 'projectile' || cue.event === 'hit');
+  if (landing.phase === 'windup') {
+    // The swing's own cues, none of its shot; a fire frame later than the launch (more than the wind-up cap) is reached sooner:
+    // what comes before it speeds up so it fires on the launch tick (self-chosen, Fable 11-19).
+    const fire = cues.find(cue => attack(cue) && cue.event === 'projectile' && !cue.stationary)?.delay ?? 0;
+    const launch = Math.max(0, landing.windupSeconds ?? fire);
+    const map = (t: number) => fire > launch && fire > 0 ? (t < fire ? t * launch / fire : t - fire + launch) : t;
+    return cues.filter(cue => !shotCue(cue)).map(cue => attack(cue) ? { ...cue, delay: map(cue.delay) } : cue);
+  }
+  if (landing.phase === 'launch') {
+    // Only the shot: it leaves on the launch (the attack event) and lands on the arrival.
+    const shot = cues.filter(shotCue);
+    // A shot that does not fly (Viktor's standing beam) lights now and its hit lands on the arrival with it.
+    if (!shot.some(cue => cue.event === 'projectile' && !cue.stationary))
+      return shot.map(cue => ({ ...cue, delay: cue.event === 'hit' ? Math.max(0, landing.seconds) : 0 }));
+    return landingCues(shot, { seconds: landing.seconds, ...(landing.beam ? { beam: true } : {}) }, 'event');
+  }
+  const arrive = Math.max(0, landing.seconds);
+  if (landing.beam) {
+    // A beam (stationary or drawn as a missile) and its hits go off on the arrival, the attack event itself.
+    if (!cues.some(cue => attack(cue) && cue.event === 'projectile')) return [...cues];
+    return cues.map(cue => !attack(cue) || (cue.event !== 'projectile' && cue.event !== 'hit') ? cue
+      : cue.event === 'projectile' && !cue.stationary ? { ...cue, delay: arrive, travelSeconds: BEAM_FLIGHT_SECONDS,
+        duration: Math.max(BEAM_FLIGHT_SECONDS, cue.duration - (cue.travelSeconds ?? DEFAULT_ATTACK_FLIGHT_SECONDS) + BEAM_FLIGHT_SECONDS) }
+      : { ...cue, delay: arrive });
+  }
+  const flies = (cue: T) => attack(cue) && cue.event === 'projectile' && !cue.stationary;
+  if (!cues.some(flies)) return [...cues];
+  let lands = arrive;
+  const moved = cues.map(cue => {
+    if (!flies(cue)) return cue;
+    const delay = depart === 'event' ? 0 : cue.delay, travel = Math.max(MIN_FLIGHT_SECONDS, arrive - delay);
+    lands = Math.max(lands, delay + travel);
+    const tail = cue.duration - (cue.travelSeconds ?? DEFAULT_ATTACK_FLIGHT_SECONDS);
+    return { ...cue, delay, travelSeconds: travel, duration: Math.max(travel, tail + travel) };
+  });
+  return moved.map(cue => attack(cue) && cue.event === 'hit' ? { ...cue, delay: lands } : cue);
+}
 /** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
 export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
   // Written as a shift from t so a tail at 1× gives exactly releaseShift's `at − clip` (Malzahar stays bit-identical).
@@ -441,6 +524,13 @@ export function ownSeconds(prepared: Pick<PreparedVfx, 'model'>): number | null 
     end = Math.max(end, emits + peak(e.particleLifetime) * (table.length ? Math.max(...table) : 1));
   }
   return Math.min(10, end);
+}
+/**
+ * The most root places one run of a system may take: a skill system's own cap (cue-overrides.ts ROOT_ROOM_MOST) or the usual
+ * ROOT_PARTICLES_MOST, and a plain attack's ROOT_PARTICLES_ATTACK_MOST.
+ */
+export function rootRoomMost(system: string, skill: boolean): number {
+  return skill ? ROOT_ROOM_MOST[system] ?? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
 }
 /** A cue with `ownLife` lasts its system's own time (ownSeconds) once the system is loaded; any other cue is unchanged. */
 export function withOwnLife<T extends Pick<TimelineCue, 'ownLife' | 'duration'>>(cue: T, prepared: Pick<PreparedVfx, 'model'> | undefined): T {
@@ -649,10 +739,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const kids = measureChildren(prepared, Math.min(longest.duration, 10), longest.event === 'projectile' && longest.travelSeconds ? longest.travelSeconds : stopAt);
         if (kids) { rooms.set(id, childRoomOf(kids)); childLive.set(id, kids.particles); }
         // A system that measures more than ROOT_PARTICLES without a limit runs with the room it needs (rootRoomOf) and reserves
-        // what it holds there, a skill's up to ROOT_PARTICLES_MOST and a plain attack's up to ROOT_PARTICLES_ATTACK_MOST. A
+        // what it holds there, a skill's up to ROOT_PARTICLES_MOST (or its own ROOT_ROOM_MOST) and a plain attack's up to ROOT_PARTICLES_ATTACK_MOST. A
         // projectile cue's system is measured in flight (MEASURE_FLIGHT), where its trails emit by distance (11-16).
         const skill = cues.some(cue => cue.system === id && !((cue.action ?? 'cast') === 'attack' && !cue.variant));
-        const most = skill ? ROOT_PARTICLES_MOST : ROOT_PARTICLES_ATTACK_MOST;
+        const most = rootRoomMost(id, skill);
         const flying = cues.find(cue => cue.system === id && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds);
         const travel = flying?.travelSeconds, scale = flying ? (flying.scale ?? 1) * cueSize(flying) : 1;
         const seconds = Math.min(longest.duration, 10);
@@ -667,9 +757,16 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
     warming.set(champion, pending); return pending;
   };
   // Where a cue meets its target, as a world point: the way LtkPlayOptions.snapshotTargets takes it.
-  const placeOf = (unit: VfxUnit, spawn: TimelineSpawn): WorldPoint => {
-    const engine = unitAnchor(unit.root, unit.body, spawn.event === 'hit' ? spawn.bone : spawn.targetBone).originAt(0);
+  const placeOf = (unit: VfxUnit, spawn: TimelineSpawn): WorldPoint => boneWorld(unit, spawn.event === 'hit' ? spawn.bone : spawn.targetBone);
+  const boneWorld = (unit: VfxUnit, bone: string | undefined): WorldPoint => {
+    const engine = unitAnchor(unit.root, unit.body, bone).originAt(0);
     return [engine[0] * AXIS_SIGN[0] * FX_SCALE, engine[1] * FX_SCALE, engine[2] * FX_SCALE];
+  };
+  // An outliving projectile (Waiting.outlives) whose caster is going: it keeps where its cue bone stands now, and flies from there.
+  const keepLaunch = (row: Waiting, unit: VfxUnit | undefined): boolean => {
+    if (!row.outlives) return false;
+    if (!row.from && unit && !unit.disposed) row.from = boneWorld(unit, row.spawn.bone);
+    return !!row.from;
   };
   // A cast's hit or projectile still plays where a dead target stood, and so does an empowered attack's (a variant: Twitch's
   // bolts after his cast, Zeri's third shot; Fable 11-13, a killing bolt drew nothing). A plain attack, a link, a state its
@@ -777,6 +874,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
+      if (context.landing !== undefined) {
+        if (!Number.isFinite(context.landing.seconds) || context.landing.seconds < 0 || context.landing.seconds > 5) return false;
+        selected = selected && landingCues(selected, context.landing);
+      }
       if (context.critFlash && critFlashesOut() >= CRIT_FLASH_MAX) return false;
       // A crit plays its attack as critAttack does; its crit flash only while fewer than CRIT_FLASH_MAX of them are out.
       if (context.crit && action === 'attack' && selected) selected = critAttack(champion, selected, critFlashesOut() < CRIT_FLASH_MAX, id => !!catalog.get(id));
@@ -861,7 +962,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
           spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
         }
-        waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(from ? { from } : {}),
+        waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(context.outlivesSource && spawn.event === 'projectile' ? { outlives: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
       }
@@ -875,10 +976,34 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
       for (const run of running) if (run.source === sourceId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
+    /**
+     * As stopSystems, easing those runs out over `seconds` instead: every layer of the run fades together by the same factor
+     * and keeps its colour (a stop ends each layer at its own pace, so the longest-lived layer is left alone on screen).
+     */
+    fadeSystems(sourceId: string, systems: readonly string[], seconds: number) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.sourceId === sourceId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.source === sourceId && systems.includes(run.system) && !run.stopped) { run.fx.fade(seconds); run.fading = true; }
+    },
     /** As stopSystems, for the runs of these systems on one unit (whoever cast them): the rule's effect on that unit ended. */
     stopSystemsOn(targetId: string, systems: readonly string[]) {
       for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
       for (const run of running) if (run.target === targetId && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
+    },
+    /**
+     * As stopSystemsOn, easing them out over `seconds` instead (a state on that unit ended: Elise's cocoon, Zyra's root). The
+     * fade itself ends the run when it is over (particles.ts fade shortens the run's own duration), so `until` is left as is.
+     */
+    fadeSystemsOn(targetId: string, systems: readonly string[], seconds: number) {
+      for (let at = waiting.length - 1; at >= 0; at--) if (waiting[at].spawn.targetId === targetId && systems.includes(waiting[at].spawn.system)) waiting.splice(at, 1);
+      for (const run of running) if (run.target === targetId && systems.includes(run.system) && !run.stopped) { run.fx.fade(seconds); run.fading = true; }
+    },
+    /**
+     * As stopSystemsOn, for a unit's own cast-starts of these systems (no target: a state it put on itself, Lux's self-cast
+     * bubble). Its cues on other units are untouched.
+     */
+    stopSystemsOnSelf(unitId: string, systems: readonly string[]) {
+      for (let at = waiting.length - 1; at >= 0; at--) { const spawn = waiting[at].spawn; if (spawn.sourceId === unitId && spawn.targetId === undefined && systems.includes(spawn.system)) waiting.splice(at, 1); }
+      for (const run of running) if (run.source === unitId && run.target === undefined && systems.includes(run.system)) { run.fx.stop(); run.until = Math.min(run.until, clock + .5); }
     },
     /** End/recast releases a buff's slots before its replacement or explosion starts. */
     stopAction(sourceId: string, action: TimelineAction) {
@@ -900,6 +1025,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       for (let at = waiting.length - 1; at >= 0; at--) {
         const row = waiting[at];
         // A row that keeps its target's place (Waiting.place) plays there.
+        if (needsLivingSource(row.spawn) && !row.withSource && row.spawn.sourceId === id && keepLaunch(row, findUnit(id))) continue;
         if (((needsLivingSource(row.spawn) || row.withSource) && row.spawn.sourceId === id) || (!row.snapshot && !row.place && row.spawn.targetId === id)) waiting.splice(at, 1);
       }
       pruneFlightSeeds();
@@ -983,7 +1109,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const readmit = row.readmit ?? SUSTAIN_READMIT.has(spawn.system);
         if (readmit && clock - when >= spawn.duration) continue;
         if (!readmit && overdue && (clock - when >= spawn.duration || (importance !== 'critical' && importance !== 'body'))) { countMiss(spawn.system); continue; }
-        if (needsLivingSource(spawn) && (!source?.alive || source.disposed)) continue;
+        if (needsLivingSource(spawn) && (!source?.alive || source.disposed) && !keepLaunch(row, source)) continue;
         // A target dead by now: a row that kept its place plays there, any other is dropped.
         if (spawn.targetId && !snapshot && (!target?.alive || target.disposed)) { if (!row.place) continue; snapshot = row.place; }
         // A flying projectile at its still living target, from a row that kept its place (a row or a falling projectile has fixed
@@ -1007,8 +1133,8 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const rowCells = rowStart ? Math.min(spawn.rowCells ?? Infinity, board ? rowReach(rowStart, spawn.rowSide!, board) + (spawn.rowBeyond ?? 0) : spawn.rowCells ?? 0) : 0;
         if (rowStart && !(rowCells > 0.05)) continue;
         // A falling projectile (TimelineCue.fromAbove) starts above where its target stands (its snapshot point once it is
-        // dead), taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
-        const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? (target ? standingPoint(target.root) : undefined) : undefined;
+        // dead) or above its board point, taken now. With neither it does not play: like a row, it never falls back to a flight from the caster.
+        const dropAt = spawn.event === 'projectile' && spawn.fromAbove ? snapshot ?? spawn.point ?? (target ? standingPoint(target.root) : undefined) : undefined;
         if (spawn.event === 'projectile' && spawn.fromAbove && !dropAt) continue;
         if (spawn.fromId !== undefined && !row.from) continue;
         // A projectile from the primary target's place (TimelineCue.fromPrimary) starts there, like a falling one starts above.
@@ -1149,7 +1275,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
-        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim);
+        const anchor = rowEnds ? pointAnchor(rowEnds[0]) : dropFrom ? pointAnchor(dropFrom) : fixed && spawn.event !== 'projectile' ? pointAnchor(fixed, snapshot ? undefined : spawn.facing) : unitAnchor(host!.root, host!.body, spawn.bone, aim, () => host!.overheadTop, spawn.lift);
         const attachment = rowEnds || dropFrom || (fixed && spawn.event !== 'projectile') ? undefined : host;
         // Systems draw at the arena's own unit scale, weapon-held ones at the body's (fx-size.ts); a cue scale multiplies that.
         const scale = (spawn.scale ?? 1) * cueSize(spawn);
@@ -1177,7 +1303,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
           curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
           brightness: spawn.brightness,
-          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom };
+          stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom,
+          // A cue (not a projectile) that plays out past its end still fades, as a plain cue would, the emitters whose
+          // particles go at the stop; only those that outlive it finish on their own (Fable 11-25, Garen's landing burst).
+          ...(spawn.playOut && spawn.event !== 'projectile' && !persistent && !spawn.fadeOut ? { tailFade: { from: Math.max(runFor - tail, spawn.stopAfter ?? 0), to: runFor } } : {}) };
         // The body is part of the key: after a model swap or star-up an attached system must rebuild for the new mesh.
         // Scale is part of it too: a parked system must not be replayed at another size.
         // So is the child room: a system parked before its champion's warm measured it keeps the room it was built with.
@@ -1193,7 +1322,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           fx.object.userData.poolUnit = attachment ? (spawn.event === 'hit' ? spawn.targetId : spawn.sourceId) : undefined;
           scene.add(fx.object); fx.update(clock - when, camera);
           if (options.budget) options.budget.live += own;
-          running.add({ reserved: own, system: spawn.system, event: spawn.event, ...(spawn.giveWay ? { giveWay: true } : {}), ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn), group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && (!!loaded.playOut || !!loaded.lingerPlayOut)) || !!spawn.playOut || undefined, lingerTail: (spawn.event === 'projectile' && !rowStart && !loaded.playOut && !spawn.playOut && !!loaded.lingerPlayOut) || undefined,
+          running.add({ reserved: own, system: spawn.system, event: spawn.event, ...(spawn.giveWay ? { giveWay: true } : {}), ranked: spawn.rank === 'decorative', source: spawn.sourceId, target: snapshot ? undefined : spawn.targetId, action: spawn.action ?? 'cast', until: when + runFor, started: clock, span: runFor, fx, persistent, boundToSource: needsLivingSource(spawn) && !row.outlives, group, importance, playOut: !!rowStart || (spawn.event === 'projectile' && (!!loaded.playOut || !!loaded.lingerPlayOut)) || !!spawn.playOut || undefined, lingerTail: (spawn.event === 'projectile' && !rowStart && !loaded.playOut && !spawn.playOut && !!loaded.lingerPlayOut) || undefined,
             playOutEnd: spawn.playOut ? { seconds: spawn.playOut, fade: spawn.playOut } : spawn.event === 'projectile' && !rowStart ? loaded.playOut : undefined, together: row.together, fan: row.fan, ...(row.fan && spawn.perStrike ? { strike: true as const } : {}), ...(held ? { holdTarget: held.hold } : {}), ...(atPlace ? { atPlace } : {}),
             ...(readmit ? { again: row } : {}) }); starts++;
           if (atPlace) LTK_RUN_STATS.placeStarted[spawn.system] = (LTK_RUN_STATS.placeStarted[spawn.system] ?? 0) + 1;
