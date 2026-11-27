@@ -4088,9 +4088,9 @@
     "tests/smeech-releap-after-kill.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 9591,
+      "currentBytes": 11343,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "83818eff035ba429c21365f6af907c95db1689ffa095d73cfca2f6cc0294fff6",
+      "currentSha256": "24f292ecd73be3ea18981237e7c2ebeb1afd89758d0e75268a321e4d3c701a8f",
       "firstDifferentByte": 0
     },
     "tests/stage5-feedback.test.ts": {

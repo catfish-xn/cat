@@ -10,6 +10,7 @@ import { admitArchives } from '../src/replay';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 import { M8_VERSION } from '../src/simulation/m8/version';
 import { battle, unit } from './combat-helpers';
+import { hexDistance } from '../src/simulation/board';
 import { packets } from './helpers/replay2-views';
 import { readyMatch } from './match-helpers';
 
@@ -52,6 +53,28 @@ describe('Smeech stands still after a stab kill, then re-leaps', () => {
     expect(out.flatMap(s => s.events.filter(e => e.type === 'abilityMarker' && e.marker === 'smeech-leap-again'))).toEqual([]);
     expect(mine(out, 'ability').filter(([, id]) => id === 'near').map(([t]) => t)[0]).toBe(kill + SMEECH_RELEAP_AFTER_KILL_TICKS);
     expect(mineIn(out, 'attack', kill, kill + SMEECH_RELEAP_AFTER_KILL_TICKS)).toEqual([]);
+  });
+  it('the hex he aimed at is taken while he is in the air: he lands on the free hex next to his new target nearest him, and strikes', () => {
+    let state = battle([smeech(), dummy('e', 3, 3, 400), dummy('far', 6, 2, 100000), { ...dummy('block', 6, 7, 100000), team: 'player' } as CombatUnit], { rngState: 42 }); // an ally of his, out of the way until it takes the hex
+    const all: { tick: number; events: readonly CombatEvent[] }[] = [];
+    let aimed: { col: number; row: number } | undefined;
+    for (let i = 0; i < 60 && state.status === 'running'; i++) {
+      const r = stepCombat(state); state = r.state; all.push({ tick: state.tick, events: r.events });
+      const m = r.events.find(e => e.type === 'abilityMarker' && e.marker === 'smeech-leap-again');
+      if (m && m.type === 'abilityMarker' && !aimed) {
+        aimed = m.cell; state = structuredClone(state); Object.assign(state.units.find(u => u.id === 'block')!, { cell: { ...m.cell } });
+      }
+    }
+    expect(aimed).toBeDefined();
+    const marker = all.flatMap(s => s.events.filter(e => e.type === 'abilityMarker' && e.marker === 'smeech-leap-again'))[0]!;
+    if (marker.type !== 'abilityMarker') throw Error('marker');
+    const landing = all.find(s => s.tick === marker.arrivalTick)!.events.filter(e => e.type === 'movement' && e.unitId === 'p');
+    expect(landing).toHaveLength(1);
+    const to = landing[0]!.type === 'movement' ? landing[0]!.to : undefined;
+    expect(to).not.toEqual(aimed);
+    const far = state.units.find(u => u.id === 'far')!;
+    expect(hexDistance(to!, far.cell)).toBe(1);
+    expect(mine(all, 'ability').filter(([, id]) => id === 'far').map(([t]) => t)[0]).toBe(marker.arrivalTick);
   });
   it('a new target that dies in the air: he lands on the hex he aimed at, stands still, and takes off again SMEECH_RELEAP_AFTER_KILL_TICKS after landing', () => {
     let state = battle([smeech(), dummy('e', 3, 3, 400), dummy('far', 6, 2, 100000), dummy('next', 5, 0, 100000)], { rngState: 42 });
