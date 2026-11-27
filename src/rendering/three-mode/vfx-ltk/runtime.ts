@@ -1,4 +1,4 @@
-import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
+import { Object3D, Vector3, type Camera, type Material, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
@@ -229,6 +229,8 @@ export interface LtkPlayOptions {
   flightSeconds?: number;
   /** Its projectile cues reach their target this share of the way through their flight and wait there (TimelineCue.arriveShare). */
   arriveShare?: number;
+  /** Its cast-start cues on the caster face this board point instead of the cast's primary target (TimelineSpawn.aimPoint). */
+  aimPoint?: WorldPoint;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its projectile flies on without its caster (LtkPlayOptions.outlivesSource). */
@@ -893,6 +895,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         }
         // Flown in and waiting (TimelineCue.arriveShare), whatever timed the flight.
         if (context.arriveShare !== undefined && spawn.event === 'projectile') spawn = { ...spawn, arriveShare: context.arriveShare };
+        if (context.aimPoint && spawn.event === 'cast-start') spawn = { ...spawn, aimPoint: context.aimPoint };
         waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(context.outlivesSource && spawn.event === 'projectile' ? { outlives: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
@@ -1202,7 +1205,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fixed = snapshot ?? spawn.point;
         // A cast faces its primary target; a cast on itself faces the nearest foe, though the model may still look elsewhere
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
-        const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
+        // A play aimed at a board point (LtkPlayOptions.aimPoint) faces it; else the cast's primary target, while it lives.
+        const aimAt = spawn.aimPoint ? new Object3D() : null;
+        if (aimAt) aimAt.position.set(spawn.aimPoint![0], spawn.aimPoint![1], spawn.aimPoint![2]);
+        const aim = aimAt ? () => aimAt : spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
