@@ -83,6 +83,7 @@ import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/
 /** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
 const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
+import { ENVELOPE_STORE_TIMEOUT_MS, envelopeSource, openEnvelopeStore } from './envelope-store';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
 import { registerGolemModels } from './summon-models';
@@ -223,8 +224,9 @@ export function useAnvilTest(next: (definitionId: string) => boolean): void { is
 export { useUnitCost } from './model-fit';
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
-type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
-  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null };
+/** `modelSha`: each model's envelope source (envelope-store.ts: file sha256 from precache.json + clip settings), by model id. */
+type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown>; modelSha: ReadonlyMap<string, string> }
+  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null; modelSha?: undefined };
 
 const fetchJson = async (url: string, timeoutMs = MANIFEST_TIMEOUT_MS): Promise<unknown> => {
   const controller = new AbortController();
@@ -277,7 +279,11 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
       : progress.totalBytes > 0 ? progress.readyBytes / progress.totalBytes : progress.readyFiles / Math.max(1, progress.totalFiles)));
     void navigator.storage?.persist?.().catch(() => false);
     const preloaded = preloader.start().catch(() => null);
-    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader, preloaded };
+    const shaByPath = new Map(list.files.flatMap(file => file.sha256 ? [[file.path, file.sha256] as const] : []));
+    const modelSha = new Map(Object.entries(cache.manifest.models).flatMap(([id, entry]) => {
+      const sha = shaByPath.get(entry.path); return sha ? [[id, envelopeSource(sha, entry)] as const] : [];
+    }));
+    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader, preloaded, modelSha };
   } catch {
     return none('素材地址无法访问或清单格式不符，显示占位棋子');
   }
@@ -480,6 +486,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Animation envelope per model id (model-fit.ts), shared by the warm-up (measured in idle slices) and mounting.
   const envelopes = new Map<string, Envelope>();
+  // This browser's earlier measurements (envelope-store.ts), by model id and file sha256: a model measured on an earlier
+  // visit fits at once, even when it first loads during a combat. Every new measurement is kept there too.
+  const envelopeStore = models.cache ? openEnvelopeStore() : null;
+  const keepEnvelope = (id: string, envelope: Envelope) => {
+    if (envelopes.has(id)) return; // the first measurement stands (pieces sharing one, a stored one read meanwhile)
+    envelopes.set(id, envelope);
+    const sha = models.modelSha?.get(id);
+    if (sha) void envelopeStore?.then(store => store.keep(id, sha, envelope)).catch(() => undefined); // a store failure never reaches the game
+  };
+  // Bounded: a store that never answers (an IndexedDB open or read that never calls back) counts as empty, so the warm-up
+  // and a mid-combat first load measure as without one instead of waiting forever (the model would stay a pawn).
+  const storedEnvelopes = envelopeStore && new Promise<void>(resolve => {
+    const giveUp = setTimeout(resolve, 2 * ENVELOPE_STORE_TIMEOUT_MS);
+    void envelopeStore.then(async store => {
+      const wanted = new Map([...models.modelSha ?? []].filter(([id]) => !HOVERING_MODELS.has(id) && !!readUnitScale(models.cache?.manifest.models, id)));
+      for (const [id, envelope] of await store.load(wanted)) if (!envelopes.has(id)) envelopes.set(id, envelope);
+    }).catch(() => undefined).finally(() => { clearTimeout(giveUp); resolve(); });
+  });
   const envelopeClips = (lease: ModelLease) => {
     const nameOf = (action: string) => lease.animationNames[action as keyof typeof lease.animationNames] ?? action;
     const names = new Set(ENVELOPE_ACTIONS.map(nameOf));
@@ -489,10 +513,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         feet: clip.name === nameOf('idle') }));
   };
   const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
+    await storedEnvelopes; // measured on an earlier visit: nothing to do
     if ((id.startsWith('pve-') && HOVERING_MODELS.has(id)) || envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
     const envelope = await animationEnvelopeSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop: () => closed || !!fighting });
     if (envelope === null) return false;
-    if (!envelopes.has(id)) envelopes.set(id, envelope);
+    keepEnvelope(id, envelope);
     return true;
   };
   const warmup = retention ? createModelWarmup({ load: id => loadLit!(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
@@ -826,15 +851,34 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
   };
   /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
-  /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
+  /**
+   * Models first seen during a shown combat that were not measured on the way in (a scouted or stage copy, a monster, a
+   * measurement cut short): drawn from their bind box, measured and re-attached at the next preparation.
+   */
   const envelopePending = new Set<string>();
+  /**
+   * A champion's envelope measured during a combat (attachBody): one measurement per model at a time, shared by every
+   * piece waiting for it, in slices of about COMBAT_SLICE_BUDGET_MS at most one a frame, so the combat never gets a long task.
+   */
+  const combatMeasuring = new Map<string, Promise<Envelope | null>>();
+  const COMBAT_SLICE_PAUSE_MS = 16, COMBAT_SLICE_BUDGET_MS = 2;
+  const combatEnvelope = (id: string, lease: ModelLease): Promise<Envelope | null> => {
+    let measuring = combatMeasuring.get(id);
+    if (!measuring) {
+      measuring = animationEnvelopeSliced(lease.scene, envelopeClips(lease), {
+        budgetMs: COMBAT_SLICE_BUDGET_MS, stop: () => closed, pause: () => new Promise<void>(resolve => setTimeout(resolve, COMBAT_SLICE_PAUSE_MS)),
+      }).finally(() => combatMeasuring.delete(id));
+      combatMeasuring.set(id, measuring);
+    }
+    return measuring;
+  };
   const envelopeOf = (id: string, lease: ModelLease): Envelope | undefined => {
     // Flying monsters use only their authored bind fit, never an unused animation envelope.
     if (id.startsWith('pve-') && HOVERING_MODELS.has(id)) return undefined;
     let envelope = envelopes.get(id);
     if (envelope === undefined && (fighting || id.startsWith('pve-'))) { envelopePending.add(id); return undefined; } // no long task mid-combat
     // Not warmed yet (the warm-up measures in slices ahead of time): measured now, at once.
-    if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); envelopes.set(id, envelope); }
+    if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); keepEnvelope(id, envelope); }
     return envelope;
   };
   // Cast lunges: the world-plane offset (x, z) is turned into the root's frame (it rotates to face) and put on the body
@@ -966,7 +1010,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           });
         } catch (error) { lease.release(); throw error; }
         if (closed || view.disposed || view.definitionId !== originalId || attaching.get(view) !== request) { lease.release(); return; }
-        if (measured) envelopes.set(definitionId, measured);
+        if (measured) keepEnvelope(definitionId, measured);
+      }
+      // A champion first seen during a combat: measured here once (in slices, at most one a frame) while the stand-in pawn
+      // still stands, so its model arrives with the idle's foot calibration instead of its bind box, rather than drawn off
+      // its cell until the next preparation. The result is kept per model like any other envelope.
+      if (!lease.placeholder && fighting && !monsterFit(definitionId) && readUnitScale(models.cache?.manifest.models, definitionId)
+        && !HOVERING_MODELS.has(definitionId) && !envelopes.has(definitionId)) {
+        let measured: Envelope | null = null;
+        // This browser may have it already (the store is read once, right after mounting).
+        await storedEnvelopes;
+        if (!envelopes.has(definitionId)) {
+          try { measured = await combatEnvelope(definitionId, lease); } catch (error) { lease.release(); throw error; }
+        }
+        if (closed || view.disposed || attaching.get(view) !== request || view.bodyRevision !== revision || view.definitionId !== originalId) { lease.release(); return; }
+        if (measured) keepEnvelope(definitionId, measured);
       }
       championLighting?.apply(lease.scene, definitionId);
       cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
@@ -1446,7 +1504,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     fighting = frame.fighting;
     // What the room says comes next (board-feed warm hints): queued once per change, after the preload, in a match.
     const hints = feed?.warmHints?.();
-    if (hints && hints.version !== hintVersion && preloaded && matchShown && warmup) { hintVersion = hints.version; warmup.want(hints.ids); }
+    if (hints && hints.version !== hintVersion && preloaded && matchShown && warmup) { hintVersion = hints.version; warmup.want([...hints.ids, ...hints.later ?? []]); }
     // Back in preparation: measure what a combat skipped and re-attach those pieces at their full envelope.
     if (!fighting && envelopePending.size) {
       const ids = new Set(envelopePending); envelopePending.clear();

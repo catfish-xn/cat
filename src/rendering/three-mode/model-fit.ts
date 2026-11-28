@@ -63,6 +63,12 @@ const ENVELOPE_SAMPLES = 8, ENVELOPE_STRIDE = 7;
 const ENVELOPE_QUANTILE = 0.98;
 /** The clips a board piece stands, walks and fights in; death, dances and the like do not size its cell. */
 export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
+/**
+ * The measurement's version in the browser's envelope store (envelope-store.ts): raise it whenever envelopeSteps, the
+ * clips it reads or the support sampler (model-grounding.ts) change what an envelope holds, so stored ones are measured again.
+ * That includes how a loaded model's clips are cut (rendering3d: IN_PLACE_CLIPS, trimClip, holdRootInPlace) and ENVELOPE_ACTIONS.
+ */
+export const ENVELOPE_VERSION = 1;
 /** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
 export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
 /**
@@ -216,7 +222,9 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
       restore();
     }
   } finally {
-    mixer.stopAllAction(); mixer.uncacheRoot(body);
+    // No uncacheRoot: this mixer is local and dropped here, so its caches go with it, while uncaching them ran 10-20 ms
+    // in one step on the largest rigs (a frame-long stall in the sliced form). restore() puts every node back.
+    mixer.stopAllAction();
     restore();
   }
   const low = Number.isFinite(ground) ? ground : null, plain = Number.isFinite(feet) ? feet : null;

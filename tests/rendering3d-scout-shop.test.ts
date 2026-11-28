@@ -486,8 +486,11 @@ describe('3D scouting shop availability', () => {
     // The client only follows the public pairing field; it must not guess an opponent from candidates.
     listeners.view({ ...published, opponentSeatId: null, opponentCandidates: ['other'] });
     expect(board.boardFeed.warmHints!().ids).toEqual(['ziggs', 'amumu', 'garen']);
+    // Every candidate's board is only measured ahead (later: not pinned), never taken as the drawn opponent.
+    expect(board.boardFeed.warmHints!().later).toEqual(['lux']);
     listeners.connection!({ kind: 'seat-lost' });
     expect(app!.debug().mode).toBe('online-lobby'); expect(board.boardFeed.warmHints!().ids).toEqual([]);
+    expect(board.boardFeed.warmHints!().later).toEqual([]);
     expect(fetch).not.toHaveBeenCalled();
   }, 20_000);
 
