@@ -18,16 +18,17 @@ function disguise(state: MatchState): MatchState {
 }
 
 for (const streaming of [false, true]) for (const army of ['empty', 'wiped'] as const) describe(`B5-69 review: ${streaming ? 'stream' : 'ordinary'} PvE, ${army} army`, () => {
-  // Seed 65, seat s3, retains Crownguard Spirit; script only Loot Explosion's draw, keeping candidate eligibility and RNG advancement.
+  // Seed 13, seat s3, retains Crownguard Spirit; script only Loot Explosion's draw, keeping candidate eligibility and RNG advancement.
+  // v26 D5 (7953c99a) drifted the old seed-65 s3 draw (Crownguard Spirit moved to its second reroll); old value seed 65.
   // Keep the same scope during restore, whose offer-history validator replays the draw.
   let restoreOffers: () => void;
   beforeEach(() => { restoreOffers = installB1Offers([ID]); });
   afterEach(() => restoreOffers());
-  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 65, combatStreaming: streaming });
+  const { room, clock } = makeRoom(new TwoSidedBattleResolver(), { seed: 13, combatStreaming: streaming });
   const own = () => room.state.seats.find(s => s.seatId === 's3')!.match;
   afterAll(() => room.dispose());
 
-  it('starts the seed-65 room with a scripted Loot Explosion draw', () => { room.start(); });
+  it('starts the seed-13 room with a scripted Loot Explosion draw', () => { room.start(); });
   for (const roundId of ['1-3', '1-4', '2-1']) it(`reaches ${roundId}`, () => {
     runUntilClaiming(room, clock, s => s.roundId === roundId && (roundId === '2-4' || s.phase === 'preparation'));
   });

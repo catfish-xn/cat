@@ -50,7 +50,7 @@ describe('v17 avarice: reconnect during and after a live battle', () => {
     const [a] = await seatTwo(harness);
     const room = harness.server.room!, seatId = a.seatId!, token = a.token!;
     // To the 4-6 anomaly node (orbs claimed and the seat's reward units fielded, so it lives that long under v22).
-    for (let guard = 0; !(room.state.phase === 'choice' && seatOf(room.state, seatId).match.pendingChoice?.kind === 'anomaly'); guard++) {
+    for (let guard = 0; !(room.state.phase === 'preparation' && seatOf(room.state, seatId).match.pendingChoice?.kind === 'anomaly'); guard++) {
       expect(guard).toBeLessThan(5_000);
       expect(seatOf(room.state, seatId).alive).toBe(true);
       // v22: the 2-1/3-2/4-2 augment opens inside the preparation; the seat answers it, levels with spare gold, then

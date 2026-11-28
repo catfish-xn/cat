@@ -28,10 +28,12 @@ function fixture() {
 it('folds the exact Firesale supply birth without changing the ledger or its earlier prefix',()=>{
   const {provenance,context}=fixture(),before=JSON.stringify({provenance,context});
   expect(foldResourceProvenance(provenance,context)).toEqual({
+    anomalySelection:null,anomalyBinding:null,lastAnomalyBinding:null,
     units:[{id:'unit-1',definitionId:'irelia',starLevel:1},{id:'unit-2',definitionId:'lux',starLevel:1}],
     items:[],persistentGrowth:[],nextUnitSerial:3,nextItemSerial:1,
   });
   expect(foldResourceProvenance(provenance,{...context,prefixLength:1})).toEqual({
+    anomalySelection:null,anomalyBinding:null,lastAnomalyBinding:null,
     units:[{id:'unit-1',definitionId:'irelia',starLevel:1}],items:[],persistentGrowth:[],nextUnitSerial:2,nextItemSerial:1,
   });
   expect(JSON.stringify({provenance,context})).toBe(before);

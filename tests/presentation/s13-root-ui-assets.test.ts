@@ -14,6 +14,8 @@ let assets: typeof import('../../src/presentation/s13-assets');
 beforeEach(async () => {
   vi.resetModules(); // The production registry and one-shot promise are module-local.
   vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('unexpected-fetch'); }));
+  // Item icons are their own chunk (2D bundle split, 11-19): the fresh module graph loads them before reading any.
+  await (await import('../../src/presentation/g23-display')).loadG23Items();
   assets = await import('../../src/presentation/s13-assets');
 });
 afterEach(() => {
@@ -94,6 +96,21 @@ describe('root UI manifest path containment', () => {
     assets.registerRootUiAssets(ROOT, { assets: [entry('icons/hero.png'), entry('../escape.png'), entry('icons/item.png', 'synthetic-item', 'item')] });
     expect(assets.s13AssetUrl('champion', HERO)).toBe(`${ROOT}icons/hero.png`);
     expect(assets.s13AssetUrl('item', 'synthetic-item')).toBeNull();
+  });
+
+  it('registers item art only for content items without a bundled icon (静止法衣), never over a bundled one', () => {
+    const bundled = assets.s13AssetUrl('item', 'TFT_Item_Artifact_Mittens');
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Shroud')).toBeNull();
+    assets.registerRootUiAssets(ROOT, { assets: [
+      entry('items/shroud.png', 'TFT_Item_Shroud', 'item'), entry('items/again.png', 'TFT_Item_Shroud', 'item'),
+      entry('items/mittens.png', 'TFT_Item_Artifact_Mittens', 'item'), entry('items/spatula.png', 'spatula', 'item'),
+    ] });
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Shroud')).toBe(`${ROOT}items/shroud.png`);
+    expect(assets.s13AssetUrl('item', 'spatula')).toBe(`${ROOT}items/spatula.png`);
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Artifact_Mittens')).not.toBe(`${ROOT}items/mittens.png`);
+    expect(assets.s13AssetUrl('item', 'TFT_Item_Artifact_Mittens')).toBeTruthy();
+    expect(bundled).toBeTruthy();
+    expect(assets.s13IconHtml('item', 'TFT_Item_Shroud', 16, 'item-icon')).toContain(`src="${ROOT}items/shroud.png"`);
   });
 });
 
@@ -221,5 +238,31 @@ describe('public 2D without a root', () => {
       expect(assets.s13AssetUrl('champion', id)).toBeNull();
       expect(assets.heroPortraitHtml(id, 34, 'synthetic-fallback')).toBe('synthetic-fallback');
     }
+  });
+});
+
+describe('root UI manifest consumable icons', () => {
+  it('fills only consumables without a bundled icon, and the tool mark and reward mark use it', async () => {
+    assets.registerRootUiAssets(ROOT, { assets: [
+      entry('icons/neekoshelp.png', 'TFT_Consumable_NeekosHelp', 'consumable'),
+      entry('icons/lesser.png', 'TFT_Consumable_ChampionDuplicator_III', 'consumable'),
+      entry('icons/unknown.png', 'synthetic-tool', 'consumable'),
+      entry('../escape.png', 'magnetic-remover', 'consumable'),
+    ] });
+    expect(assets.rootConsumableIconUrl('TFT_Consumable_NeekosHelp')).toBe(`${ROOT}icons/neekoshelp.png`);
+    expect(assets.rootConsumableIconUrl('TFT_Consumable_ChampionDuplicator_III')).toBeNull();
+    expect(assets.rootConsumableIconUrl('synthetic-tool')).toBeNull();
+    expect(assets.rootConsumableIconUrl('magnetic-remover')).toBeNull();
+    const { toolMark } = await import('../../src/presentation/orb-loot');
+    const mark = toolMark('TFT_Consumable_NeekosHelp');
+    expect(mark).toContain(`src="${ROOT}icons/neekoshelp.png"`);
+    expect(mark).toContain('data-glyph="复"');
+    expect(toolMark('TFT_Consumable_ChampionDuplicator_III')).not.toContain(ROOT);
+    const { rewardItemMarkHtml } = await import('../../src/presentation/reward-item-mark');
+    expect(rewardItemMarkHtml({ kind: 'item', name: '英雄复制器', source: 'TFT_Consumable_NeekosHelp' } as never, 30)).toContain(`${ROOT}icons/neekoshelp.png`);
+  });
+  it('keeps the one-glyph mark when no root icon is registered', async () => {
+    const { toolMark } = await import('../../src/presentation/orb-loot');
+    expect(toolMark('TFT_Consumable_NeekosHelp')).toBe('<span class="consumable-mark" aria-hidden="true">复</span>');
   });
 });

@@ -5,7 +5,7 @@ import { drainBatch5H7Gold, applyDhampyrSettlement, drainBatch5H8Deaths, appendA
 import type { MatchState, MatchEvent } from '../../simulation/match-types';
 import type { RoomState, SeatState, SettledSeat, BattleResult, BattleInput, RankEntry } from './types';
 
-function executedDeaths(battle: Extract<BattleResult,{kind:'two-sided'}>['battle'], match: MatchState) {
+function executedDeaths(battle: Pick<Extract<BattleResult,{kind:'two-sided'}>['battle'], 'events' | 'mapping' | 'a' | 'b'>, match: MatchState) {
   const deaths=augmentDeathsFromEvents(battle.events, match.augments.some(a => a.definitionId === 'a-golden-find'), match.augments.some(a => a.definitionId === 'forbidden-magic')).map(d=>{
     const mapped=battle.mapping.find(m=>m.kind==='unit'&&m.combatId===d.unitId);
     const killer=d.lootExplosion;
@@ -78,18 +78,29 @@ export function recordRoomBattleFacts(seats: readonly SettledSeat[], results: re
   return seats.map(seat => {
     let match = seat.match; if (!match.augmentHistory) return seat;
     const result = results.find(r => r.kind === 'two-sided' ? r.participants.includes(seat.seatId) : r.outcomes.some(s => s.seatId === seat.seatId));
-    if (!result || result.kind !== 'two-sided') return seat; // PvE samples are recorded by the Match commands.
-    const battle = result.battle;
-    match = recordR2PortableBattle(match,battle.terminal,battle.a.seatId===seat.seatId?'player':'enemy',battle.mapping);
-    if(!match.augmentHistory!.facts.some(f=>f.kind==='deaths'&&f.battleId===result.battleId))
-      match = appendAugmentFact(match, { kind: 'deaths', battleId: result.battleId, completeThroughTick: battle.terminal.tick, deaths:executedDeaths(battle, match) });
-    const opponentId = battle.a.seatId === seat.seatId ? battle.b.seatId : battle.a.seatId;
-    const opponent = seats.find(s => s.seatId === opponentId);
-    const record = opponent?.match.roundResults.find(r => r.round === match.round);
-    const mirror = battle.mirrorOfSeatId !== null;
-    if (!mirror && !record) throw new RangeError('Invalid augment history: missing opponent damage settlement');
-    match = appendAugmentFact(match, { kind: 'player-damage', battleId: result.battleId, opponentSeatId: opponentId,
-      mirror, hpBefore: mirror ? null : record!.hpBefore, hpAfterDamage: mirror ? null : record!.hpAfter, actualDamage: mirror ? 0 : record!.hpLost });
+    if (!result || match.m8.round.kind !== 'pvp') return seat; // PvE samples are recorded by the Match commands.
+    const combat = result.kind === 'two-sided' ? result.battle : result.outcomes.find(s => s.seatId === seat.seatId)?.combat;
+    if (!combat) return seat;
+    // A placeholder may carry either a real two-sided battle or the Match's own generated opponent.
+    const battle = combat.mapping && combat.a && combat.b ? { ...combat, mapping: combat.mapping, a: combat.a, b: combat.b } : null;
+    if (battle) {
+      match = recordR2PortableBattle(match,battle.terminal,battle.a.seatId===seat.seatId?'player':'enemy',battle.mapping);
+      if(!match.augmentHistory!.facts.some(f=>f.kind==='deaths'&&f.battleId===result.battleId))
+        match = appendAugmentFact(match, { kind: 'deaths', battleId: result.battleId, completeThroughTick: battle.terminal.tick, deaths:executedDeaths(battle, match) });
+      const opponentId = battle.a.seatId === seat.seatId ? battle.b.seatId : battle.a.seatId;
+      const opponent = seats.find(s => s.seatId === opponentId);
+      const record = opponent?.match.roundResults.find(r => r.round === match.round);
+      const mirror = battle.mirrorOfSeatId != null;
+      if (!mirror && !record) throw new RangeError('Invalid augment history: missing opponent damage settlement');
+      match = appendAugmentFact(match, { kind: 'player-damage', battleId: result.battleId, opponentSeatId: opponentId,
+        mirror, hpBefore: mirror ? null : record!.hpBefore, hpAfterDamage: mirror ? null : record!.hpAfter, actualDamage: mirror ? 0 : record!.hpLost });
+    } else {
+      // Own-combat death samples and portable effects already came from Match commands.
+      // Its generated opponent has no player HP account, as in solo combat.
+      if (!match.roundResults.some(r => r.round === match.round)) return seat;
+      match = appendAugmentFact(match, { kind: 'player-damage', battleId: result.battleId, opponentSeatId: null,
+        mirror: false, hpBefore: null, hpAfterDamage: null, actualDamage: null });
+    }
     const rewarded = drainBatch5H7Gold(match);
     match = rewarded.state;
     const beforePayout=match;

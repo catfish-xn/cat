@@ -12,7 +12,7 @@ export const LOOT_FREEZE_ALGORITHM = freezeContent({
   legacyStreamUse:'stage5-6-epic-only',planStream:'orb-stage-plan-v17',boxStream:'orb-box-v17',
   choiceOrder:'dropId-codepoint', choices:'supply-only/no-pve-fallback',
 });
-export const LOOT_RUNTIME_REVISION = 'orb-combo-v17';
+export const LOOT_RUNTIME_REVISION = 'orb-combo-v17-capacity-fifo-v1';
 /** User approved 14.24 reward tables. Rows with zero weight are deliberately absent. */
 export const EPIC_LOOT = freezeContent({
   variants:[{id:'standard',weight:899},{id:'artifact',weight:100},{id:'crown',weight:1}],

@@ -79,10 +79,15 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
       } else if (state.phase === 'preparation') state = accepted(startMatchCombat(emptyBoard(state)));
       else state = accepted(nextRound(state,state.round));
     }
-    expect(state.items.map(item => [item.id, item.definitionId])).toEqual([['item-1', 'gloves'], ['item-2', 'gloves']]);
+    // v26 PvE loot carryover (8f794062, merged c684c3ec): the conceded 1-2/1-3 minion orbs are carried instead of
+    // forfeited, adding item-1 belt and item-2 gloves (loot). The two scheduled 2-4/3-4 gloves are now item-3/item-4
+    // and their Thief's Gloves item-5 (v25: item-1/item-2 -> item-3).
+    expect(state.items.map(item => [item.id, item.definitionId])).toEqual([['item-1', 'belt'], ['item-2', 'gloves'], ['item-3', 'gloves'], ['item-4', 'gloves']]);
+    expect(state.resourceProvenance.entries.filter(entry => entry.kind === 'item-acquired' && entry.source.kind === 'schedule')
+      .map(entry => entry.kind === 'item-acquired' ? entry.itemId : '')).toEqual(['item-3', 'item-4']);
     expect(state.scheduleReceipts.filter(receipt => receipt.kind === 'component').map(receipt => receipt.definitionId)).toEqual(['gloves', 'gloves']);
-    state = accepted(combineItems(state,'item-1','item-2'));
-    state = accepted(equipItem(state,'item-3','unit-1',0));
+    state = accepted(combineItems(state,'item-3','item-4'));
+    state = accepted(equipItem(state,'item-5','unit-1',0));
     state = accepted(deployMatchUnit(state,'unit-1',{kind:'board',cell:{col:1,row:4}}));
     const basis = freezeCombatInput(state,nextRandom(state.battleSeedRngState).word,10);
     const authority: CombatInputAuthority = {g23:readG23Progress(state),playerHp:state.playerHp, seed:state.seed,round:state.round,contentDigest:state.contentDigest,
@@ -94,7 +99,7 @@ describe('B8 combat input basis pure prerequisites (not live Match integration)'
     expect(basis.inputs.temporaryEquipment).toHaveLength(2);
     expect(basis.inputs.temporaryEquipment.map(child => child.definitionId)).toEqual(['bramble-vest', 'cloak']);
     const player = buildStrategySnapshot(basis.inputs).units.find(unit => unit.unitId === 'unit-1')!;
-    expect([...new Set(player.sources.filter(effect => effect.source.parentItemInstanceId === 'item-3')
+    expect([...new Set(player.sources.filter(effect => effect.source.parentItemInstanceId === 'item-5')
       .map(effect => effect.source.sourceInstanceId))].sort())
       .toEqual(basis.inputs.temporaryEquipment.map(child => child.temporaryId).sort());
     expect(buildStrategySnapshot(basis.inputs)).toEqual(buildStrategySnapshot(state));

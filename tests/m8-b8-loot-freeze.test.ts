@@ -41,7 +41,7 @@ const legacyChoice:LootChoiceDescriptor={roundId:'1-3',encounterId:'minions-b-v1
 const ENCOUNTERS = [
   ['1-2', 'minions-a-v1', 1], ['1-3', 'minions-b-v1', 2], ['1-4', 'minions-c-v1', 3],
   ['2-7', 'krugs-v1', 10], ['3-7', 'wolves-v1', 17], ['4-7', 'razorbeaks-v1', 24],
-  ['5-7', 'elder-dragon-v1', 31], ['6-7', 'rift-herald-v1', 38],
+  ['5-7', 'elder-dragon-v1', 31], ['6-7', 'elder-dragon-v1', 38],
 ] as const;
 const jsonCopy = <T>(value: T): T => JSON.parse(JSON.stringify(value));
 const round = (ledger: FrozenLootLedger, id: string) => ledger.rounds.find(r => r.encounterPlan.roundId === id)!;

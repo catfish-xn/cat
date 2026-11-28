@@ -3,7 +3,7 @@ import { contains, sameCell, type HexCell, type Team } from '../board';
 import type { CombatEvent, CombatOrigin, CombatState, CombatUnit } from '../combat-types';
 export interface SevikaCastVariant {
   readonly actionSeq:number;
-  readonly move:'flamethrower'|'punch'|'chomp';
+  readonly move:'flamethrower'|'punch'|'chomp'|'jackpot';
   readonly channelTicks:number;
   /** High Roller's empowered roll, independent of augment ownership. */
   readonly enhanced:boolean;
@@ -25,7 +25,46 @@ export type G23CombatEventData =
   /** Sion bound (true) / broke free (false); reason e.g. 'combat-start' | 'casts' | 'hp-threshold'. */
   | { readonly type: 'bindingChanged'; readonly tick: number; readonly unitId: string; readonly bound: boolean; readonly reason: string }
   /** G2-4b Unstable Treasure Chest: unitId gained a temporary pool item for the rest of this combat. source = the chest's death trigger. */
-  | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin };
+  | { readonly type: 'combatItemGranted'; readonly tick: number; readonly unitId: string; readonly definitionId: string; readonly source: CombatOrigin }
+  /**
+   * Display only, no rule effect: a marker of an ability's moment for the renderer. 'powder-monkey-sent': Powder's monkey
+   * sets off for its landing cell (cell), arriving at arrivalTick; 'powder-monkey-arrived': it reached that cell and explodes.
+   */
+  | { readonly type: 'abilityMarker'; readonly tick: number; readonly unitId: string; readonly marker: 'powder-monkey-sent' | 'powder-monkey-arrived'; readonly cell: HexCell; readonly arrivalTick: number }
+  /**
+   * Display only, no rule effect: holderId lifts targetId (carried true) or puts it down (carried false), for the renderer's
+   * carry. Renni: lifted on her cast, put down when her stun's last pulse lands (a death of either ends it too: the renderer
+   * also ends a carry on either one's death event).
+   */
+  | { readonly type: 'carryChanged'; readonly tick: number; readonly holderId: string; readonly targetId: string; readonly carried: boolean }
+  /**
+   * Display only, no rule effect (ranged attack landing): a ranged hero's attack sends a shot at targetId, landing on
+   * arrivalTick; projectile 'flight' flies there, 'beam' is an instant beam (arrivalTick is the attack tick).
+   */
+  | { readonly type: 'attackLaunched'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly arrivalTick: number; readonly projectile: 'flight' | 'beam' }
+  /** Display only, no rule effect: a ranged hero starts an attack on targetId (its animation); the shot launches on launchTick. */
+  | { readonly type: 'attackWindup'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly launchTick: number }
+  /** Display only, no rule effect: a winding-up ranged attack was cancelled (attacker controlled, target dead or out of range). */
+  | { readonly type: 'attackWindupCancelled'; readonly tick: number; readonly attackerId: string; readonly targetId: string }
+  /** Display only, no rule effect: a flying shot reached targetId; hit false when the target died in flight (the shot did nothing). */
+  | { readonly type: 'attackLanded'; readonly tick: number; readonly attackerId: string; readonly targetId: string; readonly hit: boolean }
+  /** Display only, no rule effect: a takedown of victimId extended Swain's demon form from beforeUntilTick to untilTick (once per victim). */
+  | { readonly type: 'jayceCrystal'; readonly tick: number; readonly unitId: string; readonly phase: 'landed' | 'exploded'; readonly crystal: number; readonly count: number; readonly cell: { readonly col: number; readonly row: number } }
+  | { readonly type: 'swainAscensionExtended'; readonly tick: number; readonly unitId: string; readonly victimId: string; readonly beforeUntilTick: number; readonly untilTick: number }
+  /**
+   * Display only, no rule effect (landing batch, 11-20): one projectile of a skill (skill names it; ordinal of count in the
+   * cast actionSeq) leaves sourceId for targetId on this tick and lands on arrivalTick, where its effect settles.
+   */
+  | { readonly type: 'abilityProjectileLaunched'; readonly tick: number; readonly sourceId: string; readonly targetId: string; readonly arrivalTick: number; readonly skill: import('../ability-projectile').AbilityProjectileSkill; readonly ordinal: number; readonly actionSeq: number; readonly count: number }
+  /** Display only, no rule effect: that projectile reached targetId; hit false when the target died in flight (nothing settles, no retarget). Comes before its damage. */
+  | { readonly type: 'abilityProjectileLanded'; readonly tick: number; readonly sourceId: string; readonly targetId: string; readonly skill: import('../ability-projectile').AbilityProjectileSkill; readonly ordinal: number; readonly actionSeq: number; readonly count: number; readonly hit: boolean }
+  /**
+   * Display only, no rule effect: a timed ability effect of unitId is over, so the renderer can end its visuals.
+   * 'leblanc-chain': the chain's duration ran out (targetIds = the chained units); 'twitch-volley': the empowered attacks are used up;
+   * 'drmundo-heal': the ability's heal over time paid its last part; 'vander-brace': the cast's brace (its channel) ended;
+   * 'mordekaiser-empower': the cast's empowered time ran out; 'swain-ascension': the demon form ran out (takedown extensions included).
+   */
+  | { readonly type: 'abilityEffectEnded'; readonly tick: number; readonly unitId: string; readonly effect: 'leblanc-chain' | 'twitch-volley' | 'drmundo-heal' | 'vander-brace' | 'mordekaiser-empower' | 'swain-ascension'; readonly targetIds: readonly string[] };
 
 export interface CombatMembershipChange { readonly state: CombatState; readonly events: readonly CombatEvent[] }
 
@@ -45,8 +84,20 @@ export function spawnCombatUnit(state: CombatState, unit: CombatUnit, source: Co
 /** Removes a unit from state.units and clears other units' targetId pointing at it. */
 export function removeCombatUnit(state: CombatState, unitId: string, reason: string, tick: number): CombatMembershipChange {
   if (!state.units.some(unit => unit.id === unitId)) throw new RangeError(`Unknown combat unit ${unitId}`);
-  const units = state.units.filter(unit => unit.id !== unitId).map(unit => unit.targetId === unitId ? { ...unit, targetId: null } : unit);
-  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId] }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+  const units = state.units.filter(unit => unit.id !== unitId).map(unit => {
+    if (unit.targetId !== unitId) return unit;
+    const copy = { ...unit, targetId: null }; delete copy.targetEngaged; delete copy.meleeApproach; return copy;
+  });
+  const removed = state.units.find(unit => unit.id === unitId)!;
+  return { state: { ...state, units,removedUnitIds:[...state.removedUnitIds??[],unitId],
+    ...(namedAsEffectSource(units, unitId) ? { departedUnits: [...state.departedUnits ?? [], removed] } : {}) }, events: [{ type: 'unitRemoved', tick, unitId, reason }] };
+}
+
+/** True when a remaining unit's periodic task or status contribution still names unitId as its source. Such a source
+ * is kept in CombatState.departedUnits on removal so the effect runs to its end with its original source. */
+export function namedAsEffectSource(remaining: readonly CombatUnit[], unitId: string): boolean {
+  return remaining.some(unit => unit.mechanismState?.periodicTasks.some(task => task.source.ownerId === unitId)
+    || unit.mechanismState?.statuses.some(group => group.contributions.some(c => c.source.ownerId === unitId)));
 }
 
 export function castOutcomeEvent(tick: number, unitId: string, abilityKey: string, outcome: string, subOutcomes: readonly string[] = []): CombatEvent {

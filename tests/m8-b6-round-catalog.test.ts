@@ -45,7 +45,7 @@ const expectedRounds = [
   ['6-4', 35, 6, 4, 'supply', false, null, '6-4'],
   ['6-5', 36, 6, 5, 'pvp', false, null, '6-5'],
   ['6-6', 37, 6, 6, 'pvp', false, null, '6-6'],
-  ['6-7', 38, 6, 7, 'pve', true, 'rift-herald-v1', '6-7'],
+  ['6-7', 38, 6, 7, 'pve', true, 'elder-dragon-v1', '6-7'],
 ] as const;
 
 describe('B6 isolated round catalog (provisional conventions)', () => {
@@ -66,7 +66,7 @@ describe('B6 isolated round catalog (provisional conventions)', () => {
     expect(ROUND_CATALOG.filter(r => r.kind === 'pve').map(r => [r.roundId, r.ordinal, r.encounterId])).toEqual([
       ['1-2',1,'minions-a-v1'], ['1-3',2,'minions-b-v1'], ['1-4',3,'minions-c-v1'],
       ['2-7',10,'krugs-v1'], ['3-7',17,'wolves-v1'], ['4-7',24,'razorbeaks-v1'],
-      ['5-7',31,'elder-dragon-v1'], ['6-7',38,'rift-herald-v1'],
+      ['5-7',31,'elder-dragon-v1'], ['6-7',38,'elder-dragon-v1'],
     ]);
   });
 

@@ -7,8 +7,9 @@ import { createRequire } from 'node:module';
 import { safeInputPath, safeOutputPath, writeOutputFile, withinRoot } from './safe-path.mjs';
 import { contracts, unitDefinitions } from './runtime.mjs';
 import { parseBin } from './bin.mjs';
-import { skinBindings, animationClips, selectAnimations, canonicalAsset } from './bin-bindings.mjs';
+import { skinBindings, animationClips, selectAnimations, canonicalAsset, sourceName, clipRangeFor } from './bin-bindings.mjs';
 import { inspectSkn } from './inspect-source.mjs';
+import { decodeAnm } from './animation.mjs';
 import { makeModel, validateModel } from './model.mjs';
 import { compareModels } from './compare.mjs';
 import { decodeTexture, encodePng } from './texture.mjs';
@@ -20,6 +21,19 @@ import { planFetch, argumentsFor } from './plan-fetch.mjs';
 const sha256 = bytes => createHash('sha256').update(bytes).digest('hex');
 const canonical = p => p.toLowerCase().replaceAll('.tft_set13', '');
 const json = value => `${JSON.stringify(value, null, 2)}\n`;
+const CHARACTER_DIRECTORY = /^[a-z][a-z0-9_]{0,63}$/;
+/**
+ * Character directories that are not units (a summon, a pet, a prop creature), built like a unit under their directory
+ * name. The unit map's `$characters[<directory>]` entry is used when present; otherwise the directory's conventional
+ * base/skin/skeleton names, with every action chosen from the animation graph by `$animationRules`.
+ */
+export function characterConfigs(characters, map = {}, definitions = {}) {
+    const list = characters ? String(characters).split(',') : [];
+    if (new Set(list).size !== list.length || list.some(dir => !CHARACTER_DIRECTORY.test(dir) || Object.hasOwn(definitions, dir)))
+        throw new Error('unsupported-build-characters');
+    return Object.fromEntries(list.map(dir => [dir, map.$characters?.[dir] ?? { sourceName: dir, base: `assets/characters/${dir}/skins/base`,
+        mesh: `${dir}.tft_set13.skn`, skeleton: `${dir}.tft_set13.skl`, textures: {}, animations: {}, effectPatterns: {} }]));
+}
 async function walk(root, directory = root) {
     const files = [];
     for (const entry of await readdir(directory, { withFileTypes: true })) {
@@ -36,6 +50,107 @@ export function makeManifest(models, effects, validate, actionEffects) {
     const manifest = { schemaVersion: 1, models, effects, ...(actionEffects === undefined ? {} : { actionEffects }) };
     validate(manifest);
     return manifest;
+}
+export function castReferencedClips(cast, castSequence, castVariants) {
+    const names = new Set();
+    const add = v => {
+        if (typeof v === 'string' && v) names.add(sourceName(v));
+        else if (Array.isArray(v)) for (const item of v) if (typeof item === 'string' && item) names.add(sourceName(item));
+    };
+    const addSequence = seq => {
+        if (!seq || typeof seq !== 'object') return;
+        for (const stage of ['in', 'hold', 'main', 'out']) add(seq[stage]);
+    };
+    add(cast);
+    addSequence(castSequence);
+    if (castVariants && typeof castVariants === 'object') {
+        for (const key of ['star3', 'hero', 'front', 'back']) addSequence(castVariants[key]);
+        for (const entry of Array.isArray(castVariants.rotate) ? castVariants.rotate : []) {
+            if (typeof entry === 'string') add(entry);
+            else addSequence(entry);
+        }
+        if (castVariants.branch && typeof castVariants.branch === 'object')
+            for (const seq of Object.values(castVariants.branch)) addSequence(seq);
+    }
+    return names;
+}
+export function resolveUnitFormAnimations(animation, clips, config = {}, hasSource = () => true) {
+    const formAnimations = {}, formAnimationSkips = [];
+    if (!config?.formAnimations || typeof config.formAnimations !== 'object') {
+        return { formAnimations, formAnimationSkips };
+    }
+    const atomic = clips.filter(c => c.atomic && c.path);
+    for (const form of ['front', 'back']) {
+        const group = config.formAnimations[form];
+        if (!group || typeof group !== 'object') continue;
+        for (const action of ['idle', 'move', 'attack']) {
+            const target = group[action];
+            if (typeof target !== 'string' || !target.trim()) continue;
+            const wanted = sourceName(target);
+            const candidates = atomic.filter(c => sourceName(c.path) === wanted);
+            const paths = [...new Map(candidates.map(c => [canonicalAsset(c.path), c.path])).values()];
+            if (paths.length !== 1) {
+                formAnimationSkips.push({
+                    form,
+                    action,
+                    requested: target,
+                    reason: paths.length ? 'ambiguous-form-animation' : 'missing-form-animation',
+                });
+                continue;
+            }
+            const path = paths[0], name = sourceName(path);
+            if (!hasSource(path)) {
+                formAnimationSkips.push({
+                    form,
+                    action,
+                    requested: target,
+                    reason: 'missing-form-animation-source',
+                });
+                continue;
+            }
+            if (animation.files[name] && canonicalAsset(animation.files[name]) !== canonicalAsset(path)) {
+                throw new Error('animation-name-collision');
+            }
+            animation.files[name] = path;
+            (formAnimations[form] ??= {})[action] = name;
+        }
+    }
+    return { formAnimations, formAnimationSkips };
+}
+export function resolveUnitClipRanges(animation, clips, animationSources = [], config = {}) {
+    const clipRanges = {}, clipRangeSkips = [];
+    const castClips = castReferencedClips(animation.mapped?.cast, config.castSequence, config.castVariants);
+    // The basic attack clip stays whole (stage-clip-ranges.mjs: its first segment and End sequence cover the anm).
+    for (const [name] of Object.entries(animation.files)) {
+        const graphHashes = Object.values(animation.decisions ?? {})
+            .filter(d => d.path && sourceName(d.path) === name)
+            .flatMap(d => d.graphHashes ?? []);
+        const range = clipRangeFor(clips, name, graphHashes.length ? graphHashes : undefined);
+        if (!range) continue;
+        if (!castClips.has(sourceName(name))) {
+            clipRangeSkips.push({
+                name,
+                reason: 'non-cast-action',
+                ...(range.candidates ? { candidates: range.candidates } : { startFrame: range.startFrame, endFrame: range.endFrame }),
+            });
+            continue;
+        }
+        if (range.skip) {
+            clipRangeSkips.push({ name, reason: range.skip, candidates: range.candidates });
+            continue;
+        }
+        let decoded = null;
+        try { decoded = decodeAnm(animationSources.find(s => s.name === name)?.bytes); } catch {}
+        const fps = decoded?.fps > 0 ? decoded.fps : 30;
+        if (range.endFrame === null && !(decoded?.duration > 0)) {
+            clipRangeSkips.push({ name, reason: 'missing-anm-duration', startFrame: range.startFrame, endFrame: range.endFrame });
+            continue;
+        }
+        const start = Math.max(0, (range.startFrame ?? 0) / fps);
+        const end = range.endFrame !== null ? range.endFrame / fps : decoded.duration;
+        if (start < end) clipRanges[name] = [start, end];
+    }
+    return { clipRanges, clipRangeSkips };
 }
 export async function writeParticleEffects(id, converted, patterns, { write, remove }, effectIds = new Set()) {
     const effects = {}, systems = [], actionEffects = Object.fromEntries(Object.keys(patterns).map(action => [action, []]));
@@ -65,14 +180,21 @@ export async function writeParticleEffects(id, converted, patterns, { write, rem
     }
     return { effects, systems, actionEffects };
 }
-export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false, particleMode = 'strict', 'particle-mode': cliParticleMode, map } = {}) {
+export async function build({ units, characters, source = 'assets3d-local/trial/local', out = 'assets3d-local/out', force = false, batch = false, approximateLinger = false, particleMode = 'strict', 'particle-mode': cliParticleMode, map } = {}) {
     const root = resolve(source), output = await safeOutputPath(out, { directory: true }), rel = relative(root, output);
     if (!rel || (!isAbsolute(rel) && rel !== '..' && !rel.startsWith(`..${sep}`)))
         throw new Error('output-overlaps-source');
     map ??= await loadUnitMap();
-    const selected = units.split(','), definitions = await unitDefinitions();
-    if (new Set(selected).size !== selected.length || selected.some(id => !Object.hasOwn(definitions, id) || !map[id]?.mesh))
+    const definitions = await unitDefinitions();
+    // Without --characters the default stays the two trial units; with it, only the units named alongside.
+    const unitList = units === undefined ? (characters ? [] : ['jinx', 'vi']) : units ? units.split(',') : [];
+    if (new Set(unitList).size !== unitList.length || unitList.some(id => !Object.hasOwn(definitions, id) || !map[id]?.mesh))
         throw new Error('unsupported-build-units');
+    const characterMap = characterConfigs(characters, map, definitions), isCharacter = id => Object.hasOwn(characterMap, id);
+    if (!unitList.length && !Object.keys(characterMap).length)
+        throw new Error('unsupported-build-units');
+    map = { ...map, ...characterMap };
+    const selected = [...unitList, ...Object.keys(characterMap)];
     const { assertManifest, assetUrl, parseParticleDocument } = await contracts(), rawRoot = await safeInputPath(root, join(root, 'extracted'));
     const records = JSON.parse(await readFile(await safeInputPath(root, join(root, 'extraction.json')), 'utf8'));
     if (records.version !== '14.24.6442327' || !Array.isArray(records.files))
@@ -157,7 +279,8 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const graphEntries = graphDocs.flatMap(d => d.entries).filter(e => e.hash === binding.animationGraphHash);
         if (graphEntries.length !== 1) throw new Error('missing-or-ambiguous-animation-graph');
         const clips = animationClips([{ entries: graphEntries, patches: [] }]), animation = selectAnimations(clips, map.$animationRules, config.animations);
-        resolvedUnits[id] = { binding, animation, clips, meshBytes };
+        const { formAnimations, formAnimationSkips } = resolveUnitFormAnimations(animation, clips, config, path => Boolean(sourcePath(path)));
+        resolvedUnits[id] = { binding, animation, clips, meshBytes, formAnimations, formAnimationSkips };
         const input = await loadParticleBins([`data/characters/${config.sourceName}/skins/skin0.bin`,
             ...[`data/characters/${config.sourceName}/skins/root.bin`, `characters/${config.sourceName}`].filter(p => recordMap.has(p))], sourcePath, readRaw);
         particleInputs[id] = { paths: input.paths, unresolved: input.unresolved, bytes: input.bytes };
@@ -216,7 +339,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     }
     const models = {}, effects = {}, unitReports = {}, actionEffects = {}, effectIds = new Set();
     for (const id of selected) {
-        const config = map[id], { binding, animation, clips, meshBytes } = resolvedUnits[id], animationSources = [];
+        const config = map[id], { binding, animation, clips, meshBytes, formAnimations, formAnimationSkips } = resolvedUnits[id], animationSources = [];
         for (const [name, path] of Object.entries(animation.files)) {
             const raw = sourcePath(path);
             if (!raw) throw new Error(`missing-animation-source:${path}`);
@@ -230,11 +353,17 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         try {
             reference = await readFile(await safeInputPath(referenceRoot, join(referenceRoot, id, 'rigged.glb')));
             comparison = { available: true, ...compareModels(result.glb, reference, animation.mapped, result.report.coordinateTransform) };
-        } catch (error) { if (!batch || error.code !== 'ENOENT') throw error; }
+        } catch (error) { if (!(batch || isCharacter(id)) || error.code !== 'ENOENT') throw error; }
         const gltfValidation = validator ? await validator.validateBytes(new Uint8Array(result.glb), { uri: `${id}.glb`, maxIssues: 1000 }) : null;
         const path = `models/${id}/model.glb`;
         await write(path, result.glb);
-        models[id] = { path, animations: animation.mapped };
+        const { clipRanges, clipRangeSkips } = resolveUnitClipRanges(animation, clips, animationSources, config);
+        models[id] = {
+            path,
+            animations: animation.mapped,
+            ...(Object.keys(formAnimations).length ? { formAnimations } : {}),
+            ...(Object.keys(clipRanges).length ? { clipRanges } : {}),
+        };
         const meshPaths = new Map(), meshReasons = new Map(), meshBuffers = new Map(), meshReports = [];
         const stack = [particleSources[id]], meshRefs = new Set();
         while (stack.length) {
@@ -267,6 +396,9 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
             systemCount: converted.systems.length, emitters: converted.emitters, systems, meshes: meshReports }, textures: textureReports.filter(t => t.status === 'converted').length,
             materialTextureMappings: Object.keys(binding.textures).length,
             bindings: binding, actionMapping: animation.mapped, actionDecisions: animation.decisions,
+            ...(Object.keys(formAnimations).length ? { formAnimations } : {}),
+            ...(formAnimationSkips.length ? { formAnimationSkips } : {}),
+            clipRangeSkips,
             graphClips: clips.map(c => ({ ...c, hash: c.hash.toString(16) })),
             step2Mapping: Object.keys(config.textures).length ? Object.fromEntries(Object.entries(config.textures).map(([name, path]) => [name, {
                 expected: `${config.base}/${path}`, actual: binding.textures[name] ?? null,
@@ -280,7 +412,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
         const fetchBytes = await readFile(join(output, 'fetch-plan.json'));
         files.push({ path: 'fetch-plan.json', bytes: fetchBytes.length, sha256: sha256(fetchBytes) });
     }
-    const ready = Object.values(unitReports).every(u => (u.comparison.passed || batch && !u.comparison.available) && u.structure.passed && (!validator || u.gltfValidation.numErrors === 0 && u.gltfValidation.numWarnings === 0));
+    const ready = Object.entries(unitReports).every(([id, u]) => (u.comparison.passed || (batch || isCharacter(id)) && !u.comparison.available) && u.structure.passed && (!validator || u.gltfValidation.numErrors === 0 && u.gltfValidation.numWarnings === 0));
     const report = { schemaVersion: 1, ready, sourceVersion: records.version, units: unitReports, sourceFiles: sources, textureSummary: { converted: textureReports.filter(t => t.status === 'converted').length, skipped: textureReports.filter(t => t.status === 'skipped').length, missingReferences: [...missingTextureReferences].sort() }, textures: textureReports,
         actionEffects, actionEffectsNote: 'Name-based suggestions for written effects only, no schema extension or runtime wiring. Unsupported emitters are sidecar-only; systems with no writable emitters have no document or manifest effect.',
         contractVerification: { manifest: 'src/rendering3d/contracts.ts assertManifest (direct TS import)', particles: 'src/rendering3d/particles.ts parseParticleDocument (direct TS import)', particleDocuments: Object.keys(effects).length, passed: true },
@@ -301,7 +433,7 @@ export async function build({ units = 'jinx,vi', source = 'assets3d-local/trial/
     return report;
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-    const report = await build(argumentsFor(process.argv.slice(2), ['--units', '--source', '--out', '--particle-mode']));
+    const report = await build(argumentsFor(process.argv.slice(2), ['--units', '--characters', '--source', '--out', '--particle-mode']));
     console.log(JSON.stringify({ ready: report.ready, textures: { converted: report.textureSummary.converted, skipped: report.textureSummary.skipped, missingReferences: report.textureSummary.missingReferences.length }, totals: report.totals, fetchPlan: report.fetchPlan.totals }));
     if (!report.ready)
         process.exitCode = 1;

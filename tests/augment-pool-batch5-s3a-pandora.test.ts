@@ -40,13 +40,23 @@ it('B5-16 a rerolled component still combines using its new definition and all t
  reject(s,x=>{x.resourceProvenance.entries.findLast((e:any)=>e.kind==='item-combined').event.definitionId='invalid-recipe';});
 });
 
-it('B5-16 excludes emblems, crowns, artifacts, support, radiant and crafting tools',()=>{
+it('B5-16 keeps Tactician items and radiant items unchanged',()=>{
  let s=chosen();
- const excluded=['TFT13_Item_FamilyEmblemItem','TFT_Item_ForceOfNature','spatula','frying-pan',
-  G24_FORGE_POOLS.TFT_ArmoryKeyOrnn[0],G24_FORGE_POOLS.TFT_ArmoryKeySupport[0],Object.values(ITEM_DEFINITIONS).find(d=>d.kind==='radiant')!.id];
+ const excluded=['TFT_Item_ForceOfNature','TFT_Item_TacticiansRing','TFT_Item_TacticiansScepter',Object.values(ITEM_DEFINITIONS).find(d=>d.kind==='radiant')!.id];
  const ids:string[]=[];
  for(const definitionId of excluded){const g=grantMechanicItem(s,{source:'boundary-fixture',receiptId:`boundary:${definitionId}`,definitionId});expect(g.ok).toBe(true);if(!g.ok)throw new Error(g.reason);s=g.state;ids.push(`item-${s.nextItemSerial-1}`);}
  const before=s.items.filter(i=>ids.includes(i.id));s=advance(s);expect(s.items.filter(i=>ids.includes(i.id))).toEqual(before);
+});
+it('B5-16 rerolls emblems, spatula/frying pan, artifacts and support items within their own class',()=>{
+ let s=chosen();
+ const emblems=Object.keys(ITEM_DEFINITIONS).filter(id=>/^TFT13_Item_\w+EmblemItem$/.test(id)).sort();
+ const classes:[string,readonly string[]][]=[['TFT13_Item_FamilyEmblemItem',emblems],['spatula',['frying-pan','spatula']],['frying-pan',['frying-pan','spatula']],
+  [G24_FORGE_POOLS.TFT_ArmoryKeyOrnn[0],G24_FORGE_POOLS.TFT_ArmoryKeyOrnn],[G24_FORGE_POOLS.TFT_ArmoryKeySupport[0],G24_FORGE_POOLS.TFT_ArmoryKeySupport]];
+ const ids:string[]=[];
+ for(const [definitionId] of classes){const g=grantMechanicItem(s,{source:'boundary-fixture',receiptId:`boundary:${definitionId}`,definitionId});expect(g.ok).toBe(true);if(!g.ok)throw new Error(g.reason);s=g.state;ids.push(`item-${s.nextItemSerial-1}`);}
+ const owner=s.augments.find(a=>a.definitionId==='pandoras-items')!,seat=s.multiplayer?.seatId??'solo';s=advance(s);
+ classes.forEach(([,pool],i)=>{const after=s.items.find(item=>item.id===ids[i])!;expect(pool,ids[i]).toContain(after.definitionId);
+  expect(after.definitionId,ids[i]).toBe(pandoraPick(s.seed,seat,owner.choiceId,s.round,ids[i],pool));});
 });
 it('B5-16 running combat and equipment basis restore after an actual reroll',()=>{
  let s=advance(chosen());s=accepted(equipItem(s,s.items[0].id,s.preparation.units.find(u=>u.team==='player')!.id,0));

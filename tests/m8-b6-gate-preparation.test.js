@@ -29,7 +29,9 @@ function pageAdapter(seed=42) {
 }
 describe('B6 gate preparation and explicit dependency metadata',()=>{
   // v22 opening base 2/3/4 plus PvE loss-streak gold 0/1/1 after the 1-3 and 1-4 losses.
-  for(const [roundId,gold,hp] of [['1-3',2,97],['1-4',6,94],['2-1',11,91]])it(`earns ${gold}G legally before ${roundId}`,async()=>{
+  // HP: v26 PvE loss damage is max(1, stage base 0 + surviving monsters) = 2/3/4 for the three
+  // opening losses (ef0490c4, docs/PVE_LOSS_DAMAGE_20261029.md, user-approved 2026-10-29; replaces fixed 3HP).
+  for(const [roundId,gold,hp] of [['1-3',2,98],['1-4',6,95],['2-1',11,91]])it(`earns ${gold}G legally before ${roundId}`,async()=>{
     const state=await prepareB6Opening(pageAdapter(),roundId);
     expect(state.m8.round.roundId).toBe(roundId);expect(state.phase).toBe('preparation');
     expect(state.gold).toBe(gold);expect(state.playerHp).toBe(hp);
@@ -40,19 +42,28 @@ describe('B6 gate preparation and explicit dependency metadata',()=>{
     expect(state.phase).toBe('choice');expect(state.pendingChoice.kind).toBe('augment');expect(state.gold).toBe(11);
   });
   it('obtains one actual 2-4 supply component and reaches the next legal equipment phase',async()=>{
-    const state=await prepareB6Opening(pageAdapter(1),'2-5',{augment:'superstars-ii'});
-    // v25 seed 1: Superstars II grants no equipment; the real 2-4 sword remains the only item.
+    // v26: the D5 pool registration (3ce71065) moved seed 1's 2-1 offer off Superstars II; re-pinned to seed 82 as in df6b138a.
+    const state=await prepareB6Opening(pageAdapter(82),'2-5',{augment:'superstars-ii'});
+    // Superstars II grants no equipment. The only non-supply items are the 1-2/1-3 opening drops that the
+    // empty-board losses carried to 1-3/1-4 (pve-loot-carryover 8f794062, user-approved 2026-10-29); the real
+    // 2-4 sword is the only component receipt.
     expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
     expect(state.augments.map(augment=>augment.definitionId)).toEqual(['superstars-ii']);
-    expect(state.items.map(item=>item.definitionId)).toEqual(['sword']);
-    expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([[state.items[0].id]]);
+    expect(state.items.map(item=>[item.id,item.definitionId,item.location.kind])).toEqual([['item-1','gloves','inventory'],['item-2','belt','inventory'],['item-3','sword','inventory']]);
+    expect(state.m8.loot.receipts.flatMap(receipt=>receipt.grantedItemIds)).toEqual(['item-1','item-2']);
+    expect(state.m8.loot.receipts.filter(receipt=>receipt.grantedItemIds.length).map(receipt=>receipt.claimedRoundId)).toEqual(['1-3','1-4']);
+    expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([['item-3']]);
   });
-  it('selects a named real 2-1 augment: seed 18 Guardbreaker Spirit gloves are item-1 and the 2-4 sword item-2 (verify-m5-input itemReset)',async()=>{
-    const state=await prepareB6Opening(pageAdapter(18),'2-5',{augment:'guardbreaker-spirit'});
+  // v26: seed 18 no longer offers Guardbreaker Spirit after the D5 pool registration (3ce71065); re-pinned to seed 12 (df6b138a convention).
+  // Carried opening loot (8f794062) now arrives first as item-1/item-2, so the augment's gloves are item-3 and the 2-4 sword item-4.
+  it('selects a named real 2-1 augment: seed 12 Guardbreaker Spirit gloves are item-3 after the carried opening drops and the 2-4 sword item-4 (verify-m5-input itemReset)',async()=>{
+    const state=await prepareB6Opening(pageAdapter(12),'2-5',{augment:'guardbreaker-spirit'});
     expect(state.phase).toBe('preparation');expect(state.m8.round.roundId).toBe('2-5');
     expect(state.augments.map(augment=>augment.definitionId)).toEqual(['guardbreaker-spirit']);
-    expect(state.items.map(item=>[item.id,item.definitionId,item.location.kind])).toEqual([['item-1','gloves','inventory'],['item-2','sword','inventory']]);
-    await expect(prepareB6Opening(pageAdapter(18),'2-5',{augment:'crown-guarded'})).rejects.toThrow('lacks crown-guarded');
+    expect(state.items.map(item=>[item.id,item.definitionId,item.location.kind])).toEqual([['item-1','rod','inventory'],['item-2','tear','inventory'],['item-3','gloves','inventory'],['item-4','sword','inventory']]);
+    expect(state.m8.loot.receipts.flatMap(receipt=>receipt.grantedItemIds)).toEqual(['item-1','item-2']);
+    expect(state.scheduleReceipts.filter(receipt=>receipt.kind==='component').map(receipt=>receipt.itemIds)).toEqual([['item-4']]);
+    await expect(prepareB6Opening(pageAdapter(12),'2-5',{augment:'crown-guarded'})).rejects.toThrow('lacks crown-guarded');
   });
   it('reproduces public opening setup for the same seed',async()=>{
     expect(await prepareB6Opening(pageAdapter(4294967295),'1-3')).toEqual(await prepareB6Opening(pageAdapter(4294967295),'1-3'));

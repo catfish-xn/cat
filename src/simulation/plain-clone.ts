@@ -13,9 +13,10 @@ export function clonePlainData<T>(value: T): T {
     if (prototype !== (array ? Array.prototype : Object.prototype) && prototype !== null) throw nativeClone;
     const result: Record<string, unknown> | unknown[] = array ? new Array((input as unknown[]).length) : {};
     copies?.set(input, result);
+    const descriptors = Object.getOwnPropertyDescriptors(input);
     for (const key of Object.keys(input)) {
-      const descriptor = Object.getOwnPropertyDescriptor(input, key)!;
-      if (!('value' in descriptor)) throw nativeClone;
+      const descriptor = descriptors[key];
+      if (!descriptor || !('value' in descriptor)) throw nativeClone;
       const child = descriptor.value;
       let next: unknown;
       if (child === null || typeof child !== 'object') {

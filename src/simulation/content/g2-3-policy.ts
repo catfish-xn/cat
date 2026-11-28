@@ -46,7 +46,11 @@ export const G23_POLICY = freezeContent({
   conqueror:{radiantPoolExclusions:['TFT5_Item_ThiefsGlovesRadiant'],chests:G23_CONQUEROR_CHESTS,transitionalRewards:G23_CONQUEROR_CHESTS.map(g23ConquerorReward),deferredPolicy:'whole-tier-gold-floor-only-affected-v2', growthPerChestBps:500, progressCap:null,
     stacksPerTakedown:{2:1,4:3,6:6,9:20},radiantConversion:'equipped-board-and-bench-then-new-combinations'},
   highRoller:{first:[3500,3500,2000,1000],triple:[4000,3500,2450,50],mods:['rocket','shield','coin'],tripleMods:['blue-flamethrower','knockout-punch','quadruple-chomp','jackpot'],
-    rockets:8,rocketPhysicalDamage:100,shield:500,shieldTicks:80,gold:3,durabilityBps:8000,durabilityTicks:30},
+    rockets:8,rocketPhysicalDamage:100,shield:500,shieldTicks:80,gold:3,durabilityBps:8000,durabilityTicks:30,
+    /** The spell lands once the slot machine's right reel has stopped, as in 14.24; 25 ticks is our fitted value, not original data (G24-SEVIKA-SLOTS-01). */
+    slotTicks:25,
+    /** Spell4 Jackpot: 14.24 notes AD 250%; coin count is 约定值 G24-SEVIKA-JACKPOT-01 (6 coins over 1.5 s). */
+    jackpotCoins:6,jackpotCoinAdBps:25000},
   rumble:{selfDestructResistBps:[16000,24000,2000000]},
   academy:{memberBaseBps:500,stacking:'per-matching-copy-base-once',grantsAtDistinctTier:[3,4,5]},
   // 14.24b Take All / Save Shimmer evidence (user 2026-10-22); source weights unchanged.

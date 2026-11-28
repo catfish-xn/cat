@@ -3,6 +3,7 @@ import type { ChoiceDefinition } from '../strategy-types';
 import type { AugmentGiftSpec } from '../augment-gift-plan';
 import { TOWER_DEFENSE_SPELL } from './batch3-summons';
 import { nextRandom } from '../rng';
+import { GLOVES_OFF } from './gloves-off';
 
 /** A counter over authoritative battle receipts from the acquisition round onward (inclusive).
  * `every`/`max` name a source value (or `every` is a literal count); `repeat:false` fires once at the first threshold. */
@@ -1352,7 +1353,7 @@ export function batch3Count(row:Batch3Content,key:string|number):number {
 }
 export const HERO_UNITS=['steb','irelia','trundle','renni','vander','vladimir'] as const;
 /** Every hero row carries every coefficient (0 when unused), so the mechanic has one fixed parameter set. */
-export const HERO_FIELDS=['hero','manaReduction','hitBps','hits','omnivampBps','attackSpeedBps','dashAd1','dashAd2','dashAd3','dashAp1','dashAp2','dashAp3','dashRange','speedBps','speedTicks','permanentAdBps','mainBps','chargeBps','pounceRange','damageBps','splashBps','rangeBonus','attackMana','ampBps','overkillBps','near1','near2','near3'] as const;
+export const HERO_FIELDS=['hero','manaReduction','hitBps','hits','omnivampBps','attackSpeedBps','dashAd1','dashAd2','dashAd3','dashAp1','dashAp2','dashAp3','dashRange','speedBps','speedTicks','permanentAdBps','mainBps','chargeBps','pounceRange','damageBps','splashBps','rangeBonus','attackMana','ampBps','overkillBps','near1','near2','near3','manaIncrease'] as const;
 /** Hero augment coefficients: 14.24 augment values plus the a-level Hero SpellObject values (s13-missing-values research C3,
  * star slots 1–3). Everything a later cast reads is frozen here; P 2026-10-24 for the unconfirmed timing/geometry. */
 function batch3HeroValues(row:Batch3Content):Record<string,number> {
@@ -1363,7 +1364,7 @@ function batch3HeroValues(row:Batch3Content):Record<string,number> {
   case 'irelia':return all({hero,attackSpeedBps:Math.round(v.TOOLTIPBonusAS*10000),dashAd1:33500,dashAd2:33500,dashAd3:34500,dashAp1:40,dashAp2:60,dashAp3:90,dashRange:3});
   case 'trundle':return all({hero,manaReduction:v.ManaReduction,speedBps:Math.round(v.TOOLTIPONLYAS*100),speedTicks:Math.round(v.TOOLTIPONLYDuration*20),permanentAdBps:Math.round(v.TOOLTIPONLYADPerCast*100)});
   case 'renni':return all({hero,manaReduction:v.TOOLTIPManaReduction,mainBps:Math.round(v.TOOLTIPAbilityDamage*10000),chargeBps:Math.round(v['{9dff3ac5}']*10000),pounceRange:v.TOOLTIPHexDistance});
-  case 'vander':return all({hero,damageBps:10000+Math.round(v.TooltipBonusDamage*10000),splashBps:Math.round(v.TOOLTIPONLYSplashPerc*10000)});
+  case 'vander':return all({hero,manaIncrease:GLOVES_OFF.manaIncrease,damageBps:10000+Math.round(v.TooltipBonusDamage*10000),splashBps:Math.round(v.TOOLTIPONLYSplashPerc*10000)});
   default:return all({hero,rangeBonus:v.IncRange,attackMana:v.BonusMana,damageBps:10000+Math.round(v.TooltipBonusDamage*10000),ampBps:Math.round(v.TOOLTIPDamageAmp*10000),overkillBps:Math.round(v['{256e31ce}']*100),near1:90,near2:135,near3:205});
  }
 }

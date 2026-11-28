@@ -6,6 +6,7 @@ import { validateMatchStructure } from '../simulation/serialization-structure';
 import { readG23Progress } from '../simulation/g2-3-state';
 import { needsCrownHistory } from '../simulation/crown-history';
 import { canonicalContent, digestContent } from '../simulation/content';
+import { recordCombatTranscripts } from '../simulation/augment-history-restore';
 import { ownBattleRecord as markOwned, deepFreeze, recordVersion, equalContent, isOwnedBattleRecord,
   replayBattleRecord, matchHistoryChecks, validateBattleRecord } from '../simulation/battle-record-validation';
 export { isOwnedBattleRecord, deepFreeze, recordVersion, equalContent, checkRecordCompatibility,
@@ -32,7 +33,7 @@ export function admitArchives(envelopes: readonly unknown[], route: (file: unkno
 }
 /** Strict archive topology and historical context validation; yields once after each battle. */
 function* battleCollectionChecks(envelope: SaveEnvelope): Generator<void, void, void> {
-  const match = validateMatchStructure(envelope.match);
+  const match = recordCombatTranscripts(() => validateMatchStructure(envelope.match));
   yield* matchHistoryChecks(match, envelope.battles, envelope.runId);
   if (match.combat?.status === 'running') {
     check(envelope.currentBattle !== null, '缺少当前事件前缀');

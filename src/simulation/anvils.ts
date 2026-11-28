@@ -14,6 +14,7 @@ import { epicForgeOffers } from './epic-forges';
 import { readG23Progress } from './g2-3-state';
 import { g23RewardAtoms } from './g2-3-rewards';
 import { isCombatRosterLocked } from './operation-policy';
+import { isOverflowUnit } from './bench-capacity';
 
 /** Grant seam: callers supply an authenticated reward receipt; new sources must also define their deterministic offers. */
 export function grantAnvilUnit(state:MatchState,request:MechanicGrantRequest & {readonly definitionId:string}):MatchCommandResult {
@@ -63,7 +64,7 @@ export function planOpenAnvil(state:MatchState,unitId:string):MatchCommandResult
   const unit=state.preparation.units.find(u=>u.id===unitId);
   if(!unit)return fail('unknown-unit');
   if(unit.team!=='player')return fail('enemy-unit');
-  if(!isAnvil(unit.definitionId)||unit.location.kind!=='bench')return fail('invalid-target');
+  if(!isAnvil(unit.definitionId)||(unit.location.kind!=='bench'&&!isOverflowUnit(state.preparation,unitId)))return fail('invalid-target');
   const {offers}=specification(state,unitId),choiceId=anvilChoiceId(unitId);
   const opened=openMechanicChoice(state,{choiceId,offers,returnPhase:state.phase as 'preparation'|'settlement',payload:{kind:'forge',source:'anvil-unit',timeoutMs:30000,timeoutOption:offers[0]}});
   if(!opened.ok)return opened;

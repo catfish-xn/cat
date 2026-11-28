@@ -1,9 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { Group, Scene, type Texture } from 'three';
+import { Box3, BoxGeometry, Group, Mesh, MeshBasicMaterial, Scene, type Texture } from 'three';
 import { createScoutStage, readScout } from '../src/rendering/three-mode/scout-stage';
+import { FIVE_COST_THREE_STAR_SCALE, STAR_BODY_SCALE, useUnitCost } from '../src/rendering/three-mode/model-fit';
 import { boardFeedGeneration, publishScout, subscribeBoardFeed, type BoardFrame, type BoardScout } from '../src/rendering/board-feed';
 import { TraitColumn, traitColumnShowRows, type TraitRow } from '../src/rendering/trait-column';
 import type { ModelLease } from '../src/rendering3d';
+import { LEGEND_MODEL } from '../src/rendering/three-mode/tabletop';
+import { hexCenter } from '../src/rendering3d/picking';
+import { unitAnomalies } from '../src/presentation/anomaly-display';
 
 /** Synthetic seats only: no asset files, no real players. */
 const frame: BoardFrame = {
@@ -75,7 +79,7 @@ describe('3D scouting stage', () => {
     const scene = new Scene(), owned: { dispose(): void }[] = [];
     const icons: string[] = [];
     const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40, loadModel, legendModel: () => null, myLegend: () => null,
-      starColor: () => '#ffd34d', itemIcon: id => { icons.push(id); return `/icons/${id}.png`; },
+      starColor: () => '#ffd34d', itemIcon: id => { icons.push(id); return `/icons/${id}.png`; }, hasAnomaly: (native, items) => unitAnomalies(native, items).length > 0,
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
       own: <T extends { dispose(): void }>(resource: T) => { owned.push(resource); return resource; } });
     return { scene, stage, icons };
@@ -91,6 +95,15 @@ describe('3D scouting stage', () => {
     expect(debug.units.sort()).toEqual(['board:1,5:standin', 'board:2,6:standin', 'board:5,7:standin']);
     expect(debug.bench).toEqual(['bench:4']);
     expect(debug.orbs).toEqual(['gold', 'blue']);
+    // Its orbs stand off every deployable cell (beside the legend, on its outer side).
+    const width = Math.sqrt(3) * frame.hexRadius, grid = { rows: frame.rows, columns: frame.columns, radius: frame.hexRadius, origin: frame.origin };
+    const drawnOrbs: Group[] = [];
+    scene.traverse(node => { if (node.name.startsWith('render3d-scout-orb-')) drawnOrbs.push(node as Group); });
+    expect(drawnOrbs).toHaveLength(2);
+    for (const drawn of drawnOrbs) for (let row = 0; row < frame.rows; row++) for (let col = 0; col < frame.columns; col++) {
+      const cell = hexCenter({ col, row }, grid);
+      expect(Math.hypot(drawn.position.x - cell.x, drawn.position.z - cell.z)).toBeGreaterThanOrEqual(0.75 * width);
+    }
     expect(debug.legend).toBe('standin');
     expect(icons.sort()).toEqual(['item-1', 'item-2', 'item-3']);
     expect(scene.getObjectByName('render3d-scout-anomaly')).toBeDefined();
@@ -101,6 +114,15 @@ describe('3D scouting stage', () => {
     expect(stage.active).toBe(false);
     expect(group.visible).toBe(false);
     expect(stage.debug().units).toEqual([]);
+  });
+
+  it('marks a portable anomaly on a public bench unit without a native anomaly field', () => {
+    const { scene, stage } = setup();
+    stage.show(scoutOf({ board: { units: [], bench: [{ definitionId: 'vex', starLevel: 1, slot: 0, items: ['TFT13_AnotherAnomaly_Item:the-finisher'] }] } }), frame);
+    expect(scene.getObjectByName('render3d-scout-anomaly')).toBeDefined();
+    stage.show(scoutOf({ board: { units: [], bench: [{ definitionId: 'vex', starLevel: 1, slot: 0, items: [] }] } }), frame);
+    expect(scene.getObjectByName('render3d-scout-anomaly')).toBeUndefined();
+    stage.dispose();
   });
 
   it('loads each unit model once per build and releases them on stop', async () => {
@@ -127,6 +149,36 @@ describe('3D scouting stage', () => {
   });
 });
 
+describe('3D scouting: star sizes by cost', () => {
+  it('draws a five-cost three-star about 1.42 times its two-star, and a four-cost three-star at the usual factor', async () => {
+    // Synthetic toy bodies: a 10-unit-tall box per load, at one official scale.
+    const loaded: { id: string; scene: Group }[] = [];
+    const scene = new Scene();
+    useUnitCost(id => id === 'five-a' ? 5 : id === 'four-b' ? 4 : 1);
+    try {
+      const stage = createScoutStage({ scene, championHeight: 92, championWidth: 110, pawnHeight: 56, pawnWidth: 40,
+        loadModel: id => { const body = new Group(); body.add(new Mesh(new BoxGeometry(4, 10, 4).translate(0, 5, 0), new MeshBasicMaterial()));
+          loaded.push({ id, scene: body }); return Promise.resolve({ scene: body, animations: [], animationNames: {}, placeholder: false, release() {} } as unknown as ModelLease); },
+        unitScale: () => 1, sourceScale: 0.44, legendModel: () => null, myLegend: () => null, starColor: () => '#ffd34d', itemIcon: () => null,
+        hasAnomaly: () => false, overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
+        own: <T extends { dispose(): void }>(resource: T) => resource });
+      stage.show({ seatId: 'seat-9', name: '机器人 9', orbs: { count: 0, tiers: [] }, board: { bench: [], looseItems: [], augments: [], units: [
+        { definitionId: 'five-a', starLevel: 3, cell: { col: 1, row: 5 }, items: [] },
+        { definitionId: 'five-a', starLevel: 2, cell: { col: 2, row: 5 }, items: [] },
+        { definitionId: 'four-b', starLevel: 3, cell: { col: 3, row: 5 }, items: [] },
+        { definitionId: 'four-b', starLevel: 1, cell: { col: 4, row: 5 }, items: [] },
+      ] } } as unknown as BoardScout, frame);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      const height = (index: number) => { const body = loaded[index]!.scene; body.updateMatrixWorld(true); const box = new Box3().setFromObject(body); return box.max.y - box.min.y; };
+      expect(loaded.map(entry => entry.id)).toEqual(['five-a', 'five-a', 'four-b', 'four-b']);
+      expect(height(0) / height(1)).toBeCloseTo(FIVE_COST_THREE_STAR_SCALE / STAR_BODY_SCALE[2]!, 6);
+      expect(height(0) / height(1)).toBeCloseTo(1.42, 6);
+      expect(height(2) / height(3)).toBeCloseTo(STAR_BODY_SCALE[3]!, 6);
+      stage.show(null, null);
+    } finally { useUnitCost(() => 1); }
+  });
+});
+
 describe('3D scouting: the seat\'s little legend', () => {
   it('keeps a short legend code name only, and loads that legend, falling back to the default when it cannot be drawn', async () => {
     expect(readScout(scoutOf({ legend: 'ao-shin' })).legend).toBe('ao-shin');
@@ -141,14 +193,14 @@ describe('3D scouting: the seat\'s little legend', () => {
         const body = new Group(), release = vi.fn(); fallbackBodies.push(body); releases.push(release);
         return Promise.resolve({ scene: body, animations: [], animationNames: {}, placeholder: false, release } as unknown as ModelLease);
       },
-      legendModel: legend => legend ? `little-legend-${legend}` : 'little-legend-default', myLegend: () => 'pengu',
+      legendModel: legend => legend ? `little-legend-${legend}` : LEGEND_MODEL, myLegend: () => 'pengu',
       starColor: () => '#ffd34d', itemIcon: () => null,
       overhead: { colors: () => ({ hp: '#0f0', hpEnemy: '#f00', mana: '#00f', manaFull: '#fff', shield: '#eee' }), itemTexture: () => Promise.resolve(null as Texture | null) },
       own: <T extends { dispose(): void }>(resource: T) => resource });
     stage.show(scoutOf({ legend: 'ao-shin', board: { units: [] } }), frame);
     await new Promise(resolve => setTimeout(resolve, 0));
     // Theirs (falling back to the default) and mine, which came along to their board.
-    expect(loads.sort()).toEqual(['little-legend-ao-shin', 'little-legend-default', 'little-legend-default', 'little-legend-pengu']);
+    expect(loads.sort()).toEqual(['little-legend-ao-shin', 'little-legend-default', 'little-legend-default', 'little-legend-pengu', 'little-legend-pengu']);
     expect(stage.debug().legend).toBe('model:little-legend-ao-shin');
     expect(stage.debug().visitor).toBe('model:little-legend-pengu');
     expect(fallbackBodies).toHaveLength(2);

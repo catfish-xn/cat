@@ -1,7 +1,7 @@
 import { validSalvageConversion } from './augment-pool-batch5-s3b-salvage';
 import type { MatchState } from './match-types';
 import type { ItemInstance } from './strategy-types';
-import { G24_FORGE_POOLS } from './content/g2-4-forges';
+import { pandoraItemPool } from './pandora-item-pools';
 import { nextRandom } from './rng';
 import { appendResourceProvenance, type ResourceFact } from './resource-provenance';
 import { getMultiplayerRoundById } from './multiplayer-round';
@@ -10,8 +10,7 @@ export type S3bConversion = Extract<ResourceFact,{kind:'g23-item-converted'}>;
 export const isS3bConversion = (fact:ResourceFact):boolean => fact.kind==='g23-item-converted'&&fact.receiptId.startsWith('["augment-pool-batch5-s3b",');
 /** A private item/round stream leaves the shop, battle and loot RNG untouched. */
 export function pandoraItem(seed:number,receiptId:string,from:string):string {
-  const pool=G24_FORGE_POOLS.TFT_ArmoryKeyComponent.includes(from)?G24_FORGE_POOLS.TFT_ArmoryKeyComponent
-    :G24_FORGE_POOLS.TFT_ArmoryKeyCompleted.includes(from)?G24_FORGE_POOLS.TFT_ArmoryKeyCompleted:undefined;
+  const pool=pandoraItemPool(from);
   if(!pool)throw new RangeError('Invalid Pandora item category');
   let hash=0x811c9dc5;for(let i=0;i<receiptId.length;i++)hash=Math.imul(hash^receiptId.charCodeAt(i),16777619)>>>0;
   return pool[Math.floor(nextRandom((seed^hash)>>>0).word*pool.length/4294967296)];
@@ -19,7 +18,7 @@ export function pandoraItem(seed:number,receiptId:string,from:string):string {
 export function pandoraConversions(state:Pick<MatchState,'seed'|'augments'>,items:readonly ItemInstance[],round:number):S3bConversion[] {
   const owner=state.augments.find(a=>a.definitionId==='pandoras-items-ii'&&a.acquiredRound<round);
   if(!owner)return [];
-  return items.filter(i=>i.location.kind==='inventory'&&(G24_FORGE_POOLS.TFT_ArmoryKeyComponent.includes(i.definitionId)||G24_FORGE_POOLS.TFT_ArmoryKeyCompleted.includes(i.definitionId)))
+  return items.filter(i=>i.location.kind==='inventory'&&pandoraItemPool(i.definitionId))
     .sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0).map(i=>{
       const receiptId=JSON.stringify(['augment-pool-batch5-s3b',owner.choiceId,'pandora',round,i.id]);
       return {kind:'g23-item-converted',itemId:i.id,from:i.definitionId,to:pandoraItem(state.seed,receiptId,i.definitionId),receiptId};

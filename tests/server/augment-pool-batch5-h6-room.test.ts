@@ -3,14 +3,26 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { makeRoom, runUntilClaiming } from './helpers';
 import { restoreSharedOrbSnapshot } from '../../src/simulation/shared-pool';
 import { canonicalContent } from '../../src/simulation/content';
-import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver';
+import { battleCacheResolver, type BattleResultCache } from './battle-result-cache';
 
 describe('contested real room',()=>{
- const {room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:3});
+ // One real play records each battle; the cases replay that result and only read the cache.
+ const battles: BattleResultCache = new Map();
+ const {room,clock}=makeRoom(battleCacheResolver(battles,'read'),{seed:3});
  let restoreOffers:()=>void;
+ let warm: ReturnType<typeof makeRoom> | undefined;
  // Pool expansion moved the old seed's card; script only the eligible draw, not roster facts or settlement.
  beforeAll(()=>{restoreOffers=installB1Offers(['contested']);});
- afterAll(()=>{room.dispose();restoreOffers();});
+ beforeAll(()=>{
+  warm=makeRoom(battleCacheResolver(battles,'record'),{seed:3});
+  warm.room.start();
+  runUntilClaiming(warm.room,warm.clock,s=>s.roundId==='2-1'&&s.phase==='preparation',5000);
+ });
+ beforeAll(()=>{
+  runUntilClaiming(warm!.room,warm!.clock,s=>s.roundId==='3-2'&&s.phase==='preparation',5000);
+  warm!.room.dispose();
+ });
+ afterAll(()=>{warm?.room.dispose();room.dispose();restoreOffers();});
  for(const round of ['1-2','1-3','1-4','2-1','2-3','2-5','2-7','3-2']) it(`reaches ${round} through the room`,()=>{
   if(round==='1-2')room.start();
   expect(runUntilClaiming(room,clock,s=>s.roundId===round&&s.phase==='preparation',5000).roundId).toBe(round);

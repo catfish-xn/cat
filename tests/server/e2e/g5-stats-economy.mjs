@@ -5,10 +5,10 @@
  *
  * 1. Battle stats (TFT's damage chart): while my battle plays back the right column shows that battle only, one row per
  *    unit of mine in the replay the server pushed, and each row's 输出 (HP damage + shield absorbed), 治疗 (heal shares by
- *    their source, SR-G5-01) and 防护 (shield granted) equal the replay events' own sums over the ticks shown so far, worked
+ *    their source, SR-G5-01), 承受伤害 (HP damage + shield absorbed taken) and the shield granted equal the replay events' own sums over the ticks shown so far, worked
  *    out here independently of the page's `summarizeBattle`. So the first read of a new battle counts none of the previous
  *    one (it starts from zero). After the battle the panel holds that battle's final totals through settlement and the next
- *    preparation. The 输出/治疗/防护 tabs switch the metric and sort highest first; every heal's shares add up to its actual.
+ *    preparation. The 输出/承受伤害/治疗/护盾 tabs (治疗/护盾 = heal shares + shield granted) switch the metric and sort highest first; every heal's shares add up to its actual.
  * 2. Economy hint (SR-G5-02): in preparation and my battle the strip above the board shows "利息 +N（胜 +M）· 连胜/连败 X ·
  *    再胜/再败 +Y" from the server's `economyPreview`; the streak equals my state's. The last preview before a settlement,
  *    when the settled gold before and streak are the preview's, equals that settlement's `incomeBreakdown` item by item
@@ -23,22 +23,23 @@ const OUT = outDir('g5-stats');
 const WS_PORT = Number(process.env.G5_WS_PORT ?? 8822);
 const VITE_PORT = Number(process.env.G5_VITE_PORT ?? 5223);
 const { check, finish } = createChecks();
-const METRICS = ['shieldGiven', 'healingDone', 'damageDealt'];
+const METRICS = ['support', 'damageTaken', 'damageDealt'];
 
 const summary = page => page.evaluate(() => {
   const root = document.querySelector('#battle-summary');
   if (!root || root.hidden) return null;
   return { combat: root.dataset.combat, round: root.dataset.round, live: root.dataset.live === 'true', played: Number(root.dataset.played), metric: root.dataset.metric,
     rows: [...root.querySelectorAll('.summary-row')].map(node => ({ id: node.dataset.unit, team: node.dataset.team, value: Number(node.dataset.value),
-      dealt: Number(node.dataset.dealt), healed: Number(node.dataset.healed), shielded: Number(node.dataset.shielded) })) };
+      dealt: Number(node.dataset.dealt), taken: Number(node.dataset.taken), healed: Number(node.dataset.healed), shielded: Number(node.dataset.shielded) })) };
 });
 
 /** Per unit of one replay, from its events over the first `played` ticks, independently of the page. */
 function battleTotals(replay, played = replay.ticks.length) {
-  const rows = new Map(replay.initial.units.map(unit => [unit.id, { team: unit.team, dealt: 0, healed: 0, shielded: 0 }]));
+  const rows = new Map(replay.initial.units.map(unit => [unit.id, { team: unit.team, dealt: 0, taken: 0, healed: 0, shielded: 0 }]));
   for (const frame of replay.ticks.slice(0, played)) for (const event of frame.events) {
     if (event.type === 'packetDamage') {
       if (rows.has(event.sourceId)) rows.get(event.sourceId).dealt += event.hpDamage + event.absorbed;
+      if (rows.has(event.targetId)) rows.get(event.targetId).taken += event.hpDamage + event.absorbed;
     } else if (event.type === 'heal') {
       for (const share of event.shares) if (rows.has(share.sourceId)) rows.get(share.sourceId).healed += share.actual;
     } else if (event.type === 'shieldLayerChanged' && event.reason === 'granted') {
@@ -48,7 +49,7 @@ function battleTotals(replay, played = replay.ticks.length) {
   }
   return rows;
 }
-const same = (shown, want) => want && shown.dealt === want.dealt && shown.healed === want.healed && shown.shielded === want.shielded;
+const same = (shown, want) => want && shown.dealt === want.dealt && shown.taken === want.taken && shown.healed === want.healed && shown.shielded === want.shielded;
 /** Every heal's shares add up to its actual healing (SR-G5-01). */
 const sharesAddUp = replay => replay.ticks.every(frame => frame.events.every(event => event.type !== 'heal' || event.shares.reduce((total, share) => total + share.actual, 0) === event.actual));
 const combatOf = replay => replay.terminal.combatId ?? null;
@@ -57,8 +58,8 @@ async function sortsByTabs(page, label) {
   for (const metric of METRICS) {
     await click(page, `online:summary-tab:${metric}`); await sleep(60);
     const tab = await summary(page), values = tab?.rows.map(row => row.value) ?? [];
-    const field = { shieldGiven: 'shielded', healingDone: 'healed', damageDealt: 'dealt' }[metric];
-    check(tab?.metric === metric && values.every((value, i) => i === 0 || values[i - 1] >= value) && tab.rows.every(row => row.value === row[field]),
+    const valueOf = row => metric === 'support' ? row.healed + row.shielded : row[{ damageTaken: 'taken', damageDealt: 'dealt' }[metric]];
+    check(tab?.metric === metric && values.every((value, i) => i === 0 || values[i - 1] >= value) && tab.rows.every(row => row.value === valueOf(row)),
       `${label}: tab ${metric} shows that metric, highest first (${values.slice(0, 4).join(' ≥ ')})`);
   }
 }
@@ -68,7 +69,7 @@ function checkRows(shown, replay, label) {
   const mine = [...expected.values()].filter(row => row.team === 'player').length;
   check(shown.rows.length === mine && shown.rows.every(row => row.team === 'player'), `${label}: one row per unit of mine (${shown.rows.length} vs ${mine}), no enemy rows`);
   const wrong = shown.rows.filter(row => !same(row, expected.get(row.id)));
-  check(wrong.length === 0, `${label}: 输出/治疗/防护 of every row equal the replay events' sums${shown.live ? ` over ${shown.played} ticks` : ''} (${wrong.map(row => row.id).join(' ') || 'all equal'})`);
+  check(wrong.length === 0, `${label}: 输出/承受伤害/治疗/护盾 of every row equal the replay events' sums${shown.live ? ` over ${shown.played} ticks` : ''} (${wrong.map(row => row.id).join(' ') || 'all equal'})`);
 }
 async function checkFinal(page, replay, label) {
   const shown = await summary(page);
@@ -136,7 +137,7 @@ async function main() {
           const label = `round ${round} live (tick ${shown.played})`;
           if (reads.length === 0 && lastFinal && lastFinal !== shown.combat) freshStarts.push(round);
           checkRows(shown, replay, label);
-          const total = shown.rows.reduce((sum, row) => sum + row.dealt + row.healed + row.shielded, 0);
+          const total = shown.rows.reduce((sum, row) => sum + row.dealt + row.taken + row.healed + row.shielded, 0);
           if (reads.length && total < reads[reads.length - 1]) liveMonotonic = false;
           reads.push(total); liveReads.set(round, reads);
           if (reads.length === 1) await page.screenshot({ path: `${OUT}/live-${round}.png` });

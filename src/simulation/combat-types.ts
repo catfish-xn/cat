@@ -11,8 +11,12 @@ export type CombatResult = 'playerWin' | 'enemyWin' | 'draw';
 export interface CombatOrigin { readonly parentItemInstanceId?: string | null; readonly ownerId: string; readonly sourceKind: 'attack' | 'ability' | 'trait' | 'item' | 'augment' | 'anomaly' | 'enemyGrowth'; readonly definitionId: string; readonly instanceId: string; readonly effectIndex: number }
 export interface ShieldLayer { readonly m8State?: import('./m8/contracts').ShieldState; readonly m8Grant?: Extract<import('./m8/contracts').Effect, { kind: 'grant-shield' }>; readonly endedReason?: import('./m8/contracts').ShieldEndReason;  readonly key: string; readonly source: CombatOrigin; readonly granted: number; readonly remaining: number; readonly absorbed: number; readonly expiresAtTick: number; readonly decayPerTick?: number; readonly grantedAtTick?: number; readonly decayDurationTicks?: number }
 export interface CombatStatus { readonly contributionKeys?: readonly string[]; readonly activity?: import('./m8/contracts').CombatActivity;  readonly key: string; readonly kind: 'stun' | 'damageReduction' | 'armorReduction' | 'resistanceFlat' | 'attackSpeed' | 'abilityPower' | 'channel' | 'redirect'; readonly source: CombatOrigin; readonly amount: number; readonly startsAtTick: number; readonly expiresAtTick: number }
-export interface CombatTask { readonly teamupKind?:'attack'|'echo'|'wave'|'missiles'; readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g23Flame' | 'g23Chomp' | 'g24Heal' | 'g24Mana' | 'v20Teamup' | 'v20Powder'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
-  readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited']; }
+export interface CombatTask { readonly shot?: import('./ability-projectile').SkillShotState; readonly teamupKind?:'attack'|'echo'|'wave'|'missiles'; readonly cell?: HexCell; readonly shieldEndKey?: string; readonly attachedDot?: boolean;  readonly key: string; readonly kind: 'maddie' | 'bleed' | 'ireliaEnd' | 'leonaEnd' | 'lorisEnd' | 'corki' | 'caitlyn' | 'tristanaBounce' | 'g2Drain' | 'g2Slam' | 'g2Infection' | 'g2SingedSpeed' | 'g2Blast' | 'g2Retaliation' | 'g22Vex' | 'g22Curse' | 'g22ViSlam' | 'g22CamilleKick' | 'g2BlitzShock' | 'g2Landing' | 'g2PowderRelease' | 'g2PowderMonkey' | 'g23Heal' | 'g23Magic' | 'g23Physical' | 'g23True' | 'g23Smeech' | 'g23Stab' | 'g23RenniLift' | 'g23Flame' | 'g23Chomp' | 'g23Roll' | 'g24Heal' | 'g24Mana' | 'v20Teamup' | 'v20Powder' | 'attackLanding' | 'skillShot' | 'melDash'|'g23CrystalLand'|'g23CrystalBlast'; readonly source: CombatOrigin; readonly executeAtTick: number; readonly targetId: string | null; readonly amount: number; readonly ordinal: number; readonly total: number; readonly cancellable: boolean; readonly actionSeq: number;
+  readonly inherited?: Extract<import('./m8/contracts').DamageInput, { stage: 'after-mitigation' }>['inherited'];
+  /** attackLanding: a ranged hero's shot to targetId, taken on its attack tick (packets with their crits, deferred on-hit statuses). */
+  readonly landing?: { readonly packets: readonly import('./combat-s13-abilities').S13Packet[]; readonly effects: readonly AttackLandingEffect[]; readonly voided?: true }; }
+/** An on-hit status of an attack-completed trigger, carried by the shot and applied when it lands. */
+export interface AttackLandingEffect { readonly holderId: string; readonly source: import('./m8/contracts').Source; readonly effect: import('./m8/contracts').Effect; readonly ordinal: number; readonly area: boolean }
 export interface CombatMechanic { readonly source: CombatOrigin; readonly mechanic: string; readonly values: Readonly<Record<string, number>>; readonly targetId?: string }
 export interface V19CombatFacts { readonly garenSample?:number; readonly sharedHealth?:number; readonly smokePermanent?:boolean; readonly smokeOrdinal?:number; readonly roseTeams?:readonly Team[] }
 export type CombatMechanics = readonly CombatMechanic[];
@@ -25,7 +29,7 @@ export interface ExpansionState {
 }
 export interface G22State { initialized: boolean; rebelTriggered: boolean; wanted: string[]; wantedDeaths: number; mordeUntilTick: number; reaveUntilTick: number; reaveBps: number; exposureFromTick: number; exposureUntilTick: number; exposureBps: number }
 export interface G23State {
-  ascension:{untilTick:number;nextPulseTick:number;actionSeq:number;takedowns:string[]}|null;
+  ascension:{untilTick:number;nextPulseTick:number;actionSeq:number;takedowns:string[];pulse:number}|null;
   conquestTakedowns:string[];
   experimentTakedowns:string[];
   cuts: Record<string,number>;
@@ -37,6 +41,12 @@ export interface G23State {
 /** chest = the death trigger effect that granted it (owned by the dead holder); ordinal = its index among that chest's grants. */
 export interface CombatItemGrant { readonly chest: import('./m8/contracts').Source; readonly ordinal: number; readonly definitionId: string; readonly grantedAtTick: number }
 export interface CombatUnit {
+  /** S13: current target has reached attack range; persists through a pending one-step chase. */
+  readonly targetEngaged?: true;
+  /** Melee attack hex this unit is committed to. Kept until that hex is settled or the target changes. */
+  readonly meleeApproach?: { readonly targetId: string; readonly cell: HexCell };
+  /** A ranged attack started and winding up (cast-windup.ts rangedAttackWindupTicks): its target and the launch tick. */
+  readonly windup?: { readonly targetId: string; readonly launchTick: number };
   readonly r3Mirror?: import('./augment-pool-batch5-r3-mirrors').HallMirrorOrigin;
   readonly madChemist?: import('./augment-pool-batch5-r4').MadChemistRuntime;
   readonly batch5RebelPulseAtTick?: number;
@@ -121,6 +131,11 @@ export interface CombatState {
   readonly itemGoldReceipts?: readonly import('./g2-4b-item-gold').ItemGoldReceipt[];
   readonly itemRandomStreams?: import('./g2-4b-item-kernel').ItemRandomStreams;
   readonly removedUnitIds?:readonly string[];
+  /** Last snapshot of a removed unit (removedUnitIds) that a remaining unit's status or periodic effect still names as
+   * its source: the effect runs to its end with its original source and stats. Absent when no removal left such a reference.
+   * Kept, on purpose, after those effects end (like removedUnitIds): pruning would add a per-tick scan and change the
+   * combat bytes mid-run for no rules effect, and the list only grows by one entry per removal. */
+  readonly departedUnits?: readonly CombatUnit[];
   readonly neutralReceipts?: import('./neutral-receipts').NeutralReceipts;
   readonly openingDefinitions?: readonly import('./m8/opening').OpeningDefinition[];
   readonly openingState?: import('./m8/opening').OpeningState;

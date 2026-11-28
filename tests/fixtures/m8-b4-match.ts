@@ -21,7 +21,7 @@ const EQUIPMENT_ROUTE={seed:206,earliestRound:8,augmentPriorities:['crimson-pact
 // Keep the original component births; neither chosen card grants items or changes an isolated holder.
 const DOUBLE_BLOODTHIRSTER_ROUTE={ seed: 76672, earliestRound:15, augmentPriorities: ['pumping-up-iii', 'bronze-for-life-ii'], rerollForAugment: true };
 const equipmentPreparation=(components:readonly string[])=>acquire(components,EQUIPMENT_ROUTE);
-function acquisition(requested: readonly string[]) {
+function acquisition(requested: readonly string[], extraAugments: readonly string[] = []) {
   const components = requested.flatMap(definitionId => {
     const definition = ITEM_DEFINITIONS[definitionId];
     if (!definition) throw new Error(`Unknown fixture item ${definitionId}`);
@@ -29,12 +29,14 @@ function acquisition(requested: readonly string[]) {
   });
   if (!components.length || components.length > 4) throw new Error('Public equipment fixture requires one to four components');
   const doubleBloodthirster = requested.length === 2 && requested.every(id => id === 'bloodthirster');
-  return { components, doubleBloodthirster, options: doubleBloodthirster ? DOUBLE_BLOODTHIRSTER_ROUTE : EQUIPMENT_ROUTE };
+  const route = doubleBloodthirster ? DOUBLE_BLOODTHIRSTER_ROUTE : EQUIPMENT_ROUTE;
+  // extraAugments (a caller's scripted later card) only extends this route's priorities; its own cache key follows.
+  return { components, doubleBloodthirster, options: extraAugments.length ? { ...route, augmentPriorities: [...route.augmentPriorities, ...extraAugments] } : route };
 }
 /** Play itemMatch's public acquisition route through round ordinal `throughRound` only (cached for the
  * later itemMatch call), so a long route can be spread over several test cases. True once acquired. */
-export function advanceItemMatchRoute(id: string | readonly string[], throughRound: number): boolean {
-  const { components, options } = acquisition(typeof id === 'string' ? [id] : id);
+export function advanceItemMatchRoute(id: string | readonly string[], throughRound: number, extraAugments: readonly string[] = []): boolean {
+  const { components, options } = acquisition(typeof id === 'string' ? [id] : id, extraAugments);
   return advancePublicEquipmentPreparation(components, options, throughRound) !== undefined;
 }
 
@@ -47,16 +49,16 @@ const compiledItems = new Map<string, MatchState>();
  * All non-holders stay benched. Selected augments preserve the original
  * independent opening HP/item-stat assertions.
  */
-export function itemMatch(id: string | readonly string[], unitId = 'unit-1'): MatchState {
+export function itemMatch(id: string | readonly string[], unitId = 'unit-1', extraAugments: readonly string[] = []): MatchState {
   const requested = typeof id === 'string' ? [id] : [...id];
-  const key = JSON.stringify([requested, unitId, b1OfferCacheKey()]), cached = compiledItems.get(key);
+  const key = JSON.stringify([requested, unitId, b1OfferCacheKey(), extraAugments]), cached = compiledItems.get(key);
   if (cached) {
     const copy = structuredClone(cached);
     freezeContent(copy.m8); freezeContent(copy.resourceProvenance);
     if (copy.combatInputBasis) freezeContent(copy.combatInputBasis);
     return copy;
   }
-  const { components, doubleBloodthirster, options } = acquisition(requested);
+  const { components, doubleBloodthirster, options } = acquisition(requested, extraAugments);
   let state = acquire(components, options);
   const available = state.items.filter(item => item.location.kind === 'inventory');
   // The second Bloodthirster must use both real supply choices, leaving extra PvE drops intact.

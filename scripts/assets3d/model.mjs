@@ -53,11 +53,16 @@ export function makeModel(skn, skl, animationSources, textures, { hiddenSubmeshe
         min[k] = Math.min(min[k], positions[i]);
         max[k] = Math.max(max[k], positions[i]);
     }
-    const body = mesh.submeshes.find(s => s.name === 'Body'), pivotMin = [...min], pivotMax = [...max];
-    if (body) {
+    // Same prop tokens as model-grounding.ts. A submesh named Body keeps the historical pivot.
+    // Otherwise the largest non-weapon submesh sets the origin, so a kama or blade does not lift the feet.
+    const propSubmesh = /weapon|sword|blade|axe|shield|kama|kunai|dagger|hook|sickle|shuriken|buffbone|(?:^|_)fx(?:_|$)/i;
+    const namedBody = mesh.submeshes.find(s => s.name === 'Body');
+    const pivotSource = namedBody ?? mesh.submeshes.filter(s => !propSubmesh.test(s.name)).reduce((best, s) => !best || s.vertexCount > best.vertexCount ? s : best, null);
+    const pivotMin = [...min], pivotMax = [...max];
+    if (pivotSource) {
         pivotMin.fill(Infinity);
         pivotMax.fill(-Infinity);
-        for (let i = body.startVertex; i < body.startVertex + body.vertexCount; i++)
+        for (let i = pivotSource.startVertex; i < pivotSource.startVertex + pivotSource.vertexCount; i++)
             for (let k = 0; k < 3; k++) {
                 pivotMin[k] = Math.min(pivotMin[k], positions[i * 3 + k]);
                 pivotMax[k] = Math.max(pivotMax[k], positions[i * 3 + k]);
@@ -181,7 +186,10 @@ export function makeModel(skn, skl, animationSources, textures, { hiddenSubmeshe
         animationReport.push({ name, format: animation.format, version: animation.version, sourceDuration: animation.duration, duration: times.at(-1), frames: count, ...(ambiguous.size ? { bindPoseLocatorHashes: [...ambiguous].map(h => h.toString(16)) } : {}), ...(unboundTracks.length ? { omittedUnboundTracks: unboundTracks.length, omittedBoneHashes: [...new Set(unboundTracks.map(t => t.hash.toString(16)))] } : {}) });
     }
     doc.buffers[0].byteLength = byteOffset;
-    return { glb: writeGlb(doc, Buffer.concat(parts)), report: { vertices: mesh.vertices, triangles: mesh.triangles, bones: rig.bones, normalRepair: { reconstructed: zeroNormals.size, isolatedFallback: isolatedZeroNormals }, bbox: { min: min.map((n, k) => n + offset[k]), max: max.map((n, k) => n + offset[k]), height: max[1] - min[1] }, coordinateTransform: { mirror: 'X', translation: offset, originBasis: body ? 'Body bind-mesh minimum Y and XZ bounds center (prop submeshes retained)' : 'complete bind-mesh minimum Y and XZ bounds center', scale: 1, units: 'League native', forward: '+Z', up: '+Y' }, animations: animationReport } };
+    const originBasis = namedBody ? 'Body bind-mesh minimum Y and XZ bounds center (prop submeshes retained)'
+        : pivotSource ? `largest non-prop submesh (${pivotSource.name}) minimum Y and XZ bounds center (weapon submeshes retained)`
+        : 'complete bind-mesh minimum Y and XZ bounds center';
+    return { glb: writeGlb(doc, Buffer.concat(parts)), report: { vertices: mesh.vertices, triangles: mesh.triangles, bones: rig.bones, normalRepair: { reconstructed: zeroNormals.size, isolatedFallback: isolatedZeroNormals }, bbox: { min: min.map((n, k) => n + offset[k]), max: max.map((n, k) => n + offset[k]), height: max[1] - min[1] }, coordinateTransform: { mirror: 'X', translation: offset, originBasis, scale: 1, units: 'League native', forward: '+Z', up: '+Y' }, animations: animationReport } };
 }
 export function readAccessor({ document: d, binary: b }, index) {
     const a = d.accessors?.[index], v = d.bufferViews?.[a?.bufferView], size = { SCALAR: 1, VEC2: 2, VEC3: 3, VEC4: 4, MAT4: 16 }[a?.type], width = { 5121: 1, 5123: 2, 5125: 4, 5126: 4 }[a?.componentType];

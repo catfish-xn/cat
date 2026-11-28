@@ -7,8 +7,9 @@ export {
   startMatchCombat, stepMatch, nextRound, combineItems, equipItem, useConsumable, previewUseConsumable,
   selectAnomalyTarget, rerollAugment, deriveAugmentTier, augmentRerollLimit, rerollAnomaly, selectChoice,
   getDeploymentCap, validateMatchDeployment, matchStartFailure, needsAnomalyRecruitment,
+  isAnomalyPreparationChoice, isAnomalyPreparationRound, readAnomalyTargetIds, readAnomalyOfferHistory, isEligibleAnomalyTarget,
   forfeitPendingChoice, claimOrDiscardLoot, claimOrb, forfeitTerminalOrbs, advanceMultiplayerRound,
-  readItemSummons, moveItemSummon, d14PublicUnitMark, recordAugmentSettlementTable,
+  readItemSummons, moveItemSummon, isSummonPreparation, d14PublicUnitMark, recordAugmentSettlementTable,
 } from '../simulation/match';
 export type { ItemSummonOrigin } from '../simulation/g2-4b-summons';
 export type { MovableSummon } from '../simulation/g2-4b-voidspawn';
@@ -40,6 +41,7 @@ export { PLAYER_BATTLE_SNAPSHOT_VERSION, TWO_SIDED_BATTLE_VERSION, BattleValidat
 export type { PlayerBattleSnapshot, BattleIdentity, BattleIdMapping, BattleInput, BattleResult,
   BattleSideResult, BattleSurvivor, SideProposal, BattleFailure } from '../simulation/two-sided-types';
 export { applyRoundSettlement, enableMultiplayerSettlement, ROUND_SETTLEMENT_VERSION } from '../simulation/round-settlement';
+export { pvpSettlementHpLost } from '../simulation/pvp-settlement-health';
 export type { RoundSettlementReceipt, MultiplayerProgress, MultiplayerCommandResult, MultiplayerFailure } from '../simulation/round-settlement';
 
 export { createSharedPool, initializeSharedSeat, generateSharedShop, buySharedUnit, buySharedXp, rerollSharedShop,
@@ -71,6 +73,7 @@ export { CONSUMABLE_DEFINITIONS } from '../simulation/content/consumables';
 export { releaseCarouselParticipant, completeCarouselForSeat, releaseCarouselSeat, resolvePendingCarouselUnits, sellPendingCarouselUnit, createCarouselMatch, opensCarousel, schedule, prepareCarouselParticipants, createCarousel, pickFromCarousel, autoPickFromCarousel, advanceCarousel, grantCarouselPick, pickCarouselForSeat, autoPickCarouselForSeat, listCarouselSlots, restoreCarouselSeat, restoreCarousel, validateCarousel, CAROUSEL_RULES, CAROUSEL_COST_ODDS } from '../simulation/carousel';
 export type * from '../simulation/carousel-types';
 export { previewRoundEconomy } from '../simulation/economy-preview';
+export { getInterestGold } from '../simulation/economy';
 export type { RoundEconomyPreview, RoundEconomyPreviewOutcome } from '../simulation/economy-preview';
 export { summarizeBattle } from '../simulation/combat-summary';
 export type { UnitBattleSummary } from '../simulation/combat-summary';

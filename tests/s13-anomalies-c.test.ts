@@ -1,3 +1,4 @@
+import { stepLanded } from './helpers/landing';
 import { expect, it } from 'vitest';
 import { stepCombat } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -14,7 +15,7 @@ it('Invisibility every six seconds is unselectable for exactly20ticks and gives 
   let state = quiet(startAnomaly('Invisibility'));
   for (let i = 0; i < 119; i++) state = stepCombat(state).state;
   state = { ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) };
-  const step = stepCombat(state); state = step.state;
+  const step = stepLanded(state); state = step.state; // window: the guaranteed-crit attack lands after it
   const p = state.units.find(u => u.id === 'p')!;
   expect(p.anomalyState).toMatchObject({ invisibleUntilTick: 140, critReady: false });
   expect(packets(step.events).filter(p => p.source.ownerId === 'p' && p.source.sourceKind === 'attack').map(p => p.critical)).toEqual([true]);

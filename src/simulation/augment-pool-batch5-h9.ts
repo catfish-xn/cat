@@ -40,7 +40,8 @@ export function goldenFindGoldPlan(state: MatchState): readonly {receiptId: stri
       historyCheck(rosters.length === 1, 'golden find roster');
       const unit = rosters[0].units.find(u => u.id === binding.unitId && u.team === 'player' && u.location.kind === 'board');
       if (unit && UNIT_DEFINITIONS[unit.definitionId] && !UNIT_DEFINITIONS[unit.definitionId].summon && UNIT_DEFINITIONS[unit.definitionId].unitKind !== 'neutral') {
-        const actor = onlinePvp ? JSON.stringify(['t2', historySeatId(state), 'unit', binding.unitId]) : binding.unitId;
+        const ownCombat = state.augmentHistory.facts.some(f => f.kind === 'combat-roster' && f.battleId === battleId && f.round === result.round);
+        const actor = onlinePvp && !ownCombat ? JSON.stringify(['t2', historySeatId(state), 'unit', binding.unitId]) : binding.unitId;
         for (const death of deaths.flatMap(f => f.deaths)) {
           historyCheck(Object.hasOwn(death, 'killer'), 'golden find missing killer');
           const hostile = onlinePvp ? death.ownerSeatId !== historySeatId(state) : death.team === 'enemy';

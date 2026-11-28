@@ -13,6 +13,7 @@ import { getUnitStats } from './unit-stats';
 import type { StarLevel } from './unit-types';
 import { d14UnitBase } from './d14-anomalies/projection';
 import { D14_FOURTH_ABILITY } from './d14-anomalies/fourth-ability';
+import { GLOVES_OFF } from './content/gloves-off';
 
 export interface AbilityDisplayStats {
   readonly abilityPower?: number;
@@ -46,6 +47,12 @@ export function abilityDisplayValues(definitionId: string, starLevel: StarLevel,
 export function ultimateHeroAbilityDisplayValues(definitionId: string,
   stats: AbilityDisplayStats = {}): Readonly<Record<string, number>> {
   return displayValues(definitionId, 3, stats, true);
+}
+/** 卯足全力: the strongest Vander's hero spell placeholders on top of his ordinary values (content/gloves-off.ts). */
+export function glovesOffDisplayValues(starLevel: StarLevel, stats: AbilityDisplayStats = {}): Readonly<Record<string, number>> {
+  const base = displayValues('vander', starLevel, stats);
+  return { ...base, HEROModifiedDamage: Math.floor(base.ModifiedDamage * GLOVES_OFF.damageBps / 10000),
+    HEROModifiedBonusDamage: base.ModifiedBonusDamage, 'HEROSplashPerc*100': GLOVES_OFF.splashBps / 100 };
 }
 function displayValues(definitionId: string, starLevel: StarLevel,
   stats: AbilityDisplayStats, promoted = false): Readonly<Record<string, number>> {

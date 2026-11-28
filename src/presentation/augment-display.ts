@@ -65,11 +65,24 @@ export function augmentIconOrBadgeHtml(id: string, size: number): string {
   return augmentIconHtml(id, size) || `<span class="augment-icon augment-badge" data-augment="${id}" style="width:${size}px;height:${size}px;font-size:${Math.round(size * 0.5)}px" aria-hidden="true">${[...augmentDisplayName(id)][0] ?? '?'}</span>`;
 }
 
+/** Swap one owned-augment chip's badge or image. Leaves the chip element itself in place. */
+export function syncOwnedAugmentIcon(chip: HTMLElement, id: string): void {
+  const url = augmentIconUrl(id);
+  if (!url) return;
+  const image = chip.querySelector('img.augment-icon');
+  if (image) {
+    if (image.getAttribute('src') !== url) image.setAttribute('src', url);
+    return;
+  }
+  chip.querySelector('.augment-badge')?.remove();
+  chip.insertAdjacentHTML('afterbegin', augmentIconHtml(id, 20));
+}
+
 /** Team-up augments (v19 姐妹, v20 关系): the two champions they grant, by repo unit id. */
 const TEAMUP_PARTNERS: Readonly<Record<string, readonly string[]>> = Object.freeze({
   sisters: ['vi', 'jinx'], ...Object.fromEntries(TEAMUP_IDS.map(id => [id, V20_TRAITS[id].partners])),
 });
-/** What a team-up augment grants, then its trait's official zh_cn text (with the project's 魔改 note) once both are on the board. */
+/** What a team-up augment grants, then its trait's official zh_cn text (with our rules' note) once both are on the board. */
 function teamupDescription(id: string): string | null {
   const partners = TEAMUP_PARTNERS[id], text = Object.hasOwn(TEAMUP_PARTNERS, id) ? traitSummary(id) : null;
   if (!partners || !text) return null;
@@ -153,13 +166,13 @@ const REWARD_POOL_NOTES: Readonly<Record<string, string>> = {
 
 /**
  * The choice card's two text areas, as the original card sets them: the effect description, then the extra notes in
- * their own block (the project's 魔改执行 note of a team-up, and the effect lines once a description already says what the
+ * their own block (a team-up's 具体做法 note of our rules, and the effect lines once a description already says what the
  * augment does). Without a description the effect lines are the description. Formatting only: the text is the same.
  */
 export function augmentCardSections(id: string, dynamic?: AugmentDynamicValue): { readonly body: string; readonly extra: readonly string[] } {
   const description = augmentPlayerDescription(id, dynamic), effects = augmentEffectText(id);
   if (!description) return { body: effects, extra: [] };
-  const cut = description.indexOf(' 魔改执行：');
+  const cut = description.indexOf(' 具体做法：');
   const body = cut < 0 ? description : description.slice(0, cut), note = cut < 0 ? '' : description.slice(cut + 1);
   return { body, extra: [note, effects].filter(Boolean) };
 }

@@ -25,18 +25,18 @@ it.each([['win','playerWin'],['loss','enemyWin'],['loss','draw']] as const)(
     }
   });
 
-it('opening base entitlements are 2/3/4, with streaks and unchanged XP/HP; planners consume zero RNG words', () => {
+it('opening base entitlements are 2/3/4, with streaks and unchanged XP and survivor-based HP; planners consume zero RNG words', () => {
   const random=vi.spyOn(rng,'nextRandom');
   try {
     for (const [roundId,base] of [['1-2',2],['1-3',3],['1-4',4]] as const) {
       for (const result of ['playerWin','enemyWin','draw'] as const) {
-        const plan=planOpeningEconomy({roundId,result,gold:50,level:3,xp:0,streak:{kind:'loss',count:4}});
+        const plan=planOpeningEconomy({roundId,result,enemySurvivors:2,gold:50,level:3,xp:0,streak:{kind:'loss',count:4}});
         expect(plan.kind).toBe('opening');if(plan.kind!=='opening') throw Error('opening');
         const streak=result==='playerWin'?0:2;
         expect(plan.incomeBreakdown).toEqual({base,win:0,interest:0,streak});
         expect(plan.goldAfter).toBe(50+base+streak);
         expect(plan.streakAfter).toEqual(result==='playerWin'?{kind:'win',count:1}:{kind:'loss',count:5});
-        expect(plan.naturalXp).toBe(2);expect(plan.playerDamage).toBe(result==='playerWin'?0:3);
+        expect(plan.naturalXp).toBe(2);expect(plan.playerDamage).toBe(result==='playerWin'?0:2);
       }
     }
     expect(random).not.toHaveBeenCalled();
@@ -89,7 +89,7 @@ it('all catalog rounds and overtime follow the approved preparation table; bad i
 it('PvE can break a PvP streak, supply preserves it without payment, and overtime keeps the new thresholds and 17 base damage', () => {
   const input={stage:6,gold:19,level:3,xp:0,hp:100,enemySurvivors:2,streak:{kind:'win',count:4}} as const;
   const pve=planRoundEconomy({...input,roundKind:'pve',result:'draw'});
-  expect(pve.streakAfter).toEqual({kind:'loss',count:1});expect(pve.incomeBreakdown.streak).toBe(0);expect(pve.playerDamage).toBe(3);
+  expect(pve.streakAfter).toEqual({kind:'loss',count:1});expect(pve.incomeBreakdown.streak).toBe(0);expect(pve.playerDamage).toBe(14);
   const supply=planRoundEconomy({...input,roundKind:'supply',result:null,enemySurvivors:0});
   expect(supply.streakAfter).toEqual(input.streak);expect(supply.incomeBreakdown.streak).toBe(0);
   const overtime=planRoundEconomy({...input,roundId:'overtime-1',roundKind:'pvp',result:'playerWin'});

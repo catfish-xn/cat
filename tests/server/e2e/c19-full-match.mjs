@@ -24,7 +24,7 @@
  *   claims   (v15) at the start of each preparation a human clicks every orb of its own in the orb dock; each claimOrb
  *            is applied and the orb leaves the pushed list.
  *   .4       with the shared carousel (the production default, C19_CAROUSEL=1): at every x-4 carousel a living human picks
- *            by hand on the ring once released; the server applies the carousel-pick, the view marks my slot, and the
+ *            by hand on the ring once released; the server walks to the card and grants on contact, the view marks my slot, and the
  *            unit (on the bench, the board or the holding slot) and its item arrive in my state; no component choice opens
  *            at an x-4 round. With C19_CAROUSEL=0 (the pre-P7 x-4 supply): every supply pick: the dialog is the supply
  *            dialog with exactly the offered components; the picked one lands in my inventory.
@@ -556,23 +556,20 @@ async function carouselPick(human, s, carousel, pushed) {
   const heldBefore = new Set((s.state.heldCarouselUnits ?? []).map(unit => unit.unitId));
   let free = null;
   for (let wait = 0; wait < 30 && !(free = await ringFree())?.length; wait++) await page.waitForTimeout(100);
-  let slot = free?.[0], receipt = null, before = wire.mark();
+  let slot = free?.[0], receipt = null, shown = null, before = wire.mark();
   for (let attempt = 0; slot !== undefined && attempt < 3; attempt++) {
     before = wire.mark();
-    // The ring re-renders every countdown tick, so the chip is clicked where it stands (a pointer click, no wait for
-    // a stable node). Another seat may take the slot, or pick first so my view's revision is stale, between the read
-    // and the click: the chip is disabled and sends nothing, or the server answers slot-taken / stale-carousel;
-    // either way the ring is read again and a standing unit is clicked.
+    // The card may disappear before the pointer lands; a sent walk must reach physical contact before the grant.
     const box = await page.locator(`[data-debug="online:carousel-slot:${slot}"]`).boundingBox({ timeout: 1_000 }).catch(() => null);
     if (box) await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
-    await page.waitForTimeout(300);
-    receipt = box && wire.commandsSince(before, 'carousel-pick').length ? await wire.receiptSince(before, 'carousel-pick', 5_000) : 'taken-before-click';
-    if (!['refused:slot-taken', 'refused:stale-carousel', 'taken-before-click'].includes(receipt)) break;
+    shown = box ? await pushed(x => x.m6.carousel?.pickedSlot === slot, 5_000) : null;
+    const sent = wire.commandsSince(before, 'walk');
+    receipt = shown && sent.some(walk => walk.scene === 'carousel' && walk.slot === slot) && wire.commandsSince(before, 'carousel-pick').length === 0 ? 'contact-granted' : 'taken-before-contact';
+    if (receipt === 'contact-granted') break;
     await page.waitForTimeout(300);
     slot = (await ringFree())?.[0] ?? slot;
   }
   const picked = slot === undefined ? null : carousel.slots.find(entry => entry.slot === slot);
-  const shown = receipt === 'applied' ? await pushed(x => x.m6.carousel?.pickedSlot === slot, 5_000) : null;
   const mineShown = shown && await page.evaluate(chip => document.querySelector(`[data-debug="online:carousel-slot:${chip}"]`)?.classList.contains('mine') ?? false, slot);
   // The unit lands on the bench or the board (a new unit, or a star-up of one I own) or waits in the holding slot; its item is mine.
   const arrived = shown && await pushed(x => {
@@ -581,7 +578,7 @@ async function carouselPick(human, s, carousel, pushed) {
       || units.some(entry => entry.definitionId === picked.definitionId && (!unitsBefore.has(entry.id) || entry.starLevel > (s.state.preparation.units.find(old => old.id === entry.id)?.starLevel ?? 0)));
     return unit && x.state.items.some(item => !itemsBefore.has(item.id));
   }, 10_000);
-  const ok = receipt === 'applied' && Boolean(shown) && mineShown === true && Boolean(arrived);
+  const ok = receipt === 'contact-granted' && Boolean(shown) && mineShown === true && Boolean(arrived);
   report.carousel.push({ human: name, roundId: carousel.roundId, slot, definitionId: picked?.definitionId ?? null, items: picked?.items ?? [], receipt, mineShown, arrived: Boolean(arrived), ok });
   if (!ok) await page.screenshot({ path: `${OUT}/${name}-carousel-${carousel.roundId}.png` });
   console.log(`${name} ${carousel.roundId} carousel: slot ${slot} ${picked?.definitionId} (${receipt}${ok ? '' : ', ✗'})`);

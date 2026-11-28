@@ -67,6 +67,8 @@ describe('offline non-champion entry', () => {
     const configured = parseNeutralConfig(NEUTRAL_CONFIG).flatMap((c: { ids: string[] }) => c.ids).sort();
     expect(configured).toEqual(ids);
     const deployed = [...new Set([...encounters.matchAll(/slot\('[^']+', '([^']+)'/g)].map(m => m[1]))].sort();
-    expect(configured).toEqual(deployed);
+    expect(configured.filter((id: string) => id !== 'pve-rift-herald')).toEqual(deployed);
+    expect(deployed).not.toContain('pve-rift-herald');
+    expect(deployed).toContain('pve-elder-dragon');
   });
 });

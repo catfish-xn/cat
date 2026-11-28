@@ -1,4 +1,7 @@
+import { scheduleShot } from './ability-projectile';
+import { HEIMER_FOCUS_SHARE_BPS, heimerRocketLaunchTick, JINX_ROCKET_LAUNCH_TICKS, MORDEKAISER_CLAW_TICKS } from './cast-windup';
 import { recordBatch5RebelPulse } from './augment-pool-batch5-g2-rebel';
+import { CAST_WINDUP_TICKS } from './cast-windup';
 import { isAttackProxy } from './anomalies/availability';
 import { dashAmbessaChain } from './combat-ambessa-dash';
 /** G2-2 finite skill execution. All counters, zones and marks live in Combat JSON. */
@@ -12,6 +15,19 @@ import { modifier, stat } from './content/item-programs';
 import { lineContains, lineDirections } from './combat-skill-lines';
 /** User-approved 10-24 from the S13 third-party data table: Vi's row shockwave knocks up for 0.5 s (was 0.25 s). */
 export const VI_ROW_KNOCKUP_TICKS = 10;
+/**
+ * Vi grabs her target and slams VI_SLAM_TICKS after the cast (user-approved 2026-11-11; 11-21, authorization ②: aligned to the
+ * original frame by frame from two independent clips, was a fitted value). The target is held (a knock-up) until the slam; damage,
+ * the stun and the row's damage and knock-ups land at the slam. See docs/S13_RULES_GAP.md (蔚, 蔚砸地时刻).
+ */
+export const VI_SLAM_TICKS = 17;
+/**
+ * User-approved 2026-11-15 (original footage: the damage number shows when the kick lands, not on the cast):
+ * Camille's kick lands 5 ticks (0.25 s) after the cast. It follows the rising kick of our cast animation
+ * (tft13_camille_spell1), as the original's damage number does; fitted, not original data. The damage type is picked
+ * when the kick lands. See docs/S13_RULES_GAP.md (卡蜜尔).
+ */
+export const CAMILLE_KICK_TICKS = 5;
 /** User-approved 10-24: Ambessa's gauntlet slam stuns its target for 1 s (was 0.25 s); the slam↔gauntlet link is inferred (P). */
 export const AMBESSA_SLAM_STUN_TICKS = 20;
 import { DISPLACEMENT_POLICY, grabAdjacent, pullToward, rawRangeToHexes } from './combat-displacement';
@@ -32,11 +48,18 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
   const heal=(value:number)=>ctx.heals.push({source:origin(u),targetId:u.id,amount:value});
   const foes=()=>byDistance(u,enemies(u,ctx.units));
   switch(champion(u)) {
-    case 'camille': strike(t,ad('PercentAttackDamage','APDamage'),t.armor<t.magicResist?'physical':'magic');break;
+    case 'camille':
+      // The amount is taken now; the kick lands CAMILLE_KICK_TICKS later (g22CamilleKick, executeG22Task).
+      schedule(u,'g22CamilleKick',ctx.tick+CAMILLE_KICK_TICKS,t,ad('PercentAttackDamage','APDamage'),seq);ids.push(t.id);break;
     case 'vi':
+      // The shield lands now; she holds the channel and the grabbed target until the slam (g22ViSlam, executeG22Task).
       grantShield(u,origin(u),mag('Shield'),ctx.tick+Math.round(v('ShieldDuration')*20),ctx.tick,ctx.events);
-      strike(t,ad('PercentAttackDamage'),'physical');applyStatus(t,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);
-      for(const other of foes().filter(x=>x.id!==t.id&&x.cell.row===t.cell.row)) {strike(other,ad('PercentAttackDamage_SecondaryDamage'),'physical',true);applyStatus(other,origin(u),'stun',0,VI_ROW_KNOCKUP_TICKS,ctx.tick,ctx.events,false,'',undefined,true);}break; // the row shockwave knocks up
+      applyStatus(u,origin(u),'channel',0,VI_SLAM_TICKS,ctx.tick,ctx.events,true,'',seq);
+      applyStatus(t,origin(u),'stun',0,VI_SLAM_TICKS,ctx.tick,ctx.events,false,JSON.stringify([seq,t.id,'vi-grab']),undefined,true);
+      // Amounts are taken at the cast; ordinal 0 is the target's slam, 1 the row shockwave on the row recorded now.
+      schedule(u,'g22ViSlam',ctx.tick+VI_SLAM_TICKS,t,ad('PercentAttackDamage'),seq,0,2,t.cell);
+      schedule(u,'g22ViSlam',ctx.tick+VI_SLAM_TICKS,t,ad('PercentAttackDamage_SecondaryDamage'),seq,1,2,t.cell);
+      ids.push(t.id);break;
     case 'akali':
       strike(t,mag('Damage'));strike(t,Math.floor(mag('SecondaryDamage')*(10000+Math.round(v('TargetDamageAmp')*10000))/10000));
       Object.assign(g22(t),{exposureFromTick:ctx.tick+1,exposureUntilTick:ctx.tick+1+Math.round(v('Duration')*20),exposureBps:Math.round(v('TargetDamageAmp')*10000)});break;
@@ -47,13 +70,20 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     }
     case 'draven':ids.push(u.id);break;
     case 'heimerdinger': {
+      // Landing batch (11-20): each rocket's target is drawn now and it settles where it lands (abilityProjectile
+      // 'heimerdinger-rocket', HEIMER_ROCKET_TIMING): the k-th of n leaves heimerRocketLaunchTick(k, n) after the cast.
+      // Focus (11-20, user-approved; the share is self-chosen, not original data): the first floor(n × HEIMER_FOCUS_SHARE_BPS)
+      // rockets go to his current target, the rest are drawn at random as before. docs/S13_RULES_GAP.md (黑默丁格火箭集火).
       const n=v('StartingRockets')+Math.max(0,u.runtime.castCount-1)*v('MissileIncreasePerCast'),targets=foes();
-      for(let i=0;i<n;i++)strike(targets[Math.floor(ctx.draw()/2**32*targets.length)],mag('Damage'));break;
+      const focused=Math.floor(n*HEIMER_FOCUS_SHARE_BPS/10000);
+      for(let i=0;i<n;i++){const x=i<focused?t:targets[Math.floor(ctx.draw()/2**32*targets.length)];scheduleShot(u,'heimerdinger-rocket',ctx.tick+heimerRocketLaunchTick(i,n),x.id,mag('Damage'),seq,i,n);ids.push(x.id);}break;
     }
     case 'trundle': {
       const bps=10000+Math.floor((u.maxHp-u.hp)*Math.round(v('AmountIncreaseMax')*10000)/u.maxHp),hero=heroLive(u);
       // Shocking Troll (P): no heal; the bite stays, then SpeedBps attack speed for SpeedTicks and permanent AD growth.
-      if(!hero)heal(Math.floor(mag('GainHealth')*bps/10000));strike(t,Math.floor(ad('PercentAttackDamage')*bps/10000),'physical');
+      // The bite and its heal land CAST_WINDUP_TICKS later (g2Landing: ordinal 0 heals, 1 bites); amounts are taken now.
+      if(!hero)schedule(u,'g2Landing',ctx.tick+CAST_WINDUP_TICKS.trundle,u,Math.floor(mag('GainHealth')*bps/10000),seq,0,2);
+      schedule(u,'g2Landing',ctx.tick+CAST_WINDUP_TICKS.trundle,t,Math.floor(ad('PercentAttackDamage')*bps/10000),seq,1,2);ids.push(t.id);
       if(hero){
         applyStatus(u,origin(u),'attackSpeed',hero.speedBps,hero.speedTicks,ctx.tick,ctx.events,true);
         u.runtime.permanentAdBps+=hero.permanentAdBps;
@@ -80,14 +110,22 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       strike(t,mag('YellowDamage'));applyStatus(t,origin(u),'stun',0,Math.round(v('StunDuration')*20),ctx.tick,ctx.events);break;
     }
     case 'jinx': {
-      const phase=(u.runtime.castCount-1)%3;
+      const phase=(u.runtime.castCount-1)%3;ctx.castBranch=(['zap','chompers','rocket'] as const)[phase];
       if(phase===0){const cells=u.starLevel===3?null:path(ctx.board,u.cell,t.cell);for(const x of foes().filter(x=>cells?cells.some(c=>c.col===x.cell.col&&c.row===x.cell.row):lineContains(u.cell,t.cell,x.cell,1,14))){strike(x,ad('ZapPercentAD'),'physical',true);applyStatus(x,origin(u),'stun',0,Math.round(v('ZapStunDuration')*20),ctx.tick,ctx.events);}}
       else if(phase===1){const centers=foes().slice(0,v('NumOfFlameChompers'));for(const x of foes().filter(x=>centers.some(c=>hexDistance(c.cell,x.cell)<=1)))strike(x,ad('FlameChompersPercentAD'),'physical',true);}
-      else {const center={col:Math.floor((ctx.board.columns-1)/2),row:Math.floor((ctx.board.rows-1)/2)};for(const x of foes())strike(x,Math.floor(ad('DeathRocketPercentAD','DeathRocketAP')*Math.max(0,10000-Math.round(v('FalloffPercent')*10000)*hexDistance(center,x.cell))/10000),'physical',true);}break;
+      else {
+        // 11-21 (authorization ②): the rocket leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes at the board's centre
+        // JINX_ROCKET_FLIGHT_TICKS later (abilityProjectile 'jinx-rocket'), where who is hit and the falloff are read. The amount
+        // before falloff is taken now. She channels until it leaves (self-chosen, not original data); if she dies first, it never leaves.
+        scheduleShot(u,'jinx-rocket',ctx.tick+JINX_ROCKET_LAUNCH_TICKS,t.id,ad('DeathRocketPercentAD','DeathRocketAP'),seq,0,1);
+        applyStatus(u,origin(u),'channel',0,JINX_ROCKET_LAUNCH_TICKS,ctx.tick,ctx.events,true,'',seq);ids.push(t.id);
+      }break;
     }
-    case 'ambessa':
-      if(u.runtime.castCount%2===1){dashAmbessaChain(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
-      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,AMBESSA_SLAM_STUN_TICKS,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;
+    case 'ambessa': {
+      // One parity read decides the branch that resolves and the branch reported (display output only).
+      const chain=u.runtime.castCount%2===1;ctx.castBranch=chain?'chain':'fist';
+      if(chain){dashAmbessaChain(ctx,u,t);for(const x of foes().filter(x=>hexDistance(t.cell,x.cell)<=1))strike(x,ad('PercentStrikeAD'),'physical',true);}
+      else {strike(t,ad('SlamDamageAD'),'physical');applyStatus(t,origin(u),'stun',0,AMBESSA_SLAM_STUN_TICKS,ctx.tick,ctx.events);(ctx.ambessaRetreats??=[]).push({unitId:u.id,targetCell:{...t.cell}});}break;}
     case 'mordekaiser': {
       g22(u).mordeUntilTick=ctx.tick+Math.round(v('EmpowerDuration')*20);
       applyStatus(u,origin(u),'damageReduction',Math.round(v('DR')*10000),20,ctx.tick,ctx.events,true);
@@ -95,7 +133,10 @@ export function planG22Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       const lines=lineDirections(u.cell).map(direction=>({hits:targets.filter(x=>lineContains(u.cell,direction,x.cell,3,8)),target:lineContains(u.cell,direction,t.cell,3,8)}));
       // Stable sort preserves direction order after count and current-target ties.
       lines.sort((a,b)=>b.hits.length-a.hits.length||Number(b.target)-Number(a.target));
-      for(const x of lines[0].hits)strike(x,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),'magic',true);
+      // Landing batch (11-20): who is hit and how much is taken now; the claw appears and comes down MORDEKAISER_CLAW_TICKS after
+      // the cast (abilityProjectile 'mordekaiser-claw'), where the damage settles. DR, empower and pull stay on the cast.
+      const claw=MORDEKAISER_CLAW_TICKS[(u.starLevel??1) as 1|2|3],hits=lines[0].hits;
+      hits.forEach(x=>{scheduleShot(u,'mordekaiser-claw',ctx.tick+claw.appear,x.id,Math.floor(mag('Damage')*(targets.indexOf(x)<v('NearestEnemies')?1+v('DamageBonus'):1)),seq,ids.length,hits.length);ids.push(x.id);});
       const nearest=targets.slice(0,v('NearestEnemies'));
       pullToward(ctx,u,DISPLACEMENT_POLICY.mordekaiser.onlyLineHits?nearest.filter(x=>lines[0].hits.includes(x)):nearest,rawRangeToHexes(v('Displacement')),'mordekaiser-pull');break;
     }
@@ -131,6 +172,20 @@ export function planG22Attack(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number)
 }
 export function executeG22Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):void {
   if(task.kind==='g22Vex') {for(const [i,t] of enemies(u,ctx.units).filter(t=>task.cell&&hexDistance(t.cell,task.cell)<=1).entries())hit(ctx,u,t,task.amount,task.actionSeq,100+i,'magic',true);}
+  else if(task.kind==='g22ViSlam') {
+    // Runs only while Vi is alive (the tasks of a dead unit never run); a control on Vi ends her channel, not the slam.
+    if(task.ordinal===0){const t=ctx.units.find(t=>t.id===task.targetId&&t.alive&&t.hp>0);
+      // A target that died while held keeps no share: the slam does not pick another one.
+      if(t){hit(ctx,u,t,task.amount,task.actionSeq,0,'physical');applyStatus(t,task.source,'stun',0,Math.round(variable(u,'StunDuration')*20),ctx.tick,ctx.events);}}
+    else for(const [i,other] of byDistance(u,enemies(u,ctx.units)).filter(x=>x.id!==task.targetId&&x.cell.row===task.cell!.row).entries()) {
+      hit(ctx,u,other,task.amount,task.actionSeq,1+i,'physical',true);applyStatus(other,task.source,'stun',0,VI_ROW_KNOCKUP_TICKS,ctx.tick,ctx.events,false,'',undefined,true);} // the row shockwave knocks up
+  }
+  else if(task.kind==='g22CamilleKick') {
+    // Runs only while Camille is alive; a control on her after the cast does not stop the kick. A target that died in the
+    // meantime takes nothing and no other target is picked; one that moved away is still hit.
+    const t=ctx.units.find(t=>t.id===task.targetId&&t.alive&&t.hp>0);
+    if(t)hit(ctx,u,t,task.amount,task.actionSeq,0,t.armor<t.magicResist?'physical':'magic');
+  }
   else {const t=ctx.units.find(t=>t.id===task.targetId&&t.alive&&t.hp>0);if(t)hit(ctx,u,t,task.amount,task.actionSeq,100+task.ordinal);}
 }
 export function recordG22Damage(ctx:AbilityContext,u:S13Unit|undefined,actual:number,packet:S13Packet):void {
@@ -156,6 +211,9 @@ export function startG22Traits(ctx:AbilityContext):void {
   }
 }
 export function advanceG22Traits(ctx:AbilityContext):void {
+  // Display only: Mordekaiser's empowered time ran out (it lasts while mordeUntilTick > tick).
+  for(const u of ctx.units.filter(u=>u.alive&&u.hp>0))if(champion(u)==='mordekaiser'&&(u.g22?.mordeUntilTick??0)>0&&u.g22!.mordeUntilTick===ctx.tick)
+    ctx.events.push({type:'abilityEffectEnded',tick:ctx.tick,unitId:u.id,effect:'mordekaiser-empower',targetIds:[]});
   for(const u of ctx.units.filter(u=>u.alive&&u.hp>0))for(const m of u.mechanics??[]){
     if(m.mechanic==='enforcer'){
       const state=g22(u),count=state.wanted.filter(id=>ctx.units.some(x=>x.id===id&&!x.alive)).length;

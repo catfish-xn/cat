@@ -121,7 +121,8 @@ describe('t10-deferred-upgrades and shared-pool operations',()=>{
     expect(proposeSettlement(expected).a.seatId).toBe('A');expect(live.gold).not.toBe(base.gold);
   });
   it('versions participate in computed digest; old content saves reject and new offline saves round-trip',()=>{
-    expect(MULTIPLAYER_OPERATION_RULES).toMatchObject({version:'multiplayer-combat-ops-v2',autoDeploymentVersion:'front-center-left-first-v1'});
+    expect(MULTIPLAYER_OPERATION_RULES).toMatchObject({version:'multiplayer-combat-ops-v26-anomaly-preparation',
+      autoDeploymentVersion:'front-center-left-first-v1',anomalySaleVersion:'pending-choice-refuse-all-v1'});
     const state=createMatch(5);expect(state.contentDigest).toBe(CONTENT_DIGEST);
     expect(CONTENT_DIGEST).not.toBe('fnv1a32-utf16:20b58a63');
     expect(()=>restoreMatch({...state,contentDigest:'fnv1a32-utf16:20b58a63'})).toThrow('content-digest');

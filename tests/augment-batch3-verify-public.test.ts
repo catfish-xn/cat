@@ -4,11 +4,15 @@ import { createMatch, selectChoice, rerollShop, nextRound, startMatchCombat, ste
 import { augmentCandidates, resolveAugmentTier } from '../src/simulation/augment-offers';
 import { generateChoices } from '../src/simulation/choices';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
-import { reachRound, accepted, resolveM5Choices, emptyBoard } from './match-helpers';
+import { reachRound, fieldBench, accepted, resolveM5Choices, emptyBoard } from './match-helpers';
 import { M5_UNIT_IDS, UNIT_DEFINITIONS } from '../src/simulation/units';
 import { EMBLEM_ITEMS } from '../src/simulation/content/emblems';
 import { freeRerollsAvailable } from '../src/simulation/free-rerolls';
 import { AUGMENT_OFFER_RULES, AUGMENT_POOL_API_NAMES } from '../src/simulation/content/augment-offer-rules';
+import { needsCrownHistory } from '../src/simulation/crown-history';
+import { readG23Progress } from '../src/simulation/g2-3-state';
+import { BattleHistory } from '../src/replay/history';
+import { recordedCrownBattle } from './crown-history-helpers';
 
 // Source for each expectation: augments-research-2026-10-23/data/augments-14.24.json,
 // identified by apiName in augment-batch3-verify-source.test.ts. No grant/planning internals used.
@@ -19,8 +23,8 @@ const firstNode=(id:string)=>(['2-1','3-2','4-2'] as const).find(n=>!((AUGMENT_O
 // Hero cards at 3-2/4-2 are trait-tailored (record 89: Savage Revenge needs a fielded Bruiser).
 const TAILORED:Readonly<Record<string,string>>={'savage-revenge':'bruiser'};
 /** Public route to a later node with real HP: win stage 1 with the opener, then bench everything and concede, except
- * that a tailored card's trait is bought from the shop and kept fielded so the offer snapshot sees it. */
-function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
+ * that a tailored card keeps its trait fielded, and the egg route fights the wolves to preserve HP. */
+function reachNode(node:'3-2'|'4-2',seed:number,trait?:string,fightWolves=false,history?:BattleHistory):MatchState {
  let state=createMatch(seed);
  while(state.roundDefinitionId!==node){
   state=resolveM5Choices(state);
@@ -42,7 +46,17 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
     const fielded=state.preparation.units.find(u=>u.team==='player'&&fits(u.definitionId));
     if(fielded&&fielded.location.kind==='bench'){const r=deployMatchUnit(state,fielded.id,{kind:'board',cell:{col:3,row:4}});if(r.ok)state=r.state;}
    }
-   state=accepted(startMatchCombat(state));
+   // The egg prefix needs HP saved at 3-7: buy from the real shop while the bench has space, then fight;
+   // the next preparation benches the army again, preserving the original empty 4-2 offer snapshot.
+   if(fightWolves&&state.roundDefinitionId==='3-7'){
+    for(let slot=0;slot<state.shop.slots.length;slot++){
+     if(state.shop.slots[slot].status!=='available')continue;
+     if(state.preparation.units.filter(u=>u.team==='player'&&u.location.kind==='bench').length>=state.preparation.benchSize)break;
+     state=accepted(buyUnit(state,slot,state.shop.generation));
+    }
+    state=fieldBench(state);
+   }
+   state=history?recordedCrownBattle(state,history).state:accepted(startMatchCombat(state));
   }
   while(state.phase==='combat')state=stepMatch(state).state;
   state=resolveM5Choices(state);
@@ -51,66 +65,77 @@ function reachNode(node:'3-2'|'4-2',seed:number,trait?:string):MatchState {
  }
  return state;
 }
-/** Public offer seeds, re-pinned on the v24 merged 235-card pool from the original search (repeating it cost up to 24 s per card):
- * - 2-1 cards: the first seed from 0 (Trainer Golem openings skipped, at most 20000) whose cheap 2-1 draw offers the card;
- * - later cards: the first seed from 0 (at most 600) whose reachNode route reaches the card's first allowed node and
- *   offers it there.
- * pick() re-proves the search condition for its seed on every run (the draw and the replayed route must offer the card);
- * re-run the search above if the pool, the openings or the route change.
- * Re-pinned after v25 batch-5 pool expansion (285 admitted cards), same first-seed rule and route validators,
- * with two documented exceptions: savage-revenge skips 43 (its route fills the bench, so the two Renni gifts are
- * held in escrow by design, augment-pool-grants.ts drainBatch1Gifts) and dark-alley-dealings skips 91 (its route
- * picks slammin at 2-1, whose saves need battle replays to restore, crown-history.ts). */
+/** Public offer seeds. Re-pinned 2026-10-30 after D5 added brb, over-encumbered, restart-mission and
+ * what-you-really-are (catalog 306 → 310). Same first-seed rule as the v25 pin (repeating the search
+ * cost up to 24 s per card, so the results stay pinned and pick() re-proves each one):
+ * - 2-1 cards: the first seed from 0 (Trainer Golem openings skipped, at most 20000) whose cheap 2-1 draw
+ *   offers the card, confirmed with reachRound('2-1', false, seed). The cheap draw matched that route on
+ *   every sampled seed, including the pins below.
+ * - later cards: the first seed from 0 (at most 600) whose reachNode route reaches the card's first allowed
+ *   node and offers it there.
+ * Seeds that still met the check were not moved: all-out 12, blood-pact 13, eye-for-an-eye 78,
+ * worth-the-wait 15, blazing-soul-ii 89, noble-sacrifice 45, savage-revenge 62.
+ * savage-revenge still skips 43 (its route fills the bench, so the two Renni gifts are held in escrow by
+ * design, augment-pool-grants.ts drainBatch1Gifts). dark-alley-dealings' previous skip of 91 does not apply
+ * to the new first seed. Two offer-hits need independent battles: blazing-soul-i 11 (2-1 auto-picks
+ * cluttered-mind, whose historical bench XP needs replay; 62 saves without battles), latent-forge 8
+ * (3-2 auto-picks pilfer, requiring replay before the 8th PvP receipt; 46 saves without battles).
+ * support-mining 86 retires correctly at 3-1; saving again at 3-2 before its first history owner dhampyr
+ * re-origins the solo proof and marks previousBattle unavailable by the documented pre-owner save design.
+ * 140's spirit-link avoids that proof-provenance change for the existing full-state equality assertion.
+ * Dedicated seed-86 checks below cover all persistence entries and isolate the exact history difference.
+ * the-golden-egg: seed 28 dies at 4-1 (hp 0). 662 is the first seed in 0..2500 with a prismatic 4-2 tier
+ * whose wolf-fight route still reaches 4-2 and offers the egg (arrival hp 4; 744 is next). */
 const PUBLIC_SEEDS:Readonly<Record<string,number>>={
  'all-out':12,
- 'an-exalted-adventure':38,
- 'bad-luck-protection':82,
- 'blade-dance':61,
- 'blazing-soul-i':82,
+ 'an-exalted-adventure':92,
+ 'bad-luck-protection':175,
+ 'blade-dance':131,
+ 'blazing-soul-i':62,
  'blazing-soul-ii':89,
  'blood-pact':13,
- 'building-a-collection-iii':0,
- 'corrosion':48,
- 'dark-alley-dealings':99,
+ 'building-a-collection-iii':47,
+ 'corrosion':69,
+ 'dark-alley-dealings':60,
  'eye-for-an-eye':78,
- 'eye-for-an-eye-plus':32,
- 'field-medic':116,
- 'flexible':7,
- 'gold-for-dummies':211,
- 'latent-forge':31,
- 'living-forge':0,
+ 'eye-for-an-eye-plus':46,
+ 'field-medic':404,
+ 'flexible':14,
+ 'gold-for-dummies':18,
+ 'latent-forge':46,
+ 'living-forge':10,
  'noble-sacrifice':45,
- 'phreaky-friday':104,
- 'phreaky-friday-plus':7,
- 'prizefighter':27,
- 'rolling-for-days-i':351,
+ 'phreaky-friday':185,
+ 'phreaky-friday-plus':28,
+ 'prizefighter':18,
+ 'rolling-for-days-i':17,
  'savage-revenge':62,
- 'scapegoat':24,
- 'shimmerscale-essence':28,
- 'shocking-troll':349,
- 'spoils-of-war-i':55,
- 'spoils-of-war-ii':141,
- 'spoils-of-war-iii':38,
- 'superstars-i':100,
- 'superstars-ii':1,
- 'support-mining':132,
- 'support-mining-plus':76,
- 'team-building':101,
- 'the-golden-egg':28,
- 'tower-defense':60,
- 'trade-sector':117,
- 'wandering-trainer-i':23,
- 'wandering-trainer-ii':14,
- 'wealthy-rehab-i':95,
- 'wealthy-rehab-ii':124,
- 'what-doesnt-kill-you':29,
+ 'scapegoat':52,
+ 'shimmerscale-essence':0,
+ 'shocking-troll':46,
+ 'spoils-of-war-i':70,
+ 'spoils-of-war-ii':176,
+ 'spoils-of-war-iii':68,
+ 'superstars-i':61,
+ 'superstars-ii':82,
+ 'support-mining':140,
+ 'support-mining-plus':46,
+ 'team-building':78,
+ 'the-golden-egg':662,
+ 'tower-defense':117,
+ 'trade-sector':21,
+ 'wandering-trainer-i':88,
+ 'wandering-trainer-ii':53,
+ 'wealthy-rehab-i':24,
+ 'wealthy-rehab-ii':41,
+ 'what-doesnt-kill-you':27,
  'worth-the-wait':15,
- 'worth-the-wait-ii':6,
+ 'worth-the-wait-ii':7,
 
 };
-function pick(id:string) {
- const cached=selected.get(id);if(cached)return cached;
- const node=firstNode(id),seed=PUBLIC_SEEDS[id];
+function pick(id:string,seed=PUBLIC_SEEDS[id]) {
+ const key=id+':'+seed,cached=selected.get(key);if(cached)return cached;
+ const node=firstNode(id);
  if(seed===undefined)throw new Error('No pinned public seed: '+id);
  let before:MatchState;
  if(node==='2-1'){
@@ -119,12 +144,12 @@ function pick(id:string) {
   const root=createMatch(seed);
   expect(generateChoices(augmentCandidates(resolveAugmentTier(root,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),root.choiceRngState).offers).toContain(id);
   before=reachRound('2-1',false,seed);
- }else before=reachNode(node,seed,TAILORED[id]);
+ }else before=reachNode(node,seed,TAILORED[id],id==='the-golden-egg');
  expect(before.roundDefinitionId).toBe(node);
  const c=before.pendingChoice!;
  expect(c.kind).toBe('augment');expect(c.offers).toContain(id);
  const result={before,state:accepted(selectChoice(before,c.choiceId,c.generation,id))};
- selected.set(id,result);return result;
+ selected.set(key,result);return result;
 }
 function roundTrip(s:MatchState) {
  const saved=serializeMatch(s);
@@ -133,9 +158,9 @@ function roundTrip(s:MatchState) {
  const edit=JSON.parse(saved);edit.augments[0].acquiredRound++;
  expect(()=>restoreMatch(JSON.stringify(edit))).toThrow();
 }
-function advance(input:MatchState):MatchState {
+function advance(input:MatchState,history?:BattleHistory):MatchState {
  let s=resolveM5Choices(input);
- if(s.phase==='preparation')s=accepted(startMatchCombat(emptyBoard(s)));
+ if(s.phase==='preparation')s=history?recordedCrownBattle(emptyBoard(s),history).state:accepted(startMatchCombat(emptyBoard(s)));
  for(let n=0;s.phase==='combat'&&n<1202;n++)s=stepMatch(s).state;
  s=resolveM5Choices(s);
  expect(s.phase).toBe('settlement');
@@ -414,9 +439,9 @@ it.each([0,2,11])('B3-V1 rejects every forged counter against %i actual spends a
 });
 
 const mined=new Map<string,MatchState>();
-function mine(id:string,threshold:number):MatchState {
- const cached=mined.get(id);if(cached)return cached;
- let s=pick(id).state;const dummy=s.preparation.units.find(u=>u.definitionId==='training-dummy')!;
+function mine(id:string,threshold:number,seed=PUBLIC_SEEDS[id]):MatchState {
+ const key=id+':'+seed,cached=mined.get(key);if(cached)return cached;
+ let s=pick(id,seed).state;const dummy=s.preparation.units.find(u=>u.definitionId==='training-dummy')!;
  let deaths=0;
  for(let battle=0;battle<16&&deaths<threshold;battle++){
   s=resolveM5Choices(s);s=emptyBoard(s);
@@ -430,7 +455,7 @@ function mine(id:string,threshold:number):MatchState {
   expect(s.preparation.units.some(u=>u.id===dummy.id)).toBe(deaths<threshold);
   if(deaths<threshold){s=accepted(nextRound(s,s.round));if(s.roundDefinitionId==='2-4'||s.roundDefinitionId==='3-4')s=advance(s);}
  }
- expect(deaths).toBe(threshold);mined.set(id,s);return s;
+ expect(deaths).toBe(threshold);mined.set(key,s);return s;
 }
 it.each([['support-mining',7],['support-mining-plus',4]] as const)('G5 %s: actual dummy deaths retire it exactly at source threshold %i',(id,threshold)=>{
  const s=mine(id,threshold);
@@ -499,4 +524,88 @@ it.each([['support-mining',7],['support-mining-plus',4]] as const)('B3-V2 %s rej
  const missingReward=JSON.parse(saved);
  missingReward.seatMechanics.receipts=missingReward.seatMechanics.receipts.filter((r:{source:string;kind:string;receiptId:string})=>!(r.source==='augment-pool-batch1'&&r.kind==='item'&&r.receiptId.includes('"'+id+'"')));
  rejectPersistence(missingReward);
+});
+
+it('seed 86: retirement restores exactly; a pre-owner 3-2 save re-origins only the new Dhampyr evidence',()=>{
+ const retired=mine('support-mining',7,86);
+ expect(retired.roundDefinitionId).toBe('3-1');
+ expect(retired.augmentHistory).toBeUndefined();
+ const next=advance(retired);
+ for(const input of [retired,JSON.stringify(retired),serializeMatch(retired)]){
+  const restored=restoreMatch(input);
+  expect(restored).toEqual(retired);
+  expect(advance(restored)).toEqual(next);
+ }
+ expect(next.roundDefinitionId).toBe('3-2');
+ expect(next.augmentHistory).toBeUndefined();
+ expect(next.combatInputBasis).toBeNull();
+ expect(next.combat).toBeNull();
+ const saved=serializeMatch(next),direct=resolveM5Choices(next);
+ expect(direct.augments.at(-1)!.definitionId).toBe('dhampyr');
+ expect(direct.augmentHistory!.facts[0]).toMatchObject({kind:'acquire',previousBattle:{status:'recorded',roundId:'3-1'}});
+ expect(direct.augmentHistory!.proof).toMatchObject({kind:'solo',origin:{round:1}});
+ for(const input of [direct,JSON.stringify(direct),serializeMatch(direct)]){
+  const restored=restoreMatch(input);expect(restored).toEqual(direct);
+  expect(advance(restored)).toEqual(advance(direct));
+ }
+ // A detached object, raw JSON and canonical text all start from the saved public checkpoint.
+ // The live object overload may retain its independently tracked, in-memory command prefix.
+ for(const input of [structuredClone(next),JSON.stringify(next),saved]){
+  const loaded=restoreMatch(input);expect(loaded).toEqual(next);
+  const resumed=resolveM5Choices(loaded);
+  expect(resumed.augmentHistory!.proof).toEqual({kind:'solo',origin:next,commands:[{name:'selectChoice',args:['round:3-2:augment',0,'dhampyr'],count:1}]});
+  const equivalent=(actual:MatchState,expected:MatchState)=>{
+   const a=actual.augmentHistory!,e=expected.augmentHistory!;
+   expect(actual).toEqual({...expected,augmentHistory:{...e,proof:a.proof,
+    facts:e.facts.map(f=>f.kind==='acquire'?{...f,previousBattle:{status:'unavailable'}}:f)}});
+   expect(a.proof.kind).toBe('solo');expect(e.proof.kind).toBe('solo');
+   if(a.proof.kind!=='solo'||e.proof.kind!=='solo')throw new Error('Expected solo proof');
+   expect(a.proof.origin).toEqual(next);
+   const acquisition=e.proof.commands.findIndex(c=>c.name==='selectChoice'&&c.args[2]==='dhampyr');
+   expect(acquisition).toBeGreaterThanOrEqual(0);
+   expect(a.proof.commands).toEqual(e.proof.commands.slice(acquisition));
+  };
+  equivalent(resumed,direct);
+  const expectedBattle=startMatchCombat(emptyBoard(direct)),actualBattle=startMatchCombat(emptyBoard(resumed));
+  expect(actualBattle.ok).toBe(true);expect(expectedBattle.ok).toBe(true);
+  if(!actualBattle.ok||!expectedBattle.ok)throw new Error('Expected accepted combat');
+  expect(actualBattle.events).toEqual(expectedBattle.events);
+  equivalent(actualBattle.state,expectedBattle.state);
+  expect(actualBattle.state.phase).toBe('settlement');
+  expect(actualBattle.state.augmentHistory!.facts.filter(f=>f.kind==='player-damage')).toEqual([
+   expect.objectContaining({actualDamage:null,opponentSeatId:null})]);
+  expect(actualBattle.state.augmentHistory!.facts.filter(f=>f.kind==='player-health')).toEqual([]);
+  // Once acquired, every history/retirement field and the next complete command remain identical on restore.
+  for(const state of [resumed,actualBattle.state])for(const value of [state,JSON.stringify(state),serializeMatch(state)]){
+   const copy=restoreMatch(value);expect(copy).toEqual(state);
+   expect(advance(copy)).toEqual(advance(state));
+  }
+ }
+});
+
+it.each([['blazing-soul-i',11],['latent-forge',8]] as const)('%s skipped seed %i needs independent battle replays, not an augment fix',(id,seed)=>{
+ const history=new BattleHistory('batch3-skipped:'+id);
+ let before:MatchState;
+ if(id==='blazing-soul-i')before=reachNode('3-2',seed,undefined,false,history);
+ else {
+  before=createMatch(seed);
+  while(before.roundDefinitionId!=='2-1')before=advance(before,history);
+ }
+ const c=before.pendingChoice!;expect(c.offers).toContain(id);
+ let s=accepted(selectChoice(before,c.choiceId,c.generation,id));
+ if(id==='latent-forge'){
+  while(s.roundDefinitionId!=='3-3')s=advance(s,history);
+  expect(s.roundResults.filter(r=>r.roundKind==='pvp'&&r.round>=before.round)).toHaveLength(7);
+ }
+ expect(needsCrownHistory(s)).toBe(true);
+ expect(s.augments.map(a=>a.definitionId)).toEqual(id==='blazing-soul-i'?['cluttered-mind',id]:[id,'pilfer']);
+ expect(readG23Progress(s)!.economyReceipts.some(r=>r.kind==='battle'&&r.facts.crowns!==undefined)).toBe(false);
+ expect(()=>restoreMatch(s)).toThrow('missing historical evidence');
+ expect(()=>restoreMatch(JSON.stringify(s))).toThrow('missing historical evidence');
+ expect(()=>serializeMatch(s)).toThrow('missing historical evidence');
+ const battles=history.completedRecords,saved=serializeMatch(s,battles);
+ for(const input of [s,JSON.stringify(s),saved]){
+  expect(()=>restoreMatch(input,[])).toThrow('缺少历史证据');
+  expect(restoreMatch(input,battles)).toEqual(s);
+ }
 });

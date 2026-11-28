@@ -9,7 +9,6 @@
 import type { HexCell } from '../simulation/board';
 import type { ResolvedAbility } from '../simulation/ability-types';
 import { asDisplayEvents, type DisplayCombat, type DisplayUnit, type SceneCombatEvent } from './combat-display';
-import { displayUnitName } from '../rendering/display-names';
 import { getHeroIdentity } from './hero-identity';
 import { THEME, toNumber } from './theme';
 
@@ -18,22 +17,18 @@ const C = THEME.color;
 export type FxSpec =
   | { kind: 'slash'; at: HexCell; from: HexCell; color: number; duration: number; sourceId: string }
   | { kind: 'bolt'; from: HexCell; to: HexCell; color: number; duration: number; travel: boolean; sourceId: string }
-  /** `label` names the cast for debug/acceptance reads; the board draws only the rings. */
-  | { kind: 'cast'; at: HexCell; targets: readonly HexCell[]; color: number; duration: number; label: string }
+  | { kind: 'cast'; at: HexCell; targets: readonly HexCell[]; color: number; duration: number }
   | { kind: 'ring'; at: HexCell; color: number; radius: number; duration: number }
   | { kind: 'death'; at: HexCell; duration: number; unitId: string }
   | { kind: 'label'; at: HexCell; text: string; dy: number; color: string; background: string; duration: number }
   | { kind: 'flash'; unitId: string }
   | { kind: 'target'; unitId: string; team: 'player' | 'enemy' };
 
-/** Cast color and label: the engine ability when the local runtime is drawn, else the champion's identity (online view). */
-function castLook(source: DisplayUnit): { color: number; label: string } {
+/** Cast color only: abilities never carry name text onto the board or replay. */
+function castColor(source: DisplayUnit): number {
   const ability = (source as DisplayUnit & { readonly ability?: ResolvedAbility }).ability;
-  if (!ability) return { color: getHeroIdentity(source.definitionId).colorNumber, label: `施法 · ${displayUnitName(source.definitionId)}` };
-  return {
-    color: ability.kind === 's13' ? getHeroIdentity(ability.championId).colorNumber : ability.kind === 'selfShield' ? toNumber(C.shield) : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e,
-    label: ability.kind === 's13' ? `施法 · ${displayUnitName(ability.championId)}` : ability.kind === 'selfShield' ? '施法 · 护盾' : ability.damageType === 'magic' ? '施法 · 魔法' : '施法 · 物理',
-  };
+  if (!ability) return getHeroIdentity(source.definitionId).colorNumber;
+  return ability.kind === 's13' ? getHeroIdentity(ability.championId).colorNumber : ability.kind === 'selfShield' ? toNumber(C.shield) : ability.damageType === 'magic' ? 0xc5a0ff : 0xffc56e;
 }
 
 /**
@@ -55,9 +50,9 @@ export function planFx(events: readonly SceneCombatEvent[], combat: DisplayComba
     } else if (event.type === 'cast') {
       const source = unit(event.sourceId);
       if (!source) continue;
-      const { color, label } = castLook(source);
+      const color = castColor(source);
       const targets = event.targetIds.map(id => unit(id)).filter(target => target && target.id !== source.id).map(target => target!.cell);
-      specs.push({ kind: 'cast', at: source.cell, targets, color, duration: 700, label });
+      specs.push({ kind: 'cast', at: source.cell, targets, color, duration: 700 });
     } else if (event.type === 'heal' && event.actual > 0) {
       const target = unit(event.targetId);
       if (target) specs.push({ kind: 'ring', at: target.cell, color: 0x7dff9e, radius: 31, duration: 450 });

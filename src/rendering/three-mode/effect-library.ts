@@ -15,14 +15,20 @@ import type { BufferGeometry, Texture } from 'three';
 import { ParticleMaterialPool, loadParticleEffect, readParticleMesh, type AssetManifest, type ParticleBudget, type ParticleEffect } from '../../rendering3d';
 import type { AssetReader } from './asset-reader';
 
-/** Live particles across every effect on the renderer at most; past it new particles are not born. */
-export const MAX_LIVE_PARTICLES = 1500;
+/**
+ * Live particles across every effect on the renderer at most; past it new particles are not born. 2250, not 1500 (Fable
+ * 11-13, with MAX_LTK_SYSTEMS 20): at cap 20 the 1500 budget was what refused LTK runs in a late-game 9 v 9, and the
+ * frame-time v2.1 budget run (1500 / 2250 / 3000 alternated at cap 20) is the basis. Measured on one GTX 1080 only; the
+ * LTK pass degrade stays for weaker GPUs.
+ */
+export const MAX_LIVE_PARTICLES = 2250;
 /** An effect resource no live effect uses is released after this long. */
 export const EFFECT_IDLE_MS = 120_000;
 
 export interface EffectLibrary {
   /** `maxParticles` tightens this one effect's own live-particle limit (the shared budget applies either way). */
-  load(id: string, maxDuration: number, maxParticles?: number): Promise<ParticleEffect>;
+  /** `extra`: emitter kinds to leave out, and the quad reach (loadParticleEffect / ParticleOptions). */
+  load(id: string, maxDuration: number, maxParticles?: number, extra?: { omitKinds?: readonly string[]; quadReach?: number }): Promise<ParticleEffect>;
   readonly budget: ParticleBudget;
   readonly pool: ParticleMaterialPool;
   /** Reads so far, by kind (each resource once). */
@@ -65,7 +71,7 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
   const pool = new ParticleMaterialPool();
   return {
     budget, pool, reads,
-    load(id, maxDuration, maxParticles) {
+    load(id, maxDuration, maxParticles, extra) {
       if (closed) return Promise.reject(new Error('effect-library-closed'));
       // The resources this effect reads are held from the read until it ends (a sweep meanwhile leaves them); a failed
       // load lets them go at once.
@@ -76,7 +82,8 @@ export function createEffectLibrary(manifest: AssetManifest, root: string, reade
       };
       const letGo = () => { for (const url of urls) { const use = used(url); use.refs--; use.last = now(); } };
       return loadParticleEffect(manifest, id, { root, scale: 1, maxDuration, readJson: track(readJson), readTexture: track(readTexture),
-        readMesh: track(readMesh), borrowed: true, materials: pool, budget, ...(maxParticles === undefined ? {} : { maxParticles }) }).then(effect => {
+        readMesh: track(readMesh), borrowed: true, materials: pool, budget, ...(maxParticles === undefined ? {} : { maxParticles }),
+        ...(extra?.omitKinds?.length ? { omitKinds: extra.omitKinds } : {}), ...(extra?.quadReach ? { quadReach: extra.quadReach } : {}) }).then(effect => {
         // Closed while it loaded: a mesh that landed late was released (and its emitter skipped), so this effect fails too.
         if (closed) { effect.dispose(); letGo(); throw new Error('effect-library-closed'); }
         const dispose = effect.dispose.bind(effect);

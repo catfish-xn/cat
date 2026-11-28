@@ -21,6 +21,11 @@ import type { Point } from "./rig";
 export type MissileMovement =
   | { readonly kind: "fixedSpeed"; readonly speed: number }
   | { readonly kind: "fixedTime"; readonly travelTime: number }
+  /**
+   * Ours, not the engine's: a straight flight at a steady pace that reaches the target `arriveShare` of the way through
+   * `travelTime` and stays there until it runs out (a rocket that flies in and waits for its landing).
+   */
+  | { readonly kind: "fixedTimeThenHold"; readonly travelTime: number; readonly arriveShare: number }
   | ({ readonly kind: "accelerating" } & Acceleration)
   | ({ readonly kind: "decelToLocation" } & Acceleration)
   | { readonly kind: "fixedSpeedSpline"; readonly speed: number; readonly spline: MissileSpline }

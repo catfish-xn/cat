@@ -60,23 +60,31 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
   it('arrives at 2-1 with the frozen opening rewards and only current-round loot in the view', () => {
     expect([opening.level,opening.xp]).toEqual([5,0]);
     const expected=independentLootPlan(27,10).rounds.flatMap(r=>r.encounterPlan.drops);
-    expect(opening.m8.loot.receipts.map(r=>r.payload)).toEqual(expected.map(d=>d.payload));
+    // v26 PvE loot carryover (8f794062): the route now loses 2-7 to the 14.24 krugs (568eeea4) after killing only the rod
+    // carrier, so the unkilled bow/belt/gloves are carried to 3-7 instead of being paid at 2-7 (v25 paid all eleven).
+    const carried=new Set((opening.m8.loot.carry??[]).map(row=>row.dropId));
+    expect(expected.filter(d=>carried.has(d.dropId)).map(d=>[d.roundId,d.payload.kind==='item'?d.payload.definitionId:d.payload.kind])).toEqual([['2-7','bow'],['2-7','belt'],['2-7','gloves']]);
+    expect(opening.m8.loot.carry!.map(row=>row.deliverRoundId)).toEqual(['3-7','3-7','3-7']);
+    expect(opening.m8.loot.receipts.map(r=>r.payload)).toEqual(expected.filter(d=>!carried.has(d.dropId)).map(d=>d.payload));
     // v23: the 151-offer pool makes the 2-1 card Family Crest (Family emblem item-4 plus a Violet), and seed 27's
     // fmix32 opening is now Warwick's Hunger, so crab-rave's 2-7 cloak no longer arrives.
     // v24 uses the public free slot rerolls for Superstars II. It grants no
     // items/heroes, preserving the original independent loot/roster assertions.
     expect(opening.augments.map(a=>a.definitionId)).toEqual(['superstars-ii']);
     expect(players(opening).map(u=>u.definitionId).sort()).toEqual(['irelia','lux','renata','sett','steb']);
-    expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['belt','bow','gloves','rod','rod','rod','sword','tear']);
+    expect(opening.items.map(i=>i.definitionId).sort()).toEqual(['rod','rod','rod','sword','tear']);
     expect(opening.consumables.map(c=>c.definitionId)).toEqual(Array(4).fill('magnetic-remover'));
     expect(api.readLootView(opening)).toEqual({ roundId: '3-1', revealedDrops: [], revealedOrbs: [], pendingClaims: [], canContinue: false, reason: 'unsettled-round', pendingChoice: null });
     roundTrip(opening);
   });
 
-  // 2-1: combine the two loot components from different rounds, equip the loot-born Lux, fight.
-  const bow = lootItem(opening, 'bow'), rod = lootItem(opening, 'rod');
+  // 3-1: combine two loot components earned in different rounds, equip the loot-born Lux, fight.
+  // v26: the 2-7 bow is now carried to 3-7 (see above), so the cross-round pair is the 1-3 tear and the rod earned by the
+  // 2-7 kill, which make Archangel's Staff (v25: 2-7 bow + 1-2 rod → Rageblade). `bow`/`rageblade` keep their v25 names.
+  const bow = opening.m8.loot.receipts.find(r => r.payload.kind === 'item' && r.payload.definitionId === 'rod' && JSON.parse(JSON.parse(r.dropId)[0])[1] === '2-7')!,
+    rod = lootItem(opening, 'tear');
   const combined = accepted(api.combineItems(opening, bow.grantedItemIds[0], rod.grantedItemIds[0]));
-  const rageblade = combined.items.find(item => item.definitionId === 'rageblade')!;
+  const rageblade = combined.items.find(item => item.definitionId === 'archangel')!;
   const lux = players(opening).find(unit => unit.definitionId === 'lux')!;
   const equipped = accepted(api.equipItem(combined, rageblade.id, lux.id, 0));
   const fielded = accepted(api.deployMatchUnit(equipped, lux.id, { kind: 'board', cell: { col: 3, row: 7 } }));
@@ -108,7 +116,7 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
     for (const step of [combined, equipped, fielded]) roundTrip(step);
   });
   it('fights 2-1 with the cross-round Rageblade and keeps loot identity through settlement and Continue', () => {
-    expect(battle.events.some(event => event.type === 'statChanged' && event.source.definitionId === 'rageblade' && event.unitId === lux.id)).toBe(true);
+    expect(battle.events.some(event => event.type === 'statChanged' && event.source.definitionId === 'archangel' && event.unitId === lux.id)).toBe(true);
     expect(battle.state.m8.loot.receipts).toEqual(opening.m8.loot.receipts);
     roundTrip(battle.state);
     expect(nextPreparation.roundDefinitionId).toBe('3-2');
@@ -133,9 +141,9 @@ describe('B8 loot carried across rounds: combine, equip, fight and sell', () => 
       raw.resourceProvenance.entries.splice(index, 1);
       raw.resourceProvenance.entries.forEach((entry: any, sequence: number) => { entry.sequence = sequence; });
     });
-    reject(after, 'Invalid resource provenance: receipt birth binding', raw => { raw.m8.loot.receipts.find((r: any) => r.payload.definitionId === 'bow').grantedItemIds = [rageblade.id]; });
+    reject(after, 'Invalid resource provenance: receipt birth binding', raw => { raw.m8.loot.receipts.find((r: any) => r.receiptId === bow.receiptId).grantedItemIds = [rageblade.id]; });
     reject(after, 'Invalid resource provenance: duplicate loot receipt', raw => { raw.m8.loot.receipts.push({ ...raw.m8.loot.receipts.at(-1) }); });
     // A consumed loot component cannot reappear in inventory.
-    reject(after, 'Invalid B8 Match: current resource fold', raw => { raw.items.push({ id: bow.grantedItemIds[0], definitionId: 'bow', location: { kind: 'inventory' } }); });
+    reject(after, 'Invalid B8 Match: current resource fold', raw => { raw.items.push({ id: bow.grantedItemIds[0], definitionId: 'rod', location: { kind: 'inventory' } }); });
   });
 }));

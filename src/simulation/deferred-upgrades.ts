@@ -1,3 +1,4 @@
+import { anomalyHolderCandidates, reconcileAnomalyResources } from './anomaly-ownership';
 import type { StrategyEvent } from './strategy-types';
 import type { UnitUpgradedEvent } from './unit-types';
 import type { MatchState } from './match-types';
@@ -10,10 +11,11 @@ export function resolveDeferredUpgrades(state: MatchState): { state: MatchState;
   if (!state.multiplayer) return { state, events: [] };
   const plan = planDeferredUpgrades(state.preparation);
   if (!plan.events.length) return { state, events: [] };
-  const resources = transferUpgradeResources(state.items, state.anomalyBinding, plan.events);
+  const transferred = transferUpgradeResources(state.items, state.anomalyBinding, plan.events);
+  const resources = reconcileAnomalyResources(state.anomalySelection, transferred.anomalyBinding, anomalyHolderCandidates({...state,preparation:plan.preparation}), transferred.items);
   const equipment = planTemporaryEquipment({ ...state, preparation: plan.preparation, items: resources.items,
     anomalyBinding: resources.anomalyBinding, persistentGrowth: mergeGrowthLedger(state.persistentGrowth, plan.events),
     resourceProvenance: appendResourceProvenance(state.resourceProvenance, state.roundDefinitionId,
       plan.events.map(event => ({ kind: 'unit-upgraded-after-combat' as const, event }))) });
-  return { state: equipment.state, events: [...plan.events, ...resources.events, ...equipment.events] };
+  return { state: equipment.state, events: [...plan.events, ...transferred.events, ...resources.events, ...equipment.events] };
 }

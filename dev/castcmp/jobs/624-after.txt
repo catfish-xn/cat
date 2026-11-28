@@ -1,0 +1,8 @@
+# #624 Ambessa chain-only / fist-only, after column. Checkout d37ce921 (#624: only the rule's branch plays),
+# then overlay the recording tools 5f8a3be8 (tar xzf castcmp-5f8a3be8.tar.gz -C <repo root>, or the git bundle). One line per job for dev/castcmp/batch.cjs.
+# Pre-flight: node dev/castcmp/jobs-check.mjs <this file> (Linux, 11-12, tools 5f8a3be8): all PASS.
+# Star 2 (Fable 11-12): at 3 stars her first cast kills a 3-star Amumu (combat ends tick 77). Amumu never casts. Caption carries the real stars.
+# Rule casts in this layout (node, real-combat.ts): 1st cast tick 77 = t 500 ms, branch chain; 2nd cast tick 253 = t 9300 ms, branch fist.
+# chain: judged 500-2500 ms (1st cast); fist: 11.5 s window holding both casts, judged 9300-10300 ms (2nd cast). No attached systems: --layers none.
+v-capture.cjs ambessa w-ambessa-chain-after --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 2 --ms 3000 --settle 3000 --systems 3b4c15e0,8a64f4dd --absent 754b6c78,a429a900,6390530e,cba05b6e --layers none --from 500 --to 2500 --column after --snapshot c1333710ad8e
+v-capture.cjs ambessa w-ambessa-fist-after --real 1 --star 2 --target amumu --nfoes 1 --foestar 3 --dist 2 --ms 11500 --settle 3000 --systems 754b6c78,a429a900,6390530e,cba05b6e --absent 3b4c15e0,8a64f4dd --layers none --from 9300 --to 10300 --column after --snapshot c1333710ad8e

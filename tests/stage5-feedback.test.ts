@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { createCombatFeedbackRenderer, type FeedbackAnchor } from '../src/stats/combat-feedback-renderer';
-import { createCombatFeedbackRenderer as before } from './fixtures/stage5-feedback-before';
 import type { SceneCombatEvent } from '../src/presentation/combat-display';
 import { subscribeBoardFeed, type BoardFeedListener } from '../src/rendering/board-feed';
 vi.mock('phaser', () => ({ default: { Scene: class {} } }));
@@ -44,51 +43,83 @@ function setup() {
 }
 
 describe('stage5 floating text equivalence and DOM work', () => {
-  it.each(['2d', '3d'] as const)('matches the frozen renderer after every recorded frame, including %s anchors, resize and missing units', mode => {
-    setup(); const oldHost = host(), newHost = host(), old = before(oldHost), next = createCombatFeedbackRenderer(newHost);
+  // FROZEN BASELINE TO BE RE-PINNED (Fable 11-17): the user asked for the damage floats to be redone (the damage-float
+  // table), so they no longer match the frozen renderer (fixtures/stage5-feedback-before.ts, kept). Once the user has
+  // accepted the new look, a new frozen baseline is generated from it and the per-frame equality comes back for 2d and 3d.
+  // Until then the recorded sequence only checks the bounds every frame, and 'damage-float table' below checks each row.
+  it.each(['2d', '3d'] as const)('runs the recorded sequence with %s anchors, resize and missing units inside the bounds', mode => {
+    setup(); const newHost = host(), next = createCombatFeedbackRenderer(newHost);
     const input = JSON.stringify(sequence);
     for (const frame of sequence.ticks) {
       const at = frame.tick * 50, events = frame.events as SceneCombatEvent[];
-      old.push(events, at); next.push(events, at);
+      next.push(events, at);
       if (frame.tick === 45) size = { width: 380, height: 400 };
       const anchors = new Map<string, FeedbackAnchor>(sequence.units.filter((_, i) => (frame.tick + i) % 11 !== 0).map((u, i) =>
         [u.id, { x: 40 + u.cell.col * (mode === '3d' ? 45.3 : 58), y: 70 + u.cell.row * 49 + (mode === '3d' ? i / 3 : 0), radius: mode === '3d' ? 18 + i % 4 : 27 }]));
-      const obstacles = [{ x: 220, y: 80, w: 90, h: 20 }];
       for (const dt of [0, 16.7, 49.9]) {
-        old.render(at + dt, anchors, obstacles); next.render(at + dt, anchors, obstacles);
-        expect(snapshot(newHost), `tick ${frame.tick} + ${dt}`).toEqual(snapshot(oldHost));
+        next.render(at + dt, anchors, [{ x: 220, y: 80, w: 90, h: 20 }]);
+        const shown = snapshot(newHost)[0].children;
+        expect(shown.length, `tick ${frame.tick} + ${dt}`).toBeLessThanOrEqual(40);
+        expect(shown.every(e => /^\+?\d+$/.test(e.text) || !/^[−-]/.test(e.text)), `tick ${frame.tick}`).toBe(true);
       }
     }
-    for (const age of [849.999, 850, 851]) {
-      old.render(5000 + age, new Map()); next.render(5000 + age, new Map());
-      expect(snapshot(newHost)).toEqual(snapshot(oldHost));
-    }
+    next.render(5000 + 1101, new Map());
+    expect(snapshot(newHost)[0].children).toHaveLength(0);
     expect(JSON.stringify(sequence)).toBe(input);
-    old.reset(); next.reset(); expect(snapshot(newHost)).toEqual(snapshot(oldHost));
-    old.dispose(); next.dispose(); expect(snapshot(newHost)).toEqual(snapshot(oldHost));
+    next.reset(); expect(snapshot(newHost)[0].children).toHaveLength(0);
+    next.dispose(); expect(snapshot(newHost)).toEqual([]);
   });
 
-  it('merges same-tick amounts, preserves status/shield/heal text and the exact expiry boundary', () => {
-    setup(); const oldHost = host(), newHost = host(), old = before(oldHost), next = createCombatFeedbackRenderer(newHost);
+  it('runs the recorded sequence with every unit far apart: a damage number stays near where it appeared, whatever its unit does', () => {
+    // Original look (official-server footage, 11-25): a damage number does not follow its unit; it only drifts a little.
+    // Every unit walks on; within one frame a damage number moves only by its own small drift.
+    setup(); size = { width: 7000, height: 520 }; const newHost = host(), next = createCombatFeedbackRenderer(newHost);
+    const anchorsAt = (now: number) => new Map<string, FeedbackAnchor>(sequence.units.map((u, i) => [u.id, { x: 150 + i * 300 + now * 0.08, y: 200 + u.cell.row * 30, radius: 20 }]));
+    const placed = () => new Map((newHost as unknown as Element).children[0].children.filter(e => !e.hidden && e.style.left && !e.textContent.startsWith('+'))
+      .map(e => [e, { x: parseFloat(e.style.left), y: parseFloat(e.style.top) }] as const));
+    let checked = 0;
+    for (const frame of sequence.ticks) {
+      const at = frame.tick * 50;
+      next.push(frame.events as SceneCombatEvent[], at);
+      next.render(at, anchorsAt(at)); const before = placed();
+      next.render(at + 49.9, anchorsAt(at + 49.9));
+      for (const [e, now] of placed()) {
+        const was = before.get(e); if (!was) continue;
+        checked++;
+        expect(now.x - was.x, `tick ${frame.tick}`).toBeLessThanOrEqual(25 * 49.9 / 700 + 1e-6);
+        expect(now.x - was.x, `tick ${frame.tick}`).toBeGreaterThanOrEqual(-1e-6);
+        expect(Math.abs(now.y - was.y), `tick ${frame.tick}`).toBeLessThanOrEqual(6.5);
+      }
+    }
+    expect(checked).toBeGreaterThan(0);
+    next.dispose();
+  });
+
+  it('merges one source\'s same-tick packets, keeps heal text, shows no status word and no shield number, and keeps the exact expiry boundary', () => {
+    setup(); const newHost = host(), next = createCombatFeedbackRenderer(newHost);
     const events: SceneCombatEvent[] = [damage(1), damage(1, 'a', 5), { ...damage(1, 'b'), damageType: 'magic', absorbed: 12 },
       { type: 'heal', tick: 1, eventSeq: 5, targetId: 'c', actual: 24, shares: [] },
       { type: 'statusChanged', tick: 1, eventSeq: 6, targetId: 'd', kind: 'stun', reason: 'applied', effectiveMagnitudeBps: 0 },
       { ...damage(1, 'e'), damageType: 'true' }];
     const anchors = new Map(['a', 'b', 'c', 'd', 'e'].map((id, i) => [id, { x: 50 + i * 90, y: 250, radius: 20 }]));
-    old.push(events, 0); next.push(events, 0);
-    for (const now of [-10, 0, 600, 849.999, 850]) {
-      old.render(now, anchors); next.render(now, anchors); expect(snapshot(newHost)).toEqual(snapshot(oldHost));
-      if (now === 0) expect(snapshot(newHost)[0].children.map(e => e.text)).toEqual(['−15', '−10 魔', '盾 12', '+24', '眩晕', '−10 真']);
+    next.push(events, 0);
+    for (const now of [-10, 0, 600, 619.999, 620, 699.999, 700]) {
+      next.render(now, anchors);
+      // A stun (any status) floats no word: only damage and heals do, as in the original.
+      if (now === 0) expect(snapshot(newHost)[0].children.map(e => e.text)).toEqual(['15', '10', '+24', '10']);
+      // A heal is shorter-lived than a damage number (fitted to official-server footage).
+      if (now === 619.999) expect(snapshot(newHost)[0].children).toHaveLength(4);
+      if (now === 620 || now === 699.999) expect(snapshot(newHost)[0].children.map(e => e.text)).toEqual(['15', '10', '10']);
     }
     expect(snapshot(newHost)[0].children).toHaveLength(0);
   });
 
-  it('batches all geometry reads, avoids identical text/style assignments and bounds the detached pool at 24', () => {
+  it('batches all geometry reads, avoids identical text/style assignments and bounds the detached pool at 40', () => {
     setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
-    const anchors = new Map(Array.from({ length: 30 }, (_, i) => [`u${i}`, { x: 30 + i * 15, y: 300, radius: 10 }]));
+    const anchors = new Map(Array.from({ length: 50 }, (_, i) => [`u${i}`, { x: 30 + i * 9, y: 300, radius: 10 }]));
     for (let round = 0; round < 10; round++) {
-      renderer.push(Array.from({ length: 30 }, (_, i) => damage(round, `u${i}`)), round * 1000);
-      expect(snapshot(h)[0].children).toHaveLength(24);
+      renderer.push(Array.from({ length: 50 }, (_, i) => damage(round, `u${i}`)), round * 1000);
+      expect(snapshot(h)[0].children).toHaveLength(40);
       operations = []; renderer.render(round * 1000, anchors);
       const first = operations.findIndex(op => op.startsWith('read:')), last = operations.length - 1 - [...operations].reverse().findIndex(op => op.startsWith('read:'));
       expect(operations.slice(first, last + 1).every(op => op.startsWith('read:'))).toBe(true);
@@ -96,23 +127,25 @@ describe('stage5 floating text equivalence and DOM work', () => {
       expect(operations.filter(op => op === 'read:height')).toHaveLength(1);
       operations = []; renderer.render(round * 1000, anchors);
       expect(operations.filter(op => op === 'text' || op.startsWith('style:'))).toEqual([]);
+      // The text did not change, so the steady frame must not measure labels again.
+      expect(operations.filter(op => op === 'read:label')).toEqual([]);
       renderer.reset(); expect(snapshot(h)[0].children).toHaveLength(0);
     }
-    expect(created).toBe(24);
+    expect(created).toBe(40);
     renderer.dispose(); renderer.push([damage(100)], 0); renderer.render(0, anchors);
-    expect(snapshot(h)).toEqual([]); expect(created).toBe(24);
+    expect(snapshot(h)).toEqual([]); expect(created).toBe(40);
   });
 
-  it('keeps the last 24 floats and evicts the oldest of four for one unit', () => {
+  it('keeps the last 40 floats and evicts the oldest of seven for one unit', () => {
     setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
-    const anchors = new Map(Array.from({ length: 30 }, (_, i) => [`u${i}`, { x: 40 + i * 12, y: 300, radius: 10 }]));
-    renderer.push(Array.from({ length: 30 }, (_, i) => damage(i, `u${i}`, i + 1)), 0);
+    const anchors = new Map(Array.from({ length: 50 }, (_, i) => [`u${i}`, { x: 40 + i * 8, y: 300, radius: 10 }]));
+    renderer.push(Array.from({ length: 50 }, (_, i) => damage(i, `u${i}`, i + 1)), 0);
     renderer.render(0, anchors);
-    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(Array.from({ length: 24 }, (_, i) => `−${i + 7}`));
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(Array.from({ length: 40 }, (_, i) => `${i + 11}`));
     renderer.reset();
-    renderer.push(Array.from({ length: 4 }, (_, i) => damage(i, 'u0', i + 1)), 1);
+    renderer.push(Array.from({ length: 7 }, (_, i) => damage(i, 'u0', i + 1)), 1);
     renderer.render(1, anchors);
-    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['−2', '−3', '−4']);
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['2', '3', '4', '5', '6', '7']);
     renderer.dispose();
   });
 
@@ -135,7 +168,7 @@ describe('stage5 floating text equivalence and DOM work', () => {
     scene.fx = { casts: 0, drawn: true, show() {}, labelRects: () => [] };
     const resets = vi.spyOn(renderer, 'reset');
     scene.showEvents([damage(1, 'a', 10)]); scene.renderFeedback();
-    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['−10']);
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['10']);
     const stop = subscribeBoardFeed({ events() {} } as unknown as BoardFeedListener);
     try {
       scene.renderFeedback();
@@ -145,8 +178,266 @@ describe('stage5 floating text equivalence and DOM work', () => {
     } finally { stop(); }
     // A new event can arrive before the first 2D render; it must survive the transition reset.
     scene.showEvents([damage(3, 'a', 30)]); scene.renderFeedback();
-    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['−30']);
+    expect(snapshot(h)[0].children.map(e => e.text)).toEqual(['30']);
     expect(resets).toHaveBeenCalledTimes(2);
     renderer.dispose();
+  });
+
+  describe('damage floats (the user\'s 8 points, 11-19)', () => {
+    const crit = (tick: number, targetId = 'a', hpDamage = 10) => ({ ...damage(tick, targetId, hpDamage), critical: true }) as const;
+    const heal = (tick: number, targetId = 'a', actual = 7) => ({ type: 'heal', tick, eventSeq: tick, targetId, actual, shares: [] }) as unknown as SceneCombatEvent;
+    const labels = (events: readonly SceneCombatEvent[], now = 0) => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push(events, 0); renderer.render(now, new Map(['a', 'b'].map((id, i) => [id, { x: 120 + i * 160, y: 300, radius: 20 }])));
+      const out = snapshot(h)[0].children; renderer.dispose(); return out;
+    };
+    const px = (e: { style: Record<string, string> }) => parseFloat(e.style.fontSize);
+    it('numbers only, coloured by damage type (a basic attack too): physical orange, magic cyan-blue, true white, heals green with +', () => {
+      const [phys] = labels([damage(1)]), [magic] = labels([{ ...damage(1), damageType: 'magic' }]), [real] = labels([{ ...damage(1), damageType: 'true' }]), [healed] = labels([heal(1)]);
+      expect([phys.text, magic.text, real.text, healed.text]).toEqual(['10', '10', '10', '+7']);
+      expect([phys.style.color, magic.style.color, real.style.color, healed.style.color]).toEqual(['#ff8a24', '#36c4ff', '#ffffff', '#4fdc84']);
+      // A bold rounded sans-serif from the system, never a serif face; a thin dark edge and a hard black shadow down-right, no blur.
+      expect(phys.style.fontFamily).toMatch(/sans-serif$/); expect(phys.style.fontFamily).not.toMatch(/(^|[ ,"])serif/);
+      expect(Number(phys.style.fontWeight)).toBe(900);
+      expect(phys.style.textShadow).toContain('rgba(0,0,0,.9)'); expect(phys.style.textShadow).toContain('0.065em 0.065em 0 #000');
+      expect(phys.style.textShadow).not.toMatch(/ \d+(\.\d+)?px rgba\(0,0,0,\.6\)/);
+    });
+    it('absorbed damage shows no number (the bar shows the shield)', () => {
+      expect(labels([{ ...damage(1), hpDamage: 0, absorbed: 6 }])).toEqual([]);
+      expect(labels([{ ...damage(1), absorbed: 6 }]).map(e => e.text)).toEqual(['10']);
+    });
+    it('every hit shows on its own; one source\'s packets of one tick add up', () => {
+      expect(labels([damage(1), { ...damage(1), sourceId: 'c' }]).map(e => e.text)).toEqual(['10', '10']);
+      expect(labels([damage(1), damage(1, 'a', 5)]).map(e => e.text)).toEqual(['15']);
+    });
+    it('a crit is the same colour and larger (CRIT_SCALE), with the wedge mark (E5) in two hard tones and a dark edge, in its own label', () => {
+      const [plain] = labels([damage(1)], 400), [big] = labels([crit(1)], 400), [blue] = labels([{ ...crit(1), damageType: 'magic' }], 400);
+      expect(big.text).toBe(plain.text);
+      expect(px(big) / px(plain)).toBeCloseTo(1.4, 1); expect(px(big)).toBe(31);
+      expect(big.style.color).toBe(plain.style.color); expect(blue.style.color).toBe('#36c4ff');
+      // The mark (the user's pick E5): two hard tones of the number's colour, split along the slam, its dark edge and a black hard shadow.
+      const mark = decodeURIComponent(big.style.backgroundImage), blueMark = decodeURIComponent(blue.style.backgroundImage);
+      expect(mark).toContain("fill='#f9611c'"); expect(mark).toContain("fill='#b03f15' clip-path='url(#lo)'");
+      expect(blueMark).toContain("fill='#4c89c7'"); expect(blueMark).toContain("fill='#335a94' clip-path='url(#lo)'");
+      expect(mark).toContain("<polygon points='-10,-8 40,42 -10,42'/>"); expect(mark).toContain("fill='#000' transform='translate(");
+      expect(mark).toContain("stroke='rgba(0,0,0,.9)'");
+      // Its wedge's bottom on the digits' bottom: as much room above the line as below, the mark box placed from there.
+      expect(big.style.paddingTop).toBe(big.style.paddingBottom); expect(big.style.paddingTop).not.toBe('');
+      expect(plain.style.backgroundImage ?? '').toBe('');
+      expect(labels([crit(1, 'a', 10), damage(1, 'a', 4), crit(1, 'a', 5)]).map(e => e.text).sort()).toEqual(['15', '4']);
+    });
+    it('a plain number next to a crit keeps its own colour, size and font', () => {
+      const [alone] = labels([damage(1, 'a', 4)]), mixed = labels([damage(1, 'a', 4), crit(1, 'a', 10)]).find(e => e.text === '4')!;
+      for (const key of ['color', 'fontSize', 'fontWeight', 'fontFamily', 'textShadow'] as const) expect(mixed.style[key]).toBe(alone.style[key]);
+    });
+    it('a basic attack is no longer a small white number: it takes its damage type\'s colour at full size', () => {
+      const [plain] = labels([damage(1)], 400);
+      expect(plain.style.color).not.toBe('#ffffff'); expect(px(plain)).toBe(22);
+    });
+    it('every number has a dark edge all round and a drop shadow, so it holds on a bright floor', () => {
+      const shadow = labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.textShadow;
+      for (const edge of ['1px 0 0', '-1px 0 0', '0 1px 0', '0 -1px 0', '1px 1px 0', '-1px -1px 0']) expect(shadow).toContain(edge);
+    });
+    it('a number stays fully opaque until its fade-out; a heal lives and fades shorter than damage', () => {
+      for (const now of [0, 300, 400]) expect(Number(labels([crit(1)], now)[0].style.opacity), `at ${now}`).toBe(1);
+      expect(Number(labels([damage(1)], 550)[0].style.opacity)).toBeCloseTo(0.5, 3);
+      expect(Number(labels([heal(1)], 450)[0].style.opacity)).toBe(1);
+      expect(Number(labels([heal(1)], 535)[0].style.opacity)).toBeCloseTo(0.5, 3);
+    });
+    const top = (e: { style: Record<string, string> }) => parseFloat(e.style.top), left = (e: { style: Record<string, string> }) => parseFloat(e.style.left);
+    const scale = (e: { style: Record<string, string> }) => Number(/scale\(([\d.]+)\)/.exec(e.style.transform)?.[1] ?? 1);
+    it('a damage number appears on the struck body toward its right, with its own jitter, the same every replay, its top under its bar', () => {
+      // Anchor: x 120, y 300, radius 20. Without a bar it lands 0.25 × the body's width right of the midline, ±15 px either way.
+      const [first] = labels([damage(1)], 0), [again] = labels([damage(1)], 0);
+      expect(left(first)).toBe(left(again)); expect(top(first)).toBe(top(again));
+      expect(Math.abs(left(first) - (120 + 10))).toBeLessThanOrEqual(15); expect(Math.abs(top(first) - (300 + 20 * 0.35))).toBeLessThanOrEqual(15);
+      // Another hit (another tick, another source) lands on its own spot near it.
+      const [other] = labels([{ ...damage(2), sourceId: 'c', eventSeq: 2 }], 0);
+      expect(left(other) !== left(first) || top(other) !== top(first)).toBe(true);
+      // With a bar, in the right column: its left edge a quarter of its width (10 px) right of the bar's middle, up to 15 px
+      // more by its jitter; its top edge 2–26 px under the bar's bottom (305).
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([damage(1)], 0); renderer.render(0, new Map([['a', { x: 120, y: 280, radius: 10 }]]), [], new Map([['a', { x: 120, y: 300, w: 60, h: 10 }]]));
+      const [barred] = snapshot(h)[0].children, edge = left(barred) - 20 * scale(barred), topEdge = top(barred) - px(barred) * scale(barred) / 2;
+      expect(edge).toBeGreaterThanOrEqual(130 - 1e-6); expect(edge).toBeLessThanOrEqual(145 + 1e-6);
+      expect(topEdge).toBeGreaterThanOrEqual(305 + 2 - 1e-6); expect(topEdge).toBeLessThanOrEqual(305 + 26 + 1e-6);
+      renderer.dispose();
+    });
+    it('a damage number does not follow its unit: it drifts right in a small arc, up a little and then down', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([damage(1)], 0);
+      const at = (now: number, x: number) => { renderer.render(now, new Map([['a', { x, y: 300, radius: 20 }]])); return snapshot(h)[0].children[0]; };
+      const start = at(0, 120), x0 = left(start), y0 = top(start);
+      const mid = at(245, 300), end = at(690, 20);
+      expect(left(mid) - x0).toBeCloseTo(25 * 245 / 700, 5); expect(top(mid) - y0).toBeCloseTo(-8, 1);
+      expect(left(end) - x0).toBeCloseTo(25 * 690 / 700, 5); expect(top(end) - y0).toBeGreaterThan(15);
+      renderer.dispose();
+    });
+    it('numbers on one unit do not queue: each lands near the last and may cover it, at full size and opacity', () => {
+      const three = labels([damage(1, 'a', 10), damage(2, 'a', 20), damage(3, 'a', 30)].map((e, i) => ({ ...e, eventSeq: 1 + i })), 400);
+      expect(three.map(e => e.text)).toEqual(['10', '20', '30']);
+      for (const e of three) { expect(scale(e)).toBe(1); expect(Number(e.style.opacity)).toBe(1); expect(Math.abs(left(e) - (120 + 10 + 25 * 400 / 700))).toBeLessThanOrEqual(15 + 1e-6); }
+    });
+    // Our readability rules (coordinator 11-27/28, not original data): two columns split by the unit's bar's middle.
+    // (The review's column probe for 2bda8679, made a regression test.) Every 10 ms of every number's life, nine scenes, a tall
+    // and a short unit (their bars at different heights over their bodies), standing, walking right and walking left:
+    // - standing: a heal's right edge stays COLUMN_GAP_PX (10 px) left of the split, a damage number's left edge (a crit's
+    //   slam included) COLUMN_GAP_PX (10 px) right of it, and the two never meet, all their lives;
+    // - walking: the same on each number's first frame; later a damage number, which does not follow its unit (as in the
+    //   original), may cross: by at most MOVING_LIMIT px over the split and into a heal (measured, with a margin, so it
+    //   cannot grow unseen).
+    // Damage numbers of one tick on the unit never meet on their first frame.
+    const slamOf = (e: { style: Record<string, string> }) => { const m = /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(e.style.transform.replace('translate(-50%, -50%)', '')); return m ? [Number(m[1]), Number(m[2])] : [0, 0]; };
+    const box = (e: { text: string; style: Record<string, string> }) => { const w0 = Math.max(40, e.text.length * 9), w = w0 * scale(e), h2 = px(e) * scale(e), [dx, dy] = slamOf(e);
+      const x = left(e) + dx, y = top(e) + dy; return { l: x - w / 2, r: x + w / 2, t: y - h2 / 2, b: y + h2 / 2, quarter: 10 }; };
+    const overlap = (a: ReturnType<typeof box>, b: ReturnType<typeof box>) => Math.min(a.r - b.l, b.r - a.l, a.b - b.t, b.b - a.t);
+    const units = { tall: { y: 260, r: 40, barY: 100 }, short: { y: 262, r: 18, barY: 250 } };
+    const dmg = (tick: number, src = 'b', hp = 44, critical = false) => ({ ...damage(tick, 'a', hp), sourceId: src, critical, eventSeq: tick * 10 + src.length }) as unknown as SceneCombatEvent;
+    const big = (tick: number) => ({ ...heal(tick), actual: 300, eventSeq: tick * 10 + 9 }) as SceneCombatEvent;
+    const scenes: [string, (tick: number) => [number, SceneCombatEvent][]][] = [
+      ['plain and heal together', t2 => [[0, dmg(t2)], [0, big(t2)]]],
+      ['crit and heal together', t2 => [[0, dmg(t2, 'b', 44, true)], [0, big(t2)]]],
+      ['heal, then plain 100–500 ms later', t2 => [[0, big(t2)], [100 + (t2 % 5) * 100, dmg(t2 + 100)]]],
+      ['plain, then a heal 100–500 ms later', t2 => [[0, dmg(t2)], [100 + (t2 % 5) * 100, big(t2 + 100)]]],
+      ['three same-tick plain', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc')], [0, dmg(t2, 'ddd')]]],
+      ['five same-tick plain (two columns)', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc')], [0, dmg(t2, 'ddd')], [0, dmg(t2, 'eeee')], [0, dmg(t2, 'fffff')]]],
+      ['same-tick plain, crit, plain', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc', 44, true)], [0, dmg(t2, 'ddd')]]],
+      ['same-tick crit, plain', t2 => [[0, dmg(t2, 'b', 44, true)], [0, dmg(t2, 'cc')]]],
+      ['four mixed same-tick and a heal', t2 => [[0, dmg(t2, 'b')], [0, dmg(t2, 'cc', 4444, true)], [0, dmg(t2, 'ddd', 44444)], [0, dmg(t2, 'eeee', 44, true)], [0, big(t2)]]],
+    ];
+    // Measured on 11-28 at most 47.1 px over the split and 10.0 px into a heal (a unit walking 80 px a second), plus a margin.
+    const MOVING_LIMIT = { cross: 52, meet: 14 };
+    for (const [name, u] of Object.entries(units)) for (const speed of [0, 80, -80]) for (const [label, scene] of scenes) {
+      it(`${name} unit ${speed ? `walking ${speed > 0 ? 'right' : 'left'}` : 'standing'}, ${label}: heals left of the bar's middle, damage right of it`, () => {
+        let worstCross = -Infinity, worstMeet = -Infinity;
+        for (let tick = 1; tick <= 30; tick++) {
+          const events = scene(tick), times = [...new Set(events.map(e => e[0]))], end = Math.max(...times) + 720;
+          setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+          const born = new Set<unknown>();
+          for (let now = 0; now <= end; now += 10) {
+            const split = 200 + speed * now / 1000, bar = { x: split, y: u.barY, w: 70, h: 10 };
+            const fresh = events.filter(e => e[0] === now).map(e => e[1]); if (fresh.length) renderer.push(fresh, now);
+            renderer.render(now, new Map([['a', { x: split, y: u.y, radius: u.r }]]), [], new Map([['a', bar]]));
+            // The labels themselves (stable from frame to frame while they show), read through the same fields as a snapshot.
+            const shown = (h as unknown as Element).children[0]!.children.filter(el => !el.hidden && el.style.left)
+              .map(el => ({ text: el.textContent, style: el.style as Record<string, string>, el }));
+            const heals = shown.filter(e => e.text.startsWith('+')), hits = shown.filter(e => !e.text.startsWith('+'));
+            const where = `${name} v=${speed} ${label} tick ${tick} at ${now}`;
+            // A number's first frame: by the label (the stand-in reuses no label while it shows).
+            const first = (e: { el: unknown }) => { const isNew = !born.has(e.el); born.add(e.el); return isNew; };
+            for (const e of heals) { const r = box(e), isNew = first(e), over = r.r - (split - r.quarter);
+              if (!speed || isNew) expect(over, where).toBeLessThanOrEqual(1e-6); else worstCross = Math.max(worstCross, over); }
+            const newHits = hits.filter(e => first(e));
+            for (const e of hits) { const r = box(e), over = split + r.quarter - r.l;
+              if (!speed || newHits.includes(e)) expect(over, where).toBeLessThanOrEqual(1e-6); else worstCross = Math.max(worstCross, over); }
+            for (const a of hits) for (const b of heals) { const o = overlap(box(a), box(b));
+              if (!speed || (newHits.includes(a) && fresh.length)) expect(o, where).toBeLessThanOrEqual(1e-6); else worstMeet = Math.max(worstMeet, o); }
+            if (fresh.length) for (let i = 0; i < newHits.length; i++) for (let j = i + 1; j < newHits.length; j++) expect(overlap(box(newHits[i]!), box(newHits[j]!)), where).toBeLessThanOrEqual(1e-6);
+          }
+          renderer.dispose();
+        }
+        if (speed) { expect(worstCross).toBeLessThanOrEqual(MOVING_LIMIT.cross); expect(worstMeet).toBeLessThanOrEqual(MOVING_LIMIT.meet); }
+      });
+    }
+    it('our readability rules: the 2nd and 3rd same-tick damage numbers stand each under the one before; the 4th starts a column half a width to the right', () => {
+      const bar = { x: 200, y: 100, w: 70, h: 10 }, anchor = { x: 200, y: 260, radius: 40 };
+      setup(); const h = host(), r = createCombatFeedbackRenderer(h);
+      r.push([dmg(1, 'b', 10), dmg(1, 'cc', 20), dmg(1, 'ddd', 30), dmg(1, 'eeee', 40)], 0);
+      r.render(0, new Map([['a', anchor]]), [], new Map([['a', bar]]));
+      const [one, two, three, four] = ['10', '20', '30', '40'].map(text => snapshot(h)[0].children.find(e => e.text === text)!);
+      // Popped 1.6× on their first frame: each 35.2 px tall, 4 px apart.
+      expect(top(two) - top(one)).toBeCloseTo(35.2 + 4, 5); expect(top(three) - top(two)).toBeCloseTo(35.2 + 4, 5);
+      expect(top(four)).toBeCloseTo(top(one), 5);
+      const rightOf = (e: typeof one) => left(e) + 20 * scale(e), leftOf = (e: typeof one) => left(e) - 20 * scale(e);
+      expect(leftOf(four) - Math.max(rightOf(one), rightOf(two), rightOf(three))).toBeGreaterThanOrEqual(20 - 1e-6);
+      expect(leftOf(four) - Math.max(rightOf(one), rightOf(two), rightOf(three))).toBeLessThanOrEqual(20 + 15 + 1e-6);
+      r.dispose();
+      // A crit takes no jitter: once settled its left edge sits 10 px plus its slam's room (a quarter of its 31 px, 7.8) right of
+      // the split, for every hit.
+      for (let tick = 1; tick <= 20; tick++) {
+        setup(); const h3 = host(), r3 = createCombatFeedbackRenderer(h3);
+        r3.push([dmg(tick, 'b', 56, true)], 0); r3.render(200, new Map([['a', anchor]]), [], new Map([['a', bar]]));
+        const [c] = snapshot(h3)[0].children;
+        expect(left(c) - Math.max(40, c.text.length * 9) / 2).toBeCloseTo(200 + 10 + 7.8, 5);
+        r3.dispose();
+      }
+      // A crit's mark reaches above its digits: its mark's top, not its digits', starts under its own bar's bottom (105).
+      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2);
+      r2.push([crit(1)], 0); r2.render(0, new Map([['a', anchor]]), [], new Map([['a', bar]]));
+      const [big] = snapshot(h2)[0].children;
+      expect(top(big) - slamOf(big)[1] * 0 - (1.27 - 0.35) * px(big) * scale(big)).toBeGreaterThanOrEqual(105 + 2 - 1e-6);
+      r2.dispose();
+    });
+    it('bars are not avoided: a number on another unit\'s bar stays put; a 2D canvas label is still stepped past', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), other = { x: 160, y: 307, w: 80, h: 16 };
+      renderer.push([damage(1, 'a', 10)], 0); renderer.render(0, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [], new Map([['b', other]]));
+      const [stays] = snapshot(h)[0].children;
+      expect(Math.abs(left(stays) - 170)).toBeLessThanOrEqual(15);
+      renderer.dispose();
+      setup(); const h2 = host(), r2 = createCombatFeedbackRenderer(h2), label = { x: 170, y: 307, w: 200, h: 40 };
+      r2.push([damage(1, 'a', 10)], 0); r2.render(0, new Map([['a', { x: 160, y: 300, radius: 20 }]]), [label]);
+      const [moved] = snapshot(h2)[0].children;
+      expect(Math.abs(left(moved) - label.x)).toBeGreaterThanOrEqual(label.w / 2 + 20 - 1e-6);
+      r2.dispose();
+    });
+    it('a heal stays on its unit\'s midline and rises from its first frame, popping larger and back', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([heal(1)], 0);
+      const at = (now: number, x: number) => { renderer.render(now, new Map([['a', { x, y: 300, radius: 20 }]])); return snapshot(h)[0].children[0]; };
+      const first = at(0, 120);
+      expect(left(first)).toBe(120); expect(top(first)).toBeCloseTo(307, 5); expect(scale(first)).toBeCloseTo(2, 5);
+      const later = at(100, 140);
+      expect(left(later)).toBe(140); expect(top(later)).toBeCloseTo(307 - 8, 5); expect(scale(later)).toBeCloseTo(1.5, 5);
+      expect(at(200, 140).style.transform).toBe('translate(-50%, -50%)');
+      expect(top(at(600, 140))).toBeCloseTo(307 - 48, 5);
+      renderer.dispose();
+    });
+    it('a heal never rises past half its height below its own bar', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), bars = new Map([['a', { x: 120, y: 280, w: 60, h: 10 }]]);
+      renderer.push([heal(1)], 0); renderer.render(600, new Map([['a', { x: 120, y: 300, radius: 20 }]]), [], bars);
+      const [label] = snapshot(h)[0].children;
+      expect(top(label)).toBeGreaterThanOrEqual(285 + px(label) / 2 - 1e-6);
+      renderer.dispose();
+    });
+    it('heals one after another stand in one column, the newest lowest, none smaller or fainter', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h);
+      renderer.push([heal(1)], 0); renderer.push([{ ...heal(7), eventSeq: 7, actual: 9 } as SceneCombatEvent], 330);
+      renderer.render(400, new Map([['a', { x: 120, y: 300, radius: 20 }]]));
+      const [older, newer] = snapshot(h)[0].children;
+      expect(left(older)).toBe(left(newer)); expect(top(newer)).toBeGreaterThan(top(older));
+      expect(Number(older.style.opacity)).toBe(1); expect(scale(older)).toBe(1);
+      renderer.dispose();
+    });
+    it('a damage-over-time tick is small (a burn white), shorter-lived; heals are not changed by crits', () => {
+      const [plain] = labels([damage(1)], 400), [tick] = labels([{ ...damage(1), delivery: 'ability-periodic' } as SceneCombatEvent], 400);
+      expect(px(tick) / px(plain)).toBeCloseTo(0.8, 1);
+      expect(labels([{ ...damage(1), delivery: 'item-burn' } as SceneCombatEvent])[0].style.color).toBe('#ffffff');
+      expect(labels([{ ...damage(1), delivery: 'ability-periodic' } as SceneCombatEvent], 700)).toEqual([]);
+      expect(labels([heal(1), crit(2, 'b')]).filter(e => e.text === '+7')).toEqual(labels([heal(1)]));
+    });
+    it('a crit slams in from up-left popping larger, settles quickly, then holds still until it fades', () => {
+      const slam = (e: { style: Record<string, string> }) => /translate\((-?[\d.]+)px, (-?[\d.]+)px\)/.exec(e.style.transform);
+      const at = (now: number) => labels([crit(1)], now)[0];
+      expect(scale(at(0))).toBeCloseTo(1.9, 3); expect(scale(at(40))).toBeCloseTo(1.45, 3);
+      expect(at(80).style.transform).toBe('translate(-50%, -50%)');
+      // Up-left of its spot at first (CRIT_SLAM of its size each way), on its spot once settled (the user's 11-19 pick).
+      const first = slam(at(0))!; expect(Number(first[1])).toBeCloseTo(-0.25 * px(at(0)), 1); expect(first[1]).toBe(first[2]);
+      expect(slam(at(80))).toBeNull();
+      // It does not move: the same place from then until it fades.
+      expect(top(at(80))).toBe(top(at(650))); expect(left(at(80))).toBe(left(at(650)));
+    });
+    it('a new number pops in larger and drops back to its size within 160 ms', () => {
+      expect(labels([damage(1)], 0)[0].style.transform).toBe('translate(-50%, -50%) scale(1.600)');
+      expect(labels([damage(1)], 80)[0].style.transform).toBe('translate(-50%, -50%) scale(1.300)');
+      expect(labels([damage(1)], 160)[0].style.transform).toBe('translate(-50%, -50%)');
+    });
+    it('a pooled label taken by a crit, then by a plain hit, looks plain again', () => {
+      setup(); const h = host(), renderer = createCombatFeedbackRenderer(h), anchors = new Map([['a', { x: 120, y: 300, radius: 20 }]]);
+      renderer.push([crit(1)], 0); renderer.render(0, anchors);
+      renderer.reset(); renderer.push([damage(2)], 0); renderer.render(0, anchors); const reused = snapshot(h)[0].children[0];
+      expect(created).toBe(1);
+      expect(reused).toEqual(labels([damage(2)])[0]);
+      renderer.dispose();
+    });
   });
 });

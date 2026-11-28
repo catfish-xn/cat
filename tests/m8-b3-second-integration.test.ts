@@ -1,3 +1,4 @@
+import { DARIUS_SPIN_TICKS } from '../src/simulation/cast-windup';
 import { describe, expect, it } from 'vitest';
 import { stepCombat, type CombatState, type CombatUnit, type CombatEvent, type LedgerCombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
@@ -107,8 +108,10 @@ describe('B3 second batch on the actual S13 step pipeline', () => {
   it('Darius recast10→20 replaces next30 with40 as explicitly confirmed; originalfour integer total stays conserved', () => {
     const p = hero('darius', { hp: 900 });
     const first = stepCombat({ ...battle([p, dummy('e', 'enemy', 2)]), tick: 9 });
-    const recast = stepCombat({ ...first.state, tick: 19, units: first.state.units.map(u => u.id === 'p' ? { ...u, mana: 100 } : u) });
-    expect(recast.state.units.find(u => u.id === 'p')!.tasks!.filter(t => t.kind === 'bleed').map(t => [t.executeAtTick, t.amount])).toEqual([[40, 50], [60, 50], [80, 50], [100, 50]]);
+    // Landing batch (11-20): each spin, and the bleed it starts, lands DARIUS_SPIN_TICKS after its cast; the recast's bleed still
+    // replaces the first one, DARIUS_SPIN_TICKS later than before.
+    const recast = advance({ ...first.state, tick: 19, units: first.state.units.map(u => u.id === 'p' ? { ...u, mana: 100 } : u) }, 1 + DARIUS_SPIN_TICKS);
+    expect(recast.state.units.find(u => u.id === 'p')!.tasks!.filter(t => t.kind === 'bleed').map(t => [t.executeAtTick, t.amount])).toEqual([[40, 50], [60, 50], [80, 50], [100, 50]].map(([t, a]) => [t + DARIUS_SPIN_TICKS, a]));
   });
   it('R4 actual shield expiry emits70 area damage linked to original cast7 exactly once', () => {
     const first = stepCombat({ ...battle([hero('irelia'), dummy('e','enemy',2)]), nextActionSeq: 7 });
@@ -123,17 +126,20 @@ describe('B3 second batch on the actual S13 step pipeline', () => {
 
   });
   it('R6 lethal240 against100HP removes all four attached tasks while combat continues', () => {
-    const killed = stepCombat(battle([hero('darius'), dummy('e','enemy',2,{hp:100}),dummy('spare','enemy',6)]));
+    const killed = advance(battle([hero('darius'), dummy('e','enemy',2,{hp:100}),dummy('spare','enemy',6)]), 1 + DARIUS_SPIN_TICKS); // the spin lands DARIUS_SPIN_TICKS after the cast
     expect(killed.state.status).toBe('running');
     expect(killed.state.units.find(u => u.id === 'e')!.alive).toBe(false);
     expect(killed.state.units.flatMap(u => u.tasks ?? []).filter(t => t.attachedDot && t.targetId === 'e')).toEqual([]);
   });
   it('R6 source death keeps four legitimate attached bleeds on living target and consumes them without RNG', () => {
-    const first = stepCombat(battle([hero('darius',{ hp:100 }), dummy('e','enemy',2,{ cooldownTicks:0,attackDamage:200 }),dummy('spare','player',6)]));
+    // Landing batch (11-20, scene change): the spin now lands DARIUS_SPIN_TICKS after the cast, and a death before that cancels
+    // it, so e's killing blow waits until just after the landing (cooldownTicks DARIUS_SPIN_TICKS + 1, was 0); every bleed
+    // tick moves DARIUS_SPIN_TICKS later.
+    const first = advance(battle([hero('darius',{ hp:100 }), dummy('e','enemy',2,{ cooldownTicks:DARIUS_SPIN_TICKS + 1,attackDamage:200 }),dummy('spare','player',6)]), 2 + DARIUS_SPIN_TICKS);
     expect(first.state.units.find(u => u.id === 'p')!.alive).toBe(false);
-    expect(first.state.units.find(u => u.id === 'p')!.tasks!.filter(t => t.attachedDot).map(t => t.executeAtTick)).toEqual([21,41,61,81]);
+    expect(first.state.units.find(u => u.id === 'p')!.tasks!.filter(t => t.attachedDot).map(t => t.executeAtTick)).toEqual([21,41,61,81].map(t => t + DARIUS_SPIN_TICKS));
     const after = advance({ ...first.state, units: first.state.units.map(u => u.id === 'e' ? { ...u, cooldownTicks: 1000, attackDamage: 0 } : u) }, 80);
-    expect(packets(after.events).filter(e => e.source.ownerId === 'p' && e.tick > 1).map(e => [e.tick,e.raw])).toEqual([[21,50],[41,50],[61,50],[81,50]]);
+    expect(packets(after.events).filter(e => e.source.ownerId === 'p' && e.tick > 1 + DARIUS_SPIN_TICKS).map(e => [e.tick,e.raw])).toEqual([[21,50],[41,50],[61,50],[81,50]].map(([t, r]) => [t + DARIUS_SPIN_TICKS, r]));
     expect(after.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
     expect(after.state.rngDraws).toBe(first.state.rngDraws);
   });

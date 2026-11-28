@@ -62,7 +62,7 @@ export function advanceG23Economy(p:G23MatchProgress,f:G23BattleFacts):{progress
  validateG23BattleFacts(f);
  if(p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.battleId===f.battleId))return {progress:p,gold:0};
  if(p.economyReceipts.some(r=>r.kind==='battle'&&r.facts.round>=f.round))throw new RangeError('Unordered G23 settlement');
- const conquest=f.conquerorTier?planG23Conquest(p.conquest,f.battleId,f.conquerorTier,f.conquestTakedowns):p.conquest;
+ const conquest=f.conquerorTier&&f.roundKind==='pvp'?planG23Conquest(p.conquest,f.battleId,f.conquerorTier,f.conquestTakedowns):p.conquest;
  let gold=f.highRollerGold+(f.itemGoldPayouts?.reduce((sum,p)=>sum+p.amount,0)??0);const rewards=[...p.rewards],ids:string[]=[];
  for(const chest of G23_CONQUEROR_CHESTS.slice(p.conquest.chestsOpened,conquest.chestsOpened)){
   const id=`g23:conqueror:${chest.tier}`,{Gold=0,...reward}=g23ConquerorReward(chest);

@@ -3,7 +3,7 @@ import { g23ConquerorBonusBps } from './g2-3-progress';
 import type { CombatStrategyInputs } from './combat-input';
 import type { Unit } from './unit-types';
 import type { Effect, ItemDefinition, TraitSnapshot, TraitTier } from './strategy-types';
-import { readRoundEnemyProjection, type EnemyItem } from './round-enemies';
+import { roundEnemyItems, type EnemyItem } from './round-enemies';
 import { G22_CONVENTIONS } from './content/g2-2-traits';
 import { priorPvpWins } from './g2-2-pvp-history';
 import { SCRAP_CHAMPION_ROLES, SCRAP_LUCKY_POLICY, SCRAP_ROLE_ITEMS } from './content/scrap-lucky';
@@ -12,7 +12,7 @@ export interface G22Equipment { id:string; unitId:string; definitionId:string }
 export function g22Equipment(state:CombatStrategyInputs,enemyItems?:readonly EnemyItem[]):G22Equipment[] {
   return [...state.items.flatMap(i=>i.location.kind==='unit'?[{id:i.id,unitId:i.location.unitId,definitionId:i.definitionId}]:[]),
     ...state.temporaryEquipment.map(i=>({id:i.temporaryId,unitId:i.holderId,definitionId:i.definitionId})),
-    ...(enemyItems??(state.preparation.units.some(u=>u.team==='enemy')?readRoundEnemyProjection(state.round).items:[])).map(i=>({id:`enemy:${state.round}:${i.unitId}:${i.slot}`,unitId:i.unitId,definitionId:i.definitionId}))];
+    ...(enemyItems??roundEnemyItems(state)).map(i=>({id:`enemy:${state.round}:${i.unitId}:${i.slot}`,unitId:i.unitId,definitionId:i.definitionId}))];
 }
 const roleItems=new Map<Readonly<Record<string,ItemDefinition>>,ReadonlyMap<string,readonly string[]>>();
 /** Recommended items by unit definition, resolved from client apiNames to this catalog's ids (client order). */

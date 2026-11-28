@@ -31,12 +31,14 @@ function validateSalvage(before,after,command,events){
 module.exports={RECIPES,academicConsumed,salvageGifts,validateSalvage};
 function pandoraChanges(state,round){
  const a=state.augments.find(a=>a.definitionId==='pandoras-items-ii'&&a.acquiredRound<round);if(!a)return [];
- const components=['belt','bow','cloak','gloves','rod','sword','tear','vest'],completed=Object.keys(RECIPES).sort();
- return state.items.filter(i=>i.location.kind==='inventory'&&(components.includes(i.definitionId)||RECIPES[i.definitionId]))
+ const {pools}=require('../../augment-reward-pools-oracle-data.cjs'),completed=Object.keys(RECIPES).sort();
+ const classes=[['belt','bow','cloak','gloves','rod','sword','tear','vest'],['frying-pan','spatula'],completed,pools.emblem,pools.artifact,pools.support];
+ const poolOf=id=>classes.find(pool=>pool.includes(id));
+ return state.items.filter(i=>i.location.kind==='inventory'&&poolOf(i.definitionId))
   .sort((a,b)=>a.id<b.id?-1:1).map(i=>{
    const receiptId=JSON.stringify([source,a.choiceId,'pandora',round,i.id]);let h=2166136261n;
    for(const c of receiptId)h=((h^BigInt(c.charCodeAt(0)))*16777619n)&0xffffffffn;
-   const word=(((BigInt(state.seed)^h)*1664525n+1013904223n)&0xffffffffn),pool=components.includes(i.definitionId)?components:completed;
+   const word=(((BigInt(state.seed)^h)*1664525n+1013904223n)&0xffffffffn),pool=poolOf(i.definitionId);
    return {kind:'g23-item-converted',itemId:i.id,from:i.definitionId,to:pool[Number(word*BigInt(pool.length)/4294967296n)],receiptId};
   });
 }

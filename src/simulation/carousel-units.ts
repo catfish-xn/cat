@@ -1,3 +1,5 @@
+import { reconcileMatchAnomaly } from './anomaly-ownership';
+import { usableBenchSlots } from './bench-capacity';
 import type { MatchState, MatchEvent } from './match-types';
 import type { PendingCarouselUnit } from './carousel-types';
 import type { GameState } from './game';
@@ -41,13 +43,14 @@ export function validateCarouselMetadata(state: MatchState): void {
 /** No merge, ID allocation or RNG: a held card owns stock but has no location. */
 export function placeCarouselUnit(state: MatchState, unit: PendingCarouselUnit): GameState | null {
   const preparation = state.preparation;
+  if (preparation.overflowUnitIds?.length) return null;
   let location: import('./units').UnitLocation | undefined;
-  for (let slot = 0; slot < preparation.benchSize; slot++) {
+  for (let slot = 0; slot < usableBenchSlots(preparation); slot++) {
     if (!preparation.units.some(u => u.location.kind === 'bench' && u.location.slot === slot)) {
       location = {kind:'bench',slot}; break;
     }
   }
-  if (!location && preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length < deploymentCapFor(state.level, readG23Progress(state))) {
+  if (!location && preparation.usableBenchSlots === undefined && preparation.units.filter(u => u.team === 'player' && u.location.kind === 'board').length < deploymentCapFor(state.level, readG23Progress(state))) {
     const zone = preparation.board.deploymentZones.player;
     for (let row = zone.firstRow; row <= zone.lastRow && !location; row++) {
       for (let col = 0; col < preparation.board.columns; col++) {
@@ -98,5 +101,5 @@ export function resolveCarouselPreparation(state: MatchState): {state:MatchState
     resourceProvenance:appendResourceProvenance(next.resourceProvenance,next.roundDefinitionId,
       {kind:'carousel-preparation-settled',receiptIds,claimedUnitIds,upgrades})};
   events.push({type:'carouselPreparationSettled',receiptIds,claimedUnitIds});
-  return {state:next,events};
+  return {state:reconcileMatchAnomaly(next,events),events};
 }

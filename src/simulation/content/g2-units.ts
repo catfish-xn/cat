@@ -143,7 +143,7 @@ export const G2_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = fre
     "cost": 2,
     "baseStats": {
       "health": 700,
-      "attack": 65,
+      "attack": 63,
       "armor": 45,
       "magicResist": 45
     },
@@ -253,7 +253,7 @@ export const G2_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = fre
     "cost": 1,
     "baseStats": {
       "health": 650,
-      "attack": 50,
+      "attack": 46,
       "armor": 40,
       "magicResist": 40
     },
@@ -298,7 +298,7 @@ export const G2_UNIT_DEFINITIONS: Readonly<Record<string, UnitDefinition>> = fre
     "cost": 2,
     "baseStats": {
       "health": 600,
-      "attack": 45,
+      "attack": 48,
       "armor": 20,
       "magicResist": 20
     },

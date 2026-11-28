@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createHash } from 'node:crypto';
-import { BOARD_PICKS, boardRoot, boardPlanJson, placedPropReferences, resolveBoardReference } from './boards-plan.mjs';
+import { BOARD_PICKS, boardRoot, boardPlanJson, placedPropReferences, resolveBoardReference, mergeBoardPick } from './boards-plan.mjs';
 import { readRman } from './rman.mjs';
 import { offlineArchiveReader } from './global-vfx.mjs';
 import { safeInputPath, safeOutputPath, writeOutputFileAtomic } from './safe-path.mjs';
@@ -20,23 +20,34 @@ import { convertParticleMesh } from './particle-mesh.mjs';
 import { convertParticles } from './particles.mjs';
 import { contracts } from './runtime.mjs';
 import { createPrecache } from './merge-manifests.mjs';
-import { boardGroundSpan, alignBoardGroundXZ } from './boards-alignment.mjs';
-
 const hash = b => createHash('sha256').update(b).digest('hex');
 const idFor = p => hash(Buffer.from(p)).slice(0, 20);
+/** Baked lightmap decode (render: diffuse × pow(lightmap.rgb, gamma) × scale, in sRGB space) and the tint of the arena's
+ * other meshes (trees, outer rocks, props; not the skybox). Our own values, not original game data: the per-channel fit
+ * to TFT footage of the default arena (2.52/2.32/2.20 over 16 regions of two videos) pushed warmer and brighter on the
+ * user's call (2026-11-14); the tint takes the blue-green cast off the meshes that have no lightmap.
+ * See BoardLightmap in src/rendering3d/contracts.ts. */
+export const BOARD_LIGHTMAP_DECODE = Object.freeze({ gamma: 0.5, scale: Object.freeze([2.9, 2.6, 2.15]), tint: Object.freeze([1.14, 1.03, 0.82]) });
 const json = boardPlanJson;
-/** Legacy locator estimate, retained for boards without measured ground evidence.
- * The first-cell interpretation is an assumption, not native grid metadata.
- * GLBs already reflect X. Callers apply this scale and offset to their group. */
-export function boardAlignment(first, center, target = {radius:34,origin:{x:35,y:50}}) {
+/** Place every board, including board-default, from BoardLocator (first cell) and
+ * BoardCenterLocator (mean of the 56 cells: 3.25 columns and 3.5 rows from the first).
+ * X and Z source steps scale independently. GLBs already reflect X.
+ * Optional alignmentScale uniformly scales sx/sz so walkable width matches a target cell count. */
+export function boardAlignment(first, center, target = {radius:34,origin:{x:35,y:50}}, options = {}) {
   const sourceStepX=(center[0]-first[0])/3.25,sourceStepZ=(center[2]-first[2])/3.5;
   if(!(sourceStepX>0&&sourceStepZ>0))throw new Error('invalid-board-locators');
-  const sx=Math.sqrt(3)*target.radius/sourceStepX,sz=1.5*target.radius/sourceStepZ;
+  const factor=options.alignmentScale??1;
+  if(!(factor>0&&Number.isFinite(factor)))throw new Error('invalid-board-alignment-scale');
+  const sx=Math.sqrt(3)*target.radius/sourceStepX*factor,sz=1.5*target.radius/sourceStepZ*factor;
   const targetCenter=[target.origin.x+Math.sqrt(3)*target.radius*3.25,0,target.origin.y+1.5*target.radius*3.5];
-  return {status:'locator-aligned',reflectX:true,scale:[sx,sx,-sz],offset:[targetCenter[0]+sx*center[0],-sx*first[1],targetCenter[2]+sz*center[2]],
+  const alignment={status:'locator-aligned',reflectX:true,scale:[sx,sx,-sz],offset:[targetCenter[0]+sx*center[0],-sx*first[1],targetCenter[2]+sz*center[2]],
     sourceFirstCell:first,sourceCenter:center,sourceSteps:[sourceStepX,sourceStepZ],target,
     gridMapping:'native (col,row) -> runtime (6-col,7-row); odd-row offset',
-    policy:'Place root at offset with scale; source X reflection is baked in GLBs. Retarget using radius and origin from BoardFrame.'};
+    policy:'Place root at offset with scale; source X reflection is baked in GLBs. Per-board alignmentScale adjusts uniform cell size without ground-span refit. Retarget using BoardFrame.'};
+  if(options.alignmentScale!=null)alignment.alignmentScale=factor;
+  else alignment.alignmentScale='default';
+  if(options.alignmentEvidence)alignment.alignmentEvidence=options.alignmentEvidence;
+  return alignment;
 }
 export function nestedBoardObjects(entries, type) {
   const result = [], stack = [...entries];
@@ -48,7 +59,7 @@ export function nestedBoardObjects(entries, type) {
   return result;
 }
 export function boardReferences(manifest, effects = {}) {
-  const refs = new Set([manifest.boards?.[manifest.boardKey]?.path, ...Object.values(manifest.models).map(v => v.path),
+  const refs = new Set([manifest.boards?.[manifest.boardKey]?.path, manifest.boards?.[manifest.boardKey]?.lightmap?.path, ...Object.values(manifest.models).map(v => v.path),
     ...Object.values(manifest.effects).map(v => v.path)].filter(Boolean));
   for (const d of Object.values(effects)) for (const e of d.emitters ?? [])
     for (const p of [e.texture, e.mesh, e.distortion?.normalMap].filter(Boolean)) refs.add(p);
@@ -103,7 +114,8 @@ export async function buildBoards({keys}={}) {
   }
   const { parseParticleDocument } = await contracts();
   const results = [];
-  for (const pick of plan.picks) {
+  for (const rawPick of plan.picks) {
+    const pick = mergeBoardPick(rawPick);
     if(keys && !keys.includes(pick.key))continue;
     console.log('boards: build', pick.key);
     const root = join(output, boardRoot(pick.key)), payloads = new Map();
@@ -126,13 +138,15 @@ export async function buildBoards({keys}={}) {
     // Arena map coordinates use a local board frame. Preserve them here;
     // manifest alignment is derived below from the shipped board locator.
     const origin = [0, 0, 0];
+    const lightmapped = new Set();
     for (const mesh of geometry.meshes) for (const range of mesh.ranges) {
       const id = `${pick.key}-static-${mesh.id}-${mesh.ranges.indexOf(range)}`;
       try {
         const mat = entries.find(e => binIs(e, 'StaticMaterialDef') && binField(e, 'name')?.toLowerCase() === range.material.toLowerCase());
         if (!mat) throw new Error('missing-board-material');
         const diffuse = boardDiffuse(mat), png = encodePng(decodeTexture(await load(diffuse.path)));
-        const converted = boardRangeGlb(mesh, range, png, { origin });
+        const converted = boardRangeGlb(mesh, range, png, { origin, lightmap: true });
+        if (converted.lightmap) lightmapped.add(converted.lightmap.path);
         const path = `models/${id}.glb`; await write(path, converted.glb); manifest.models[id] = { path };
         scene.models.push({ id, visibility: mesh.visibility, renderFlags: mesh.renderFlags, bounds: converted.bounds, baked: mesh.baked }); report.staticModels++;
       } catch (e) { report.limitations.push({ stage: 'static-material', id, material: range.material, reason: e.message }); }
@@ -141,17 +155,13 @@ export async function buildBoards({keys}={}) {
     const locator = locators.find(v => binField(v, 'name') === 'BoardLocator');
     const centerLocator = locators.find(v => binField(v, 'name') === 'BoardCenterLocator');
     const matrix = locator && binField(locator, 'transform');
-    // Locator-only placement is a legacy estimate, not recovered cell centres.
-    // For the base arena, fit both full envelopes to actual ground/wall sections.
+    // Default and extra boards: place from BoardLocator (first cell) and BoardCenterLocator (56-cell average).
     scene.locators = locators;
     if(!matrix || !centerLocator)throw new Error('missing-board-grid-locators');
-    scene.alignment = boardAlignment(matrix.slice(12,15),binField(centerLocator,'transform').slice(12,15));
-    if (pick.key === 'board-default') {
-      const center = binField(centerLocator, 'transform').slice(12,15);
-      scene.alignment = alignBoardGroundXZ(scene.alignment, {
-        x: boardGroundSpan(geometry, center, 'x'), z: boardGroundSpan(geometry, center),
-      }, scene.grid.columns, scene.grid.rows);
-    }
+    const first=matrix.slice(12,15),centerPt=binField(centerLocator,'transform').slice(12,15);
+    const alignOpts={};
+    if(pick.alignmentScale!=null){alignOpts.alignmentScale=pick.alignmentScale;alignOpts.alignmentEvidence=pick.alignmentEvidence;}
+    scene.alignment=boardAlignment(first,centerPt,undefined,alignOpts);
     report.alignment = scene.alignment;
 
     const propObjects = nestedBoardObjects(entries, 'MapAnimatedProp');
@@ -217,7 +227,11 @@ export async function buildBoards({keys}={}) {
       catch(e){report.limitations.push({stage:'baked-lightmap',source:p,reason:e.message});}
     }
     scene.shaderPolicy='Diffuse preview only; original material records, source shader paths and behavior cues retained in local source archive.';
-    manifest.boards[pick.key]={path:'scene.json',grid:scene.grid,alignment:scene.alignment};
+    // One shared atlas: the arena's TEXCOORD_1 (boardRangeGlb) samples it. Decoding fitted against original footage.
+    const atlas=lightmapped.size===1?scene.lighting.baked.find(b=>canonicalAsset(b.source)===canonicalAsset([...lightmapped][0])):null;
+    if(lightmapped.size>1)report.limitations.push({stage:'baked-lightmap',reason:'several-lightmap-atlases'});
+    manifest.boards[pick.key]={path:'scene.json',grid:scene.grid,alignment:scene.alignment,
+      ...(atlas?{lightmap:{path:atlas.path,...BOARD_LIGHTMAP_DECODE}}:{})};
     await write('scene.json',json(scene));
     const effects=Object.fromEntries(report.systems.filter(s=>s.document).map(s=>[s.id,s.document]));
     const refs=[...new Set([...boardReferences(manifest,effects),...payloads.keys()])];

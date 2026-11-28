@@ -1,3 +1,4 @@
+import { validateAnomalyOfferHistory } from './anomaly-offer-history-check';
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { augmentCandidates, augmentNodeOf, drawAugmentCard, externallyBlockableAugments, isTraitTailoredNode, recordedOfferFilter, resolveAugmentTier } from '../augment-offers';
 import { augmentExtraRerolls, canRerollAugmentSlot } from '../augment-pool-batch5-s1a';
@@ -58,9 +59,5 @@ export function validateAugmentOfferHistory(state: MatchState): void {
   }
   check(index === state.augmentOffers.length && owned.length === state.augments.length);
   check(JSON.stringify(state.removedAugmentIds) === JSON.stringify(removed));
-  // No other consumer of this stream exists until the later anomaly target/offer.
-  // Selling the bound target removes anomalyBinding but retains its schedule receipt and consumed words.
-  const anomalyDrawn = state.scheduleReceipts.some(receipt => receipt.kind === 'anomaly')
-    || state.pendingChoice?.kind === 'anomaly' && state.pendingChoice.generation > 0;
-  if (!anomalyDrawn) check(state.choiceRngState === rng);
+  validateAnomalyOfferHistory(state, rng);
 }

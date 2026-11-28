@@ -9,6 +9,7 @@ import { TwoSidedBattleResolver } from '../../src/server/room/two-sided-resolver
 import type { RoundSettlement, SeatCommand, SeatState } from '../../src/server/room/types';
 import type { MatchEvent, MatchState } from '../../src/simulation/match-types';
 import { runUntil, SEATS, TIMINGS } from './helpers';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { validateRewards } from '../fixtures/m5/augment-rewards-oracle.cjs';
 import { CATALOG, COST, ROUNDS, xp, entryXp, benchXp } from '../fixtures/m5/oracle.g2.cjs';
 
@@ -33,7 +34,8 @@ describe.each([
     { ...TIMINGS, roomId: 'test-room', seed: 8, clock, combatStreaming, resolver: new TwoSidedBattleResolver() });
   const holder = () => room.state.seats.find(s => s.seatId === 's7')!;
   const published: MatchEvent[] = [];
-  const finalRound = holderDies ? 25 : 24;
+  // New PvE damage moves both simultaneous-elimination vectors to 4-6.
+  const finalRound = 23;
   let lastRevision = -1;
   let payoutPlan: RoundSettlement | undefined;
   let disconnected = false;
@@ -69,8 +71,11 @@ describe.each([
         for (const seat of room.state.seats) {
           if (!seat.alive) continue;
           // In the dying-holder vector, one opening win keeps s0 in the same final elimination batch.
-          const sell = ['s2', ...(!holderDies || round >= 2 ? ['s0'] : []), ...(round >= 2 ? ['s1'] : []), ...(holderDies && round >= 3 ? ['s7'] : [])].includes(seat.seatId);
-          if (sell) for (const unit of seat.match.preparation.units.filter(u => u.team === 'player'))
+          // The surviving-holder route lets s2 win 1-2 so it joins s0/s1's 4-6 elimination batch.
+          const sell = [...(holderDies || round >= 2 ? ['s2'] : []), ...(!holderDies || round >= 2 ? ['s0'] : []), ...(round >= 2 ? ['s1'] : []), ...(holderDies && round >= 3 ? ['s7'] : [])].includes(seat.seatId);
+          // pve-loot-carryover (8f794062, merged c684c3ec): a conceding seat now receives its carried PvE loot,
+          // including Armory Key anvils, which cannot be sold (wrong-phase) and never fight; v25 forfeited them.
+          if (sell) for (const unit of seat.match.preparation.units.filter(u => u.team === 'player' && !isAnvil(u.definitionId)))
             command(seat, { type: 'sell', unitId: unit.id });
         }
         if (round === 4 && !holder().match.augments.some(a => a.definitionId === 'survivor')) {
@@ -89,7 +94,7 @@ describe.each([
         expect(room.setConnected('s7', false)).toBe(true);
         disconnected = true;
       }
-      if (!combatStreaming && round === 24 && !holderDies && room.state.round === round && room.state.phase === 'battle' && !payoutPlan) {
+      if (!combatStreaming && round === finalRound && !holderDies && room.state.round === round && room.state.phase === 'battle' && !payoutPlan) {
         const planned = room.planSettlement(room.state.battles);
         expect(planned.ok).toBe(true);
         if (!planned.ok) throw new Error(planned.detail);
@@ -101,16 +106,16 @@ describe.each([
       expect(clock.runNext()).toBe(true);
     }
     expect(room.state.fault).toBeNull();
-    expect(receipts(holder().match)).toHaveLength(!holderDies && round === 24 ? 1 : 0);
-    expect(published).toHaveLength(!holderDies && round === 24 ? 1 : 0);
+    expect(receipts(holder().match)).toHaveLength(!holderDies && round === finalRound ? 1 : 0);
+    expect(published).toHaveLength(!holderDies && round === finalRound ? 1 : 0);
   });
 
   it('publishes a single numbered grant after simultaneous elimination, or none for a dying holder', () => {
     const seat = holder();
     if (holderDies) {
       expect(seat.alive).toBe(false);
-      expect(seat.eliminatedRound).toBe(25);
-      expect(room.state.seats.filter(s => s.eliminatedRound === 25).map(s => s.seatId)).toEqual(['s0', 's1', 's2', 's7']);
+      expect(seat.eliminatedRound).toBe(finalRound);
+      expect(room.state.seats.filter(s => s.eliminatedRound === finalRound).map(s => s.seatId)).toEqual(['s0', 's1', 's2', 's7']);
       expect(receipts(seat.match)).toEqual([]);
       expect(grants(seat.serverEvents?.events ?? [])).toEqual([]);
       return;
@@ -119,7 +124,7 @@ describe.each([
     expect(payoutPlan!.eliminated.map(s => s.seatId).sort()).toEqual(['s0', 's1', 's2']);
     const before = payoutPlan!.seats.find(s => s.seatId === seat.seatId)!;
     const receipt = { receiptId: JSON.stringify([SOURCE, 'round:2-1:augment']), source: SOURCE,
-      round: 24, roundId: '4-7', kind: 'gold', amount: 60 };
+      round: finalRound, roundId: '4-6', kind: 'gold', amount: 60 };
     expect(seat.alive).toBe(true);
     expect(seat.match.gold).toBe(before.match.gold + 60);
     expect(receipts(seat.match)).toEqual([receipt]);
@@ -175,12 +180,13 @@ describe.each([
     }
   });
 
-  it('repeated replay projection and the next round do not grant again', () => {
+  // Retain the original complete round span (through 26 / 25), with one round per test budget.
+  for (let round = finalRound + 1; round <= (holderDies ? 26 : 25); round++) it(`repeated replay projection and round ${round} do not grant again`, () => {
     const before = holder().match;
     const replay = toCombatReplayFor(room.state, holder().seatId);
     expect(toCombatReplayFor(room.state, holder().seatId)).toEqual(replay);
     expect(holder().match).toBe(before);
-    runUntil(room, clock, s => s.round === finalRound + 1 && s.phase === 'settlement');
+    runUntil(room, clock, s => s.round === round && s.phase === 'settlement');
     expect(room.state.fault).toBeNull();
     expect(receipts(holder().match)).toEqual(receipts(before));
     expect(published).toHaveLength(holderDies ? 0 : 1);

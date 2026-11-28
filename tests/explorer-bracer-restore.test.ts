@@ -45,7 +45,8 @@ beforeAll(() => {
 describe('Seeker\'s Armguard save/restore', () => {
   it.each([false, true])('rejects coordinated count/AP/sample edits (sample edited = %s)', sampled => {
     // v22 AD star scaling (1/1.5/2.25) and mana rules move the public fight's post-two-kill cast from tick 410 to 441.
-    expect(stacked.combat!.tick).toBe(441);
+    // Ranged attack wind-up (#791, pure-result re-pin): that cast now comes at tick 431.
+    expect(stacked.combat!.tick).toBe(431);
     const control = restoreMatch(JSON.stringify(stacked));
     expect(finish(control)).toEqual(finish(stacked));
     const bad = structuredClone(stacked), u = holder(bad);

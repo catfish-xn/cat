@@ -62,7 +62,12 @@ export const ANOMALY_DEFINITIONS: Readonly<Record<string,ChoiceDefinition>> = fr
 /** v17: authoritative live-bank sampling is wired for online combat.
  * Solo and multiplayer share the complete pool; target eligibility still applies. */
 export const ANOMALY_OFFER_POLICY = freezeContent({
-  revision: 'anomaly-offers-v17-online-avarice-enabled',
+  revision: 'anomaly-offers-v26-initial-twelve',
+  initialUniqueOffers: 12,
+  firstFreeOfferCounts: true,
+  laterRepeatPolicy: 'exclude-immediate-previous',
+  timeoutTargetPolicy: 'no-catalog-summons-lexicographic-id',
+  preparationPolicy: 'single-round-deadline-board-editable',
   multiplayerExcluded: [] as readonly string[],
   resumeWhen: 'enabled-server-authoritative-live-bank-wired',
 } as const);

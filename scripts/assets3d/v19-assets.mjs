@@ -159,7 +159,7 @@ export function appendDance(before, skn, skl, animation, name) {
 export async function prepareV19({ out = 'assets3d-local/v19-additions', source = 'assets3d-local/trial/local',
   sixSource = 'assets3d-local/six-cost/source', base = 'assets3d-local/cast-anim',
   rebuilt = 'assets3d-local/six-cost/rebuilt-v2/converted', scales = 'assets3d-local/model-scale/root',
-  board = 'assets3d-local/row-align/asset-root-v2', sources = DEFAULT_SOURCES,
+  board = 'assets3d-local/board-locator/asset-root', sources = DEFAULT_SOURCES,
   portraitSource = 'requested' } = {}, { unitMap } = {}) {
   const config = await readSources(sources);
   for (const id of Object.keys(PORTRAITS)) portraitPath(config, id, portraitSource);

@@ -52,6 +52,8 @@ export class MatchApplication {
   private ignoreNextDelta = true;
   private operation = 0;
   private archiveRequest = 0;
+  /** archiveRequest value whose loadArchives has finished; older loads must not count. */
+  private archiveSettledRequest = 0;
   private savedArchiveRun: string | null = null;
   constructor(private session: MatchSession, private hooks: ApplicationHooks) {
     MatchApplication.instances++;
@@ -112,6 +114,8 @@ export class MatchApplication {
       // Handle failures in the same continuation as the identity check: a late
       // rejection must not report failure against a newly activated session.
       if (current()) this.failed(error);
+    } finally {
+      if (request === this.archiveRequest) this.archiveSettledRequest = request;
     }
   }
   private refreshRecords() { this.replayPanel.setRecords([...this.history.completedRecords, ...this.archives.filter(record => record.runId !== this.runId)]); }
@@ -201,9 +205,12 @@ export class MatchApplication {
       this.install(candidate, token, prepared, preparedHistory);
       if (token) {
         this.status = { kind: 'saved', at: new Date().toISOString(), token };
-        // Activation may import a fourth finished run and evict the oldest archive.
-        await this.loadArchives();
-      }
+        // Admission replays every other completed run. The new match is already
+        // installed; blocking this promise keeps the seed buttons disabled for
+        // that replay (v26 sniper preview crossed the 30s control wait). The
+        // game-over path refreshes the same catalog in the background.
+        void this.loadArchives();
+      } else this.archiveSettledRequest = this.archiveRequest;
     } catch (error) {
       if (this.disposed || id !== this.operation) return;
       this.mode = previous; this.failed(error);
@@ -322,6 +329,7 @@ export class MatchApplication {
     this.syncControls();
   }
   debug() { return { mode: this.mode, runId: this.runId, token: this.coordinator?.token ?? null, status: this.status, quarantinedArchives: this.quarantinedArchives.length,
+    archivesSettled: this.archiveSettledRequest === this.archiveRequest,
     completedCount: this.history.completedRecords.length, lifecycle: { applications: MatchApplication.instances, sessions: MatchSession.liveCount, observers: this.session.observerCount }, paused: this.session.paused,
     replay: this.playbackSession ? { tick: this.playbackSession.read().tick, endTick: this.playbackSession.read().endTick, fx: { ...this.replayView?.stats } } : null }; }
   dispose() {

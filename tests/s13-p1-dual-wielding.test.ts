@@ -55,7 +55,7 @@ it('public anomaly selection grants two role items once, keeps equipment, restor
  const swapped=structuredClone(s),other=swapped.preparation.units.find(u=>u.team==='player'&&u.id!==target.id&&DUAL_WIELDING_ROLES[u.definitionId]===DUAL_WIELDING_ROLES[target.definitionId]);
  expect(other).toBeDefined();Object.assign(swapped.scheduleReceipts.find(r=>r.eventId===c.choiceId)!,{unitId:other!.id});expect(()=>restoreMatch(swapped)).toThrow();
  const forged=structuredClone(s),r=forged.seatMechanics!.receipts.find(r=>r.source==='s13-anomaly-acquisition')!;Object.assign(r,{definitionId:'deathblade'});expect(()=>restoreMatch(forged)).toThrow();
- s=resolveM5Choices(s);s=accepted(sellUnit(s,target.id));expect(s.anomalyBinding).toBe(null);expect(restoreMatch(serializeMatch(s))).toEqual(s);
+ s=resolveM5Choices(s);const retained=s.anomalySelection;s=accepted(sellUnit(s,target.id));expect(s.anomalyBinding).toBe(null);expect(s.anomalySelection).toEqual(retained);expect(restoreMatch(serializeMatch(s))).toEqual(s);
 // Temporary, user-approved (04:22, #265): isolated full workload measured 12.66 s;
 // 30 s rounds about twice that up to allow worker contention. Assertions and
 // public command generation/replay/strict restore workloads remain unchanged.

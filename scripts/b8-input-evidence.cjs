@@ -14,7 +14,7 @@ const path = require('node:path');
 const { isDeepStrictEqual } = require('node:util');
 const { hash } = require('./m4-evidence.cjs');
 
-const SEED = 27, OPENING_COMPONENTS = ['bow', 'rod'];
+const SEED = 1914, OPENING_COMPONENTS = ['bow', 'rod'];
 const INPUT_TYPES = new Set(['pointerdown', 'pointerup', 'pointerout', 'mousedown', 'mouseup', 'mouseout', 'mouseleave', 'click']);
 const POINTER_TYPES = new Set(['pointerdown', 'pointerup', 'pointerout', 'click']);
 const positive = value => Number.isSafeInteger(value) && value > 0;
@@ -107,8 +107,8 @@ function validateB8RagebladeEvidence(manifest, dir, { api, readCombatStats }) {
   };
 
   // Trusted start and the gate's opening policy: Start in preparation, Continue in settlement,
-  // T13 seed 27 earns bow/rod randomly; choose the first non-placebo augment.
-  let state=require('./v17-rageblade-route.cjs').prefix(api,(before,after,pick)=>step(`b8-opening-${before.pendingChoice.kind}-${pick}`,before,after,[`choice:${pick}`]));
+  // T13 seed 1914 (v26; was 27) earns bow/rod randomly; choose the first non-placebo augment.
+  let state=require('./v26-neutrals-1424-rageblade-route.cjs').prefix(api,(before,after,pick)=>step(`b8-opening-${before.pendingChoice.kind}-${pick}`,before,after,[`choice:${pick}`]));
 
   // Identities from the replay: components from the real random drops, Lux from its loot receipt.
   const lootItem = id => state.m8.loot.receipts.find(receipt => receipt.payload.kind === 'item' && receipt.payload.definitionId === id)?.grantedItemIds[0];

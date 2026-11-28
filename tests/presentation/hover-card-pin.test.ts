@@ -7,7 +7,9 @@ let browser: Browser, context: BrowserContext | undefined, page: Page, bundle: s
 // Compilation and the shared-browser connection have independent default hook budgets.
 beforeAll(async () => {
   const result = await build({ stdin: { contents: `export { attachHoverCards, HoverCard } from './src/presentation/hover-card';`, resolveDir: process.cwd() },
-    bundle: true, write: false, format: 'iife', globalName: 'Hover' });
+    // bb1990d5: hover-card's text loader now reaches augment-hud.ts, which imports its stylesheet; the page supplies its
+    // own rules, so drop CSS exactly as hover-dom.test.ts does.
+    bundle: true, write: false, format: 'iife', globalName: 'Hover', loader: { '.css': 'empty' } });
   bundle = result.outputFiles[0].text;
 });
 beforeAll(async () => { browser = await testBrowser(); });

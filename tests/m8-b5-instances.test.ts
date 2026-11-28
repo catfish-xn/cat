@@ -18,7 +18,7 @@ beforeAll(() => { publicInventory(['last-whisper', 'last-whisper']); });
 beforeAll(() => { publicInventory(['quicksilver', 'quicksilver']); });
 beforeAll(() => { publicInventory(['sword', 'sword', 'sword', 'sword'], false, 6); });
 beforeAll(() => { publicInventory(['thiefs-gloves', 'sword']); });
-beforeAll(() => { publicInventory(['thiefs-gloves', 'thiefs-gloves'], false, 11); });
+beforeAll(() => { publicInventory(['thiefs-gloves', 'thiefs-gloves'], false, 24); });
 beforeAll(() => { publicInventory(['gloves', 'gloves']); });
 beforeAll(() => { publicInventory(['blue-buff', 'blue-buff']); });
 beforeAll(() => { publicInventory(['thiefs-gloves']); });
@@ -92,9 +92,10 @@ describe('B5 permanent equipment constraints and atomic commands', () => {
     // Split the five-component synthetic matrix into two real acquisitions,
     // preserving rejection of both an ordinary item and another TG parent.
     for (const incoming of ['sword', 'thiefs-gloves']) {
-      // The default double-TG route now takes Spoils of War II (requires battles).
-      // Seed 11 supplies both real recipes with a history-free Conqueror Crest.
-      const legal = publicInventory(['thiefs-gloves', incoming], false, incoming === 'thiefs-gloves' ? 11 : undefined);
+      // Seed 11's double TG now includes Cluttered Mind (B4XP), so a save without
+      // battles is rejected. Seed 24 is the next loot-legal seed whose augments do
+      // not require crown or augment history (seeds 0..180, after-sell gold checked).
+      const legal = publicInventory(['thiefs-gloves', incoming], false, incoming === 'thiefs-gloves' ? 24 : undefined);
       const control = accepted(equipItem(legal.state, legal.itemIds[0], 'unit-1', slot));
       expect(control.items.find(item => item.id === legal.itemIds[0])?.location).toEqual({ kind: 'unit', unitId: 'unit-1', slot: 0 });
       for (const targetSlot of [0, 1, 2]) rejected(control, s => equipItem(s, legal.itemIds[1], 'unit-1', targetSlot), 'exclusive-slots');

@@ -8,10 +8,13 @@ import { reachRound, accepted, resolveM5Choices } from './match-helpers';
 import { selectChoice, startMatchCombat, stepMatch } from '../src/simulation/match';
 import { restoreMatch, serializeMatch } from '../src/simulation/serialization';
 const RESEARCH_FILE='/home/aiapps/workspace/augments-research-2026-10-23/data/augments-14.24.json';
-/** v25 pool drift: first bounded 3-2 seed whose public offers include contested (STAGE_SEEDS still lists 12 for reroll-only routes). */
-const CONTESTED_OFFER_SEED=14;
-/** v25 pool drift: first bounded 2-1 seed whose public offers include scoreboard-scrapper. */
-const SCOREBOARD_OFFER_SEED=11;
+/** v25 pool drift: first bounded 3-2 seed whose public offers include contested (STAGE_SEEDS still lists 12 for reroll-only routes).
+ * v26 D5 (7953c99a) added four cards and stage bans, moving the 2-1 and 3-2 draws (old seed 14). Re-searched the same
+ * reachRound('3-2', false) route from 0: seed 159 is the first whose unrerolled 3-2 offer includes contested. */
+const CONTESTED_OFFER_SEED=159;
+/** v25 pool drift: first bounded 2-1 seed whose public offers include scoreboard-scrapper.
+ * v26 D5 (7953c99a) moved the 2-1 draws (old seed 11); re-searched from 0: seed 1 offers it without rerolls. */
+const SCOREBOARD_OFFER_SEED=1;
 it.skipIf(!existsSync(RESEARCH_FILE))('archive values and stage tags',()=>{
  const row=JSON.parse(readFileSync(RESEARCH_FILE,'utf8')).find((r:any)=>r.apiName==='TFT_Augment_Contested');
  expect(row.effects).toEqual(AUGMENT_BATCH5_H6.contested.source.values);

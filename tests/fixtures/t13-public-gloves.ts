@@ -1,5 +1,7 @@
 import { AUGMENT_BATCH5_G1 } from '../../src/simulation/content/augment-pool-batch5-g1';
-import { createMatch, buyUnit, deployMatchUnit, nextRound, selectChoice, rerollAugment, startMatchCombat, combineItems } from '../../src/simulation/match';
+import { createMatch, buyUnit, deployMatchUnit, nextRound, selectChoice, rerollAugment, startMatchCombat, combineItems, sellUnit } from '../../src/simulation/match';
+import { isSellableUnit } from '../../src/simulation/seat-mechanics/forms';
+import { isAnvil } from '../../src/simulation/content/anvils';
 import { finishPublicEquipmentBattle, benchPublicEquipmentPlayers, resolvePublicEquipmentChoices } from './b8-public-equipment';
 import type { MatchCommandResult, MatchState } from '../../src/simulation/match-types';
 import { S13_P2_SOURCE } from '../../src/simulation/content/s13-augments-p2-source';
@@ -12,6 +14,7 @@ import { AUGMENT_BATCH4_B4XP } from '../../src/simulation/content/augment-pool-b
 import { AUGMENT_BATCH4_B4REROLL } from '../../src/simulation/content/augment-pool-batch4-b4reroll';
 import { AUGMENT_BATCH4_B4COMBAT } from '../../src/simulation/content/augment-pool-batch4-b4combat';
 import { AUGMENT_SHOP } from '../../src/simulation/content/augment-pool-shop';
+import { AUGMENT_D5 } from '../../src/simulation/content/augment-pool-d5';
 
 const accepted = (result: MatchCommandResult): MatchState => {
   if (!result.ok) throw Error(`Public TG supply route: ${result.reason}`);
@@ -30,32 +33,42 @@ const extraItemChoices = new Set(['blood-brothers','high-voltage','pyromaniac','
   ...Object.keys(AUGMENT_BATCH4),...Object.keys(AUGMENT_BATCH4_B4XP),...Object.keys(AUGMENT_BATCH4_B4REROLL),
   ...Object.keys(AUGMENT_BATCH4_B4COMBAT),...Object.keys(AUGMENT_SHOP),...Object.keys(AUGMENT_BATCH5_G1),
   // v25 adds history, inventory and combat effects; keep this TG-only route isolated.
-  ...["a-golden-find","academic-research","aerial-warfare","all-that-shimmers","all-that-shimmers-plus","anger-issues","another-anomaly","artifactory","at-what-cost","beggars-can-be-choosers","cloning-facility","component-buffet","contested","cooking-pot","dhampyr","diversified-portfolio","diversified-portfolio-plus","expected-unexpectedness","fine-vintage","forbidden-magic","forward-thinking","ghost-of-friends-past","glorious-evolution","good-for-something","greater-moonlight","hall-of-mirrors","hard-commit","head-start","im-the-carry-now","loot-explosion","lucky-gloves","lucky-gloves-plus","lunch-money","mad-chemist","max-cap","mirrored-monetization","moonlight","natural-selection","no-scout-no-pivot","pandoras-bench","pandoras-items","pandoras-items-ii","pandoras-items-iii","pilfer","power-up","prismatic-pipeline","quality-over-quantity","rebel-resurgence","recombobulator","replication","reroll-transfer","roll-the-dice","salvage-bin","salvage-bin-plus","scavenger","scoreboard-scrapper","shop-glitch","snipers-nest","sponging","survivor","table-scraps","tiniest-titan","tiniest-titan-plus","titanic-titan","tomb-raider-1","tomb-raider-2","trait-tracker","two-much-value","void-swarm","voidcaller","young-and-wild-and-free"]]);
+  ...["a-golden-find","academic-research","aerial-warfare","all-that-shimmers","all-that-shimmers-plus","anger-issues","another-anomaly","artifactory","at-what-cost","beggars-can-be-choosers","cloning-facility","component-buffet","contested","cooking-pot","dhampyr","diversified-portfolio","diversified-portfolio-plus","expected-unexpectedness","fine-vintage","forbidden-magic","forward-thinking","ghost-of-friends-past","glorious-evolution","good-for-something","greater-moonlight","hall-of-mirrors","hard-commit","head-start","im-the-carry-now","loot-explosion","lucky-gloves","lucky-gloves-plus","lunch-money","mad-chemist","max-cap","mirrored-monetization","moonlight","natural-selection","no-scout-no-pivot","pandoras-bench","pandoras-items","pandoras-items-ii","pandoras-items-iii","pilfer","power-up","prismatic-pipeline","quality-over-quantity","rebel-resurgence","recombobulator","replication","reroll-transfer","roll-the-dice","salvage-bin","salvage-bin-plus","scavenger","scoreboard-scrapper","shop-glitch","snipers-nest","sponging","survivor","table-scraps","tiniest-titan","tiniest-titan-plus","titanic-titan","tomb-raider-1","tomb-raider-2","trait-tracker","two-much-value","void-swarm","voidcaller","young-and-wild-and-free"],
+  // v26 D5 (7953c99a) registers BRB / Restart Mission / Over-Encumbered / What You Really Are: history owners or
+  // board/unit gifts (BRB fields units at 2-1 so the empty-board concede never settles); keep them out too.
+  ...Object.keys(AUGMENT_D5)]);
 /** T13's five supply choices remain guaranteed. Concede with an empty board to
  * obtain two gloves at 2-4/3-4 without depending on random PvE content. The level-9
  * control fights the opening to retain enough HP for 4-2. All battles, income,
  * choices and the extra holder are committed by public commands. */
 export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
+  // v26 PvE loss damage (claude/v26-pve-loss-damage, merged 54557be5) makes the conceded 2-7/3-7 neutrals cost HP,
+  // so the level-9 control (v25: 4-2) is eliminated at 4-1 and now stops at 4-1 preparation (8 HP; paid XP still
+  // reaches level 9). Both control rounds fight the opening exactly as v25 did.
+  const fightsOpening = roundId === '4-2' || roundId === '4-1';
   const key = JSON.stringify([seed, roundId]);
   if (cached.has(key)) return structuredClone(cached.get(key)!);
   let state = resolvePublicEquipmentChoices(createMatch(seed));
   // v22 anvils are bench units, so bench the opening unit in the first free slot.
   const freeSlot = (s: MatchState) => Array.from({ length: s.preparation.benchSize }, (_, i) => i)
     .find(i => !s.preparation.units.some(u => u.location.kind === 'bench' && u.location.slot === i))!;
-  if (roundId !== '4-2') state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: freeSlot(state) }));
+  if (!fightsOpening) state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'bench', slot: freeSlot(state) }));
   for (let budget = 0; budget < 40; budget++) {
     while (state.phase === 'choice') {
       const choice = state.pendingChoice!;
       if (choice.kind === 'anomaly') throw Error('TG fixture must finish before the anomaly');
       if (seed === 42 && state.roundDefinitionId === '2-1' && choice.generation === 0) {
-        if (!choice.offers.includes('sorcerer-crest')) throw Error('TG seed42 must offer Sorcerer Crest');
+        // D5 registration (7953c99a, v26 merge 3ce71065) moved seed 42's 2-1 offer from Sorcerer Crest
+        // (v25) to snipers-nest/no-scout-no-pivot/visionary-crest. Visionary Crest has the same shape
+        // (one emblem item + one bench unit), so it keeps the single unequipped emblem this route needs.
+        if (!choice.offers.includes('visionary-crest')) throw Error('TG seed42 must offer Visionary Crest');
         // Preserve the emblem while advancing the choice stream to a later
         // combat-only card. All resource births still use public commands.
         state = accepted(rerollAugment(state, choice.choiceId, choice.generation, 1));
         continue;
       }
       const id = choice.kind === 'component' ? 'gloves'
-        : (seed===42?['sorcerer-crest','watcher-crest','dominator-crest','manaflow-i','manaflow-ii','glass-cannon-ii','clockwork-accelerator','inspiring-epitaph','mentorship-ii','backup','trade-sector','superstars-ii','raining-gold','raining-gold-plus','heroic-grab-bag','team-building','rolling-for-days-i',
+        : (seed===42?['visionary-crest','sorcerer-crest','watcher-crest','dominator-crest','manaflow-i','manaflow-ii','glass-cannon-ii','clockwork-accelerator','inspiring-epitaph','mentorship-ii','backup','trade-sector','superstars-ii','raining-gold','raining-gold-plus','heroic-grab-bag','team-building','rolling-for-days-i',
           // Later choices may change attack speed/damage (as Clockwork did),
           // while preserving the independent opening HP/armor and item births.
           ...(state.roundDefinitionId==='2-1'?[]:['pumping-up-i','pumping-up-ii','pumping-up-iii','bronze-for-life-i','bronze-for-life-ii','lone-hero','blistering-strikes','piercing-lotus-i']),...(state.roundDefinitionId==='4-2'?['noble-sacrifice']:[])]:['manaflow-i', 'pumping-up-i', 'backup', 'bulky-buddies-i', 'prismatic-ticket']).find(id => choice.offers.includes(id))
@@ -83,7 +96,7 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
       return state;
     }
     if (state.phase === 'preparation') {
-      if (roundId === '4-2' && state.round <= 3) {
+      if (fightsOpening && state.round <= 3) {
         for (const unit of state.preparation.units.filter(unit => unit.team === 'player' && unit.location.kind === 'bench')) {
           const col = unit.id === 'unit-2' ? 3 : 5;
           state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col, row: 7 } }));
@@ -92,6 +105,15 @@ export function publicGlovesInventory(roundId = '3-5', seed = 42): MatchState {
       } else state = accepted(startMatchCombat(state));
     }
     if (state.phase !== 'settlement') throw Error(`TG route ended at ${state.roundDefinitionId}/${state.phase}`);
+    // v26 PvE loot carryover (8f794062, merged c684c3ec) delivers the conceded 2-7 krug orbs at 3-7; with a full
+    // bench they wait as pending-capacity and nextRound is unsettled. Sell carried reserves (never the opening
+    // unit-1 or bought unit-2) through public commands, as r3r4-public/g24 natural-forge fixtures do.
+    while (state.m8.loot.direct.some(drop => drop.status === 'pending-capacity')) {
+      const reserve = state.preparation.units.find(unit => unit.team === 'player' && unit.location.kind === 'bench'
+        && unit.id !== 'unit-1' && unit.id !== 'unit-2' && isSellableUnit(unit.definitionId) && !isAnvil(unit.definitionId));
+      if (!reserve) throw Error(`TG route cannot free bench capacity at ${state.roundDefinitionId}`);
+      state = accepted(sellUnit(state, reserve.id));
+    }
     state = accepted(nextRound(state, state.round));
   }
   throw Error(`TG route cannot reach ${roundId}`);

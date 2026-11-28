@@ -1,0 +1,26 @@
+# #619 keyframe sheets for regate-dir.cjs --sheets (folders are batch.cjs job folders under --out).
+# --crop me,foe: systems drawn on the target (Jinx W_Tar, Nami W, Ekko R_Mark, LeBlanc E target buf, Jayce R lightning),
+# so the area is the caster's and the target's boxes together.
+--hero mordekaiser --system 3292fe09 --before w-mordekaiser-before --after w-mordekaiser-after --off w-mordekaiser-off
+--hero vi --system 9614ffb4 --before w-vi-before --after w-vi-after --off w-vi-off
+--hero jinx --system 10fede7e --before w-jinx-before --after w-jinx-after --off w-jinx-off --crop me,foe
+--hero ambessa --system c07aa972 --before w-ambessa-before --after w-ambessa-after --off w-ambessa-off --debug w-ambessa-debug
+--hero loris --system c39ce57c --before w-loris-before --after w-loris-after --off w-loris-off
+--hero drmundo --system 5443cd9f --before w-drmundo-before --after w-drmundo-after --off w-drmundo-off
+--hero drmundo --system 4caada37 --before w-drmundo-before --after w-drmundo-after --off w-drmundo-off
+--hero ekko --system 006b32b1 --before w-ekko-before --after w-ekko-after --off w-ekko-off --crop me,foe
+--hero smeech --system 5cde9f59 --before w-smeech-before --after w-smeech-after --off w-smeech-off
+--hero smeech --system 17b8eb5c --before w-smeech-before --after w-smeech-after --off w-smeech-off
+--hero illaoi --system eefae499 --before w-illaoi-before --after w-illaoi-after --off w-illaoi-off
+--hero kogmaw --system 9f805f6e --before w-kogmaw-before --after w-kogmaw-after --off w-kogmaw-off
+--hero leblanc --system 4ea54e59 --before w-leblanc-before --after w-leblanc-after --off w-leblanc-off --crop me,foe
+--hero leona --system 8d9a4ccc --before w-leona-before --after w-leona-after --off w-leona-off
+--hero nami --system 03b4d6ac --before w-nami-before --after w-nami-after --off w-nami-off --crop me,foe
+--hero nocturne --system 97366927 --before w-nocturne-before --after w-nocturne-after --off w-nocturne-off
+--hero warwick --system f7e4f133 --before w-warwick-before --after w-warwick-after --off w-warwick-off
+--hero viktor --system 37d3ac23 --before w-viktor-before --after w-viktor-after --off w-viktor-off
+--hero scar --system f4a6240a --before w-scar-before --after w-scar-after --off w-scar-off
+--hero jayce --system 8d9d784b --before w-jayce-before --after w-jayce-after --off w-jayce-off --crop me,foe
+--hero silco --system c7bb8557 --before w-silco-before --after w-silco-after --off w-silco-off
+--hero g23-sion --system 5afb9708 --before w-g23-sion-before --after w-g23-sion-after --off w-g23-sion-off
+--hero g23-sion --system 9118f221 --before w-g23-sion-before --after w-g23-sion-after --off w-g23-sion-off

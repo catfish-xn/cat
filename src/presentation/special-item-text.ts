@@ -8,7 +8,7 @@ import { readTooltipText, tooltipTextPlaceholder } from './tooltip-text-loader';
 import { G23_SPECIAL_ITEM_SOURCE } from '../simulation/content/g2-3-special-item-runtime';
 import type { Effect, ItemDefinition } from '../simulation/strategy-types';
 import { PORTABLE_ANOMALY_PREFIX } from '../simulation/content/augment-pool-batch5-r2';
-import { anomalyPlayerDescription } from './g23-display';
+import { anomalyDisplayName, anomalyPlayerDescription } from './g23-display';
 
 type Values = Readonly<Record<string, number | null>>;
 const pct = (v: number | null | undefined) => `${Math.round((v ?? 0) * 100)}%`;
@@ -51,7 +51,10 @@ export function specialItemLines(definition: ItemDefinition, radiantOfName?: str
   if (shimmer) return shimmer;
   const stats = definition.effects.map(effectLine).filter((line): line is string => line !== null);
   const descriptions = definition.id.startsWith(PORTABLE_ANOMALY_PREFIX)
-    ? [anomalyPlayerDescription(definition.id.slice(PORTABLE_ANOMALY_PREFIX.length)), ...(definition.effectDescriptions ?? []).slice(1)]
+    ? [`携带者获得【${anomalyDisplayName(definition.id.slice(PORTABLE_ANOMALY_PREFIX.length))}】的异常突变进化效果。`,
+      anomalyPlayerDescription(definition.id.slice(PORTABLE_ANOMALY_PREFIX.length)),
+      ...(definition.effectDescriptions ?? []).slice(1),
+      '卸下后效果失效，原异常英雄不能装备；不会继承原英雄已累计的成长。']
     : definition.effectDescriptions ?? [];
   return [...(radiantOfName ? [`「${radiantOfName}」的光明版本。`] : []), ...(stats.length ? [stats.join(' · ')] : []),
     ...descriptions.filter(line => !isImplementationNote(line))];

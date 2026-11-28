@@ -316,6 +316,15 @@ describe('particle v2 interpreter', () => {
     expect(mesh(effect).geometry.drawRange.count).toBe(6);
     expect(mesh(effect).geometry.getAttribute('position').getX(0)).toBeCloseTo(-1); effect.dispose();
   });
+  it('reuses quad meshes across later births instead of constructing one per particle', () => {
+    const effect = new ParticleEffect(doc(quad({ lifetime: 0.05, emission: { mode: 'continuous', rate: 80, loop: true } })), { scale: 1, maxParticles: 8 });
+    effect.update(0.2);
+    const built = effect.builtMeshes;
+    expect(built).toBeGreaterThan(0); expect(built).toBeLessThanOrEqual(8); expect(effect.particleCount).toBeLessThanOrEqual(8);
+    effect.update(1);
+    expect(effect.builtMeshes).toBe(built); expect(effect.particleCount).toBeLessThanOrEqual(8);
+    effect.dispose(); expect(effect.particleCount).toBe(0);
+  });
   it('releases retired/replaced particles, all live materials and owned shared geometry exactly once', () => {
     const effect = new ParticleEffect(doc(quad({ lifetime: 0.5, emission: { mode: 'continuous', rate: 2, loop: true, burst: 1 } })));
     const first = mesh(effect), md = vi.spyOn(first.material, 'dispose'), gd = vi.spyOn(first.geometry, 'dispose');
@@ -397,6 +406,24 @@ describe('v2 lazy resource loading', () => {
     expect(td).toHaveBeenCalledTimes(1);
     expect(gd).toHaveBeenCalledTimes(['missing position', 'empty position'].includes(failure) ? 1 : 0);
     if (!['missing position', 'empty position'].includes(failure)) geometry.dispose();
+  });
+  it('spans quads and arbitrary quads over quadReach times size0, leaving meshes and rays as they were', () => {
+    const geometry = new BoxGeometry();
+    const fx = new ParticleEffect(parseParticleDocument(doc(quad({ size0: 10 }), quad({ kind: 'arbitraryQuad', size0: 10 }),
+      quad({ kind: 'ray', direction: [0, 1, 0], size0: 10 }), quad({ kind: 'mesh', mesh: 'm.glb', size0: 10 }))), { scale: 1, quadReach: 2, mesh: () => geometry });
+    fx.update(0.1);
+    expect([0, 1, 2, 3].map(i => mesh(fx, i).scale.x)).toEqual([20, 20, 10, 10]);
+    fx.dispose(); geometry.dispose();
+    expect(() => new ParticleEffect(parseParticleDocument(doc(quad())), { scale: 1, quadReach: 0 })).toThrow('invalid-particle-options');
+  });
+  it('leaves out the emitter kinds omitKinds names, without changing the reader\'s document', async () => {
+    const raw = doc(quad({ position: [1, 0, 0] }), quad({ kind: 'ray', direction: [0, 1, 0], position: [2, 0, 0] }), quad({ position: [3, 0, 0] }));
+    const before = structuredClone(raw);
+    const effect = await loadParticleEffect(manifest, 'effect', { readJson: async () => raw, omitKinds: ['ray'] });
+    try {
+      expect(effect.object.children.map(c => c.position.x)).toEqual([1, 3]);
+      expect(raw).toEqual(before);
+    } finally { effect.dispose(); }
   });
   it('deduplicates failed mesh reads but counts every skipped emitter and preserves valid meshes', async () => {
     const geometry = new BoxGeometry(), gd = vi.spyOn(geometry, 'dispose');

@@ -13,6 +13,7 @@ import { selectTargets, startingRows, type TargetEnvironment } from './targeting
 import { targetingEnvironment, targetUnit } from './s13-targeting';
 import type { CombatStatus } from '../combat-types';
 import type { AbilityContext, PeriodicReference, S13Packet } from '../combat-s13-abilities';
+import { effectSourceUnit } from '../effect-source';
 import { byDistance, enemies, origin, variable, ad, ap, changedStatusEvent, compareText, constantModifier, endedStatusEvents, ensureMechanisms, frozenShield, hpSample, shieldProjection, sourceKey, spellCrit, syncShield, type S13Unit } from '../combat-s13-state';
 import type { AmountSample } from './stats';
 import { changeMaxHp, conditionHolds, evaluateAmount, integer, resolveStat, safeNumber } from './stats';
@@ -74,6 +75,8 @@ export function executeOverTimeTask(ctx: AbilityContext, task: import('../combat
 function clearMechanismTarget(ctx: AbilityContext, unit: S13Unit, actionSeq: number): void {
   const before = unit.targetId; if (before === null) return;
   unit.targetId = null;
+  delete unit.targetEngaged;
+  delete unit.meleeApproach;
   ctx.events.push({ type: 'targetChanged', tick: ctx.tick, unitId: unit.id, before, after: null });
   emitMechanismSignal(ctx, { event: 'target-changed', tick: ctx.tick, actionSeq, actorId: unit.id, targetId: null, cast: null });
 }
@@ -265,11 +268,12 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
   const executePulse = (unit: S13Unit, task: PeriodicTask) => {
     const advanced = advancePeriodicTask(task, ctx.tick); if (!advanced.due) { if (!advanced.task) unit.mechanismState = { ...unit.mechanismState!, periodicTasks: unit.mechanismState!.periodicTasks.filter(t => t.key !== task.key) }; return; }
     const burn = task.program.effects.some(e => e.kind === 'damage' && e.delivery === 'item-burn');
-    const holder = ctx.units.find(u => u.id === task.source.ownerId)!;
-    const payable = task.program.selector.sample !== 'each-tick' && (!burn || burnWinners.get(unit.id) === task.key);
+    // A removed source keeps paying from its departed snapshot; with no source at all the pulse only advances.
+    const holder = effectSourceUnit(ctx, task.source.ownerId);
+    const payable = holder !== undefined && task.program.selector.sample !== 'each-tick' && (!burn || burnWinners.get(unit.id) === task.key);
     let current = task;
     const seq = nextSeq(), firstPacket = ctx.packets.length;
-    if (payable) {
+    if (payable && holder) {
       emitMechanismSignal(ctx, { event: 'periodic', tick: ctx.tick, actionSeq: seq, actorId: holder.id, targetId: task.targetId, cast: null });
       const targets = selectMechanismTargets(holder, ctx.units, task.program.selector, task.targetId, task.source, { board: ctx.board, tick: ctx.tick });
       const samples = new Map(targets.map(t => [t.id, { ...effectSample(holder, t, ctx.tick,undefined,undefined,ctx.units), ...resistsSample(ctx, holder) }]));
@@ -282,7 +286,7 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     }
     const updated = advanced.task ? { ...advanced.task, remainders: current.remainders } : null;
     unit.mechanismState = { ...unit.mechanismState!, periodicTasks: [...unit.mechanismState!.periodicTasks.filter(t => t.key !== task.key), ...(updated ? [updated] : [])] };
-    for (const packet of ctx.packets.slice(firstPacket).sort((a, b) => compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal)) packet.critical = rollCrit(packet.critEligibility, spellCrit(holder), ctx.draw);
+    if (holder) for (const packet of ctx.packets.slice(firstPacket).sort((a, b) => compareText(a.targetId, b.targetId) || a.ordinal - b.ordinal)) packet.critical = rollCrit(packet.critEligibility, spellCrit(holder), ctx.draw);
   };
   for (const unit of ctx.units) unit.mechanismState = { ...unit.mechanismState!, periodicTasks: cleanPeriodicTasks(unit.mechanismState!.periodicTasks, dead, dead) };
   // All declared final pulses see the old contributions before any expiration.
@@ -293,8 +297,11 @@ export function maintainMechanisms(ctx: AbilityContext, nextSeq: () => number): 
     ctx.events.push(...endedStatusEvents(ctx.tick, unit.id, expired.ended, 'expired'));
     unit.mechanismState = { ...unit.mechanismState!, periodicTasks: cancelAttachedBurns(unit.mechanismState!.periodicTasks, expired.ended.map(e => e.contribution)) };
     replaceStatuses(unit, expired.groups.map(g => summarizeGroup(g, ctx.tick)));
-    for (const ended of expired.ended) for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, ctx.units.find(u => u.id === ended.contribution.source.ownerId)!,
-      { ...ended.contribution.source, effectIndex: ended.contribution.source.effectIndex + index + 1 }, unit, effect, nextSeq(), index);
+    for (const ended of expired.ended) {
+      const owner = effectSourceUnit(ctx, ended.contribution.source.ownerId); if (!owner) continue;
+      for (const [index, effect] of ended.effects.entries()) executeMechanismEffect(ctx, owner,
+        { ...ended.contribution.source, effectIndex: ended.contribution.source.effectIndex + index + 1 }, unit, effect, nextSeq(), index);
+    }
     unit.statuses = unit.statuses.filter(s => !s.contributionKeys || s.contributionKeys.some(k => unit.mechanismState!.statuses.some(g => g.contributions.some(c => c.key === k))));
     unit.shieldLayers = unit.shieldLayers.map(layer => {
       const maintained = maintainShield(frozenShield(layer, unit), ctx.tick);
@@ -348,7 +355,7 @@ export function refreshMechanismAuras(ctx: AbilityContext, applyNew = true): voi
   }
 }
 export function clearPeriodicAccount(ctx: AbilityContext, reference: PeriodicReference, targetId: string): void {
-  const owner = ctx.units.find(u => u.id === reference.holderId)!;
+  const owner = ctx.units.find(u => u.id === reference.holderId); if (!owner) return;
   owner.mechanismState = { ...owner.mechanismState!, periodicTasks: owner.mechanismState!.periodicTasks.map(t => t.key === reference.taskKey ? clearRemainder(t, reference.effectIndex, targetId) : t) };
 }
 export function executeShieldEnd(ctx: AbilityContext, holder: S13Unit, legacyKey: string, seq: number, damageContext?: DamageExecutionContext): void {
@@ -433,6 +440,9 @@ export function maintainActivities(ctx: AbilityContext, unit: S13Unit, controlle
     if (!reason) return activity;
     const ended = { ...activity, lifecycle: 'ended' as const, endedAtTick: reason === 'expired'&&!targetDied ? activity.expiresAtTick : ctx.tick, endReason: reason };
     if (unit.statuses.some(s => s.activity?.key === activity.key)) ctx.events.push({ type: 'activityChanged', tick: ctx.tick, activity: ended, reason });
+    // Display only: Vander's cast brace (its channel) is over.
+    if (activity.kind === 'channel' && unit.ability.kind === 's13' && unit.ability.championId === 'vander' && unit.statuses.some(s => s.activity?.key === activity.key))
+      ctx.events.push({ type: 'abilityEffectEnded', tick: ctx.tick, unitId: unit.id, effect: 'vander-brace', targetIds: [] });
     return ended;
   }) };
   unit.statuses = unit.statuses.filter(s => !s.activity || unit.mechanismState!.activities.some(a => a.key === s.activity!.key && a.lifecycle === 'active'));

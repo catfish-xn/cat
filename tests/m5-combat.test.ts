@@ -1,3 +1,6 @@
+import { DARIUS_SPIN_TICKS, LUX_SELF_SHIELD_TICKS, LUX_SHIELD_FLIGHT_TICKS, maddieShotFlightTicks } from '../src/simulation/cast-windup';
+import { rangedAttackFlightTicks } from '../src/simulation/cast-windup';
+import { stepLanded } from './helpers/landing';
 import { BATCH3_SUMMON_UNITS, TRAINING_DUMMY_ID, TOWER_DUMMY_ID } from '../src/simulation/content/batch3-summons';
 import { B5_G4_SUMMON_UNITS } from '../src/simulation/content/augment-pool-batch5-g4';
 import { S13_ANOMALY_SUMMON_UNITS } from '../src/simulation/content/s13-anomaly-summons';
@@ -15,6 +18,7 @@ import { makeSourcedEffects, resolveEffects, cloneEffect } from '../src/simulati
 import { getUnitStats } from '../src/simulation/unit-stats';
 import { battle, unit } from './combat-helpers';
 import { packets, heals, casts } from './helpers/replay2-views';
+import { CAST_WINDUP_TICKS } from '../src/simulation/cast-windup';
 
 function hero(name: string, id = 'p', overrides: Partial<CombatUnit> = {}): CombatUnit {
   return unit(id, id.startsWith('e') ? 'enemy' : 'player', id.startsWith('e') ? 2 : 1, 3, {
@@ -35,6 +39,8 @@ function advance(initial: CombatState, ticks: number): { state: CombatState; eve
   for (let n = 0; n < ticks && state.status === 'running'; n++) { const step = stepCombat(state); state = step.state; events.push(...step.events); }
   return { state, events };
 }
+/** Wind-up batch 2 (2026-11-16): Tristana's shell lands CAST_WINDUP_TICKS.tristana after her cast; step through the landing. */
+const tristanaLanded = (initial: CombatState) => advance(initial, 1 + CAST_WINDUP_TICKS.tristana);
 /** B9 replay2: S13 statuses must be anchored by frozen contributions or an activity, so injected
  * fixture statuses are built with the engine's own applyStatus (same source, kind, amount and ticks). */
 function withStatus(target: CombatUnit, src: CombatOrigin, kind: 'stun' | 'redirect', value: number, appliedAtTick: number, expiresAtTick: number): CombatUnit {
@@ -77,32 +83,37 @@ describe('M5 independent finite combat rules', () => {
     }
   });
   it('uses AP-scaled Zyra damage, distinct secondary targets, and next-tick stun', () => {
-    const result = stepCombat(battle([hero('zyra'), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)]));
+    // 2026-11-16: her vines land CAST_WINDUP_TICKS.zyra after the cast (tick 1); the stun starts the tick after they land.
+    const result = advance(battle([hero('zyra'), dummy(), dummy('e2', 3, 3), dummy('e3', 3, 4)]), 1 + CAST_WINDUP_TICKS.zyra);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => [p.unitId, p.raw])).toEqual([['e', 260], ['e2', 95], ['e3', 95]]);
     const stun = result.state.units.find(u => u.id === 'e')!.statuses![0];
-    expect(stun).toMatchObject({ kind: 'stun', startsAtTick: 2, expiresAtTick: 22 });
+    expect(stun).toMatchObject({ kind: 'stun', startsAtTick: 2 + CAST_WINDUP_TICKS.zyra, expiresAtTick: 22 + CAST_WINDUP_TICKS.zyra });
   });
   it('Lux selects lowest current HP rather than percentage and buffs only the next attack', () => {
-    const result = stepCombat(battle([hero('lux'), dummy(), dummy('p2', 0, 3, { hp: 50, maxHp: 100 }), dummy('p3', 0, 4, { hp: 100, maxHp: 1000 })]));
+    // Landing batch (11-20): the ally's shield lands when the missile arrives, LUX_SHIELD_FLIGHT_TICKS after the cast.
+    const result = advance(battle([hero('lux'), dummy(), dummy('p2', 0, 3, { hp: 50, maxHp: 100 }), dummy('p3', 0, 4, { hp: 100, maxHp: 1000 })]), 1 + LUX_SHIELD_FLIGHT_TICKS);
     expect(result.state.units.find(u => u.id === 'p2')!.shield).toBe(160);
     expect(result.state.units.find(u => u.id === 'p3')!.shield).toBe(0);
     expect(result.state.units.find(u => u.id === 'p')!.runtime!.nextAttackMagic).toBe(360);
-    const next = advance(result.state, 20);
+    const next = advance(result.state, 20 + rangedAttackFlightTicks(3)); // window: the charged attack's shot lands after it
     expect(packets(next.events).filter(p => p.source.definitionId === 'lux-ability' && p.source.sourceKind === 'ability')).toHaveLength(1);
     expect(next.state.units.find(u => u.id === 'p')!.runtime!.nextAttackMagic).toBe(0);
   });
   it('Darius bleed has four conserving tasks and persists after source death', () => {
-    const initial = stepCombat(battle([hero('darius'), dummy()]));
+    // Landing batch (11-20): the spin (and the bleed with it) lands DARIUS_SPIN_TICKS after the cast; the bleed runs from there.
+    const initial = advance(battle([hero('darius'), dummy()]), 1 + DARIUS_SPIN_TICKS);
     const owner = initial.state.units.find(u => u.id === 'p')!;
-    expect(owner.tasks!.filter(t => t.kind === 'bleed').map(t => [t.executeAtTick, t.amount])).toEqual([[21, 50], [41, 50], [61, 50], [81, 50]]);
+    expect(owner.tasks!.filter(t => t.kind === 'bleed').map(t => [t.executeAtTick, t.amount])).toEqual([[21, 50], [41, 50], [61, 50], [81, 50]].map(([t, a]) => [t + DARIUS_SPIN_TICKS, a]));
     const state = { ...initial.state, units: [...initial.state.units.map(u => u.id === 'p' ? { ...u, alive: false, hp: 0, mana: 0 } : u), dummy('p2', 0, 0)] };
     const later = advance(state, 80);
     expect(packets(later.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([50, 50, 50, 50]);
   });
   it('Maddie six shots use fixed offsets and the first enemy along the path intercepts', () => {
-    const result = advance(battle([hero('maddie'), dummy(), dummy('e2', 5, 3)]), 24);
-    const shots = packets(result.events).filter(p => p.source.definitionId === 'maddie-ability');
-    expect(shots.map(p => p.tick)).toEqual([1, 5, 10, 14, 19, 24]);
+    // Landing batch (11-20): each shot leaves on its offset and lands maddieShotFlightTicks later (e is one hex away).
+    const flight = maddieShotFlightTicks(1), result = advance(battle([hero('maddie'), dummy(), dummy('e2', 5, 3)]), 24 + flight);
+    // The longer window also takes in her next basic attack; only the skill's packets count here.
+    const shots = packets(result.events).filter(p => p.source.definitionId === 'maddie-ability' && p.source.sourceKind === 'ability');
+    expect(shots.map(p => p.tick)).toEqual([1, 5, 10, 14, 19, 24].map(t => t + flight));
     expect(shots.every(p => p.unitId === 'e' && p.raw === 135)).toBe(true);
   });
   it('cancels future multishots after control without undoing committed same-tick shots', () => {
@@ -110,8 +121,10 @@ describe('M5 independent finite combat rules', () => {
     // Stun from e applied at tick1, active from tick2 (next-tick) and expiring at tick50.
     const state = { ...initial.state, units: initial.state.units.map(u => u.id !== 'p' ? u : withStatus(u, source('e'), 'stun', 0, 1, 50)) };
     const result = advance(state, 30);
-    expect(packets(initial.events)).toHaveLength(1);
-    expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(0);
+    // Landing batch (11-20): the cast tick's shot has left (committed) and lands under the stun; the rest never leave.
+    expect(initial.events.filter(e => e.type === 'abilityProjectileLaunched')).toHaveLength(1);
+    expect(packets(initial.events)).toHaveLength(0);
+    expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(1);
     expect(result.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
   });
   it('Kog stacks speed and each third cast adds range with no cross-battle state', () => {
@@ -155,9 +168,9 @@ describe('M5 independent finite combat rules', () => {
     expect(end.state.units.find(u => u.id === 'p')!.runtime!.nextAttackPhysical).toBe(0);
   });
   it('Tristana overkill schedules one committed bounce and grants exactly 125 AD bps', () => {
-    const initial = stepCombat(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
+    const initial = tristanaLanded(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
     const owner = initial.state.units.find(u => u.id === 'p')!;
-    expect(owner.tasks).toEqual([expect.objectContaining({ kind: 'tristanaBounce', amount: 475, executeAtTick: 2 })]);
+    expect(owner.tasks).toEqual([expect.objectContaining({ kind: 'tristanaBounce', amount: 475, executeAtTick: 2 + CAST_WINDUP_TICKS.tristana })]);
     expect(owner.runtime!.permanentAdBps).toBe(125);
     const next = stepCombat(initial.state);
     expect(packets(next.events).find(p => p.source.ownerId === 'p')).toMatchObject({ raw: 475, hpDamage: 475 });
@@ -173,7 +186,7 @@ describe('M5 independent finite combat rules', () => {
   });
   it('Loris transfers half post-mitigation damage once and uses his shield without a second armor reduction', () => {
     const result = stepCombat(battle([hero('loris', 'p', { armor: 1000 }), dummy('a', 1, 2, { armor: 100 }),
-      dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 200, attackRange: 1 })]));
+      dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 200, attackRange: 1, targetId: 'a' })])); // a/p are tied; keep the pre-P1 target so this case does not draw.
     expect(packets(result.events).filter(p => p.source.ownerId === 'e').map(p => [p.unitId, p.mitigated, p.absorbed, p.hpDamage, p.redirected]))
       .toEqual([['a', 50, 0, 50, false], ['p', 50, 50, 0, true]]);
   });
@@ -185,7 +198,9 @@ describe('M5 independent finite combat rules', () => {
     expect(result.state.units.find(u => u.id === 'p')!.shieldLayers).toEqual([expect.objectContaining({ key: 'b', remaining: 30, absorbed: 10 })]);
   });
   it('simultaneous lethal casts both land and no same-tick healing revives the dead', () => {
-    const result = stepCombat(battle([hero('scar', 'p', { hp: 50 }), hero('zyra', 'e', { hp: 50 })]));
+    // 2026-11-16: Zyra's vines now land after a wind-up (cast-windup.ts); Ezreal still strikes on his cast tick, so he keeps
+    // the two casts simultaneous here (was zyra).
+    const result = stepCombat(battle([hero('scar', 'p', { hp: 50 }), hero('ezreal', 'e', { hp: 50 })]));
     expect(result.state.result).toBe('draw');
     expect(result.state.units.every(u => !u.alive && u.hp === 0 && u.mana === 0)).toBe(true);
     expect(heals(result.events)).toEqual([]);
@@ -199,7 +214,7 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.mitigated)).toEqual([77, 135]);
   });
   it('uses an explicit crit word for every planned attack including zero-probability neutrals', () => {
-    const result = stepCombat(battle([hero('lux', 'p', { mana: 0 }), dummy('e', 2, 3, { cooldownTicks: 0, attackDamage: 100 })], { rngState: 42, rngDraws: 0 }));
+    const result = stepLanded(battle([hero('lux', 'p', { mana: 0 }), dummy('e', 2, 3, { cooldownTicks: 0, attackDamage: 100 })], { rngState: 42, rngDraws: 0 }));
     expect(result.state.rngDraws).toBe(2);
     // replay2: outcome.raw is pre-crit, so Lux's critical raw is her 100 AD (was 140 = 100×140% after crit).
     expect(packets(result.events).filter(p => p.source.sourceKind === 'attack').map(p => [p.source.ownerId, p.critical, p.raw])).toEqual([['e', false, 100], ['p', true, 100]]);
@@ -207,8 +222,8 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(result.events).filter(p => p.source.sourceKind === 'attack').map(p => p.mitigated)).toEqual([100, 140]);
   });
   it('Gunblade consumes actual HP damage, healing cannot recursively cause damage', () => {
-    const result = stepCombat(battle([hero('zyra', 'p', { hp: 4000, mechanics: [mechanic('p', 'gunblade', { selfHealBps: 1500, allyHealBps: 2500 })] }),
-      dummy('e', 2, 3, { hp: 100 }), dummy('p2', 0, 3, { hp: 100, maxHp: 1000 })]));
+    const result = advance(battle([hero('zyra', 'p', { hp: 4000, mechanics: [mechanic('p', 'gunblade', { selfHealBps: 1500, allyHealBps: 2500 })] }),
+      dummy('e', 2, 3, { hp: 100 }), dummy('p2', 0, 3, { hp: 100, maxHp: 1000 })]), 1 + CAST_WINDUP_TICKS.zyra); // vines land after the wind-up
     expect(heals(result.events).map(e => [e.unitId, e.requested, e.actual])).toEqual([['p', 15, 15], ['p2', 25, 25]]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p')).toHaveLength(1);
   });
@@ -258,9 +273,9 @@ describe('M5 independent finite combat rules', () => {
     expect(packets(end.events).filter(p => p.source.definitionId === 'irelia-ability' && p.source.sourceKind === 'ability')).toEqual([expect.objectContaining({ raw: 70, tick: 61 })]);
   });
   it('Tristana last-enemy kill has no ricochet growth and committed bounce never recurses', () => {
-    const finalKill = stepCombat(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 })]));
+    const finalKill = tristanaLanded(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 })]));
     expect(finalKill.state.units.find(u => u.id === 'p')!.runtime!.permanentAdBps).toBe(0);
-    const first = stepCombat(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3, { hp: 10 }), dummy('e3', 4, 3)]));
+    const first = tristanaLanded(battle([hero('tristana'), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3, { hp: 10 }), dummy('e3', 4, 3)]));
     const next = stepCombat(first.state);
     expect(next.state.units.find(u => u.id === 'p')!.runtime!.permanentAdBps).toBe(125);
     expect(next.state.units.find(u => u.id === 'p')!.tasks).toEqual([]);
@@ -273,28 +288,30 @@ describe('M5 independent finite combat rules', () => {
   });
   it('Kill Streak belongs to the first lethal packet and only a surviving owner gets mana', () => {
     const m = mechanic('p', 'killStreak', { mana: 20 });
-    const alive = stepCombat(battle([hero('zyra', 'p', { mechanics: [m] }), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
+    // 2026-11-16: Zyra's vines now land after a wind-up (cast-windup.ts), so Ezreal (still lethal on his cast tick) keeps the
+    // kill inside the cast's mana lock here (was zyra).
+    const alive = stepCombat(battle([hero('ezreal', 'p', { mechanics: [m] }), dummy('e', 2, 3, { hp: 100 }), dummy('e2', 3, 3)]));
     // v22 cast mana lock: the surviving owner's 20 kill mana is requested in the lethal cast's tick and fully blocked.
     const killMana = (events: readonly CombatEvent[]) =>
       events.flatMap(e => e.type === 'manaChanged' && 'outcome' in e && e.outcome.reason === 'kill' ? [e.outcome] : []);
     expect(killMana(alive.events)).toEqual([expect.objectContaining({ targetId: 'p', amount: 20, before: 0, blocked: 20, applied: 0, after: 0 })]);
     expect(alive.state.units.find(u => u.id === 'p')!.mana).toBe(0);
     expect(alive.events.filter(e => e.type === 'kill')).toEqual([expect.objectContaining({ unitId: 'e', source: expect.objectContaining({ ownerId: 'p' }) })]);
-    const dead = stepCombat(battle([hero('zyra', 'p', { hp: 50, mechanics: [m] }), hero('zyra', 'e', { hp: 50 })]));
+    const dead = stepCombat(battle([hero('ezreal', 'p', { hp: 50, mechanics: [m] }), hero('ezreal', 'e', { hp: 50 })]));
     expect(killMana(dead.events)).toEqual([]);
     expect(dead.state.units.find(u => u.id === 'p')!.mana).toBe(0);
   });
   it('Sniper distance amplification and Watcher threshold use pre-damage HP with strict greater-than', () => {
     const attacker = hero('lux', 'p', { mana: 0, mechanics: [mechanic('p', 'sniper', { damageBpsPerHex: 700 })] });
     const watch = mechanic('e', 'watcher', { reductionBps: 1500, healthyReductionBps: 3000, thresholdBps: 5000 });
-    const atHalf = stepCombat(battle([attacker, dummy('e', 3, 3, { hp: 500, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
+    const atHalf = stepLanded(battle([attacker, dummy('e', 3, 3, { hp: 500, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
     // seed42 firstword1083814273 exceeds25% threshold, no crit: floor(100*1.14*.85)=96.
     expect(packets(atHalf.events)[0]).toMatchObject({ raw: 100, mitigated: 96 });
-    const above = stepCombat(battle([attacker, dummy('e', 3, 3, { hp: 501, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
+    const above = stepLanded(battle([attacker, dummy('e', 3, 3, { hp: 501, maxHp: 1000, mechanics: [watch] })], { rngState: 42 }));
     expect(packets(above.events)[0].mitigated).toBe(79);
   });
   it('Artillery and Titanic each create one derived AoE without incrementing the primary counter', () => {
-    const result = stepCombat(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: [
+    const result = stepLanded(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: [
       mechanic('p', 'artillery', { everyN: 5, adBps: 12500, radius: 1 }), mechanic('p', 'titanic', { adBps: 4000, radius: 1 }),
     ] }), dummy(), dummy('e2', 3, 3)], { rngState: 42 }));
     expect(result.state.units.find(u => u.id === 'p')!.runtime!.attackCount).toBe(5);
@@ -304,7 +321,10 @@ describe('M5 independent finite combat rules', () => {
   it('Rageblade and periodic AP/heal mechanics emit their own source provenance', () => {
     const owner = hero('lux', 'p', { hp: 4000, mana: 0, mechanics: [mechanic('p', 'rageblade', { attackSpeedBps: 500 }),
       mechanic('p', 'archangel', { periodTicks: 100, abilityPower: 30 }), mechanic('p', 'dragonClaw', { periodTicks: 40, healMaxHpBps: 250 })] });
-    const attack = stepCombat(battle([owner, dummy()], { rngState: 42 }));
+    // Ranged attack wind-up (#791): step on to the tick her first shot launches (Rageblade stacks on that attack).
+    let step = stepCombat(battle([owner, dummy()], { rngState: 42 })); const events = [...step.events];
+    while (!events.some(e => e.type === 'attackLaunched') && step.state.tick < 40) { step = stepCombat(step.state); events.push(...step.events); }
+    const attack = { events };
     expect(attack.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'rageblade'), before: 0, after: 500 });
     const periodic = stepCombat(battle([{ ...owner, cooldownTicks: 1000 }, dummy()], { tick: 199 }));
     expect(periodic.events.find(e => e.type === 'statChanged')).toMatchObject({ source: source('p', 'archangel'), before: 100, after: 130 });
@@ -313,7 +333,7 @@ describe('M5 independent finite combat rules', () => {
   it('Bulky Buddies grants its one-time sourced shield only after the frozen buddy dies', () => {
     const buddy = { ...mechanic('p', 'bulkyBuddies', { shieldMaxHpBps: 1000, durationTicks: 200 }), targetId: 'a' };
     const result = stepCombat(battle([hero('lux', 'p', { mana: 0, cooldownTicks: 1000, mechanics: [buddy] }),
-      dummy('a', 1, 2, { hp: 10 }), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100 })]));
+      dummy('a', 1, 2, { hp: 10 }), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100, targetId: 'a' })])); // tied with p; pin a so the buddy still dies.
     expect(result.state.units.find(u => u.id === 'p')!.runtime!.buddyTriggered).toBe(true);
     expect(result.state.units.find(u => u.id === 'p')!.shieldLayers).toEqual([expect.objectContaining({ source: buddy.source, granted: 500, expiresAtTick: 201 })]);
   });
@@ -331,9 +351,10 @@ describe('M5 independent finite combat rules', () => {
     expect(caitlyn.state.units.find(u => u.id === 'e')!.statuses![0]).toMatchObject({ kind: 'resistanceFlat', amount: -20, startsAtTick: 2 });
   });
   it('Kog passive and Darius initial spin use distinct noncritical magic/physical coefficients', () => {
-    const kog = stepCombat(battle([hero('kogmaw', 'p', { mana: 0, abilityPower: 150 }), dummy()], { rngState: 42 }));
+    const kog = stepLanded(battle([hero('kogmaw', 'p', { mana: 0, abilityPower: 150 }), dummy()], { rngState: 42 }));
     expect(packets(kog.events).map(p => [p.damageType, p.raw, p.critical])).toEqual([['physical', 100, false], ['magic', 72, false]]);
-    const darius = stepCombat(battle([hero('darius', 'p', { hp: 4700 }), dummy(), dummy('e2', 1, 2)]));
+    // Landing batch (11-20): his spin lands DARIUS_SPIN_TICKS after the cast.
+    const darius = advance(battle([hero('darius', 'p', { hp: 4700, targetId: 'e' }), dummy(), dummy('e2', 1, 2)]), 1 + DARIUS_SPIN_TICKS); // e/e2 are tied; pin e.
     expect(packets(darius.events).map(p => p.raw)).toEqual([240, 240]);
     expect(heals(darius.events)[0]).toMatchObject({ requested: 150, actual: 150 });
     expect(darius.state.units.find(u => u.id === 'p')!.tasks!.map(t => t.targetId)).toEqual(['e', 'e', 'e', 'e']);
@@ -348,21 +369,22 @@ describe('M5 independent finite combat rules', () => {
   });
   it('multiple redirects choose the smallest protector ID and transferred damage cannot redirect again', () => {
     const result = stepCombat(battle([hero('loris', 'p'), hero('loris', 'p2', { cell: { col: 0, row: 2 } }),
-      dummy('a', 1, 2), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100 })]));
+      dummy('a', 1, 2), dummy('e', 2, 2, { cooldownTicks: 0, attackDamage: 100, targetId: 'a' })])); // a/p are tied; pin a so the redirect still lands on p.
     expect(packets(result.events).filter(p => p.redirected).map(p => [p.unitId, p.mitigated])).toEqual([['p', 50]]);
   });
   it('derived AoE packet ordinals are unique and item enumeration cannot choose a different killer', () => {
     const mechanics = [mechanic('p', 'titanic', { adBps: 4000, radius: 1 }), mechanic('p', 'artillery', { everyN: 5, adBps: 12500, radius: 1 })];
-    const run = (list: CombatMechanic[]) => stepCombat(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: list }), dummy()], { rngState: 42 }));
+    const run = (list: CombatMechanic[]) => stepLanded(battle([hero('lux', 'p', { mana: 0, runtime: { ...EMPTY_RUNTIME, attackCount: 4 }, mechanics: list }), dummy()], { rngState: 42 }));
     expect(run(mechanics).events).toEqual(run([...mechanics].reverse()).events);
     expect(packets(run(mechanics).events).map(p => p.packetOrdinal)).toEqual([0, 3, 4]);
   });
   it('one-second next-tick stun blocks exactly20 logical action opportunities before expiring', () => {
-    const first = stepCombat(battle([hero('zyra'), dummy('e', 2, 3, { cooldownTicks: 0, attackIntervalTicks: 1, baseAttackSpeedBps: 200000 })]));
+    // 2026-11-16: Zyra's stun lands CAST_WINDUP_TICKS.zyra after her cast; the 20 blocked opportunities start from there.
+    const first = advance(battle([hero('zyra'), dummy('e', 2, 3, { cooldownTicks: 0, attackIntervalTicks: 1, baseAttackSpeedBps: 200000 })]), 1 + CAST_WINDUP_TICKS.zyra);
     const blocked = advance(first.state, 20);
     expect(blocked.events.filter(e => e.type === 'attack' && e.attackerId === 'e')).toHaveLength(0);
     const expired = stepCombat(blocked.state);
-    expect(expired.state.tick).toBe(22);
+    expect(expired.state.tick).toBe(22 + CAST_WINDUP_TICKS.zyra);
     expect(expired.events.filter(e => e.type === 'attack' && e.attackerId === 'e')).toHaveLength(1);
   });
   // replay2 (M8_B9_U7_PLAN §2): ManaOutcome.reason is frozen to attack/damage/incoming-basic-hit/periodic/
@@ -383,7 +405,7 @@ describe('M5 independent finite combat rules', () => {
     const start = applyCombatStart(hookState(false));
     expect(start.state.units.find(u => u.id === 'p')!.shieldLayers).toEqual([expect.objectContaining({ granted: 60, remaining: 60 })]);
     expect(applyCombatStart(start.state).events).toEqual([]);
-    const result = stepCombat(start.state);
+    const result = stepLanded(start.state);
     // replay2: the seed-42 Lux attack crits and outcome.raw is pre-crit: 100 AD (was 140 = 100×140% after crit).
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => p.raw)).toEqual([100, 25]);
     expect(packets(result.events).filter(p => p.source.ownerId === 'p').map(p => [p.critical, p.mitigated])).toEqual([[true, 140], [false, 25]]);
@@ -407,7 +429,7 @@ describe('M5 independent finite combat rules', () => {
   it('Tristana with Loris redirect cannot create two ricochets, duplicate task keys, or double growth', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
-    const result = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), {
+    const result = tristanaLanded(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 100 }), { // ea/ep are tied; pin the primary.
       ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     // 575 incoming splits288 to primary and287 to protector. Only primary overkill188 may ricochet.
@@ -421,7 +443,7 @@ describe('M5 independent finite combat rules', () => {
   it('killing only a damage-sharing protector does not count as Tristana primary-target ricochet', () => {
     const protector = hero('loris', 'ep', { hp: 10, mana: 0, cooldownTicks: 1000, cell: { col: 2, row: 4 } });
     const shieldSource = origin(protector);
-    const result = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 1000 }), {
+    const result = tristanaLanded(battle([hero('tristana', 'p', { targetId: 'ea' }), dummy('ea', 2, 3, { hp: 1000 }), { // ea/ep are tied; pin the primary.
       ...withStatus(protector, shieldSource, 'redirect', 5000, 0, 80),
     }, dummy('ez', 4, 3)]));
     expect(result.state.units.find(u => u.id === 'ea')!.hp).toBe(712);
@@ -433,7 +455,7 @@ describe('M5 independent finite combat rules', () => {
   it.each([0, 100])('475 Tristana ricochet shares238/237 once with secondary armor %i, without reapplying armor or recursively sharing', armor => {
     const protector = hero('loris', 'ep', { mana: 0, cooldownTicks: 1000, cell: { col: 4, row: 3 } });
     const src = origin(protector);
-    const first = stepCombat(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), dummy('eb', 3, 3, { armor }), {
+    const first = tristanaLanded(battle([hero('tristana'), dummy('ea', 2, 3, { hp: 100 }), dummy('eb', 3, 3, { armor }), {
       ...withStatus(protector, src, 'redirect', 5000, 0, 80),
     }]));
     expect(first.state.units.find(u => u.id === 'p')!.tasks![0].amount).toBe(475);
@@ -446,8 +468,9 @@ describe('M5 independent finite combat rules', () => {
   });
   it('the scheduled Archangel boundary precedes action planning: tick99 Lux shields160, tick100 shields208', () => {
     const owner = hero('lux', 'p', { mechanics: [mechanic('p', 'archangel', { periodTicks: 100, abilityPower: 30 })] });
-    const before = stepCombat(battle([owner, dummy()], { tick: 98 }));
-    const boundary = stepCombat(battle([owner, dummy()], { tick: 99 }));
+    // Landing batch (11-20): her own shield lands LUX_SELF_SHIELD_TICKS after the cast, its amount taken on the cast.
+    const before = advance(battle([owner, dummy()], { tick: 98 }), 1 + LUX_SELF_SHIELD_TICKS);
+    const boundary = advance(battle([owner, dummy()], { tick: 99 }), 1 + LUX_SELF_SHIELD_TICKS);
     expect(before.state.units.find(u => u.id === 'p')!.shield).toBe(160);
     expect(boundary.state.units.find(u => u.id === 'p')!.shield).toBe(208); //160×130/100.
     expect(boundary.events.find(e => e.type === 'statChanged')).toMatchObject({ stat: 'abilityPower', before: 100, after: 130 });

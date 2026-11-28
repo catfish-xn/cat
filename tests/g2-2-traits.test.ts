@@ -14,7 +14,9 @@ it('admits precisely fifteen complete source records without form substitutes',(
  expect(Object.keys(G22_UNITS)).toHaveLength(15);expect(Object.keys(M5_UNIT_DEFINITIONS)).toHaveLength(63);
  for(const row of source.champions.filter((r:any)=>r.new)){
   expect(Object.values(row.record.stats)).not.toContain(null);
-  expect(G22_UNITS[row.id].baseStats).toEqual({health:row.record.stats.hp,attack:row.record.stats.damage,armor:row.record.stats.armor,magicResist:row.record.stats.magicResist});
+  // Official 14.24b attack values replace the archived ones; tests/s13-14-24b-overrides.test.ts locks the exact list.
+  const bPatch=JSON.parse(readFileSync(new URL('../src/simulation/content/source/s13-14.24b/b-patch-overrides.json',import.meta.url),'utf8'));
+  expect(G22_UNITS[row.id].baseStats).toEqual({health:row.record.stats.hp,attack:bPatch.units[row.id]?.attack??row.record.stats.damage,armor:row.record.stats.armor,magicResist:row.record.stats.magicResist});
  }
  for(const id of ['swain','jayce','gangplank'])expect(M5_UNIT_DEFINITIONS[id]).toBeDefined();
 });

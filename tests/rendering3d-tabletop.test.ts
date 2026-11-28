@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { Group, PerspectiveCamera, Scene, Vector3 } from 'three';
-import { createTabletop, LEGEND_MODEL, type TabletopContext } from '../src/rendering/three-mode/tabletop';
+import { createTabletop, farLegendSpot, LEGEND_MODEL, legendOrbSlots, legendSpot, type TabletopContext } from '../src/rendering/three-mode/tabletop';
+import { hexCenter } from '../src/rendering3d/picking';
 import type { BoardFrame, BoardLegendWalk, BoardOrb, BoardPiece } from '../src/rendering/board-feed';
 import type { ModelLease, ParticleEffect } from '../src/rendering3d';
 
@@ -32,13 +33,35 @@ function setup(overrides: Partial<TabletopContext> = {}) {
 }
 
 describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
-  it('stands my legend beside the board, outside every deployable cell, and keeps it in the camera box', () => {
+  it('stands my legend on the near-left platform, outside every deployable cell, and keeps it in the camera box', () => {
     const { tabletop } = setup();
     const points = tabletop.layout(frame());
     tabletop.frame(frame());
     expect(tabletop.debug().legends).toEqual(['legend:me:standin']);
-    const width = Math.sqrt(3) * 34, rightmost = 35 + width * 6.5;
-    expect(points[0]!.x).toBeGreaterThan(rightmost + width);
+    // TFT: my legend stands bottom left beside the bench (the un-mirrored arena's stone platform), the opponent's top right.
+    const width = Math.sqrt(3) * 34, leftmost = 35, rightmost = 35 + width * 6.5;
+    expect(points[0]!.x).toBeLessThan(leftmost - width);
+    expect(points[1]!.x).toBeGreaterThan(rightmost + width);
+    // Mine on the near-left platform's middle (playtest capture 6b353a0f), the far one in the top-right corner.
+    expect(legendSpot(frame()).x).toBeCloseTo(leftmost - width * 0.8, 6);
+    expect(farLegendSpot(frame()).x).toBeCloseTo(rightmost + width * 1.6, 6);
+  });
+
+  it('keeps all ten orb slots off every deployable cell, so a left click there still lifts the unit', () => {
+    const { tabletop } = setup();
+    const board = frame(), width = Math.sqrt(3) * board.hexRadius;
+    const grid = { rows: board.rows, columns: board.columns, radius: board.hexRadius, origin: board.origin };
+    const slots = legendOrbSlots(board);
+    expect(slots).toHaveLength(10);
+    // The camera box reaches the last (outermost, highest) slot the tabletop draws.
+    expect(tabletop.layout(board)[2]!.distanceTo(slots[9]!)).toBeCloseTo(0, 6);
+    for (const slot of slots) for (let row = 0; row < board.rows; row++) for (let col = 0; col < board.columns; col++) {
+      const cell = hexCenter({ col, row }, grid);
+      expect(Math.hypot(slot.x - cell.x, slot.z - cell.z)).toBeGreaterThanOrEqual(0.75 * width);
+    }
+    // Both columns stand clear of the gold-mine column, about 0.22 widths left of the legend on the live board.
+    const mineX = legendSpot(board).x - 0.22 * width;
+    for (const slot of slots) expect(Math.abs(slot.x - mineX)).toBeGreaterThanOrEqual(0.5 * width);
   });
 
   it('shows an opponent legend only while a battle against another board is shown', () => {
@@ -130,6 +153,23 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     const receipt = (dropId: string, resolution?: 'held' | 'forfeited') => ({ receiptId: lootReceiptId(dropId), dropId, resolution,
       payload: { kind: 'gold' as const, quantity: 1 }, grantedItemIds: [], grantedUnitIds: [] });
     expect(grantedOrbIds([receipt(lootEntryId(orbA, 0)), receipt(lootEntryId(orbA, 1)), receipt(lootEntryId(orbB, 0), 'forfeited')])).toEqual([orbA]);
+  });
+
+  it('anchors idle orb particles on the orb root with the stand (dominant emitter y compensated)', async () => {
+    const loadEffect = vi.fn(async () => fakeEffect());
+    const { scene, tabletop, step } = setup({ loadEffect });
+    tabletop.frame(frame({ orbs: [orb('a', 'blue')] }));
+    await flush();
+    const root = scene.getObjectByName('render3d-orb-blue')!;
+    const fx = root.children.find(child => child.type === 'Group' && child !== root.children[0] && child !== root.children[1]);
+    expect(fx?.position.x).toBe(0);
+    expect(fx?.position.z).toBe(0);
+    expect(fx?.position.y).toBe(16 - 12);
+    step(0.25);
+    expect(fx?.position.x).toBe(0);
+    expect(fx?.position.z).toBe(0);
+    expect(fx?.position.y).toBeGreaterThan(1);
+    expect(fx?.position.y).toBeLessThan(7);
   });
 
   it('gives a trait orb its own idle and open effects, and falls back to the generic tier when they are missing', async () => {
@@ -246,8 +286,8 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     tabletop.frame(frame({ fighting: true, pieces: [monster] }));
     expect(tabletop.walkTo({ x: 0, y: 0 }, 'a')).toBeNull(); // not revealed yet
     tabletop.frame(frame({ fighting: true, pieces: [{ ...monster, alive: false }], orbs: [{ ...orb('a'), source: 'm' }] }));
-    // My legend walks straight through the corpse while the orb is still flying out of it.
-    tabletop.walkTo({ x: monster.x, y: monster.y });
+    // My legend walks straight through the corpse, to two hex widths past it, while the orb is still flying out of it.
+    tabletop.walkTo({ x: monster.x + Math.sqrt(3) * 34 * 2, y: monster.y });
     clock += 60_000; tabletop.update(0.016);
     expect(claimOrb).not.toHaveBeenCalled();
     step(1);
@@ -327,6 +367,39 @@ describe('3D tabletop: legend, orbs and the settled HP bolt', () => {
     tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
     tabletop.walkTo({ x: 0, y: 0 }, 'a'); clock += 60_000; tabletop.update(0.016); tabletop.update(0.016);
     expect(claimOrb).toHaveBeenCalledTimes(2);
+  });
+
+  it('opens an orb at my legend\'s touch before the room answers, once, and draws it again if the claim is refused', () => {
+    let clock = 0;
+    const claimOrb = vi.fn();
+    const { scene, tabletop } = setup({ now: () => clock, claimOrb });
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    tabletop.walkTo({ x: 0, y: 0 }, 'a');
+    clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenCalledExactlyOnceWith('a');
+    // Opened at the touch: the opening plays and the orb is gone, with no answer from the room yet.
+    expect(tabletop.debug().orbs.find(entry => entry.orbId === 'a')?.opened).toBe(true);
+    expect(tabletop.debug().opening).toBe(1);
+    expect(scene.getObjectByName('render3d-orb-blue')!.visible).toBe(false);
+    // Frames without an answer keep it open; the room's grant then removes it without a second opening.
+    tabletop.frame(frame({ orbs: [orb('a')] }));
+    expect(scene.getObjectByName('render3d-orb-blue')!.visible).toBe(false);
+    tabletop.frame(frame({ orbs: [], openedOrbs: ['a'] }));
+    expect(tabletop.debug().orbs).toEqual([]);
+    expect(tabletop.debug().opening).toBe(1);
+
+    // A refused claim: the orb is drawn again and may be claimed again.
+    tabletop.frame(frame({ orbs: [orb('b')], openedOrbs: ['a'] }));
+    tabletop.walkTo({ x: 0, y: 0 }, 'b'); clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb).toHaveBeenLastCalledWith('b');
+    expect(tabletop.debug().orbs.find(entry => entry.orbId === 'b')?.opened).toBe(true);
+    tabletop.frame(frame({ orbs: [orb('b')], openedOrbs: ['a'], orbRefusals: { b: 1 } }));
+    expect(tabletop.debug().orbs.find(entry => entry.orbId === 'b')?.opened).toBe(false);
+    expect(scene.getObjectByName('render3d-orb-blue')!.visible).toBe(true);
+    const width = Math.sqrt(3) * 34;
+    tabletop.walkTo({ x: 35 + width * 3, y: 50 }); clock += 60_000; tabletop.update(0.016);
+    tabletop.walkTo({ x: 0, y: 0 }, 'b'); clock += 60_000; tabletop.update(0.016);
+    expect(claimOrb.mock.calls.filter(([id]) => id === 'b')).toHaveLength(2);
   });
 
   it('claims an orb it crossed during one long frame (a dropped frame or a background tab)', () => {

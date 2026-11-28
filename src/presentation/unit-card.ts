@@ -3,11 +3,13 @@
  * content's public definitions (`UNIT_DEFINITIONS`, `getUnitStats`, `TRAIT_DEFINITIONS`) and the rules' ability display
  * functions (`abilityDisplayName` / `abilityDisplayValues`). Nothing is computed beyond formatting.
  */
-import { getUnitStats } from '../simulation/unit-stats';
+import { getUnitStats, resolveUnitStats } from '../simulation/unit-stats';
+import type { UnitForm } from '../simulation/seat-mechanics/types';
 import { anvilIconUrl, anvilInfo, type AnvilInfo } from './anvil-display';
 import { fourStarBaseStats } from './d14-display';
 import { UNIT_DEFINITIONS, type StarLevel } from '../simulation/units';
-import { abilityText } from './ability-text';
+import { abilityFormIds, abilityText, abilityUnitDefinition, formDefinitionId } from './ability-text';
+import { HERO_ABILITY_MANA_INCREASE } from './hero-ability';
 import type { RankTotals, UnitBattleStats } from './battle-ranking';
 import { getHeroIdentity, heroEmblemSvg, heroTraitTags } from './hero-identity';
 import { attachHoverCards, unitHoverCard } from './hover-card';
@@ -17,13 +19,15 @@ import { itemDisplayName } from './g23-display';
 import { itemMarkHtml } from './item-codex';
 import { readTooltipText } from './tooltip-text-loader';
 import type { CombatViewUnit } from './combat-display';
+import { anomalyNotes, unitAnomalies } from './anomaly-display';
 
 function el<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
 /** Shared inspect/hover heading; missing ability art uses the hero portrait. */
 export function abilityLabel(definitionId: string, text: string): HTMLElement {
-  const label = el('div', text, 'unit-card-label'), url = abilityIconUrl(UNIT_DEFINITIONS[definitionId].abilityId) ?? s13AssetUrl('champion', definitionId);
+  const abilityId = abilityUnitDefinition(definitionId)?.abilityId ?? UNIT_DEFINITIONS[definitionId].abilityId;
+  const label = el('div', text, 'unit-card-label'), url = abilityIconUrl(abilityId) ?? s13AssetUrl('champion', definitionId.replace(/-ranged$/, ''));
   if (url) {
     const image = el('img'); image.src = url; image.alt = ''; image.width = image.height = 36; image.loading = 'lazy';
     image.style.cssText = 'border-radius:6px;float:left;margin-right:8px';
@@ -31,6 +35,11 @@ export function abilityLabel(definitionId: string, text: string): HTMLElement {
     label.prepend(image);
   }
   return label;
+}
+/** Front/back-row caption of a form swapper's ability section; empty for every other hero. */
+export function formCaption(definitionId: string, displayId: string): string {
+  if (abilityFormIds(definitionId).length < 2) return '';
+  return displayId === definitionId ? '前排形态 · ' : '后排形态 · ';
 }
 /** COMBAT tick is 50 ms: attacks per second from the attack interval when the content has no original speed. */
 const TICKS_PER_SECOND = 20;
@@ -98,7 +107,7 @@ export function battleLine(stats: UnitBattleStats, line: HTMLElement = el('p', '
 /** Authoritative per-item counters, including duplicate items; no client counter or cap calculation. */
 export function itemStackLine(stacks: CombatViewUnit['itemStacks'], line: HTMLElement = el('p', '', 'unit-card-text')): HTMLElement {
   line.dataset.debug = 'unit-card:item-stacks';
-  line.textContent = (stacks ?? []).map(row => `${itemDisplayName(row.definitionId)} · 层数 ${row.stacks}/${row.maxStacks}`).join('；');
+  line.textContent = (stacks ?? []).map(row => `${itemDisplayName(row.definitionId)} · 层数 ${row.maxStacks === null ? row.stacks : `${row.stacks}/${row.maxStacks}`}`).join('；');
   line.hidden = !stacks?.length;
   return line;
 }
@@ -123,7 +132,11 @@ function anvilCardBody(definitionId: string, anvil: AnvilInfo): HTMLElement {
   return body;
 }
 
-export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = '', notes: readonly string[] = [], itemStacks?: CombatViewUnit['itemStacks']): HTMLElement | null {
+/**
+ * `form`: the unit's current form (board row in preparation, frozen form in combat). A form swapper shows that form's
+ * ability; off the board (bench, shop) it shows both forms, front row first.
+ */
+export function unitCardBody(definitionId: string, starLevel: number, battle: UnitBattleStats | null = null, gear = '', notes: readonly string[] = [], itemStacks?: CombatViewUnit['itemStacks'], heroAbility = false, form: UnitForm | null = null): HTMLElement | null {
   const anvil = anvilInfo(definitionId);
   if (anvil) return anvilCardBody(definitionId, anvil);
   const definition = Object.hasOwn(UNIT_DEFINITIONS, definitionId) ? UNIT_DEFINITIONS[definitionId] : undefined;
@@ -148,12 +161,20 @@ export function unitCardBody(definitionId: string, starLevel: number, battle: Un
     const role = roleSection(definitionId);
     if (role) body.append(role);
   }
-  const stats = fourStar ?? getUnitStats(definitionId, neutral ? 1 : star);
-  const ability = abilityText(definitionId, fourStar ? 4 : star);
-  const section = el('div', '', 'unit-card-ability'); section.dataset.debug = 'unit-card:ability';
-  section.append(abilityLabel(definitionId, `技能${ability ? ` · ${ability.name}` : ''} · 法力 ${stats.initialMana}/${stats.maxMana}${fourStar ? ' · 四星数值' : ''}`));
-  section.append(el('p', ability?.text || '无主动技能说明', 'unit-card-text'));
-  body.append(section);
+  // A form swapper on the board shows its current form's stats (bench and shop: the front-row definition).
+  const stats = fourStar ?? (form === 'ranged' && formDefinitionId(definitionId, form) !== definitionId
+    ? resolveUnitStats(abilityUnitDefinition(formDefinitionId(definitionId, form))!, star) : getUnitStats(definitionId, neutral ? 1 : star));
+  const hero = heroAbility && !fourStar;
+  const displayIds = fourStar || hero ? [definitionId] : form ? [formDefinitionId(definitionId, form)] : abilityFormIds(definitionId);
+  for (const displayId of displayIds) {
+    const ability = abilityText(displayId, fourStar ? 4 : star, undefined, hero);
+    const mana = displayId === definitionId ? stats : resolveUnitStats(abilityUnitDefinition(displayId)!, star);
+    const section = el('div', '', 'unit-card-ability'); section.dataset.debug = 'unit-card:ability';
+    if (displayId !== definitionId) section.dataset.form = 'ranged';
+    section.append(abilityLabel(displayId, `${formCaption(definitionId, displayId)}技能${ability ? ` · ${ability.name}` : ''} · 法力 ${mana.initialMana}/${mana.maxMana + (hero ? HERO_ABILITY_MANA_INCREASE : 0)}${fourStar ? ' · 四星数值' : ''}`));
+    section.append(el('p', ability?.text || '无主动技能说明', 'unit-card-text'));
+    body.append(section);
+  }
   const speed = stats.baseAttackSpeedBps !== undefined ? stats.baseAttackSpeedBps / 10_000 : TICKS_PER_SECOND / stats.attackIntervalTicks;
   const grid = el('dl', '', 'unit-card-stats'); grid.dataset.debug = 'unit-card:stats';
   for (const [label, value] of [['生命', stats.health], ['攻击力', stats.attack], ['护甲', stats.armor], ['魔抗', stats.magicResist], ['攻速', speed.toFixed(2)], ['射程', stats.attackRange]] as const) {
@@ -171,6 +192,7 @@ export function attachUnitCards(scope: HTMLElement): () => void {
   return attachHoverCards(scope, unitHoverCard(), '[data-unit-def]', anchor => {
     const definitionId = anchor.dataset.unitDef ?? '', star = Number(anchor.dataset.unitStar ?? 1) || 1;
     if (!Object.hasOwn(UNIT_DEFINITIONS, definitionId)) return null;
-    return { key: `unit:${definitionId}:${star}`, build: () => unitCardBody(definitionId, star)! };
+    const notes = anomalyNotes(unitAnomalies(anchor.dataset.unitAnomaly, Array.from(anchor.querySelectorAll<HTMLElement>('[data-item-def]')).map(item => item.dataset.itemDef!)));
+    return { key: `unit:${definitionId}:${star}:${notes.join('|')}`, build: () => unitCardBody(definitionId, star, null, '', notes)! };
   });
 }

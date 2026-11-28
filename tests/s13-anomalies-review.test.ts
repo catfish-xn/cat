@@ -1,3 +1,4 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { expect, it } from 'vitest';
 import { createCombatWithEvents, stepCombat, type CombatState } from '../src/simulation/combat';
 import { readCombatStats } from '../src/simulation/combat-s13';
@@ -153,7 +154,8 @@ it('M4 Mini Mees preserves redirected damage without reducing redirect-only Lori
   ]));
   state = { ...state, units: state.units.map(u => u.id === 'e' ? { ...u, armor: 60 } : u.id === 'guard'
     ? { ...u, armor: 50, maxMana: 50, mana: 50 } : u) };
-  for (let i = 0; i < 3; i++) state = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) }).state;
+  // Ranged attack wind-up (#791, window only): each forced attack starts, then launches a wind-up later.
+  for (let i = 0; i < 3; i++) { state = stepCombat({ ...state, units: state.units.map(u => u.id === 'p' ? { ...u, cooldownTicks: 0 } : u) }).state; for (let n = 0; n < rangedAttackWindupTicks('lux', 20); n++) state = stepCombat(state).state; }
   state = quiet(state);
   const redirected = [], direct = [];
   for (let i = 0; i < 10; i++) {

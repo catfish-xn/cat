@@ -17,6 +17,7 @@ import { itemMarkHtml } from './item-codex';
 import type { LootLabels } from './loot-view';
 import { NEXT_BATTLE_TEXT, takesEffectNextBattle } from './equipment-feedback';
 import { itemDisplayName, lootEntry } from './g23-display';
+import { rootConsumableIconUrl } from './s13-assets';
 import { lootPayloadDescription } from './loot-payload-text';
 
 /** The orb part of a LootView, or of the private view's revealedLoot (§18.4): the same three fields. */
@@ -56,7 +57,7 @@ const TOOL_MARK: Readonly<Record<ConsumableDefinitionId, { readonly glyph: strin
 };
 export const consumableName = (id: string): string => CONSUMABLE_DEFINITIONS[id as ConsumableDefinitionId]?.name ?? id;
 export function toolMark(id: string): string {
-  const mark = TOOL_MARK[id as ConsumableDefinitionId], url = mark ? lootEntry(mark.apiName)?.iconUrl : null;
+  const mark = TOOL_MARK[id as ConsumableDefinitionId], url = mark ? lootEntry(mark.apiName)?.iconUrl ?? rootConsumableIconUrl(id) : null;
   return url ? `<img class="consumable-mark consumable-icon" data-glyph="${mark!.glyph}" src="${url}" alt="" draggable="false" loading="lazy" decoding="async">`
     : `<span class="consumable-mark" aria-hidden="true">${mark?.glyph ?? '?'}</span>`;
 }

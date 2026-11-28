@@ -309,7 +309,24 @@ export interface CastReceipt {
   readonly actualManaSpent: number;
   readonly refundedMana: number;
   readonly completionCell: HexCell;
+  /**
+   * Display-only: this unit's cast number in this combat, counting this cast (runtime.castCount after the cast starts):
+   * 1 for its first cast, reset every combat. Every S13 cast counts: a cast that starts always completes in the same
+   * tick (combat-s13.ts), so there is no interrupted cast to skip. Optional only so older receipts still parse.
+   */
+  readonly castIndex?: number;
+  /** Display-only: which branch this cast took, written where the rule chose it; absent when the ability has none. */
+  readonly branch?: CastBranch;
+  /**
+   * Display-only: the board cells the cast's area covers, written where the rule draws one (Malzahar's gate: the 5-hex line
+   * across his target, board.ts hexCrossLine, cells off the board left out, from one end to the other). The rule's hits
+   * stay in targetIds; this is for drawing the area, empty cells included.
+   */
+  readonly area?: CastArea;
 }
+export interface CastArea { readonly cells: readonly HexCell[] }
+/** castIndex: the caster's cast count this combat including this cast (runtime.castCount, from 1). */
+export interface CastBranch { readonly castIndex: number; readonly branch: string }
 export type Trigger = 'combat-start' | 'attack-completed' | 'incoming-basic-hit' | 'cast-completed'
   | 'damage-dealt' | 'damage-taken' | 'shield-hit' | 'post-damage-survival' | 'shield-ended'
   | 'target-changed' | 'kill-or-assist' | 'periodic' | 'counter-updated'
@@ -495,11 +512,11 @@ export interface M8CombatExtension {
 export interface M8Version {
   readonly contractVersion: 'm8-b2-v3-review';
   readonly schemaVersion: 12;
-  readonly rulesVersion: 's13-g2-3-v25-online-rules';
-  readonly contentVersion: 's13-14.24b-g2-3-v25-online-rules';
+  readonly rulesVersion: 's13-g2-3-v26-neutrals-1424';
+  readonly contentVersion: 's13-14.24b-g2-3-v26-neutrals-1424';
   readonly contentDigest: string;
-  readonly saveFormatVersion: 8;
-  readonly replayFormatVersion: 8;
+  readonly saveFormatVersion: 10;
+  readonly replayFormatVersion: 10;
   readonly commandProtocolVersion: 7;
   readonly rngAlgorithm: 'lcg32-v1';
   readonly tickMs: 50;

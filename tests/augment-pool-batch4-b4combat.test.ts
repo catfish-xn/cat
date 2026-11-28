@@ -14,9 +14,11 @@ import { createCombatWithEvents, stepCombat } from '../src/simulation/combat';
 import { ad, ap } from '../src/simulation/combat-s13-state';
 
 // Public routes offering each card without rerolls, re-searched on the v25 integrated pool (seeds 0..100).
+// v26 D5 pool (7953c99a): category-five 142 (was 3; none in 0..141), long-distance-pals 14 (was 49),
+// sated-spellweaver 37 (was 42), overheal 88 (was 41; 42 also offers it but picks history-proof snipers-nest).
 const routes:Record<string,{seed:number;node:string;reroll?:number}>={
- 'category-five':{seed:3,node:'2-1'},'long-distance-pals':{seed:49,node:'3-2'},
- 'sated-spellweaver':{seed:42,node:'3-2'},overheal:{seed:41,node:'3-2'}
+ 'category-five':{seed:142,node:'2-1'},'long-distance-pals':{seed:14,node:'3-2'},
+ 'sated-spellweaver':{seed:37,node:'3-2'},overheal:{seed:88,node:'3-2'}
 };
 function acquire(id:string):MatchState {
  const r=routes[id];let s=reachRound(r.node,false,r.seed);

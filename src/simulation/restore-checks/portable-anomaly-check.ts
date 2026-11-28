@@ -1,6 +1,5 @@
 // 存档恢复专用校验。只随单人 application 动态加载，实时对局命令不引用这里。
 import { portableGrantId, r2AnomalyAllowed } from '../augment-pool-batch5-r2-anomaly';
-import { traceBoundUnitIdentity } from '../bound-unit-identity';
 import { PORTABLE_ANOMALY_PREFIX, portableAnomalyId } from '../content/augment-pool-batch5-r2';
 import type { MatchState } from '../match-types';
 
@@ -19,7 +18,7 @@ export function validatePortableAnomaly(state:MatchState):void {
       ||receipt.definitionId!==PORTABLE_ANOMALY_PREFIX+selected.definitionId)fail();
   }
   if(owner&&state.pendingChoice?.kind==='anomaly'&&state.pendingChoice.offers.some(id=>!r2AnomalyAllowed(state.augments,id)))fail();
-  const original=selected?.unitId?traceBoundUnitIdentity(selected.unitId,state.resourceProvenance.entries):null;
+  const original=state.anomalyBinding?.unitId??null;
   for(const item of state.items)if(portableAnomalyId(item.definitionId)!==null){
     if(!owner||!selected||item.definitionId!==PORTABLE_ANOMALY_PREFIX+selected.definitionId
       ||item.location.kind==='unit'&&item.location.unitId===original)fail();

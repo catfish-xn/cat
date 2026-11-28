@@ -119,7 +119,10 @@ const { chromium } = require('playwright'), { sourceFingerprint } = require('./m
           const input = document.querySelector('[data-debug=m6-import]'), transfer = new DataTransfer();
           transfer.items.add(new File([JSON.stringify({ ...template, runId: 'fresh', match: createMatch(7), battles: [], currentBattle: null })], 'fresh.json', { type: 'application/json' }));
           input.files = transfer.files; input.dispatchEvent(new Event('change'));
-          while (app.debug().runId !== 'fresh' || app.busy) await new Promise(r => setTimeout(r, 10));
+          // 787fdb02 starts the activation refresh in the background so seed buttons are not held
+          // through archive admission. archivesSettled is that same refresh finishing: the list,
+          // quarantine count and status the old await loadArchives() published before busy cleared.
+          while (app.debug().runId !== 'fresh' || app.busy || !app.debug().archivesSettled) await new Promise(r => setTimeout(r, 10));
           const snapshot = () => ({ token: app.debug().token, status: app.debug().status, quarantined: app.debug().quarantinedArchives, statuses: [...statuses],
             options: [...document.querySelectorAll('#replay-root select option')].filter(o => o.value !== '').map(o => o.textContent) });
           const before = snapshot();

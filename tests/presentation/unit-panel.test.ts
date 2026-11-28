@@ -5,6 +5,8 @@ import type { Browser, Page } from 'playwright';
 import { testBrowser } from '../fixtures/shared-browser';
 import { build } from 'esbuild';
 import { readFileSync } from 'node:fs';
+import { g23FormStats } from '../../src/simulation/g2-3-forms';
+import { DEFAULT_BOARD } from '../../src/simulation/board';
 let browser: Browser, page: Page;
 // Bundling, browser launch and page setup are separate hooks so each stays within the default hook limit on slow CI runners.
 let bundle = '';
@@ -16,7 +18,10 @@ beforeAll(async () => {
     export {registerRootUiAssets} from './src/presentation/s13-assets';
     export {loadTooltipText} from './src/presentation/tooltip-text-loader';
     export {UNIT_DEFINITIONS} from './src/simulation/units';`, resolveDir: process.cwd() },
-    bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' } });
+    bundle: true, write: false, format: 'iife', globalName: 'Inspect', define: { 'import.meta.env.BASE_URL': '"./"' },
+    // bb1990d5 (v26 augment icons layout) made augment-text-data import ./augment-hud.css; an in-memory bundle has no CSS
+    // output path, so drop stylesheets exactly as tests/presentation/hover-dom.test.ts does. The page still loads src/style.css.
+    loader: { '.css': 'empty' } });
   bundle = result.outputFiles[0].text;
 });
 beforeAll(async () => {
@@ -44,13 +49,17 @@ it('shows projected scene unit/item cards and the shared orb body in Chromium, w
     const orb = show({ kind: 'orb', id: 'mine' }, null, { orbId: 'mine', tier: 'gold', source: 'pve', roundId: '1-2', queued: false,
       entries: [{ kind: 'gold', quantity: 7 }, { kind: 'unit', definitionId: 'lux', starLevel: 2, quantity: 1 }] });
     const orbText = orb.textContent!, visible = orb.checkVisibility(), entriesVisible = orb.querySelector('ul')!.checkVisibility();
+    // Family orbs still queue during a battle; a PvE orb opens at the touch (TFT).
+    const familyText = show({ kind: 'orb', id: 'family' }, null, { orbId: 'family', tier: 'blue', source: 'family', roundId: '1-2', queued: false,
+      entries: [{ kind: 'gold', quantity: 3 }] }).textContent!;
     const publicText = show({ kind: 'public-orbs', count: 2, tiers: ['gold', 'blue'] }).textContent!;
     show(null);
-    return { unitText, beside, item, orbText, visible, entriesVisible, publicText, hidden: document.getElementById('unit-card')!.hidden };
+    return { unitText, beside, item, orbText, familyText, visible, entriesVisible, publicText, hidden: document.getElementById('unit-card')!.hidden };
   });
   expect(result.unitText).toContain('拉克丝'); expect(result.unitText).toContain('★★'); expect(result.unitText).toContain('暴风大剑');
   expect(result.beside).toBe(true); expect(result.item).toContain('暴风大剑'); expect(result.item).toContain('攻击');
-  expect(result.orbText).toContain('7 金币'); expect(result.orbText).toContain('拉克丝★★'); expect(result.orbText).toContain('战后结算');
+  expect(result.orbText).toContain('7 金币'); expect(result.orbText).toContain('拉克丝★★'); expect(result.orbText).toContain('点击领取'); expect(result.orbText).not.toContain('战后结算');
+  expect(result.familyText).toContain('战后结算');
   expect(result.orbText).toContain('自动出售'); expect(result.visible).toBe(true); expect(result.entriesVisible).toBe(true);
   expect(result.publicText).toContain('2 个'); expect(result.publicText).not.toContain('拉克丝'); expect(result.publicText).not.toContain('7 金币');
   expect(result.hidden).toBe(true);
@@ -196,4 +205,78 @@ it('refreshes independent Titan counters in the pinned panel and hover body, the
   expect(result.before).toContain('1/25'); expect(result.before).toContain('3/25');
   expect(result.after).toContain('7/25'); expect(result.after).toContain('25/25');
   expect(result.hover).toContain(result.after); expect(result.same).toBe(true); expect(result.cleared).toBe(true);
+});
+
+it('keeps the ability text in a card that opens from the ability icon', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect, body = api.buildUnitPanel({ id: 'lux', definitionId: 'lux', starLevel: 2, team: 'player' });
+    document.body.append(body);
+    const button = body.querySelector('.inspect-ability') as HTMLButtonElement, card = body.querySelector('.inspect-ability-card') as HTMLElement;
+    const closed = card.checkVisibility(), size = button.getBoundingClientRect();
+    button.focus(); const open = card.checkVisibility() && button.getAttribute('aria-expanded') === 'true';
+    button.blur(); const reclosed = !card.checkVisibility();
+    const role = card.querySelector('[data-debug="unit-card:role"]') !== null, stats = body.querySelectorAll('.inspect-stat').length;
+    body.remove(); return { closed, open, reclosed, role, stats, target: size.width >= 44 && size.height >= 44, label: button.getAttribute('aria-label') };
+  });
+  expect(result).toMatchObject({ closed: false, open: true, reclosed: true, role: true, stats: 8, target: true });
+  expect(result.label).toContain('技能');
+});
+it('shows a form swapper the ability of its current form, and both forms off the board', async () => {
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect;
+    const labels = (body: HTMLElement) => Array.from(body.querySelectorAll('.unit-card-ability .unit-card-label')).map(node => node.textContent ?? '');
+    const hover = (form: string | null) => labels(api.unitCardBody('elise', 2, null, '', [], undefined, false, form));
+    const panel = (data: object) => labels(api.buildUnitPanel({ id: 'e', definitionId: 'elise', starLevel: 2, team: 'player', ...data }));
+    return { melee: hover('melee'), ranged: hover('ranged'), bench: hover(null), panelRanged: panel({ form: 'ranged' }),
+      combatMelee: panel({ form: 'ranged', combat: { form: 'melee' } }), plain: labels(api.unitCardBody('lux', 2)) };
+  });
+  expect(result.melee).toHaveLength(1); expect(result.melee[0]).toMatch(/^前排形态 · 技能 · 结茧/);
+  expect(result.ranged).toHaveLength(1); expect(result.ranged[0]).toMatch(/^后排形态 · 技能 · 自爆蜘蛛/);
+  expect(result.bench.map(label => label.slice(0, 4))).toEqual(['前排形态', '后排形态']);
+  expect(result.panelRanged).toHaveLength(1); expect(result.panelRanged[0]).toMatch(/^后排形态 · 自爆蜘蛛/);
+  expect(result.combatMelee).toHaveLength(1); expect(result.combatMelee[0]).toMatch(/^前排形态 · 结茧/);
+  expect(result.plain).toHaveLength(1); expect(result.plain[0]).not.toMatch(/形态/);
+});
+it('labels each form section with that form\'s mana, as the rules resolve the form from the board row', async () => {
+  // Front rows are the first two of the player's deployment zone, back rows the rest (rules: seat-mechanics/forms.ts).
+  const front = DEFAULT_BOARD.deploymentZones.player.firstRow, back = DEFAULT_BOARD.deploymentZones.player.lastRow;
+  const heroes = ['elise', 'jayce', 'gangplank', 'swain'];
+  const expected = heroes.map(id => [g23FormStats(id, 2, 'player', front), g23FormStats(id, 2, 'player', back)]
+    .map(stats => `法力 ${stats.initialMana}/${stats.maxMana}`));
+  const result = await page.evaluate(ids => {
+    const api = (window as any).Inspect;
+    const labels = (body: HTMLElement) => Array.from(body.querySelectorAll('.unit-card-ability .unit-card-label')).map(node => node.textContent ?? '');
+    return ids.map(id => ({
+      melee: labels(api.unitCardBody(id, 2, null, '', [], undefined, false, 'melee')),
+      ranged: labels(api.unitCardBody(id, 2, null, '', [], undefined, false, 'ranged')),
+      bench: labels(api.unitCardBody(id, 2)),
+      panelRanged: labels(api.buildUnitPanel({ id, definitionId: id, starLevel: 2, team: 'player', form: 'ranged' })),
+      panelMelee: labels(api.buildUnitPanel({ id, definitionId: id, starLevel: 2, team: 'player', form: 'melee' })),
+    }));
+  }, heroes);
+  // The two forms differ for every one of them, so a back-row label reading the front-row mana fails here.
+  for (const [front, back] of expected) expect(front).not.toBe(back);
+  result.forEach((row, i) => {
+    const [front, back] = expected[i];
+    expect(row.melee[0]).toContain(front); expect(row.ranged[0]).toContain(back);
+    expect(row.bench[0]).toContain(front); expect(row.bench[1]).toContain(back);
+    expect(row.panelMelee[0]).toContain(front); expect(row.panelRanged[0]).toContain(back);
+  });
+});
+it('shows the back-row form\'s stats in the card grid and the inspect panel', async () => {
+  const front = DEFAULT_BOARD.deploymentZones.player.firstRow, back = DEFAULT_BOARD.deploymentZones.player.lastRow;
+  const result = await page.evaluate(() => {
+    const api = (window as any).Inspect;
+    const grid = (body: HTMLElement) => Object.fromEntries(Array.from(body.querySelectorAll('[data-debug="unit-card:stats"] dt')).map(dt => [dt.textContent, dt.nextElementSibling?.textContent]));
+    const panel = (form: string) => { const body = api.buildUnitPanel({ id: 'j', definitionId: 'jayce', starLevel: 2, team: 'player', form });
+      return { range: body.querySelector('[data-value="range"]')?.textContent ?? '', mana: body.querySelector('[data-value="mana"]')?.textContent ?? '' }; };
+    return { ranged: grid(api.unitCardBody('jayce', 2, null, '', [], undefined, false, 'ranged')), melee: grid(api.unitCardBody('jayce', 2, null, '', [], undefined, false, 'melee')),
+      bench: grid(api.unitCardBody('jayce', 2)), panelRanged: panel('ranged'), panelMelee: panel('melee') };
+  });
+  const ranged = g23FormStats('jayce', 2, 'player', back), melee = g23FormStats('jayce', 2, 'player', front);
+  expect(result.ranged['射程']).toBe(String(ranged.attackRange)); expect(result.ranged['生命']).toBe(String(ranged.health));
+  expect(result.melee['射程']).toBe(String(melee.attackRange)); expect(result.melee['生命']).toBe(String(melee.health));
+  expect(result.bench).toEqual(result.melee);
+  expect(result.panelRanged.mana).toContain(`/${ranged.maxMana}`); expect(result.panelMelee.mana).toContain(`/${melee.maxMana}`);
+  expect(result.panelRanged.range).toBe(`${ranged.attackRange} 格`); expect(result.panelMelee.range).toBe(`${melee.attackRange} 格`);
 });

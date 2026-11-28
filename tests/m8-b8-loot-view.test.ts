@@ -1,9 +1,14 @@
+import {readFileSync} from 'node:fs';
+import path from 'node:path';
+import {gunzipSync} from 'node:zlib';
+// @ts-expect-error Recorder script is native ESM JavaScript.
+import {resolveFixtureTarget} from '../scripts/record-m8-b8-terminal-prefix.mjs';
 import {lootPlan as independentLootPlan} from './fixtures/orb-combo-oracle.cjs';
 import {beforeAll,describe,expect,it} from 'vitest';
 import * as api from '../src/simulation/match';
 import type {MatchState} from '../src/simulation/match';
 import {restoreMatch,serializeMatch} from '../src/simulation/serialization';
-import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation,configuredPrefix,reserveExcept,players,TERMINAL_EMPTY_BOARD_ROUNDS} from './fixtures/t13-loot-public';
+import {accepted,battle,bench,fillBench,plan,publicPrefix,terminalPreparation,reserveExcept,players,pinTerminalPrefix} from './fixtures/t13-loot-public';
 import { vi } from 'vitest';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
 vi.setConfig({ testTimeout: 20_000 });
@@ -24,10 +29,22 @@ function hiddenIndependent(s:MatchState,mutate:(s:any)=>void){const raw=JSON.par
 // on that route; two ordinary rod recipes and public equipment commands give
 // the same two-carrier terminal control without killing the anvil carrier.
 let terminalHero:MatchState;
+// v26 D5 pool (7953c99a) + 14.24 razorbeaks (568eeea4): seed 2146 now takes built-different / immovable-object /
+// teaming-up-ii (was patient-study / wand-overflow / bulky-buddies-ii), so the default supplies leave three rods
+// ("Missing earned rods"), and the tougher 4-7 razorbeaks survive Maddie with Warmog/two Deathcaps/Statikk on
+// every cell. The route now takes rods at 2-4 and 3-4 (was bow, rod) for the two Deathcaps, and the 2-star Loris
+// (was Maddie) carries Warmog + both Deathcaps at (0,4) (was Maddie at (0,7) with Warmog/Deathcap/Statikk):
+// it kills one component carrier and one hero carrier, then the player falls at 3 HP.
 async function prepareTerminalHero(){
- let s=reserveExcept(await configuredPrefix('4-7',{seed:2146,build:'sniper',
-  emptyBoardRounds:[...TERMINAL_EMPTY_BOARD_ROUNDS,'4-7'],protectedUnitIds:[]}),[]);
- const holder=players(s).find(u=>u.definitionId==='maddie');if(!holder)throw Error('Missing earned Maddie');
+ // The new loss formula makes the terminal route win 3-7; its earned glove can
+ // otherwise consume the first belt as Guardbreaker before the second arrives.
+ // Reserve real belts and rods for the original Warmog/two-Deathcap boundary.
+ // The gzip is that audited seed-2146 configuredPrefix (independent ledger left on).
+ // restoreMatch checks the save in full. The remover, recipes, and deployment below
+ // stay live public commands on the restored preparation.
+ // Regenerate with scripts/record-m8-b8-terminal-prefix.mjs after a real rule change.
+ let s=reserveExcept(auditedSave('m8-b8-terminal-2146.json.gz'),[]);
+ const holder=players(s).find(u=>u.definitionId==='loris');if(!holder)throw Error('Missing earned Loris');
  for(const unit of players(s).filter(u=>s.items.some(i=>i.location.kind==='unit'&&i.location.unitId===u.id))){
   const remover=s.consumables.find(c=>c.definitionId==='magnetic-remover');if(!remover)throw Error('Missing earned remover');
   s=accepted(api.useConsumable(s,remover.consumableId,{kind:'unit',unitId:unit.id}));
@@ -36,17 +53,27 @@ async function prepareTerminalHero(){
   const rods=s.items.filter(i=>i.location.kind==='inventory'&&i.definitionId==='rod');
   if(rods.length<2)throw Error('Missing earned rods');s=accepted(api.combineItems(s,rods[0].id,rods[1].id));
  }
- for(const [slot,definitionId]of ['warmog','deathcap','statikk-shiv'].entries()){
+ for(const [slot,definitionId]of ['warmog','deathcap','deathcap'].entries()){
   const item=s.items.find(i=>i.location.kind==='inventory'&&i.definitionId===definitionId);if(!item)throw Error(`Missing earned ${definitionId}`);
   s=accepted(api.equipItem(s,item.id,holder.id,slot));
  }
- s=accepted(api.deployMatchUnit(s,holder.id,{kind:'board',cell:{col:0,row:7}}));
+ s=accepted(api.deployMatchUnit(s,holder.id,{kind:'board',cell:{col:0,row:4}}));
  return fillBench(s,['ezreal']);
 }
 // Warm shared prefixes once; report each original 10 s callback separately.
+// Seed 2253 rolls a prismatic 4-2 offer, so its solo proof starts at match creation
+// and a cold serialize replays every combat. Seed 2146 is the audited sniper prefix.
+// Each gzip is that route's save. restoreMatch checks it in full; later cases only extend it.
+// Regenerate both with scripts/record-m8-b8-terminal-prefix.mjs after a real rule change.
+function auditedSave(file: string){
+ return restoreMatch(gunzipSync(readFileSync(new URL(`./fixtures/${file}`,import.meta.url))).toString());
+}
 async function warmTerminal(hero=false){
  const began=performance.now();
- try{if(hero)terminalHero=await prepareTerminalHero();else await terminalPreparation(null);}
+ try{
+  if(hero)terminalHero=await prepareTerminalHero();
+  else pinTerminalPrefix(auditedSave('m8-b8-terminal-2253.json.gz'));
+ }
  finally{console.info(`B8 terminal warmup ${hero?'hero':'default'}: ${performance.now()-began} ms`);}
 }
 beforeAll(async () => { await warmTerminal(); });
@@ -91,7 +118,10 @@ describe('B8 readLootView over real randomized public routes',()=>{
  // (0,7) kills r01/r03 and leaves the first-orb anvil unearned.
 // Tool carrier: Leona (was Loris) at (0,7). After the xp/batch-3 merge seed 2253's augments let a lone Loris there
 // clear all six razorbeaks; Leona kills the same r01 rod and r02 reforger carriers and dies.
- it.each([{name:'two source deaths including a hero',keep:'maddie',col:0,row:7,deaths:2,seed:2146},{name:'only component carrier',keep:'urgot',col:0,row:4,deaths:1},{name:'tool carrier',keep:'leona',col:0,row:7,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths,seed})=>{
+ // v26 14.24 razorbeaks (568eeea4) with targeting/pathing: on seed 2253 a lone Urgot at (0,4) and a lone Leona at
+// (0,7) now kill no razorbeak. The 2-star Loris at (0,7) kills only the r01 rod carrier (was Urgot at (0,4)), and at
+// (0,4) kills the same r01 rod and r02 gold/reforger carriers the Leona case did (was Leona at (0,7)).
+ it.each([{name:'two source deaths including a hero',keep:'loris',col:0,row:4,deaths:2,seed:2146},{name:'only component carrier',keep:'loris',col:0,row:7,deaths:1},{name:'tool carrier',keep:'loris',col:0,row:4,deaths:2},{name:'no carrier',keep:null,col:1,row:7,deaths:0}])('terminal $name: retained reward is read-only and unearned content stays hidden',async({keep,col,row,deaths,seed})=>{
   const prep=seed===2146?terminalHero:await terminalPreparation(keep,col,row,seed);
   if(seed===2146){expect(prep.playerHp).toBe(3);expect(bench(prep)).toHaveLength(9);expect(players(prep).find(u=>u.definitionId===keep)!.location).toEqual({kind:'board',cell:{col,row}});}
   const terminal=battle(prep),s=terminal.ended,v=view(s);expect(s.phase).toBe('gameOver');
@@ -115,5 +145,23 @@ describe('B8 readLootView over real randomized public routes',()=>{
   const restored=restoreMatch(serializeMatch(s));expect(api.stepMatch(restored)).toEqual({state:restored,events:[]});expect(api.nextRound(restored,restored.round)).toEqual({ok:false,state:restored,reason:'wrong-phase'});
   expect(v.revealedDrops.every(d=>d.allowedActions.length===0)).toBe(true);
   if(!deaths)hiddenIndependent(s,raw=>{for(const d of raw.m8.loot.frozen.rounds.at(-1).encounterPlan.drops)d.payload={kind:'gold',quantity:99};});
+ });
+ it('record-m8-b8 logs an overridden fixture directory to stderr in write mode only',()=>{
+  const defaultDir=path.resolve('tests/fixtures'),customDir=path.resolve('artifacts/custom-fixtures');
+  const stderr=vi.spyOn(console,'error').mockImplementation(()=>{});
+  try{
+   expect(resolveFixtureTarget([],{})).toEqual({check:false,fixtureDir:defaultDir,overridden:false});
+   expect(resolveFixtureTarget(['--check'],{})).toEqual({check:true,fixtureDir:defaultDir,overridden:false});
+   expect(resolveFixtureTarget(['--check',`--fixture-dir=${customDir}`],{})).toEqual({check:true,fixtureDir:customDir,overridden:true});
+   expect(resolveFixtureTarget(['--check'],{M8_B8_TERMINAL_FIXTURE_DIR:customDir})).toEqual({check:true,fixtureDir:customDir,overridden:true});
+   expect(stderr).not.toHaveBeenCalled();
+   expect(resolveFixtureTarget([`--fixture-dir=${customDir}`],{})).toEqual({check:false,fixtureDir:customDir,overridden:true});
+   expect(stderr).toHaveBeenLastCalledWith(`record-m8-b8: writing fixtures to ${customDir} (overridden)`);
+   expect(resolveFixtureTarget([],{M8_B8_TERMINAL_FIXTURE_DIR:'artifacts/env-fixtures'})).toEqual({check:false,fixtureDir:path.resolve('artifacts/env-fixtures'),overridden:true});
+   expect(stderr).toHaveBeenLastCalledWith(`record-m8-b8: writing fixtures to ${path.resolve('artifacts/env-fixtures')} (overridden)`);
+   expect(stderr).toHaveBeenCalledTimes(2);
+  }finally{
+   stderr.mockRestore();
+  }
  });
 });

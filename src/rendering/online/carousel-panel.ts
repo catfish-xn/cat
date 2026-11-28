@@ -1,6 +1,3 @@
-import { attachHoverCards, HoverCard } from '../../presentation/hover-card';
-import { unitCardBody } from '../../presentation/unit-card';
-import { hoverAction } from '../../presentation/text-card';
 /**
  * G1-P7 shared carousel (选秀) panel. A ring of the units standing on the carousel, each with the item it carries,
  * floating over the enemy half of my board so the bench below stays visible (a picked unit lands there at once).
@@ -18,16 +15,15 @@ import { hoverAction } from '../../presentation/text-card';
  * §21.1). The release groups shown are the rules' `releaseOrder` cut where `releaseAtMs` changes, for display only.
  */
 import { UNIT_DEFINITIONS } from '../../simulation/units';
-import { getHeroIdentity, heroEmblemSvg } from '../../presentation/hero-identity';
-import { attachItemPopover, itemMarkHtml } from '../../presentation/item-codex';
+import { heroEmblemSvg } from '../../presentation/hero-identity';
+import { itemMarkHtml } from '../../presentation/item-codex';
 import { heroPortraitHtml } from '../../presentation/s13-assets';
 import type { CarouselSlotView, CarouselView, SeatPublic } from './protocol';
+import { attachCarouselCards, element, unitName } from './carousel-holding';
+/** The holding slot moved out with the shared helpers; re-exported for existing callers. */
+export { CarouselHoldingSlot, readHeldCarouselUnits, type HeldCarouselUnitView } from './carousel-holding';
 import { itemDisplayName } from '../../presentation/g23-display';
 
-function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
-  const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
-}
-const unitName = (definitionId: string) => getHeroIdentity(definitionId).name;
 const itemName = (definitionId: string) => itemDisplayName(definitionId);
 
 /** One release group as shown: consecutive seats of the release order that share a release time. */
@@ -65,19 +61,6 @@ export type CarouselSide = 'carousel' | 'board';
 /** Space switches sides, unless the key goes to a control or a text field (a focused slot button takes Space as a click). */
 const SWITCH_KEY = 'Space';
 
-const HOLDING_RULE = '临时位：只保管，不参战 · 备战席或场上有空位时自动移入';
-function attachCarouselCards(scope: HTMLElement): () => void {
-  const card = new HoverCard(`${scope.className}-unit-card`, 'hover:carousel');
-  const detach = attachHoverCards(scope, card, '[data-carousel-unit], [data-item-def], .carousel-holding-sell', anchor => {
-    const id = anchor.dataset.carouselUnit;
-    if (!id) return null;
-    const star = Number(anchor.dataset.star ?? 1) as 1 | 2 | 3;
-    const notes = anchor.dataset.holding ? [HOLDING_RULE] : [];
-    return { key: `${id}:${star}:${notes}`, build: () => unitCardBody(id, star, null, '', notes)! };
-  }, { pin: true, longPress: hoverAction });
-  const items = attachItemPopover(scope, `${scope.className}-item-card`, { pin: true, longPress: hoverAction });
-  return () => { detach(); items(); card.dispose(); };
-}
 
 export class CarouselPanel {
   readonly root: HTMLElement;
@@ -128,7 +111,10 @@ export class CarouselPanel {
     back.title = '回到选秀盘（空格）'; back.append(element('kbd', '空格'));
     back.addEventListener('click', () => this.setSide('carousel'));
     this.bar.append(element('strong', '选秀', 'carousel-bar-title'), this.barTimer, element('span', '秒', 'carousel-timer-unit'), this.barStatus, back);
-    host.append(this.root, this.bar);
+    // S13: in 3D the shop folds to a tab at the bottom while drafting (nothing can be bought on the carousel).
+    const shopTab = element('div', '', 'carousel-shop-tab'); shopTab.dataset.debug = 'online:carousel-shop-tab';
+    shopTab.setAttribute('aria-disabled', 'true'); shopTab.title = '选秀中商店不可用';
+    host.append(this.root, this.bar, shopTab);
     this.detach = attachCarouselCards(this.root);
     document.addEventListener('keydown', this.onKey);
   }
@@ -174,7 +160,7 @@ export class CarouselPanel {
     for (const chip of Array.from(this.ring.querySelectorAll('.carousel-slot.pending'))) chip.classList.remove('pending');
     this.tick();
   }
-  /** A slot click, from its chip or the 3D carousel: taken only while my batch is out, the slot stands and no pick is out. */
+  /** A 2D card click requesting server-planned travel: taken only while my batch is out, the slot stands and no pick is out. */
   pickSlot(slot: number): boolean {
     const current = this.view, chip = this.chip(slot);
     if (!current?.eligible || !chip || chip.disabled || this.pending !== null) return false;
@@ -191,7 +177,7 @@ export class CarouselPanel {
   elapsedNow(): number | null { return this.view ? performance.now() - this.clockOffset - this.view.startedAt : null; }
   /** My click still waiting for the server's answer, if any. */
   get pendingSlot(): number | null { return this.pending; }
-  /** True while the 3D layer draws the carousel: the panel keeps its head, countdown and release order but not the ring. */
+  /** True while the 3D layer draws the carousel: as in S13 only the stage bar's countdown stays; the panel keeps just the way to my board. */
   set drawnIn3d(on: boolean) { this.root.toggleAttribute('data-ring-3d', on); }
   private chip(slot: number): HTMLButtonElement | null {
     return this.ring.querySelector<HTMLButtonElement>(`.carousel-slot[data-slot="${slot}"]`);
@@ -282,57 +268,4 @@ export class CarouselPanel {
     this.order.replaceChildren(...rows);
   }
   dispose(): void { this.detach(); document.removeEventListener('keydown', this.onKey); this.root.remove(); this.bar.remove(); }
-}
-
-/**
- * One unit in the carousel holding slot (临时位): a pick the rules could not place because my bench and my board were both
- * full (MULTIPLAYER_CONTRACT §21.6). The server sends them as `PrivateSeatView.heldCarouselUnits`, copied from the rules'
- * `carousel.heldCarouselUnits`; only `readHeldCarouselUnits` reads the wire.
- */
-export interface HeldCarouselUnitView { readonly receiptId: string; readonly unitId: string; readonly definitionId: string }
-/** The held units of my seat view (or its display copy); empty when the server sent none. */
-export function readHeldCarouselUnits(state: object): readonly HeldCarouselUnitView[] {
-  const held = (state as { readonly heldCarouselUnits?: unknown }).heldCarouselUnits;
-  return Array.isArray(held) ? held as HeldCarouselUnitView[] : [];
-}
-
-/**
- * The holding slot (临时位) beside the bench: a carousel unit kept there does not fight. The server moves it out by
- * itself once the bench or the board has room (the rules decide where); the only command here is the explicit sell, the
- * same `sell` as any unit.
- */
-export class CarouselHoldingSlot {
-  readonly root: HTMLElement;
-  private readonly detach: () => void;
-  private key = '';
-  constructor(host: HTMLElement, private readonly onSell: (unitId: string) => void) {
-    this.root = element('aside', '', 'carousel-holding'); this.root.hidden = true; this.root.dataset.debug = 'online:carousel-holding';
-    this.root.setAttribute('aria-label', '临时位 · 不参战');
-    host.append(this.root); this.detach = attachCarouselCards(this.root);
-  }
-  render(units: readonly HeldCarouselUnitView[], operable: boolean): void {
-    const key = `${operable}|${units.map(unit => unit.unitId).join(',')}`;
-    if (key === this.key) return;
-    this.key = key;
-    this.root.hidden = units.length === 0;
-    const cards = units.map(unit => {
-      const cost = UNIT_DEFINITIONS[unit.definitionId]?.cost ?? 0;
-      const card = element('div', '', `carousel-holding-unit cost-${cost}`); card.dataset.unit = unit.unitId; card.dataset.definition = unit.definitionId;
-      card.dataset.debug = `online:carousel-holding-unit:${unit.unitId}`;
-      card.dataset.carouselUnit = unit.definitionId; card.dataset.holding = 'true'; card.tabIndex = 0;
-      card.setAttribute('aria-label', `${unitName(unit.definitionId)} · ${HOLDING_RULE}`);
-      const portrait = element('span', '', 'carousel-holding-portrait');
-      portrait.innerHTML = heroPortraitHtml(unit.definitionId, 40, heroEmblemSvg(unit.definitionId, 40));
-      const sell = element('button', `出售 +${cost}`, 'carousel-holding-sell'); sell.type = 'button'; sell.disabled = !operable;
-      sell.dataset.debug = `online:carousel-holding-sell:${unit.unitId}`;
-      sell.title = operable ? `出售 ${unitName(unit.definitionId)}` : '准备阶段可出售';
-      sell.addEventListener('click', () => { if (!sell.disabled) this.onSell(unit.unitId); });
-      card.append(portrait, element('span', unitName(unit.definitionId), 'carousel-holding-name'), element('span', '不参战', 'carousel-holding-idle'), sell);
-      return card;
-    });
-    const head = element('header', '', 'carousel-holding-head'); head.setAttribute('aria-label', HOLDING_RULE);
-    head.append(element('strong', '临时位', 'carousel-holding-title'), element('span', '只保管不参战 · 有空位自动移入', 'carousel-holding-note'));
-    this.root.replaceChildren(head, ...cards);
-  }
-  dispose(): void { this.detach(); this.root.remove(); }
 }

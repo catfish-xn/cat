@@ -251,7 +251,13 @@ function rewardPlan(s,env){
   }
  }
  const explosion=lootExplosionPlan(s);
- return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
+ const oeGifts=[];
+ for(const a of s.augments.filter(x=>x.definitionId==='over-encumbered')){
+  const stage=env.ROUNDS[a.acquiredRound-1].stage+1;
+  const due=s.roundResults.find(r=>{const row=env.ROUNDS[r.round-1];return row.stage===stage&&row.sub===7;});
+  if(due&&due.hpAfter>0)oeGifts.push(...expand(s,{...a,acquiredRound:due.round,choiceId:JSON.stringify([a.choiceId,'over-encumbered-stage',stage])},[Q('component',3)],env));
+ }
+ return {gifts:[...gifts,...batch2,...batch3,...forms,...levelsOut,...oeGifts,...explosion.gifts],gold:[...gold,...h4.goldPlan(s),...explosion.gold]};
 }
 // P-B5-69 (2026-10-27): independent integer weights and reward mapping, not production receipts.
 function lootExplosionPlan(s) {
@@ -267,7 +273,8 @@ function lootExplosionPlan(s) {
    if(!k||!d.ordinaryHero||k.killerSeatId!==seat||d.ownerSeatId===seat)continue;
    assert(Number.isInteger(k.critChanceBps)&&k.critChanceBps>=0&&k.critChanceBps<=10000);
    const ns=['augment-pool-batch5-g7',seat,a.choiceId,r.round,d.combatId,d.eventSeq];
-   let rng=salt(s.seed,ns);const draw=()=>rng=word(rng);
+   // 2026-11-21 (#795): the drop roll is keyed by the death's tick and unit; the receipt ids keep the eventSeq namespace.
+   let rng=salt(s.seed,['augment-pool-batch5-g7',seat,a.choiceId,r.round,d.combatId,d.tick,d.unitId]);const draw=()=>rng=word(rng);
    if(BigInt(draw())*10000n>=BigInt(Math.min(10000,1100+k.critChanceBps))*MOD)continue;
    let ticket=pick(draw(),weights.reduce((a,b)=>a+b,0)),tier=1;
    for(const w of weights){if(ticket<w)break;ticket-=w;tier++;}
@@ -428,7 +435,8 @@ function validateRewardsCore(before,after,command,events,base){
  if(entry)xpGain=base.entryXp(before);
  if(select){xpGain=({'silver-spoon':10,epoch:6,'epoch-plus':8,'level-up':12,'slammin-plus':10})[command.definitionId]??0;
   if(command.definitionId==='call-to-chaos'&&outcome(before,augments.at(-1))==='xp')xpGain+=64;}
- const progression=base.xp(before.level,before.xp,xpGain);
+ const xpCap=s=>s.augments.some(a=>a.definitionId==='max-cap')?7:10;
+ const progression=base.xp(before.level,before.xp,xpGain,xpCap(select?{...before,augments}:before));
  assert.deepEqual([after.level,after.xp],[progression.level,progression.xp],'independent XP state before reward thresholds');
  if(pvpSettlement){
   const r=after.roundResults.at(-1);

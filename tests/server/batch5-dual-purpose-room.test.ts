@@ -12,7 +12,9 @@ let room:Room,clock:ManualClock;
 const mine=()=>room.state.seats.find(s=>s.seatId==='s1')!.match;
  beforeEach(()=>{
  // Room seed 53, seat s1: first public 2-1 initial offer with Dual Purpose on the merged 235-card pool.
- ({room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:53}));room.start();
+ // v26 D5 (7953c99a) pool: seed 53's s1 no longer reaches it; seed 7 is the first room seed from 0 whose s1 gets Dual Purpose
+ // at 2-1 within the public slot rerolls (after rerolling slot 0).
+ ({room,clock}=makeRoom(new TwoSidedBattleResolver(),{seed:7}));room.start();
  runUntil(room,clock,s=>s.roundId==='2-1'&&s.phase==='preparation');
  roomOfferFor(room,'s1','dual-purpose');const choice=mine().pendingChoice!;expect(choice.offers).toContain('dual-purpose');
  expect(room.handle('s1',{type:'choose',choiceId:choice.choiceId,generation:choice.generation,definitionId:'dual-purpose'})).toMatchObject({ok:true});

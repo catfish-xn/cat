@@ -1,3 +1,4 @@
+import { rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { offeredAt } from './augment-stage-helpers';
 import { expect, it } from 'vitest';
 import { createMatch } from '../src/simulation/match';
@@ -18,6 +19,12 @@ function initial(names: string[], mechanics: {mechanic:string;values:Record<stri
     source: { ownerId: u.unitId, sourceKind: 'augment' as const, definitionId: m.mechanic === 'blisteringStrikes' ? 'blistering-strikes' : m.mechanic, instanceId: 'choice-' + i, effectIndex: i } }))) ] })) };
   const started = createCombatWithEvents(preparation, withAugments, 'augment-test').state;
   return { ...started, units: started.units.map(u => ({ ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 })) };
+}
+// Ranged attack landing (window only): Lux's shot lands later; step on (her next attacks held) until it has.
+function landing(s: CombatState, id: string): CombatState {
+  let r = stepCombat(s);
+  while (!r.events.some(e => e.type === 'attackLanded' && e.attackerId === id)) r = stepCombat({ ...r.state, units: r.state.units.map(u => u.id === id ? { ...u, cooldownTicks: 2000 } : u) });
+  return r.state;
 }
 function advance(s: CombatState, ticks: number): CombatState { for (let i=0;i<ticks;i++) s=stepCombat(s).state; return s; }
 function validate(s: CombatState) { for (const u of s.units) validateMechanisms(u,s.units,s.tick,s.combatId!,s.status==='finished',s.nextActionSeq!); }
@@ -121,8 +128,11 @@ import { M5_UNIT_DEFINITIONS } from '../src/simulation/units';
 // the route's empty-board helper); death cards still see an ally death. Climb the Ladder I is a 3-2/4-2 card, so its seed
 // is a 3-2 seed. The Blistering Strikes 16/648 ignite restore regression lives in tests/blistering-restore.test.ts.
 // v25 batch-5 pool (285 cards): re-searched first public routes in 0..100 without Trainer-Golem openings.
+// D5 310-card pool, same rule (Trainer Golem openings skipped; 2-1 via reachRound('2-1', false), Climb via reachRound('3-2', false)):
+// clockwork-accelerator 40 no longer offers it (first hit is 127; none in 0..126). inspiring-epitaph 21 → 20.
+// climb-the-ladder-i 46 → 40. lone-hero 70 still offers it. Blistering stays on the scripted 61 draw.
 it.each([
- ['blistering-strikes',61],['clockwork-accelerator',40],['lone-hero',70],['climb-the-ladder-i',46],['inspiring-epitaph',21],
+ ['blistering-strikes',61],['clockwork-accelerator',127],['lone-hero',70],['climb-the-ladder-i',40],['inspiring-epitaph',20],
 ] as const)('%s public selection, real battle, strict save/restore and next-step state/RNG/events/receipts match (seed %i)',(id,seed)=>{
  const run=()=>{
  // 14.24 stage tags: Climb the Ladder I is offered at 3-2/4-2; its seed column is a 3-2 seed.
@@ -186,28 +196,32 @@ it('Glass Cannon I+II start at 60% HP and amplify 100 attack damage by 32%; Mana
  const glass=[1200,2000].map(damageAmpBps=>({mechanic:'glassCannon',values:{startingHealthBps:8000,damageAmpBps}}));
  let s=initial(['lux'],glass);const hero=s.units.find(u=>u.id==='p0')!;expect(hero.hp).toBe(Math.floor(hero.maxHp*.6));
  s={...s,units:s.units.map(u=>u.id==='p0'?{...u,cooldownTicks:0,attackRange:20,attackDamageBase:100,attackDamage:100,attackDamagePercentBps:0,spellCrit:undefined,baseCritChanceBps:0}: {...u,armor:0})};
- expect(stepCombat(s).state.units.find(u=>u.id==='enemy')!.hp).toBe(s.units.find(u=>u.id==='enemy')!.hp-132);
+ expect(landing(s,'p0').units.find(u=>u.id==='enemy')!.hp).toBe(s.units.find(u=>u.id==='enemy')!.hp-132);
  let mana=initial(['lux'],[{mechanic:'extraAttackMana',values:{amount:2}},{mechanic:'extraAttackMana',values:{amount:4}}]);
  mana={...mana,units:mana.units.map(u=>u.id==='p0'?{...u,cooldownTicks:0,attackRange:20,mana:0}:u)};
- expect(stepCombat(mana).state.units.find(u=>u.id==='p0')!.mana).toBe(16);
+ // Ranged attack wind-up (#791, window only): the attack mana comes on the launch, a wind-up after the start.
+ let manaStep=stepCombat(mana).state;for(let n=0;n<rangedAttackWindupTicks('lux',20);n++)manaStep=stepCombat(manaStep).state;
+ expect(manaStep.units.find(u=>u.id==='p0')!.mana).toBe(16);
 });
 import { packets } from './helpers/replay2-views';
 import { commitMechanismHeal } from '../src/simulation/m8/s13-mechanisms';
 it('Blistering Strikes primary attack attaches five 1%-HP burn pulses and 33% Wound; expiry and restore do not duplicate',()=>{
  let s=initial(['lux'],[{mechanic:'blisteringStrikes',values:{durationTicks:100,burnBpsPerSecond:100,woundBps:3300}}]);
  s={...s,units:s.units.map(u=>u.id==='p0'?{...u,cooldownTicks:0,attackRange:20,attackDamageBase:0,attackDamage:0}:u)};
- let r=stepCombat(s);s=r.state;
+ // Ranged attack landing (pure-result re-pin, shift = the shot's flight): the statuses come when Lux's shot lands on tick L
+ // (was tick 1); every later tick below moves by L-1.
+ s=landing(s,'p0');const L=s.tick;let r=stepCombat(s);
  const enemy=s.units.find(u=>u.id==='enemy')!;
  expect(enemy.mechanismState!.statuses.find(g=>g.kind==='wound')!.effectiveMagnitudeBps).toBe(3300);
  expect(enemy.mechanismState!.statuses.find(g=>g.kind==='burn')!.effectiveMagnitudeBps).toBe(100);validate(s);
  expect(stepCombat(JSON.parse(JSON.stringify(s)))).toEqual(stepCombat(s));
  const units=structuredClone(s.units) as S13Unit[],target=units.find(u=>u.id==='enemy')!;target.hp-=200;const before=target.hp;
- const ctx:AbilityContext={tick:1,combatId:s.combatId,board:s.board,units,events:[],packets:[],heals:[],draw:()=>0};
+ const ctx:AbilityContext={tick:s.tick,combatId:s.combatId,board:s.board,units,events:[],packets:[],heals:[],draw:()=>0}; // window: while wounded (was tick 1)
  commitMechanismHeal(ctx,{source:{ownerId:target.id,sourceKind:'ability',definitionId:target.ability.id,instanceId:target.id,effectIndex:0},targetId:target.id,amount:100});
  expect(target.hp-before).toBe(67);
  s={...s,units:s.units.map(u=>({...u,cooldownTicks:2000}))};const damage:number[]=[];const ticks:number[]=[];
  for(let n=0;n<101;n++){r=stepCombat(s);s=r.state;for(const p of packets(r.events).filter(p=>p.damageType==='true')){damage.push(p.hpDamage);ticks.push(s.tick);}}
- expect(ticks).toEqual([21,41,61,81,101]);expect(enemy.maxHp).toBe(1120);expect(damage).toEqual([11,11,11,11,12]);expect(damage.reduce((a,b)=>a+b,0)).toBe(56);
+ expect(ticks).toEqual([21,41,61,81,101].map(t=>t+L-1));expect(enemy.maxHp).toBe(1120);expect(damage).toEqual([11,11,11,11,12]);expect(damage.reduce((a,b)=>a+b,0)).toBe(56);
  expect(s.units.find(u=>u.id==='enemy')!.mechanismState!.statuses).toEqual([]);validate(s);
 });
 it('Singed self-speed and durability use distinct identities and strict restore rejects forged speed',()=>{
@@ -239,7 +253,7 @@ it.each([
       ? { ...u, mana: 0, cooldownTicks: 0, attackRange: 20, attackDamageBase: 100, attackDamage: 100, attackDamagePercentBps: 0, baseCritChanceBps: 0 }
       : { ...u, armor: 0, cooldownTicks: 2000, moveCooldownTicks: 2000 }) };
     const enemyHp = combat.units.find(u => u.id === 'enemy')!.hp;
-    const after = stepCombat(combat).state;
+    const after = landing(combat, 'hero');
     expect(after.units.find(u => u.id === 'hero')!.mana).toBe(10 + (kind === 'mana' && row >= 6 ? amount : 0));
     expect(enemyHp - after.units.find(u => u.id === 'enemy')!.hp).toBe(100 + (kind === 'glass' && row >= 6 ? amount : 0));
   }
@@ -277,5 +291,5 @@ it.each([['bronze-for-life-i', 300, 0], ['bronze-for-life-ii', 350, 150]] as con
       ? { ...u, mana: 0, cooldownTicks: 0, attackRange: 20, attackDamageBase: 100, attackDamage: 100, attackDamagePercentBps: 0, baseCritChanceBps: 0 }
       : u.id === 'enemy' ? { ...u, armor: 0, cooldownTicks: 2000, moveCooldownTicks: 2000 } : { ...u, cooldownTicks: 2000, moveCooldownTicks: 2000 }) };
     const hp = combat.units.find(u => u.id === 'enemy')!.hp;
-    expect(hp - stepCombat(combat).state.units.find(u => u.id === 'enemy')!.hp).toBe(103);
+    expect(hp - landing(combat, 'hero').units.find(u => u.id === 'enemy')!.hp).toBe(103);
   });

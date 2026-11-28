@@ -1,3 +1,6 @@
+import { hexDistance } from '../src/simulation/board';
+import { rangedAttackFlightTicks, rangedAttackWindupTicks } from '../src/simulation/cast-windup';
+import { stepLanded } from './helpers/landing';
 import { installB1Offers } from './fixtures/b1-scripted-offers';
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { sellUnit, deployMatchUnit, equipItem, startMatchCombat, stepMatch, type MatchCommandResult, type MatchEvent, type MatchState } from '../src/simulation/match';
@@ -65,7 +68,10 @@ beforeAll(() => {
     state = accepted(grantMechanicItem(state, { receiptId: `item-${slot}`, source: 'test', definitionId }));
     state = accepted(equipItem(state, state.items.at(-1)!.id, owner.id, slot));
   }
-  state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 4, row: 4 } }));
+  // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): from (4,4) Lux's first kill at tick 118 is
+  // now single (her double kill comes at 207 after a stack). From (1,7) her first kill is the same exact tick-118,
+  // root-action-18 Luden double kill.
+  state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 1, row: 7 } }));
   initial = state = accepted(startMatchCombat(state));
   while (state.phase === 'combat') {
     const r = stepMatch(state);
@@ -84,9 +90,11 @@ beforeEach(() => {
 
 it('Lux kills two different targets in one root action and gains two +20 stacks', () => {
   const packets = doubleKill.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome] : []);
-  expect(after.combat!.tick).toBe(118);
+  // Ranged attack landing (pure-result re-pin): the double kill comes when Lux's hits land, the flight after tick 128.
+  // Ranged attack wind-up (#791, pure-result re-pin): that attack launches at 128 (was 118 before the wind-up).
+  expect(after.combat!.tick).toBe(128 + rangedAttackFlightTicks(1));
   expect(packets).toHaveLength(2);
-  expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([18]));
+  expect(new Set(packets.map(p => p.context.rootActionSeq))).toEqual(new Set([20])); // #791 wind-up: root action 20 (was 18)
   expect(new Set(packets.map(p => p.context.targetId)).size).toBe(2);
   expect(packets.map(p => p.context.delivery)).toEqual(['ability-direct', 'equipment-proc']);
   expect(count(before)).toBe(0); expect(count(after)).toBe(2);
@@ -107,10 +115,12 @@ it.each(['object', 'json'] as const)('restores the real double kill and continue
 describe('Renata public acquisition fixture', () => {
   let acquired: MatchState, granted: MatchState, deployed: MatchState;
   beforeAll(() => {
-    // v25: seed 84 publicly offers inert Hedge Fund; avoid falling through to Tiniest Titan,
-    // whose replay authority conflicts with the later boundary grants. Keep the tick-60 double kill.
-    let preparation = acquireEquipment(['rod'],{seed:84,augmentPriorities:['hedge-fund']});
-    for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=accepted(sellUnit(preparation,u.id));
+    // The hedge-fund priority keeps the public offer on inert Hedge Fund (v25, then seed 84; seed 18 since cast wind-up batch 3), not Tiniest Titan,
+    // whose replay authority conflicts with the later boundary grants. Keep the double kill (tick 77 since cast wind-up batch 3; tick 82 since the ranged attack wind-up #791, same root action and targets).
+    let preparation = acquireEquipment(['rod'],{seed:18,augmentPriorities:['hedge-fund']});
+    // v26 pve-loot-carryover (8f794062): carried loot can leave an anvil whose sale opens a forge choice; resolve it publicly
+    // before the next sale, as frontRowRod does.
+    for(const u of preparation.preparation.units.filter(u=>u.team==='player'&&u.id!=='unit-1'))preparation=resolveM5Choices(accepted(sellUnit(preparation,u.id)));
     acquired = freezeContent(structuredClone(preparation));
     for (let i = 0; i < 9; i++) preparation = accepted(grantMechanicUnit(preparation, { receiptId: `renata-${i}`, source: 'test', definitionId: 'renata' }));
     granted = freezeContent(structuredClone(preparation));
@@ -119,14 +129,22 @@ describe('Renata public acquisition fixture', () => {
       preparation = accepted(grantMechanicItem(preparation, { receiptId: `renata-item-${slot}`, source: 'test', definitionId }));
       preparation = accepted(equipItem(preparation, preparation.items.at(-1)!.id, owner.id, slot));
     }
-    preparation = accepted(deployMatchUnit(preparation, owner.id, { kind: 'board', cell: { col: 4, row: 4 } }));
+    // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing; seed 84 now takes Living Forge since D5
+    // 7953c99a): from (4,4) Renata's first kill is a single tick-41 kill. (4,6) is the only cell whose tick-60 root-9 action
+    // kills two: her ability on enemy-r4-2 plus the Luden splash on enemy-r4-1.
+    // Wind-up batch 3 (2026-11-17, scene change): Renata's missiles now land after her cast, so seed 84 at (4,6) no longer opens
+    // with the double kill (every seed-84 cell's same-action double kill comes after an earlier kill, leaving the bracer at 3
+    // stacks). Searched seeds 0..149 over all 28 player cells for a first kill that is her ability plus the Luden splash on one
+    // action at 2-1: seeds 1 and 5 hit it but their augments break the later boundary grants' replay authority; seed 18 at
+    // (4,5) is the first that passes, at tick 77 on root action 9 (enemy-r4-2 by her ability, enemy-r4-1 by the splash).
+    preparation = accepted(deployMatchUnit(preparation, owner.id, { kind: 'board', cell: { col: 4, row: 5 } }));
     deployed = freezeContent(structuredClone(preparation));
   });
 
   // Temporarily 20 s (user-approved 2026-10-20); restore the default 5 s once this slow case is sped up.
-  it('saves Renata\'s tick-60 double kill, restores object/JSON, and replays every complete combat state', () => {
+  it('saves Renata\'s tick-82 double kill, restores object/JSON, and replays every complete combat state', () => {
     let preparation = ownFixture(acquired);
-    expect(preparation.seed).toBe(84); expect(preparation.roundDefinitionId).toBe('2-1');
+    expect(preparation.seed).toBe(18); expect(preparation.roundDefinitionId).toBe('2-1');
     preparation = ownFixture(granted);
     const owner = preparation.preparation.units.find(u => u.definitionId === 'renata' && u.team === 'player')!;
     expect(owner.starLevel).toBe(3);
@@ -143,12 +161,12 @@ describe('Renata public acquisition fixture', () => {
     while (state.phase === 'combat') {
       const before = state, next = stepMatch(state); state = next.state;
       observe(before, state, next.events, 'tick'); states.push(state.combat!);
-      if (state.combat!.tick === 60) {
+      if (state.combat!.tick === 82) { // #791 wind-up: was 77
         earlyBefore = before; earlyAfter = state;
         const packets = next.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
         expect(packets).toHaveLength(2);
         expect(packets.map(p => [p.rootActionSeq, p.delivery, p.targetId])).toEqual([
-          [9, 'ability-direct', 'enemy-r4-1'], [9, 'ability-direct', 'enemy-r4-2'],
+          [9, 'ability-direct', 'enemy-r4-2'], [9, 'equipment-proc', 'enemy-r4-1'],
         ]);
         const old = before.combat!.units.find(u => u.id === owner.id)!, current = state.combat!.units.find(u => u.id === owner.id)!;
         expect(current.triggerLedger!.runtimes.filter(r => r.source.definitionId === BRACER).map(r => [r.source.effectIndex, r.triggerCount])).toEqual([[4128, 2]]);
@@ -203,8 +221,10 @@ function earned(s: CombatState) {
   });
 }
 
+// Ranged attack landing (scene change, Fable 11-18): a ranged holder's shot no longer kills on its attack tick, so the same-tick
+// mutual kill needs a melee holder (Vi); the ranged version below records what happens now.
 it('S1: a holder and its target dying in the same tick award no stack to the dead holder', () => {
-  const { state } = attributionFight(['lux']);
+  const { state } = attributionFight(['vi']);
   const initial = { ...state, units: state.units.map(u => ({ ...u, hp: 1, maxHp: 1,
     attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: 0 })) };
   const result = stepCombat(initial);
@@ -217,19 +237,42 @@ it('S1: a holder and its target dying in the same tick award no stack to the dea
   expect(combatUnit(result.state, 'p').runtime!.abilityPowerFlat).toBe(0);
 });
 
+it('S1 ranged holder: the target kills Lux on her launch tick; her shot is still in flight when the fight ends, so nobody gets a stack', () => {
+  const { state } = attributionFight(['lux']);
+  // Ranged attack wind-up (#791, scene change): Lux's shot now leaves a wind-up after her attack starts, so the target strikes on
+  // that launch tick (its cooldown is her wind-up plus one) instead of tick 1; the window runs through that tick.
+  const w = holderWindup(state);
+  const initial = { ...state, units: state.units.map(u => ({ ...u, hp: 1, maxHp: 1,
+    attackDamage: 10000, attackDamageBase: 10000, cooldownTicks: u.id === 'e' ? w + 1 : 0 })) };
+  let result = stepCombat(initial); const windowEvents = [...result.events];
+  for (let n = 0; n < w && result.state.status === 'running'; n++) { result = stepCombat(result.state); windowEvents.push(...result.events); }
+  result = { ...result, events: windowEvents };
+  expect(result.events.filter(e => e.type === 'attackLaunched').map(e => e.type === 'attackLaunched' && e.attackerId)).toEqual(['p']);
+  const lethal = result.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
+  expect(lethal.map(p => [p.source.ownerId, p.targetId])).toEqual([['e', 'p']]);
+  expect(result.state.result).toBe('enemyWin');
+  expect(earned(result.state)).toEqual([]);
+});
+
+const holderWindup = (state: CombatState) => rangedAttackWindupTicks(combatUnit(state, 'p').definitionId, readCombatStats(combatUnit(state, 'p'), state).attackIntervalTicks);
 it.each([false, true])('S1: Sion owns its kill; Black Rose holder earns only a real prior assist (%s)', contributed => {
   const started = attributionFight(['morgana', 'vladimir', 'cassiopeia'], true);
   const sion = started.state.units.find(u => u.definitionId === 'g23-sion')!;
   expect(sion).toBeDefined();
   expect(started.events).toContainEqual(expect.objectContaining({ type: 'unitSpawned', unitId: sion.id, definitionId: 'g23-sion' }));
   let state: CombatState = { ...started.state, units: started.state.units.map(u => u.id === sion.id
-    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2, attackDamage: 10000, attackDamageBase: 10000 }
+    // Ranged attack landing (scene change, Fable 11-18): Sion strikes 2 + the holder's flight ticks in, after her shot has landed.
+    // Ranged attack wind-up (#791, window only): and after the holder's wind-up, so her shot launches before he strikes.
+    ? { ...u, runtime: { ...u.runtime!, buddyTriggered: true }, cooldownTicks: 2 + holderWindup(started.state) + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell)), attackDamage: 10000, attackDamageBase: 10000 }
     : u.id === 'e' ? { ...u, hp: 100, maxHp: 100 }
     : u.id === 'p' && contributed ? { ...u, cooldownTicks: 0 } : u) };
-  const first = stepCombat(state); state = first.state;
+  const first = stepLanded(state); state = first.state; // window: the holder's shot lands
   expect(first.events.some(e => e.type === 'packetDamage' && e.outcome.context.source.ownerId === 'p' && e.outcome.hpDamage > 0)).toBe(contributed);
   expect(earned(state)).toEqual([]);
-  const second = stepCombat(state); state = second.state;
+  // Window: on to Sion's strike, which kills on exactly the tick his cooldown (2 + the holder's wind-up and flight) runs out.
+  const sionCooldown = 2 + holderWindup(started.state) + rangedAttackFlightTicks(hexDistance(started.state.units.find(x => x.id === 'p')!.cell, started.state.units.find(x => x.id === 'e')!.cell));
+  let second = stepCombat(state); for (let n = 0; n < 10 && !second.events.some(e => e.type === 'kill'); n++) second = stepCombat(second.state); state = second.state;
+  expect(second.state.tick).toBe(started.state.tick + sionCooldown);
   const lethal = second.events.flatMap(e => e.type === 'packetDamage' && e.outcome.killingPacket ? [e.outcome.context] : []);
   expect(lethal).toHaveLength(1);
   expect(lethal[0]).toMatchObject({ source: { ownerId: sion.id }, targetId: 'e', delivery: 'basic-attack' });
@@ -339,7 +382,9 @@ it.each(['unknown-target', 'duplicate-target', 'old-action-key'] as const)('reje
   else tuple.pop();
   changed[JSON.stringify(tuple)] = 1;
   Object.assign(owner, { triggerLedger: { ...ledger, actionCounts: changed } });
-  for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid Match save');
+  // v26: seed 1's route now carries a Mirror forge result into this combat, so its input is replay-authenticated and the forged
+  // ledger is rejected by that exact check first (as chest-bracer's tamper case since 02413be4); was 'Invalid Match save'.
+  for (const input of [bad, JSON.stringify(bad)]) expect(() => restoreMatch(input)).toThrow('Invalid authoritative Mirror forge replay');
   expect(restoreMatch(serializeMatch(after))).toEqual(after);
 });
 
@@ -397,14 +442,27 @@ describe('dead-holder public combat fixture', () => {
   beforeAll(() => {
     // v22 AD/mana rules moved the old seed's same-tick death; seed 207 at (3,7) had it at tick 352 after one earlier kill.
     // Later v23 combat changes (Sion rework, short CC/knock-up) let that Zyra survive; seed 28 at (6,7) trades at tick 323.
-    let state = frontRowRod(28);
+    // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): no seed-28 cell trades any more. Seed 44 is
+    // the first seed from 0 with a same-tick trade after exactly one earlier kill: Zyra at (0,4) and enemy-r8-3 at tick 315.
+    // 2026-11-16: Zyra's vines land CAST_WINDUP_TICKS.zyra (6) after her cast; the same seed and cell now trade at tick 321.
+    // Wind-up batch 2 (scene change approved by Fable): seed 44 at (0,4) no longer trades (Zyra dies without landing a killing
+    // blow that tick). Searched seeds 0..359 over all 28 player cells for a same-tick trade after exactly one earlier kill:
+    // seed 306 has four cells that trade (first (1,4) at tick 465) but its bracer resistance buffs have run out by then, which
+    // the death-cleanup assertions below need active; seed 338 at (0,7) meets every premise: Zyra kills enemy-r8-2 at tick 223
+    // as enemy-r8-4 kills her (no longer a mutual trade; the premise is the holder's same-tick killing blow).
+    // Ranged attack landing (#739): seed 338 no longer trades in any cell. Searched seeds 0..199 over all 28 cells with the
+    // same premises (one earlier kill, resistance buffs active); seed 149 at (4,6) trades at tick 300 (Zyra and enemy-r8-3 kill each other).
+    // Ranged attack wind-up (#791, scene change approved by Fable 11-24): seed 149 no longer trades in any cell. Searched seeds
+    // 0..415 over all 28 cells with the same premises (same-enemy trade, one earlier kill, resistance buffs active): seed 306 at
+    // (4,7) trades at tick 460 (Zyra and enemy-r4-3 kill each other).
+    let state = frontRowRod(306);
     for (let i = 0; i < 9; i++) state = accepted(grantMechanicUnit(state, { receiptId: `boundary-zyra-${i}`, source: 'test', definitionId: 'zyra' }));
     const owner = state.preparation.units.find(u => u.definitionId === 'zyra' && u.team === 'player')!;
     state = equipBracer(state, owner.id);
-    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 6, row: 7 } }));
+    state = accepted(deployMatchUnit(state, owner.id, { kind: 'board', cell: { col: 4, row: 7 } }));
     const initial = accepted(startMatchCombat(state));
     let before = initial;
-    while (before.phase === 'combat' && before.combat!.tick < 322) before = stepMatch(before).state;
+    while (before.phase === 'combat' && before.combat!.tick < 459) before = stepMatch(before).state;
     fixture = freezeContent(structuredClone({ state, initial, before, ownerId: owner.id }));
   });
 
@@ -413,13 +471,13 @@ describe('dead-holder public combat fixture', () => {
     certifyFixture(copy.initial); certifyFixture(copy.before);
     const owner = state.preparation.units.find(u => u.id === copy.ownerId)!;
     expect(owner.starLevel).toBe(3);
-    const initial = copy.initial, before = stepTo(copy.before, 322);
+    const initial = copy.initial, before = stepTo(copy.before, 459);
     const result = stepMatch(before), after = result.state;
-    const targetId = 'enemy-r8-1';
-    expect(after.combat!.tick).toBe(323);
+    const targetId = 'enemy-r4-3';
+    expect(after.combat!.tick).toBe(460);
     expect(result.events.filter(e => e.type === 'kill')).toEqual([
-      expect.objectContaining({ type: 'kill', tick: 323, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r8-1' }) }),
-      expect.objectContaining({ type: 'kill', tick: 323, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
+      expect.objectContaining({ type: 'kill', tick: 460, unitId: owner.id, source: expect.objectContaining({ ownerId: 'enemy-r4-3' }) }),
+      expect.objectContaining({ type: 'kill', tick: 460, unitId: targetId, source: expect.objectContaining({ ownerId: owner.id }) }),
     ]);
     expect(result.events.filter(e => e.type === 'packetDamage' && e.outcome.killingPacket)).toEqual([
       expect.objectContaining({ outcome: expect.objectContaining({ context: expect.objectContaining({ targetId: owner.id }) }) }),
@@ -446,8 +504,21 @@ describe('dead-holder public combat fixture', () => {
 describe.each([
   // v24: public Watcher/Sentinel Crests leave this Black Rose board without an active crest trait.
   // Seeds 5/1 retain real Sion attacks with no/yes prior Morgana contribution and a live curse task.
-  { contribution: false, seed: 5, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 255, targetId: 'enemy-r4-1' },
-  { contribution: true, seed: 1, cells: [{ col: 4, row: 6 }, { col: 0, row: 6 }, { col: 4, row: 7 }], tick: 225, targetId: 'enemy-r4-1' },
+  // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): on seeds 5/1 no Morgana cell still gives a
+  // lone Sion attack kill with the required contribution while Morgana is alive and has no bracer stack yet. Seed 2 (first from 0) keeps a clean boundary for both crests with the
+  // same Cassiopeia (0,6) / Vladimir (4,7) cells: Morgana (5,7) without contribution, Sion kills enemy-r8-4 at tick 307;
+  // Morgana (5,6) with contribution, Sion kills enemy-r8-1 at tick 278. (Were seed 5 tick 255 / seed 1 tick 225, enemy-r4-1.)
+  // Ranged attack landing (#739): without contribution, seeds 0..80 give no lone Sion kill (with the Watcher Crest route) in
+  // any Morgana cell with Cassiopeia (0,6) / Vladimir (4,7). The task-mechanism-restore layout keeps it: seed 1, Morgana (6,7),
+  // Cassiopeia (0,4), Vladimir (3,4); Sion kills enemy-r4-1 at tick 323.
+  // Ranged attack wind-up (#791, scene change): seed 1 no longer gives it in any Morgana cell; the task-mechanism-restore search
+  // (seeds 0..19, all Morgana cells, Cassiopeia (0,4) / Vladimir (3,4)) gives seed 3, Morgana (4,5): Sion kills enemy-r8-1 at 242.
+  { contribution: false, seed: 3, cells: [{ col: 4, row: 5 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 242, targetId: 'enemy-r8-1' },
+  // Ranged attack landing (#739): with contribution, Morgana (5,6) no longer gives the lone Sion kill; Morgana (4,6) does,
+  // Sion kills enemy-r8-1 at tick 224 (same seed and Cassiopeia/Vladimir cells).
+  // Ranged attack wind-up (#791, scene change): seed 2 at (4,6) now has Morgana hit the target on the kill tick. The same
+  // task-mechanism-restore layout as above, seed 5, Morgana (6,7): Sion kills enemy-r4-2 at tick 420 with her prior contribution.
+  { contribution: true, seed: 5, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 420, targetId: 'enemy-r4-2' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   // Script only the draw; the following equality checks the fixture, not real-RNG availability.
   let restoreOffers: () => void;

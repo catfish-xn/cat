@@ -26,7 +26,9 @@ function threeHeroMatch(): MatchState {
   // v23 batch 3: seed 5's first offer stopped being a quiet card (changes the shield numbers); pick one publicly.
   let state = crestPick(5);
   state = accepted(deployMatchUnit(state, 'unit-1', { kind: 'board', cell: { col: 1, row: 4 } }));
-  for (const [id, col] of [['maddie', 3], ['lux', 5]] as const) {
+  // Landing batch (11-20, scene change; assertions unchanged): Lux's shield now lands when her missile arrives, which moved
+  // the stacked case off its checkpoint at (5,7); tried every player cell: (2,7), (4,7) and (6,6) hold it, (4,7) is used.
+  for (const [id, col] of [['maddie', 3], ['lux', 4]] as const) {
     const slot = state.shop.slots.findIndex(s => s.status === 'available' && s.definitionId === id);
     state = accepted(buyUnit(state, slot, state.shop.generation));
     const unitId = `unit-${state.nextUnitSerial - 1}`;
@@ -56,12 +58,21 @@ function publicStart(dynamic = false, deathHolder = false, bracer = false): Matc
   // v22: seed 5 now fields opening-reward Powder+Silco (Dominator), which routes the save through the
   // earlier full V19 replay; seed 42 keeps a plain Irelia board so the resists validator decides.
   let state = dynamic ? threeHeroMatch() : pick42();
-  if (!dynamic) for (const [i, unit] of state.preparation.units.filter(u => u.team === 'player').entries())
+  // pve-loot-carryover (8f794062, user-approved 2026-10-29): the empty-board stage-1 losses now carry their loot, so seed 42
+  // reaches 2-1 with Tristana/Singed/Powder (and belt/gloves) on the bench as well. Field only the v25 board, Irelia plus the
+  // Watcher crest's Vander, and leave the carried loot benched.
+  if (!dynamic) for (const [i, unit] of state.preparation.units.filter(u => u.team === 'player' && ['irelia', 'vander'].includes(u.definitionId)).entries())
     state = accepted(deployMatchUnit(state, unit.id, { kind: 'board', cell: { col: i * 2 + 1, row: 4 } }));
   if (deathHolder) {
     // v22 combat (mana/overtime) keeps a front-line Maddie alive to the end, so the death holder is
     // now back-line Lux behind front-line Irelia (1,4) + Maddie (2,4): she dies at tick 489, pre-overtime.
     state = accepted(deployMatchUnit(state, maddieId, {kind: 'board', cell: {col: 2, row: 4}}));
+    // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1, melee pathing): a (5,7) Lux now survives the whole fight.
+    // Lux at (4,5), still behind the same front line, dies at tick 411 (pre-overtime) with the crest's death grant.
+    // Landing batch (11-20, scene change approved by Fable): at (4,5) she no longer dies with the death grant. Tried every
+    // player cell: (2,4) and (4,4) still die pre-overtime with it (at 285 and 443), (3,6) and (4,6) only in overtime; (4,4) is
+    // used and the death tick re-pinned 411 -> 443.
+    state = accepted(deployMatchUnit(state, luxId, {kind: 'board', cell: {col: 4, row: 4}}));
   }
   for (const [slot, definitionId] of (dynamic && !deathHolder ? [crest, 'gargoyle', ...(bracer ? ['TFT_Item_Artifact_SeekersArmguard'] : [])] : [crest]).entries()) {
     const granted = grantMechanicItem(state, { receiptId: `resists-${slot}`, source: 'resists-restore-test', definitionId });
@@ -161,7 +172,7 @@ it('restores the holder-death grant after live defenses and periodic history', (
     }
   }
   expect(death).toBeDefined();
-  expect(death!.combat!.tick).toBe(489); // before overtime: the resists replay is the restore authority
+  expect(death!.combat!.tick).toBe(445); // #791 wind-up re-pin (was 443; landing batch 443, earlier 411; v26 489); before overtime: the resists replay is the restore authority
   const restored = restoreMatch(JSON.stringify(death));
   expect(restored).toEqual(death); expect(stepMatch(restored)).toEqual(stepMatch(death!));
 });
@@ -218,14 +229,19 @@ it.each(['object', 'JSON'] as const)('restores stacked crest/gargoyle/bracer fro
   expect(state.combat!.tick).toBe(600);
   const holder = state.combat!.units.find(u => u.id === 'unit-1')!;
   expect(holder.triggerLedger!.runtimes.some(r => r.source.definitionId === 'TFT_Item_Artifact_SeekersArmguard' && r.triggerCount > 0)).toBe(true);
+  // v26 combat drift (14.24 neutrals 568eeea4, targeting P0/P1): the holder's one bracer trigger is now a personal kill
+  // (+20 AP, +20 armor/MR) instead of an assist (+15): AP flat 15→20, AP 145→150, stacked resists 310→320.
+  // Ranged attack wind-up (#791, pure-result re-pin): that trigger is an assist again: AP flat 20→15, AP 150→145, resists 320→310.
   expect(holder.runtime!.abilityPowerFlat).toBe(15);
   expect(readCombatStats(holder, state.combat!).abilityPower).toBe(145);
-  // 70% of the stacked 155 armor + 155 MR is 217; v22 tick 600 is the first overtime stack, which
+  // 70% of the stacked 160 armor + 160 MR is 224; v22 tick 600 is the first overtime stack, which
   // scales new shields by 90% (so this checkpoint is authenticated by the overtime full replay).
   const stats = readCombatStats(holder, state.combat!);
   expect(stats.armor + stats.magicResist).toBe(310);
-  expect(active(state).layer.granted).toBe(Math.floor(217 * overtimeReceivedBps(600) / 10000));
-  expect(active(state).layer.granted).toBe(195);
+  // Ranged attack wind-up (#791, pure-result re-pin): the tick-600 pulse's 70% resists sample is now 242 (was 224), so the
+  // overtime-scaled grant is 217 (was 201).
+  expect(active(state).layer.granted).toBe(Math.floor(242 * overtimeReceivedBps(600) / 10000));
+  expect(active(state).layer.granted).toBe(217);
   const input = format === 'object' ? state : serializeMatch(state);
   let original = state, restored = restoreMatch(input);
   expect(restored).toEqual(original);
@@ -254,7 +270,12 @@ it('restores crest shields after a chest grants the holder dual resists, and rej
   // Maddie board; v15 used seed 27, whose chest now rolls Bramble Vest) naturally grants
   // Gargoyle at tick 169, before the next crest pulse at tick 180.
   // v25: publicly reroll slot 0 to Placebo; Iron Assets now grants an extra unit.
-  let open = reachRound('2-1', false, 78);
+  // v26 combat/offer drift: seed 78's chest now rolls Giant Slayer at 177. Seed 4 is the only seed in 0..119 whose same
+  // public route (reroll slot 0, Placebo priority; it takes Quickstriker Crest) has the chest grant Gargoyle (tick 172)
+  // before the tick-180 crest pulse on the receiver.
+  // Ranged attack wind-up (#791, scene change): seed 4's chest now rolls Adaptive Helm (169). Searched seeds 0..239 on the same
+  // public route: seeds 179 (Gargoyle at 143) and 201 (Gargoyle at 177) grant Gargoyle before the pulse; seed 179 is the first.
+  let open = reachRound('2-1', false, 179);
   const c = open.pendingChoice!;
   open = accepted(rerollAugment(open, c.choiceId, c.generation, 0));
   let state = resolveM5Choices(open, ['placebo']);
@@ -274,7 +295,7 @@ it('restores crest shields after a chest grants the holder dual resists, and rej
   while (state.phase === 'combat' && state.combat!.tick < 180) state = stepMatch(state).state;
   expect(state.combat!.tick).toBe(180);
   const holder = state.combat!.units.find(u => u.id === receiver)!;
-  expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 169 }]);
+  expect(holder.combatItemGrants).toMatchObject([{ definitionId: 'gargoyle', grantedAtTick: 143 }]);
   expect(active(state).layer.source.ownerId).toBe(receiver);
   expect(active(state).layer.m8State.startsAtTick).toBe(180);
   for (const input of [structuredClone(state), serializeMatch(state)]) expect(restoreMatch(input)).toEqual(state);

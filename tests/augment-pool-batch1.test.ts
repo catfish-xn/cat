@@ -185,7 +185,9 @@ it.each(['black-rose-crest','black-rose-crown'])('%s is eligible at 3-2 (scripte
  // The 3-2 draw is scripted by withB1Offers: only eligibility (real candidate pool) is asserted, not that the real RNG offers it.
  // The Morgana purchase, selection, restore and tamper checks run through the real commands.
  const traits=UNIT_DEFINITIONS.morgana.traits;
- const seed=id==='black-rose-crest'?42:28;
+ // Seed 42 reaches 3-1 with the bench already full (9 units), so the Morgana buy is bench-full.
+ // Seed 4 is still eligible once Morgana's traits are fielded, reaches 3-1 with 4 units and 75 gold, and the buy succeeds.
+ const seed=id==='black-rose-crest'?4:28;
  {
   const initial=createMatch(seed),first=generateChoices(augmentCandidates(resolveAugmentTier(initial,'round:2-1:augment'),[],[],null,{node:'2-1',fieldedTraits:[],blocked:[]}),initial.choiceRngState);
   const chosen=first.offers.find(x=>x!=='placebo'&&x!=='glass-cannon-i')!;

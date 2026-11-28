@@ -2,10 +2,11 @@ import type { MatchState } from './match-types';
 
 /** Digested multiplayer operations; deployment and upgrade policy are unchanged. */
 export const MULTIPLAYER_OPERATION_RULES = {
-  version: 'multiplayer-combat-ops-v2',
+  version: 'multiplayer-combat-ops-v26-anomaly-preparation',
   phases: ['preparation', 'combat', 'choice', 'settlement'],
   upgradeVersion: 'bench-during-combat-deferred-v1',
   autoDeploymentVersion: 'front-center-left-first-v1',
+  anomalySaleVersion: 'pending-choice-refuse-all-v1',
 } as const;
 
 export const EQUIPMENT_OPERATION_RULES_VERSION = 'equipment-ops-next-battle-v1';
@@ -20,7 +21,7 @@ export function canOperateEquipment(state: Readonly<MatchState>): boolean {
 /** Authority is opt-in multiplayer metadata, never a client-supplied command flag. */
 export function canOperateMatch(state: Readonly<MatchState>): boolean {
   if (state.multiplayer?.status === 'eliminated' || state.pendingChoice?.payload?.source === 'masterwork-upgrade') return false;
-  return state.phase === 'preparation' || (state.multiplayer?.status === 'active'
+  return state.phase === 'preparation' || (state.phase === 'choice' && state.pendingChoice?.kind === 'anomaly' && state.pendingChoice.returnPhase === 'preparation') || (state.multiplayer?.status === 'active'
     && (state.phase === 'combat' || state.phase === 'choice' || state.phase === 'settlement'));
 }
 

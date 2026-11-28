@@ -1,0 +1,322 @@
+// The real combat behind ?real=1 (harness.ts) and its pre-flight check (jobs-check.mjs): one layout, one start, one
+// window, so what node simulates is what the browser replays. Simulation only: no DOM, no renderer.
+import { createCombatWithEvents, stepCombat } from '../../src/simulation/combat';
+import { buildStrategySnapshot } from '../../src/simulation/strategy-snapshot';
+import { DEFAULT_BOARD } from '../../src/simulation/board';
+import { toDisplayEvents, toCombatViewState } from '../../src/presentation/combat-display';
+import { ITEM_DEFINITIONS } from '../../src/simulation/content/items';
+
+export interface RealSetup { unit: string; star: number; form: string | null; foe: string; dist: number; nfoes: number; foestar: number;
+  /** v-capture --foe-offset K: every foe K columns to the side (+ right), so the target stands ahead and to the side. */
+  foeOffset?: number;
+  /** v-capture --ally X (--allystar N, default 2): one more of `me`'s team, a front-liner one row ahead of it (user rule 11-13:
+   * a ranged caster is recorded behind a tank, its target at least 3 rows away). */
+  ally?: string; allystar?: number;
+  /** v-capture --ally-cell R,C: the ally on this cell instead of one row straight ahead of `me` (row 4, col 3), e.g. ahead
+   * and one column to the side, off the line from `me` to its target. */
+  allyCell?: Cell;
+  /** v-capture --me-cell R,C: the caster on this cell instead of row 5, column 3 (a form swapper fights in its ranged form only
+   * from its side's back two rows, rows 6-7). The foes' default row and the ally's default cell are taken from it. */
+  meCell?: Cell;
+  /** v-capture --foe-cell R,C: the target `foe` on this cell (any row, e.g. on `me`'s own row), not `dist` rows ahead. */
+  foeCell?: Cell;
+  /** v-capture --foe2 X / --foe2star N / --foe2-cell R,C: the second foe as another hero, of its own star, on its own cell
+   * (e.g. a melee foe far off for the ally to walk to, so it leaves the caster's line). Needs --nfoes 2 or more. */
+  foe2?: string; foe2star?: number; foe2Cell?: Cell;
+  /** v-capture --ally2 X / --ally2star N (default 2) / --ally2-cell R,C: a second unit of `me`'s team (e.g. a tank and a
+   * partner), by default one row ahead of `me` and one column to the right. */
+  ally2?: string; ally2star?: number; ally2Cell?: Cell;
+  /** v-capture --items me=a+b,ally=c: completed or component items on `me`, `ally` and `ally2` (up to 3 each, slots in the
+   * order given). Recording setup only; without it nobody carries items. parseItems reads it. Foes: --foe-items. */
+  items?: ItemSetup;
+  /** v-capture --foe-items foe=a+b,foe2=c: items on the foes (`foe` … `foe4`, up to 3 each, slots in the order given), recording
+   * setup only. Parsed and checked (parseFoeItems), then given to the combat as the rules' recording-only enemy items
+   * (CombatStrategyInputs.recordingEnemyItems, realFoeItems), which also check them by name. */
+  foeItems?: FoeItemSetup;
+  /** v-capture --as-scale X (0.2–1): the caster's attack speed times X, recording only (parseAsScale). Lines using it are not
+   * acceptance clips (jobs-check says so) and their frames carry a corner tag. Without it nothing changes. */
+  asScale?: number }
+/** Item ids per unit of `me`'s team, in slot order. */
+export type ItemSetup = Partial<Record<ItemHolder, string[]>>;
+export type ItemHolder = 'me' | 'ally' | 'ally2';
+const ITEM_HOLDERS: readonly ItemHolder[] = ['me', 'ally', 'ally2'];
+/** "me=a+b,ally=c" (v-capture --items) as items per unit, or a reason it cannot be: unknown unit or item, a unit named twice,
+ * more than 3 items on one unit, an empty list. */
+export function parseItems(text: string | null | undefined): { items: ItemSetup } | { why: string } {
+  if (!text) return { why: '--items is empty' };
+  const items: ItemSetup = {};
+  for (const part of text.split(',')) {
+    const [holder, list, extra] = part.split('=');
+    if (extra !== undefined || !list) return { why: `--items wants unit=item+item, got ${part}` };
+    if (/^foe[2-4]?$/.test(holder)) return { why: `--items: items on foes are not supported yet (${holder})` };
+    if (!ITEM_HOLDERS.includes(holder as ItemHolder)) return { why: `--items: ${holder} is not one of ${ITEM_HOLDERS.join(', ')}` };
+    if (items[holder as ItemHolder]) return { why: `--items names ${holder} twice` };
+    const ids = list.split('+');
+    if (ids.length > 3) return { why: `--items: ${holder} has ${ids.length} items, at most 3` };
+    const unknown = ids.filter(id => !Object.hasOwn(ITEM_DEFINITIONS, id));
+    if (unknown.length) return { why: `--items: unknown item ${unknown.join(', ')}` };
+    items[holder as ItemHolder] = ids;
+  }
+  return { items };
+}
+/** Item ids per foe, in slot order (v-capture --foe-items). */
+export type FoeItemSetup = Partial<Record<FoeHolder, string[]>>;
+export type FoeHolder = 'foe' | 'foe2' | 'foe3' | 'foe4';
+const FOE_HOLDERS: readonly FoeHolder[] = ['foe', 'foe2', 'foe3', 'foe4'];
+/** --foe-items reaches the combat: the rules' recording-only enemy items (CombatStrategyInputs.recordingEnemyItems). */
+export const FOE_ITEMS_APPLIED = true;
+/** "foe=a+b,foe2=c" (v-capture --foe-items) as items per foe, or a reason it cannot be: unknown foe or item, a foe named twice,
+ * more than 3 items on one foe, an empty list. */
+export function parseFoeItems(text: string | null | undefined): { items: FoeItemSetup } | { why: string } {
+  if (!text) return { why: '--foe-items is empty' };
+  const items: FoeItemSetup = {};
+  for (const part of text.split(',')) {
+    const [holder, list, extra] = part.split('=');
+    if (extra !== undefined || !list) return { why: `--foe-items wants foe=item+item, got ${part}` };
+    if (!FOE_HOLDERS.includes(holder as FoeHolder)) return { why: `--foe-items: ${holder} is not one of ${FOE_HOLDERS.join(', ')}` };
+    if (items[holder as FoeHolder]) return { why: `--foe-items names ${holder} twice` };
+    const ids = list.split('+');
+    if (ids.length > 3) return { why: `--foe-items: ${holder} has ${ids.length} items, at most 3` };
+    const unknown = ids.filter(id => !Object.hasOwn(ITEM_DEFINITIONS, id));
+    if (unknown.length) return { why: `--foe-items: unknown item ${unknown.join(', ')}` };
+    items[holder as FoeHolder] = ids;
+  }
+  return { items };
+}
+/** The foes' items as the rules' enemy items read them (round-enemies.ts EnemyItem): unit id, definition, slot. */
+export function realFoeItems(s: RealSetup): { unitId: string; definitionId: string; slot: number }[] {
+  return FOE_HOLDERS.flatMap(holder => (s.foeItems?.[holder] ?? []).map((definitionId, slot) => ({ unitId: holder, definitionId, slot })));
+}
+/** "foe=a+b foe2=c" for captions and logs, or null without foe items. */
+export function foeItemsLabel(items: FoeItemSetup | null | undefined): string | null {
+  const parts = FOE_HOLDERS.filter(h => items?.[h]?.length).map(h => `${h}=${items![h]!.join('+')}`);
+  return parts.length ? parts.join(' ') : null;
+}
+/** The recording's items as the game holds them (strategy-types.ts ItemInstance): on their unit, slot by slot. */
+export function realItems(s: RealSetup): any[] {
+  return ITEM_HOLDERS.flatMap(holder => (s.items?.[holder] ?? []).map((definitionId, slot) =>
+    ({ id: `item-${holder}-${slot}`, definitionId, location: { kind: 'unit', unitId: holder, slot } })));
+}
+/** "me=a+b ally=c" for captions and logs, or null without items. */
+export function itemsLabel(items: ItemSetup | null | undefined): string | null {
+  const parts = ITEM_HOLDERS.filter(h => items?.[h]?.length).map(h => `${h}=${items![h]!.join('+')}`);
+  return parts.length ? parts.join(' ') : null;
+}
+export interface Cell { row: number; col: number }
+/** The board (src/simulation/board.ts DEFAULT_BOARD): rows 0-7, columns 0-6; `me` stands on row 5, column 3. */
+const ROWS = 8, COLS = 7;
+export const ME_CELL: Cell = { row: 5, col: 3 };
+/** "R,C" (v-capture --ally-cell / --foe-cell / --foe2-cell) as a cell, or null when it is not two whole numbers. */
+export function parseCell(text: string | null | undefined): Cell | null {
+  const m = /^(-?[0-9]+),(-?[0-9]+)$/.exec(text ?? '');
+  return m ? { row: Number(m[1]), col: Number(m[2]) } : null;
+}
+/** Ticks the replay keeps after the first cast of `me` when no window is asked for (3 s). */
+export const DEFAULT_AFTER_TICKS = 60;
+/** The replay starts this many ticks before the first cast of `me` (half a second). */
+export const LEAD_TICKS = 10;
+/** The recorded window of a real combat is chosen around one anchor cast of `me`: its first by default, its N-th with
+ * castNumber (v-capture --cast-index N, ?castindex=N). Where the window starts, in ticks before that cast: LEAD_TICKS
+ * (half a second) unless asked: fromStart (--from-start 1, ?fromstart=1) starts at combat start (tick 0, so the attacks
+ * and casts before the anchor are in the window); leadMs (--lead-ms MS, ?leadms=MS) starts MS before the anchor cast,
+ * never before combat start. */
+export interface WindowStart { fromStart?: boolean; leadMs?: number | null; castNumber?: number; anchor?: Anchor }
+/**
+ * What the window is anchored on (v-capture --anchor, ?anchor=): `me`'s N-th cast (the default), its N-th basic attack that
+ * hits (`attack-hit`: a basic-attack damage packet it lands), or the N-th display event of a type that `me` sends or is the
+ * subject of (`event:<type>`, e.g. `event:packetDamage` for a passive's periodic damage). For a unit that never casts
+ * (Amumu, Zeri) an attack or event anchor still finds a window. N is --cast-index (castNumber).
+ */
+export type Anchor = { kind: 'cast' } | { kind: 'attack-hit' } | { kind: 'event'; type: string };
+export const CAST_ANCHOR: Anchor = { kind: 'cast' };
+/** --anchor's value as an Anchor, or null when it is not one (`cast`, `attack-hit`, `event:<display event type>`). */
+export function parseAnchor(value: string | null | undefined): Anchor | null {
+  if (value == null || value === 'cast') return CAST_ANCHOR;
+  if (value === 'attack-hit') return { kind: 'attack-hit' };
+  const m = /^event:([A-Za-z][A-Za-z0-9]{0,31})$/.exec(value);
+  return m ? { kind: 'event', type: m[1]! } : null;
+}
+/** Whether one display event is an occurrence of the anchor for `me`. */
+export function anchorMatches(anchor: Anchor, e: any): boolean {
+  if (anchor.kind === 'cast') return e.type === 'cast' && e.sourceId === 'me';
+  if (anchor.kind === 'attack-hit') return e.type === 'packetDamage' && e.sourceId === 'me' && e.delivery === 'basic-attack' && e.hit === true;
+  return e.type === anchor.type && (e.sourceId === 'me' || e.attackerId === 'me' || e.unitId === 'me');
+}
+/** How an anchor reads in messages: "cast", "basic attack hit", "packetDamage event". */
+export const anchorName = (anchor: Anchor) => anchor.kind === 'cast' ? 'cast' : anchor.kind === 'attack-hit' ? 'basic attack hit' : `${anchor.type} event`;
+/**
+ * The display events before a replay window, as one catch-up batch for the renderer: every event of ticks 0 to `from` - 1,
+ * then a marker two ticks past the window's first tick. The renderer moves its counts and states on every event of a batch
+ * but starts effects only for its last EFFECT_TICKS (2) ticks (placeholder-renderer.ts onEvents), so with the marker last
+ * nothing before the window starts an effect. Without this a window that opens mid-combat starts every count at zero:
+ * Zeri's third attack, Twitch's shots after her cast and the like were drawn plain. The marker is an effectTriggered event,
+ * which no renderer consumer reads.
+ */
+export function catchUpBatch(events: readonly (readonly unknown[])[], from: number): unknown[] {
+  if (from <= 0) return [];
+  const batch = events.slice(0, from).flat();
+  return batch.length ? [...batch, { type: 'effectTriggered', tick: from + 1, eventSeq: -1, ownerId: '', sourceKind: 'item', sourceDefinitionId: '', targetId: '' }] : [];
+}
+export function leadTicksFor(castIndex: number, start: WindowStart = {}): number {
+  if (start.fromStart) return Math.max(0, castIndex);
+  if (start.leadMs != null) return Math.max(0, Math.min(castIndex, Math.round(start.leadMs / 50)));
+  return LEAD_TICKS;
+}
+/** Ticks to replay past the anchor cast for a window of `windowMs`: from the default lead-in as before; with an asked-for
+ * window the replay keeps windowMs past the anchor at least (a superset; extra ticks are never shown). */
+export function afterTicksFor(windowMs: number, start: WindowStart = {}): number {
+  return start.fromStart || start.leadMs != null || (start.castNumber ?? 1) !== 1 ? Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) + 1)
+    : Math.max(DEFAULT_AFTER_TICKS, Math.ceil(windowMs / 50) - LEAD_TICKS + 1);
+}
+
+/** `me` on row 5; up to four foes `dist` rows in front ('training-dummy' is a Garen), shifted `foeOffset` columns (default 0);
+ * an `ally` one row in front of `me`. --foe-cell / --foe2-cell / --ally-cell put those units on given cells instead. */
+export function realUnits(s: RealSetup): any[] {
+  const foe = s.foe === 'training-dummy' ? 'garen' : s.foe;
+  const meCell = s.meCell ?? ME_CELL, meRow = meCell.row, foeRow = Math.max(0, Math.min(3, meRow - Math.max(2, s.dist)));
+  const asked: Record<string, Cell | undefined> = { foe: s.foeCell, foe2: s.foe2Cell };
+  const units = [
+    { id: 'me', definitionId: s.unit, team: 'player', starLevel: s.star, location: { kind: 'board', cell: { ...meCell } }, ...(s.form ? { form: s.form } : {}) },
+    ...[['foe', 3, foeRow], ['foe2', 2, foeRow], ['foe3', 4, foeRow], ['foe4', 3, Math.max(0, foeRow - 1)]].slice(0, Math.max(1, Math.min(4, s.nfoes))).map(([id, col, row]) =>
+      ({ id, definitionId: id === 'foe2' && s.foe2 ? s.foe2 : foe, team: 'enemy', starLevel: id === 'foe2' && s.foe2star !== undefined ? s.foe2star : s.foestar,
+        location: { kind: 'board', cell: asked[id as string] ? { ...asked[id as string]! } : { col: (col as number) + (s.foeOffset ?? 0), row } } })),
+    ...(s.ally ? [{ id: 'ally', definitionId: s.ally, team: 'player', starLevel: s.allystar ?? 2, location: { kind: 'board', cell: { ...(s.allyCell ?? { row: meRow - 1, col: meCell.col }) } } }] : []),
+    ...(s.ally2 ? [{ id: 'ally2', definitionId: s.ally2, team: 'player', starLevel: s.ally2star ?? 2, location: { kind: 'board', cell: { ...(s.ally2Cell ?? { row: meRow - 1, col: meCell.col + 1 }) } } }] : []),
+  ];
+  const why = layoutProblem(s, units);
+  if (why) throw new Error(why);
+  return units;
+}
+/** Why this layout cannot be placed (a cell option without its unit, a unit off the board, two on one cell), or null. */
+export function layoutProblem(s: RealSetup, units: any[]): string | null {
+  if (s.allyCell && !s.ally) return '--ally-cell needs --ally';
+  if ((s.ally2Cell || s.ally2star !== undefined) && !s.ally2) return '--ally2-cell / --ally2star need --ally2';
+  for (const holder of ['ally', 'ally2'] as const) if (s.items?.[holder]?.length && !s[holder]) return `--items ${holder}=... needs --${holder}`;
+  for (const [n, holder] of FOE_HOLDERS.entries()) if (s.foeItems?.[holder]?.length && s.nfoes < n + 1) return `--foe-items ${holder}=... needs --nfoes ${n + 1} or more`;
+  // The rules pick a form swapper's form by its row (seat-mechanics/forms.ts: the side's front two rows melee, back two ranged),
+  // never by --form, which only picks what the renderer draws: the two must agree.
+  const meRow = (s.meCell ?? ME_CELL).row;
+  if (s.form === 'ranged' && meRow < 6) return `--form ranged needs the caster in rows 6-7 (--me-cell); on row ${meRow} the rules fight it as melee`;
+  if (s.form === 'melee' && meRow >= 6) return `--form melee needs the caster in rows 4-5; on row ${meRow} the rules fight it as ranged`;
+  if (s.meCell && (s.meCell.row < 4 || s.meCell.row >= ROWS)) return `--me-cell must be on the caster's side (rows 4-${ROWS - 1}), got ${s.meCell.row},${s.meCell.col}`;
+  if ((s.foe2 || s.foe2star !== undefined || s.foe2Cell) && s.nfoes < 2) return '--foe2 / --foe2star / --foe2-cell need --nfoes 2 or more';
+  const seen = new Map<string, string>();
+  for (const u of units) {
+    const c: Cell = u.location.cell, key = `${c.row},${c.col}`;
+    if (!Number.isInteger(c.row) || !Number.isInteger(c.col) || c.row < 0 || c.row >= ROWS || c.col < 0 || c.col >= COLS) return `${u.id} at ${key} is off the board (rows 0-${ROWS - 1}, columns 0-${COLS - 1})`;
+    if (seen.has(key)) return `${u.id} and ${seen.get(key)} both on ${key}`;
+    seen.set(key, u.id);
+  }
+  return null;
+}
+/** A cell's centre in hex widths (the renderer's layout, harness.ts hexOf: odd rows half a column to the right). */
+export function hexCenter(c: Cell): { x: number; y: number } { return { x: c.col + (c.row % 2) / 2, y: c.row * Math.sqrt(3) / 2 }; }
+/** How far `c` stands from the segment from `a` to `b`, in hex widths (centre to centre; Infinity when it is not between
+ * them, i.e. its foot falls outside the segment). Under about 0.5 its body stands on the line. */
+export function lineClearance(a: Cell, b: Cell, c: Cell): number {
+  const p = hexCenter(a), q = hexCenter(b), r = hexCenter(c), dx = q.x - p.x, dy = q.y - p.y, len2 = dx * dx + dy * dy;
+  if (!len2) return Infinity;
+  const t = ((r.x - p.x) * dx + (r.y - p.y) * dy) / len2;
+  if (t <= 0 || t >= 1) return Infinity;
+  return Math.abs((r.x - p.x) * dy - (r.y - p.y) * dx) / Math.sqrt(len2);
+}
+
+/** "0.6" (v-capture --as-scale) as a number in 0.2–1, or why it cannot be. */
+export function parseAsScale(text: string | null | undefined): { asScale: number } | { why: string } {
+  const value = Number(text);
+  return text && /^\d*\.?\d+$/.test(text) && value >= 0.2 && value <= 1 ? { asScale: value } : { why: `--as-scale wants a number from 0.2 to 1, got ${text}` };
+}
+/** The recording-only label of a slowed caster (--as-scale), or null at 1. */
+export function asScaleLabel(asScale: number | undefined): string | null {
+  return asScale !== undefined && asScale !== 1 ? `录制专用：攻速×${asScale}` : null;
+}
+/** A real combat started the way the game starts one: strategy snapshot, then the combat-start hooks (applyCombatStart via
+ * createCombatWithEvents; Viktor's chaos energy, opening mana and shields are set there). Plain createCombat skips them. */
+export function startRealCombat(units: any[], items: any[] = [], asScale = 1, foeItems: readonly { unitId: string; definitionId: string; slot: number }[] = []): { state: any; events: any[] } {
+  const preparation: any = { board: DEFAULT_BOARD, benchSize: 7, units };
+  // --foe-items: the foes' items, through the rules' recording-only field (which checks them by name). Without it the
+  // snapshot is built exactly as before.
+  const started = createCombatWithEvents(preparation, buildStrategySnapshot({ round: 1, preparation, items, temporaryEquipment: [],
+    augments: [], persistentGrowth: [], augmentProgress: [], ...(foeItems.length ? { recordingEnemyItems: foeItems } : {}) } as any), 'castcmp', 42);
+  // Self-check: a replay that skipped combat start would silently change who casts and when.
+  if (!(started.state as any).startEffectsApplied) throw new Error('real combat: combat-start hooks not applied');
+  // --as-scale (recording only): the caster's base attack speed times asScale, after combat start. At 1 nothing is touched.
+  if (asScale !== 1) {
+    const me = (started.state as any).units.find((u: any) => u.id === 'me');
+    if (!me) throw new Error('--as-scale: no unit `me`');
+    me.baseAttackSpeedBps = Math.round((me.baseAttackSpeedBps ?? Math.round(200000 / me.attackIntervalTicks)) * asScale);
+  }
+  return started as { state: any; events: any[] };
+}
+
+/** Steps the combat tick by tick: up to 30 s, or `afterTicks` past the anchor cast of `me` (its first, or its
+ * `castNumber`-th: v-capture --cast-index N), or of its `anchor` (an attack hit or an event; parseAnchor). N counts
+ * ticks, not events: a tick with several matching events (a pulse striking two foes at once) counts once. `onTick` sees every tick's state and display events (tick 0 carries the
+ * combat-start events). `castIndex` is the anchor cast's tick (-1 when it never came). */
+export function runRealCombat(units: any[], afterTicks: number, onTick: (state: any, shown: any[]) => void, castNumber = 1, anchor: Anchor = CAST_ANCHOR, items: any[] = [], asScale = 1,
+  foeItems: readonly { unitId: string; definitionId: string; slot: number }[] = []) {
+  const started = startRealCombat(units, items, asScale, foeItems);
+  let state = started.state, castIndex = -1, ticks = 1, casts = 0;
+  onTick(state, toDisplayEvents(started.events as any) as any[]);
+  while (state.status !== 'finished' && ticks < 600 && (castIndex < 0 || ticks < castIndex + afterTicks)) {
+    const stepped = stepCombat(state); state = stepped.state;
+    const shown = toDisplayEvents(stepped.events as any) as any[];
+    if (castIndex < 0 && shown.some(e => anchorMatches(anchor, e)) && ++casts === castNumber) castIndex = ticks;
+    onTick(state, shown); ticks++;
+  }
+  return { castIndex, ticks, combatStart: !!state.startEffectsApplied, finished: state.status === 'finished' };
+}
+
+/** What the recorded window [castIndex - lead (LEAD_TICKS unless asked, leadTicksFor), + windowMs] holds: the first cast
+ * of `me`, its targets, whether they are alive at the end of the window, and every other unit's cast inside it. */
+/**
+ * --after-end-ms N (recording only, default 0): the window may run N ms past the combat's last tick. The rules are not advanced
+ * there; the board holds its last state and the effects already started play on, as the game shows them until the next
+ * round. A window past the end is refused without it.
+ */
+export function parseAfterEndMs(text: string | null | undefined): { afterEndMs: number } | { why: string } {
+  if (text === null || text === undefined) return { afterEndMs: 0 };
+  return /^[0-9]+$/.test(text) && Number(text) <= 5000 ? { afterEndMs: Number(text) } : { why: `--after-end-ms must be a whole number of ms from 0 to 5000, got ${text}` };
+}
+export function auditWindow(events: readonly (readonly any[])[], alive: readonly Readonly<Record<string, boolean>>[], castIndex: number, windowMs: number, lead: number = LEAD_TICKS, anchor: Anchor = CAST_ANCHOR, afterEndMs = 0) {
+  const from = Math.max(0, castIndex - lead), to = from + Math.ceil(windowMs / 50);
+  // The anchor's own occurrence: a cast names its targets; an attack hit or another event its one target, if any.
+  const cast = (events[castIndex] ?? []).find(e => anchorMatches(anchor, e));
+  const targets: string[] = [...(cast?.targetIds ?? (cast?.targetId && cast.targetId !== 'me' ? [cast.targetId] : []))];
+  // The anchor is inside the recorded window (jobs-check: the event the window is about really happens in it).
+  const anchorInWindow = !!cast && castIndex >= from && castIndex <= to;
+  const end = Math.min(to, alive.length - 1);
+  const otherCasts: { id: string; tick: number }[] = [];
+  for (let t = from; t <= Math.min(to, events.length - 1); t++) for (const e of events[t] ?? []) if (e.type === 'cast' && e.sourceId !== 'me') otherCasts.push({ id: e.sourceId, tick: t });
+  const myCasts = events.slice(from, to + 1).flat().filter(e => e.type === 'cast' && e.sourceId === 'me').length;
+  const replayEnds = alive.length - 1, afterEndTicks = Math.max(0, to - replayEnds);
+  return { castTick: castIndex, from, to, replayEnds, coversWindow: replayEnds + Math.ceil(afterEndMs / 50) >= to, afterEndTicks, afterEndMs,
+    // A window run past the combat's end (--after-end-ms) is about how it ends: its targets may well have fallen there.
+    pastEnd: afterEndMs > 0 && afterEndTicks > 0, targets, anchorInWindow,
+    targetsAliveAtEnd: Object.fromEntries(targets.map(id => [id, !!alive[end]?.[id]])), otherCasts, myCasts };
+}
+
+/** Every unit's board cell this tick. */
+export function cellsOf(state: any): Record<string, { row: number; col: number; alive: boolean }> {
+  return Object.fromEntries(toCombatViewState(state).units.map((u: any) => [u.id, { row: u.cell.row, col: u.cell.col, alive: !!u.alive }]));
+}
+/** Hex distance on the harness's board (odd rows shifted half a cell right, as harness.ts hexOf draws them). */
+export function hexDistance(a: { row: number; col: number }, b: { row: number; col: number }): number {
+  const cube = (c: { row: number; col: number }) => { const x = c.col - (c.row - (c.row & 1)) / 2, z = c.row; return [x, z, -x - z]; };
+  const [p, q] = [cube(a), cube(b)];
+  return Math.max(Math.abs(p[0] - q[0]), Math.abs(p[1] - q[1]), Math.abs(p[2] - q[2]));
+}
+/** Foes that may hide the caster on screen when `me` casts: alive, next to `me`, on its row or nearer the camera
+ * (the camera looks from the player's side, so a larger row is drawn lower and in front). A coarse stand-in for the
+ * browser's box-overlap check in gate.cjs, which is the authority: a tall foe one row behind can still cover the caster
+ * (Viktor vs two Garens: 36.5% on a Windows GPU run, 11-12) and only the gate sees that. */
+export function frontBlockers(cells: Record<string, { row: number; col: number; alive: boolean }>): string[] {
+  const me = cells.me; if (!me) return [];
+  return Object.entries(cells).filter(([id, c]) => id !== 'me' && c.alive && c.row >= me.row && hexDistance(c, me) <= 1).map(([id]) => id);
+}
+/** Why a --foe-offset cannot be used with this many foes (every shifted foe must stay on the board's columns 0-6), or null. */
+export function foeOffsetProblem(offset: number, nfoes: number): string | null {
+  if (!Number.isInteger(offset)) return `--foe-offset must be a whole number of columns, got ${offset}`;
+  const cols = [3, 2, 4, 3].slice(0, Math.max(1, Math.min(4, nfoes))).map(c => c + offset);
+  return cols.every(c => c >= 0 && c <= 6) ? null : `--foe-offset ${offset} puts a foe off the board (columns ${cols.join(',')}; use --nfoes 1 or a smaller offset)`;
+}

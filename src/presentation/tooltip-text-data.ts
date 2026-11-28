@@ -5,3 +5,4 @@ export { CHAMPION_ROLES, ROLE_DISPLAY } from './unit-roles';
 export { SIX_COST_TEXT, annotate } from './trait-display-text';
 export { EXTRA_TRAIT_TEXT } from './trait-extra-text';
 export { SHIMMER_FAMILIES } from './special-item-templates';
+export { HERO_ABILITY_ZH } from './hero-ability-zh';

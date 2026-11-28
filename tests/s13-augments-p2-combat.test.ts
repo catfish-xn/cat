@@ -1,3 +1,4 @@
+import { stepLanded } from './helpers/landing';
 import { applyStatusContribution } from '../src/simulation/m8/status';
 import { effectIdentity } from '../src/simulation/m8/identity';
 import { expect, it } from 'vitest';
@@ -126,7 +127,7 @@ it('Cull The Weak uses target missing-health percentage for crit and retargets i
   p.targetId=e.id;expect(p2Target(p,[p,e,low,far],59)!.id).toBe(e.id);expect(p2Target(p,[p,e,low,far],60)!.id).toBe(low.id);
   expect(p2Crit(p,e,spellCrit(p)).chanceBps).toBe(7500);expect(p2Crit(p,low,spellCrit(p)).chanceBps).toBe(10000);
   const start={...state,units:[{...p,cooldownTicks:0,moveCooldownTicks:2000,mana:0,maxMana:0}, {...low,cooldownTicks:2000,moveCooldownTicks:2000,mana:0,maxMana:0}]};
-  const packets=stepCombat(start).events.filter(e=>e.type==='packetDamage');
+  const packets=stepLanded(start).events.filter(e=>e.type==='packetDamage'); // window: her shot lands after the attack
   expect(packets.some(e=>e.type==='packetDamage'&&e.outcome.context.source.ownerId===p.id&&e.outcome.critical)).toBe(true);
 });
 it.each(['share-your-energy','cull-the-weak','stoneskin'])('%s opening facts are reconstructed independently and reject fabricated broadcasts',anomaly=>{

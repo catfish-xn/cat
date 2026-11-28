@@ -20,6 +20,39 @@ function fight(state: MatchState) {
   while (state.phase === 'combat') state = stepMatch(state).state;
   return choices(state);
 }
+// Same seed-42 commands as the checked walk, without per-tick restore. Callers only use this
+// to reach a later round whose ticks are asserted below; earlier rounds are asserted by their own case.
+function fastForwardRestoreRounds(untilRound: number): MatchState {
+  let state = choices(createMatch(42));
+  for (let round = 1; round < untilRound; round += 1) state = advanceRestoreRound(state, round, false);
+  return state;
+}
+function advanceRestoreRound(state: MatchState, round: number, check: boolean): MatchState {
+  const started = startMatchCombat(state); if (!started.ok) throw new Error(started.reason);
+  state = started.state;
+  while (state.phase === 'combat') {
+    if (check) {
+      const restored = restoreMatch(serializeMatch(state));
+      const live = stepMatch(state);
+      expect(stepMatch(restored)).toEqual(live);
+      state = live.state;
+    } else state = stepMatch(state).state;
+  }
+  state = choices(state);
+  if (check) {
+    expect(state.roundResults).toHaveLength(round);
+    expect(restoreMatch(serializeMatch(state))).toEqual(state);
+  }
+  const next = nextRound(state, round); if (!next.ok) throw new Error(next.reason);
+  state = next.state;
+  if (state.pendingChoice?.kind === 'augment') state = choices(state);
+  return state;
+}
+function restoreRounds(fromRound: number, untilRound: number): MatchState {
+  let state = fromRound === 1 ? choices(createMatch(42)) : fastForwardRestoreRounds(fromRound);
+  for (let round = fromRound; round < untilRound; round += 1) state = advanceRestoreRound(state, round, true);
+  return state;
+}
 describe('M5 Match atomic integration', () => {
   it('starts with the approved single hero, then restores the first real augment without an old component package', () => {
     const initial=createMatch(42);
@@ -35,7 +68,15 @@ describe('M5 Match atomic integration', () => {
     expect(selected.ok).toBe(true);if(!selected.ok)throw new Error(selected.reason);
     const stale=selectChoice(selected.state,c.choiceId,c.generation,pick);
     expect(stale.ok).toBe(false);expect(stale.state).toBe(selected.state);
-    expect(selected.state.phase).toBe('preparation');expect(selected.state.items).toHaveLength(0);expect(selected.state.augments).toHaveLength(1);
+    expect(selected.state.phase).toBe('preparation');
+    // v26 PvE loot carryover (8f794062, merged c684c3ec): the conceded 1-x neutral orbs now arrive as carried loot
+    // before 2-1 (v25 forfeited them, so the inventory was empty). Two Trick itself still grants no item: the
+    // inventory is exactly the pre-choice loot inventory, every item has a loot birth, and no augment receipt exists.
+    expect(before.items.length).toBeGreaterThan(0);expect(selected.state.items).toEqual(before.items);
+    expect(selected.state.nextItemSerial).toBe(before.nextItemSerial);
+    expect(selected.state.resourceProvenance.entries.filter(e=>e.kind==='item-acquired').map(e=>e.kind==='item-acquired'&&e.source.kind))
+      .toEqual(before.items.map(()=>'loot'));
+    expect(selected.state.augments).toHaveLength(1);
     expect(restoreMatch(serializeMatch(selected.state))).toEqual(selected.state);
   });
   it('locks natural refresh while allowing paid D and immediate F, rejected commands retain identity', () => {
@@ -51,27 +92,34 @@ describe('M5 Match atomic integration', () => {
     expect(next.state.shop).toBe(before.shop);expect(next.state.rngState).toBe(before.rngState);
     expect(nextRound(next.state,before.round).state).toBe(next.state);
   });
-  it('restores each real tick, then supply without creating combat or consuming battle RNG', () => {
-    let state=choices(createMatch(42));
-    for(let round=1;round<getCatalogRoundById('2-4').ordinal;round++) {
-      const started=startMatchCombat(state); if(!started.ok) throw new Error(started.reason);state=started.state;
-      while(state.phase==='combat') {
-        const restored=restoreMatch(serializeMatch(state));
-        expect(stepMatch(restored)).toEqual(stepMatch(state));state=stepMatch(state).state;
-      }
-      state=choices(state);expect(state.roundResults).toHaveLength(round);
+  describe('per-tick restore through the 2-4 supply', () => {
+    // Serializing every combat tick through 2-3 is ~38s here (~45s at 0c676fac) and was killed at 60s
+    // on the loaded CI shard. Each case below does its own rounds inside the approved 60s limit:
+    // 1-2..1-4, then 2-1..2-2, then 2-3 plus the supply assertions. No hook runs the walk.
+    // Earlier rounds are only fast-forwarded with the same seed-42 commands; their ticks stay asserted
+    // in the earlier case. The 60s cap is unchanged.
+    const supplyOrdinal = getCatalogRoundById('2-4').ordinal;
+    it('restores each real tick from 1-2 through 1-4', () => {
+      const state = restoreRounds(1, 4);
+      expect(state.roundDefinitionId).toBe('2-1');
+      // 临时、用户 10-20 批准：时限 60 秒（原 30 秒）；断言不变。本段走子在此时限内。
+    }, 60000);
+    it('restores each real tick from 2-1 through 2-2', () => {
+      const state = restoreRounds(4, 6);
+      expect(state.roundDefinitionId).toBe('2-3');
+      // 临时、用户 10-20 批准：时限 60 秒（原 30 秒）；断言不变。本段走子在此时限内。
+    }, 60000);
+    it('restores each real tick through 2-3, then supply without creating combat or consuming battle RNG', () => {
+      let state = restoreRounds(6, supplyOrdinal);
+      expect(state.roundDefinitionId).toBe('2-4');expect(state.pendingChoice?.kind).toBe('component');
+      const battleSeed=state.battleSeedRngState, gold=state.gold, c=state.pendingChoice!;
+      const selected=selectChoice(state,c.choiceId,c.generation,c.offers[0]);if(!selected.ok)throw new Error(selected.reason);state=selected.state;
+      expect(state.phase).toBe('settlement');expect(state.combat).toBe(null);expect(state.battleSeedRngState).toBe(battleSeed);
+      expect(state.roundResults.at(-1)?.result).toBe('supply');expect(state.gold).toBe(gold);
+      const paid=nextRound(state,state.round);expect(paid.ok).toBe(true);
+      expect(paid.state.gold).toBe(state.roundResults.at(-1)!.goldAfter);expect(paid.state.gold).toBeGreaterThan(gold);
       expect(restoreMatch(serializeMatch(state))).toEqual(state);
-      const next=nextRound(state,round);if(!next.ok)throw new Error(next.reason);state=next.state;
-      if(state.pendingChoice?.kind==='augment') state=choices(state);
-    }
-    expect(state.roundDefinitionId).toBe('2-4');expect(state.pendingChoice?.kind).toBe('component');
-    const battleSeed=state.battleSeedRngState, gold=state.gold, c=state.pendingChoice!;
-    const selected=selectChoice(state,c.choiceId,c.generation,c.offers[0]);if(!selected.ok)throw new Error(selected.reason);state=selected.state;
-    expect(state.phase).toBe('settlement');expect(state.combat).toBe(null);expect(state.battleSeedRngState).toBe(battleSeed);
-    expect(state.roundResults.at(-1)?.result).toBe('supply');expect(state.gold).toBe(gold);
-    const paid=nextRound(state,state.round);expect(paid.ok).toBe(true);
-    expect(paid.state.gold).toBe(state.roundResults.at(-1)!.goldAfter);expect(paid.state.gold).toBeGreaterThan(gold);
-    expect(restoreMatch(serializeMatch(state))).toEqual(state);
-    // 临时、用户 10-20 批准：CI 上约 31 秒（原限 30 秒，本机约 17 秒，断言都过），按约 2 倍放宽到 60 秒；断言不变。
-  }, 60000);
+      // 临时、用户 10-20 批准：时限 60 秒（原 30 秒）；断言不变。本段走子在此时限内。
+    }, 60000);
+  });
 });

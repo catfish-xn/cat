@@ -7,6 +7,7 @@ import { getRoundKind, getRoundSchedule, getStageRound } from '../src/simulation
 import { planCatalogRoundEconomy, OPENING_INITIAL_STATE, OPENING_ECONOMY_RULES } from '../src/simulation/opening-economy';
 import { CONTENT_DIGEST, digestContent } from '../src/simulation/content';
 import * as enemies from '../src/simulation/round-enemies';
+import { augmentNeedsHistory } from '../src/simulation/augment-history-owners';
 import { accepted, resolveM5Choices } from './match-helpers';
 import { publicNeutralPreparation } from './fixtures/m8-neutral-public-route';
 // Temporarily 20 s for slow CI runners (user-approved 2026-10-20 04:22: "Ci 超时可以放宽时限，或者直接验收").
@@ -38,24 +39,38 @@ describe('B6 installed round, opening and restore transactions',()=>{
     expect(state.m8.encounterPlan).toBeNull();
     roundTrip(state);
   });
-  it('concedes the three opening battles once: 2/3/4 base + 0/1/1 streak, 2/2/2XP and fixed 3HP',()=>{
+  it('concedes the three opening battles once: 2/3/4 base + 0/1/1 streak, 2/2/2XP and 2/3/4HP from surviving monsters',()=>{
     let state=createMatch(42);
+    // pve-loot-carryover (8f794062, docs/CURSOR_pve-loot-carryover.md, M8B_POLICY D4, user-approved 2026-10-29):
+    // each surviving opening loss carries its unearned drops to the next PvE, which pays them even if it is lost too.
+    const counter=(roundId:string)=>JSON.stringify(['s13-orbs-project-v17',roundId,'components-granted']);
     for(const expected of [
-      {id:'1-2',gold:2,level:2,hp:97,base:2,bonus:0,count:1,xp:2},
-      {id:'1-3',gold:6,level:3,hp:94,base:3,bonus:1,count:2,xp:2},
-      {id:'1-4',gold:11,level:3,hp:91,base:4,bonus:1,count:3,xp:2},
+      {id:'1-2',gold:2,level:2,hp:98,damage:2,base:2,bonus:0,count:1,xp:2,next:'1-3',delivered:[] as string[][],counted:null as string|null},
+      {id:'1-3',gold:6,level:3,hp:95,damage:3,base:3,bonus:1,count:2,xp:2,next:'1-4',delivered:[['1-2','item','belt','item-1'],['1-2','unit','tristana','unit-2']],counted:'1-2'},
+      {id:'1-4',gold:11,level:3,hp:91,damage:4,base:4,bonus:1,count:3,xp:2,next:'2-7',delivered:[['1-3','item','gloves','item-2'],['1-3','unit','singed','unit-3'],['1-3','unit','powder','unit-4']],counted:'1-3'},
     ]) {
       expect(readRoundInfo(state).roundId).toBe(expected.id);
       roundTrip(state);
       const frozen=structuredClone(state.m8);
+      const current=new Set(frozen.loot.frozen.rounds.find(r=>r.encounterPlan.roundId===expected.id)!.encounterPlan.drops.map(d=>d.dropId));
+      const due=new Set((frozen.loot.carry??[]).filter(r=>r.deliverRoundId===expected.id).map(r=>r.dropId));
+      expect(current.size).toBeGreaterThan(0);
       state=concede(state);
       // Round income is paid at the next round entry (deferred-income.ts): settlement still shows the previous gold.
       expect(state).toMatchObject({phase:'settlement',gold:expected.gold-expected.base-expected.bonus,level:expected.level,xp:expected.id==='1-4'?2:0,playerHp:expected.hp,streak:{kind:'loss',count:expected.count}});
+      const paid=state.m8.loot.receipts.slice(frozen.loot.receipts.length);
+      expect(paid.map(r=>[JSON.parse(JSON.parse(r.dropId)[0])[1],r.payload.kind,'definitionId' in r.payload?r.payload.definitionId:null,...r.grantedItemIds,...r.grantedUnitIds])).toEqual(expected.delivered);
+      expect(paid.every(r=>due.has(r.dropId)&&r.claimedRoundId===expected.id&&r.resolution==='held'&&r.gold===0)).toBe(true);
+      expect(paid.map(r=>r.dropId).sort()).toEqual([...due].sort());
+      expect(frozen.loot.choiceEligibility).toEqual([]);
       expect(state.m8).toEqual({...frozen,loot:{...frozen.loot,
-        direct:frozen.loot.direct.map(drop=>({...drop,status:'forfeited'})),
-        choiceEligibility:frozen.loot.choiceEligibility.map(choice=>({...choice,status:'forfeited'})),
+        direct:frozen.loot.direct.map(drop=>current.has(drop.dropId)?{...drop,status:'carried'}
+          :due.has(drop.dropId)?{...drop,status:'granted',receiptId:paid.find(r=>r.dropId===drop.dropId)!.receiptId}:drop),
+        receipts:[...frozen.loot.receipts,...paid],
+        carry:[...(frozen.loot.carry??[]),...[...current].map(dropId=>({dropId,deliverRoundId:expected.next}))],
+        guaranteeCounters:expected.counted?{...frozen.loot.guaranteeCounters,[counter(expected.counted)]:frozen.loot.guaranteeCounters[counter(expected.counted)]+1}:frozen.loot.guaranteeCounters,
       }});
-      expect(state.roundResults.at(-1)).toMatchObject({roundId:expected.id,incomeBreakdown:{base:expected.base,win:0,interest:0,streak:expected.bonus},xpRequested:expected.xp,playerDamage:3});
+      expect(state.roundResults.at(-1)).toMatchObject({roundId:expected.id,incomeBreakdown:{base:expected.base,win:0,interest:0,streak:expected.bonus},xpRequested:expected.xp,baseDamage:0,survivingEnemyCount:expected.damage,playerDamage:expected.damage});
       roundTrip(state);
       expect(stepMatch(state)).toEqual({state,events:[]}); expect(stepMatch(state).state).toBe(state);
       const old=state;
@@ -67,8 +82,11 @@ describe('B6 installed round, opening and restore transactions',()=>{
     }
     expect(state).toMatchObject({round:4,roundDefinitionId:'2-1',phase:'choice',gold:11,level:3,xp:2,playerHp:91});
     expect(state.pendingChoice).toMatchObject({kind:'augment',eventId:'round:2-1:augment'});
-    expect(state.items).toEqual([]);expect(state.preparation.units.filter(u=>u.team==='player')).toHaveLength(1);
-    expect(state.scheduleReceipts).toEqual([]); // Empty-board losses forfeit every hero/component entitlement.
+    // Carried 1-2/1-3 loot was paid at 1-3/1-4; the 1-4 drops wait for 2-7. Schedule entitlements are still forfeited.
+    expect(state.items).toEqual([{id:'item-1',definitionId:'belt',location:{kind:'inventory'}},{id:'item-2',definitionId:'gloves',location:{kind:'inventory'}}]);
+    expect(state.preparation.units.filter(u=>u.team==='player').map(u=>[u.id,u.definitionId])).toEqual([['unit-1','irelia'],['unit-2','tristana'],['unit-3','singed'],['unit-4','powder']]);
+    expect(state.m8.loot.direct.filter(d=>d.status==='carried')).toHaveLength(4);
+    expect(state.scheduleReceipts).toEqual([]);
     expect(state.shop.generation).toBe(4);
   });
   it('restores real preparation, running combat and settlement at all three opening identities without generating again',()=>{
@@ -149,6 +167,11 @@ describe('B6 installed round, opening and restore transactions',()=>{
       if(restore) {roundTrip(state);lateRestoreCount++;}
       state=accepted(startMatchCombat(state));
       if(restore) {
+        // v26: D5 (3ce71065) moved the seed-65 route's 2-1 offer to history-dependent rebel-resurgence;
+        // the route's public 2-1 pick (family-crest, scripts/v26-neutrals-1424-route.cjs) keeps it history-free again.
+        // Without an augment-history proof, restore must not generate enemies at all.
+        expect(state.augments.map(a=>a.definitionId).filter(augmentNeedsHistory)).toEqual([]);
+        expect(state.augmentHistory).toBeUndefined();
         const generation=vi.spyOn(enemies,'createRoundEnemies'),items=vi.spyOn(enemies,'getRoundEnemyItems');
         try {roundTrip(state);lateRestoreCount++;expect(generation).not.toHaveBeenCalled();expect(items).not.toHaveBeenCalled();}
         finally {generation.mockRestore();items.mockRestore();}

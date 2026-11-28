@@ -1,5 +1,6 @@
-import {expect,it} from 'vitest';
-import {g23IconUrl,itemDisplayName} from '../../src/presentation/g23-display';
+import {beforeAll,expect,it} from 'vitest';
+import {g23IconUrl,itemDisplayName,loadG23Items} from '../../src/presentation/g23-display';
+beforeAll(()=>loadG23Items());
 import {ITEM_DEFINITIONS} from '../../src/simulation/content/g2-3-item-registry';
 
 it('the crown shows its official 14.24 name, its bundled loot icon and the permanent team-size text',()=>{

@@ -1,18 +1,45 @@
 import {expect,it} from 'vitest';
-import {accepted,reachRound} from './match-helpers';
+import {accepted,emptyBoard,resolveM5Choices} from './match-helpers';
+import type {MatchState} from '../src/simulation/match-types';
 import {openingEncounter} from './fixtures/m5/oracle.g2.cjs';
-import {buyUnit,deployMatchUnit,selectChoice,nextRound} from '../src/simulation/match';
+import {buyUnit,createMatch,deployMatchUnit,selectChoice,nextRound,startMatchCombat,sellUnit} from '../src/simulation/match';
+import {hasPendingLootCapacity} from '../src/simulation/loot-runtime';
 import {enableMultiplayerSettlement,applyRoundSettlement,ROUND_SETTLEMENT_VERSION} from '../src/simulation/round-settlement';
 import {snapshotForBattle} from '../src/simulation/two-sided-snapshot';
 import {compileBattle,resolveTwoSidedBattle,proposeSettlement} from '../src/simulation/two-sided-battle';
 import {deriveTraits} from '../src/simulation/trait-snapshot';
 import {grantXp} from '../src/simulation/progression';
+/** Same public empty-board route as reachRound('2-1',false,seed). v26 pays carried 1-2/1-3 loot at 1-4 settlement;
+ * empty-board losses can fill the bench and leave pending-capacity — same as live solo settlement sell + retry. */
+function clearPendingCapacity(state:MatchState):MatchState{
+ let s=state;
+ while(hasPendingLootCapacity(s)){
+  const unit=s.preparation.units.find(u=>u.team==='player'&&u.location.kind==='bench');
+  if(!unit)throw new Error(`pending-capacity at ${s.roundDefinitionId} with no sellable bench unit`);
+  s=accepted(sellUnit(s,unit.id));
+ }
+ return s;
+}
+function reachOpening(seed:number):MatchState{
+ let state=createMatch(seed);
+ while(state.roundDefinitionId!=='2-1'){
+  state=resolveM5Choices(state);
+  if(state.phase==='preparation')state=accepted(startMatchCombat(emptyBoard(state)));
+  state=resolveM5Choices(state);
+  if(state.phase!=='settlement')throw new Error(`Cannot reach 2-1 from ${state.roundDefinitionId}/${state.phase}`);
+  if(hasPendingLootCapacity(state))state=clearPendingCapacity(state);
+  state=accepted(nextRound(state,state.round));
+ }
+ return state;
+}
 const onlineAccepted=(r:ReturnType<typeof applyRoundSettlement>)=>{if(!r.ok)throw Error(r.reason);return r.state;};
 it.each(['going-long','investment-strategy-ii'])('%s public board crosses Conqueror breakpoint and both real online receipts settle',id=>{
- let s=reachRound('2-1',false,0),found=false;
- for(let seed=0;seed<3000;seed++){ // bounded; the 14.24 stage tags moved the first matching seed
+ /** First seed with augment offer + darius/draven shop after v26 reachOpening (309/330; 317/323 only met shop, not offer). */
+ const first={'going-long':309,'investment-strategy-ii':330}[id]!;
+ let s!:MatchState,found=false;
+ for(let seed=first;seed<3000;seed++){ // bounded; re-pin if 14.24 stage tags drift
   if(openingEncounter(seed)==='trainer-golems')continue; // v23 fmix32 openings: the unbenchable golem blocks reachRound's empty board.
-  s=reachRound('2-1',false,seed);
+  s=reachOpening(seed);
   const available=new Set([...s.shop.slots.filter(x=>x.status==='available').map(x=>x.definitionId),...s.preparation.units.filter(u=>u.team==='player').map(u=>u.definitionId)]);
   if(s.pendingChoice!.offers.includes(id)&&available.has('darius')&&available.has('draven')){found=true;break;}
  }

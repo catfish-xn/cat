@@ -1,8 +1,9 @@
 /**
- * G5 battle stats in the right column (TFT's damage chart): 输出, 治疗 and 防护 of my units in the battle on the board,
- * adding up live while it plays back, then held at its final totals until my next battle starts (then it starts from
- * zero). Numbers are the rules' `summarizeBattle` of the ticks shown so far (presentation/battle-ranking.ts); 防护 is the
- * shield each unit granted. Read-only: no command, no rule.
+ * G5 battle stats in the right column (TFT's damage chart): 输出, 承受伤害 and 治疗/护盾 of my units in the battle on the
+ * board, adding up live while it plays back, then held at its final totals until my next battle starts (then it starts
+ * from zero). Numbers are the rules' `summarizeBattle` of the ticks shown so far (presentation/battle-ranking.ts):
+ * 承受伤害 is the HP damage plus shield absorbed a unit took, 治疗/护盾 its heal shares plus the shield it granted, as
+ * TFT's chart counts them. Read-only: no command, no rule.
  */
 import { rankBattle, rankLiveBattle, type BattleRanking, type BattleRankRow } from '../../presentation/battle-ranking';
 import { heroEmblemSvg } from '../../presentation/hero-identity';
@@ -14,10 +15,11 @@ import type { FinishedBattle } from './remote-session';
 function element<K extends keyof HTMLElementTagNameMap>(tag: K, text = '', className = ''): HTMLElementTagNameMap[K] {
   const node = document.createElement(tag); if (text) node.textContent = text; if (className) node.className = className; return node;
 }
-type Metric = 'damageDealt' | 'healingDone' | 'shieldGiven';
-type ShownRow = BattleRankRow & { readonly shieldGiven: number };
+type Metric = 'damageDealt' | 'damageTaken' | 'support';
+/** `support` = 治疗/护盾: healing done plus shield granted. */
+type ShownRow = BattleRankRow & { readonly shieldGiven: number; readonly support: number };
 const METRICS: readonly { readonly metric: Metric; readonly label: string }[] = [
-  { metric: 'damageDealt', label: '输出' }, { metric: 'healingDone', label: '治疗' }, { metric: 'shieldGiven', label: '防护' },
+  { metric: 'damageDealt', label: '输出' }, { metric: 'damageTaken', label: '承受伤害' }, { metric: 'support', label: '治疗/护盾' },
 ];
 const RESULT_TEXT: Record<string, string> = { playerWin: '胜利', enemyWin: '失败', draw: '平局' };
 /** Live totals are recomputed at most this often while a battle plays. */
@@ -50,7 +52,7 @@ export class BattleSummaryPanel {
       this.tabs.append(tab);
     }
     this.list.dataset.debug = 'online:summary-rows';
-    this.root.title = '本场我方单位：输出含护盾吸收的伤害；治疗为单位施加的治疗量；防护为单位给出的护盾量。战斗中实时累加，下一场战斗开始时清零。';
+    this.root.title = '本场我方单位：输出含护盾吸收的伤害；承受伤害为单位受到的伤害（含护盾吸收）；治疗/护盾为单位施加的治疗量加给出的护盾量。战斗中实时累加，下一场战斗开始时清零。';
     this.root.append(head, this.tabs, this.list);
     host.append(this.root);
   }
@@ -81,7 +83,7 @@ export class BattleSummaryPanel {
   /** My side only, as in TFT's chart. */
   private shownRows(): ShownRow[] {
     const ranking = this.shown?.ranking;
-    return ranking ? ranking.rows.filter(row => row.team === 'player').map(row => ({ ...row, shieldGiven: ranking.shieldGiven.get(row.unitId) ?? 0 })) : [];
+    return ranking ? ranking.rows.filter(row => row.team === 'player').map(row => { const shieldGiven = ranking.shieldGiven.get(row.unitId) ?? 0; return { ...row, shieldGiven, support: row.healingDone + shieldGiven }; }) : [];
   }
   private renderRows(): void {
     for (const tab of Array.from(this.tabs.children) as HTMLElement[]) { const on = tab.dataset.key === this.metric; tab.classList.toggle('active', on); tab.setAttribute('aria-selected', String(on)); }
@@ -93,13 +95,13 @@ export class BattleSummaryPanel {
       const value = row[metric], star = effective.get(row.unitId) ?? row.starLevel;
       const item = element('li', '', `summary-row team-${row.team}${row.alive ? '' : ' dead'}`);
       Object.assign(item.dataset, { unit: row.unitId, team: row.team, value: String(value), definition: row.definitionId, star: String(star),
-        dealt: String(row.damageDealt), healed: String(row.healingDone), shielded: String(row.shieldGiven), kills: String(row.kills) });
+        dealt: String(row.damageDealt), taken: String(row.damageTaken), healed: String(row.healingDone), shielded: String(row.shieldGiven), kills: String(row.kills) });
       item.title = `${displayUnitName(row.definitionId)} ${star}星${row.alive ? '' : ' · 阵亡'}`
-        + `\n输出 ${row.damageDealt} · 治疗 ${row.healingDone} · 防护 ${row.shieldGiven} · 击杀 ${row.kills}`;
+        + `\n输出 ${row.damageDealt} · 承受伤害 ${row.damageTaken} · 治疗 ${row.healingDone} · 护盾 ${row.shieldGiven} · 击杀 ${row.kills}`;
       const portrait = element('span', '', 'summary-portrait'); portrait.innerHTML = heroPortraitHtml(row.definitionId, 22, heroEmblemSvg(row.definitionId, 22));
       const name = element('span', `${displayUnitName(row.definitionId)}${'★'.repeat(star)}`, 'summary-name');
       const number = element('span', String(value), 'summary-value');
-      const bar = element('span', '', 'summary-bar'); const fill = element('span', '', `summary-fill${metric === 'shieldGiven' ? ' summary-fill-shield' : ''}`);
+      const bar = element('span', '', 'summary-bar'); const fill = element('span', '', `summary-fill${metric === 'support' ? ' summary-fill-shield' : ''}`);
       fill.style.width = `${Math.round(value / top * 100)}%`; bar.append(fill);
       item.append(portrait, name, number, bar);
       return item;

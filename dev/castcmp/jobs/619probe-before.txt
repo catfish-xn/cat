@@ -1,0 +1,2 @@
+# Fable 11-12: what Jayce's before column (5c346c72) draws; the probe now finds that build's unnamed overlays.
+v-capture.cjs jayce w-jayce-before --star 3 --one 1 --dist 2 --settle 3000 --systems 8d9d784b,e07c8088 --layers none --probe attached --column before --snapshot c1333710ad8e

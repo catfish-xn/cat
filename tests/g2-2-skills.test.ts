@@ -1,9 +1,13 @@
+import { rangedAttackFlightTicks, rangedAttackWindupTicks } from '../src/simulation/cast-windup';
 import { expect, it } from 'vitest';
 import { stepCombat, type CombatUnit, type CombatState, type CombatEvent } from '../src/simulation/combat';
 import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { battle, unit, freeze } from './combat-helpers';
 import { packets, heals } from './helpers/replay2-views';
+import { VI_SLAM_TICKS, CAMILLE_KICK_TICKS } from '../src/simulation/combat-g2-2';
+import { CAST_WINDUP_TICKS, MORDEKAISER_CLAW_TICKS } from '../src/simulation/cast-windup';
+import { heimerRocketLandTick } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
 function hero(name:string,patch:Partial<CombatUnit>={}):CombatUnit{return unit('p','player',1,3,{definitionId:name,ability:resolveAbility(name+'-ability',1),hp:4000,maxHp:5000,armor:0,magicResist:0,mana:100,maxMana:100,attackDamage:100,attackRange:6,abilityPower:100,baseAttackSpeedBps:10000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],...patch});}
 function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'enemy',2,3,{definitionId:'neutral-stage-2',ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,mana:0,maxMana:1,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],...patch});}
 function run(initial:CombatState,count:number){let state=initial;const events:CombatEvent[]=[];for(let n=0;n<count&&state.status==='running';n++){const r=stepCombat(state);state=r.state;events.push(...r.events);}return{state,events};}
@@ -12,14 +16,26 @@ it.each([
  ['camille',[260]],['vi',[600]],['akali',[80,276]],['sett',[270]],['heimerdinger',[50,50,50,50,50]],
  ['trundle',[322]],['ziggs',[180,90,90,90]],['steb',[260]],['vex',[220]],['twistedfate',[110,230]],
  ['jinx',[265]],['ambessa',[250]],['mordekaiser',[200]],
-] as const)('%s independently sourced first-cast raw damage', (name,values)=>{const initial=freeze(battle([hero(name),dummy()],{rngState:42}));expect(raw(stepCombat(initial).events)).toEqual(values);expect(initial.tick).toBe(0);});
-it('Camille heals actual mitigated damage, not raw damage',()=>{const r=stepCombat(battle([hero('camille'),dummy('e',{armor:100,magicResist:200})],{rngState:42}));expect(heals(r.events).find(x=>x.unitId==='p')?.actual).toBe(42);});
+] as const)('%s independently sourced first-cast raw damage', (name,values)=>{const initial=freeze(battle([hero(name),dummy()],{rngState:42}));
+  // Vi's damage lands at her slam, VI_SLAM_TICKS after the cast (user 2026-11-11), Camille's at her kick, CAMILLE_KICK_TICKS
+  // after the cast (user 2026-11-15); Trundle's CAST_WINDUP_TICKS after it (user 2026-11-16); every other skill on the cast
+  // tick.
+  // Landing batch (11-20): Heimerdinger's rockets land one by one (the last heimerRocketLandTick(4, 5) after the cast, none
+  // before the first), Mordekaiser's claw MORDEKAISER_CLAW_TICKS[1].land after it.
+  const later=({vi:VI_SLAM_TICKS,camille:CAMILLE_KICK_TICKS,trundle:CAST_WINDUP_TICKS.trundle,heimerdinger:heimerRocketLandTick(4,5),mordekaiser:MORDEKAISER_CLAW_TICKS[1].land} as Record<string,number>)[name];
+  const first=({heimerdinger:heimerRocketLandTick(0,5)} as Record<string,number>)[name]??later;
+  // Only the skill's packets: over the claw's wait Mordekaiser also attacks.
+  const skill=(events:readonly CombatEvent[])=>packets(events).filter(x=>x.source.ownerId==='p'&&x.source.sourceKind==='ability').map(x=>x.raw);
+  expect((name==='mordekaiser'?skill:raw)(later?run(initial,1+later).events:stepCombat(initial).events)).toEqual(values);
+  if(later)expect((name==='mordekaiser'?skill:raw)(run(initial,first!).events)).toEqual([]);
+  expect(initial.tick).toBe(0);});
+it('Camille heals actual mitigated damage, not raw damage',()=>{const r=run(battle([hero('camille'),dummy('e',{armor:100,magicResist:200})],{rngState:42}),1+CAMILLE_KICK_TICKS);expect(heals(r.events).find(x=>x.unitId==='p')?.actual).toBe(42);});
 it('Vex samples a fixed zone at source delay; Morgana preserves all 525 DOT damage and shield mark',()=>{
  const vex=run(battle([hero('vex'),dummy()],{rngState:42}),17);expect(raw(vex.events).filter(x=>x===110)).toEqual([110]);
  const morgana=run(battle([hero('morgana',{baseAttackSpeedBps:1}),dummy()],{rngState:42}),201);
  expect(raw(morgana.events).reduce((a,b)=>a+b,0)).toBe(525);expect(morgana.state.units.find(x=>x.id==='e')!.g22?.reaveBps).toBe(5000);
 });
-it('Draven becomes an empowered basic attacker after casting; no cast damage invented',()=>{const r=run(battle([hero('draven'),dummy()],{rngState:42}),22);expect(raw(r.events)[0]).toBe(150);});
+it('Draven becomes an empowered basic attacker after casting; no cast damage invented',()=>{const r=run(battle([hero('draven'),dummy()],{rngState:42}),22+rangedAttackWindupTicks('draven',20)+rangedAttackFlightTicks(1)); /* window: Draven's empowered shot winds up (#791), then lands after it */expect(raw(r.events)[0]).toBe(150);});
 it('Steb shares only actual healing to two nearest allies and does not recurse',()=>{const r=stepCombat(battle([hero('steb'),dummy(),hero('steb',{id:'ally',mana:0,hp:3000,cell:{col:0,row:3},cooldownTicks:1000})],{rngState:42}));expect(heals(r.events).filter(x=>x.unitId==='ally').map(x=>x.actual)).toEqual([67]);});
 it('Mordekaiser empowered attacks are magic and state is detached across steps',()=>{const first=stepCombat(battle([hero('mordekaiser'),dummy()],{rngState:42}));const saved=JSON.stringify(first.state);const r=run(freeze(first.state),22);expect(raw(r.events)).toContain(330);expect(JSON.stringify(first.state)).toBe(saved);});
 it('Ambessa alternates chains and fists without leaking stance counters',()=>{const r=stepCombat(battle([hero('ambessa',{runtime:{...EMPTY_RUNTIME,castCount:1}}),dummy()],{rngState:42}));expect(raw(r.events)).toEqual([500]);});

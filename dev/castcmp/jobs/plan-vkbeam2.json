@@ -1,0 +1,17 @@
+{
+  "name": "plan-vkbeam2",
+  "note": "Projectile beams pinned (PR #642), re-record. before = integration 992fcc28; after = 83b3eb5c (seed fix 9c651d21 + these jobs). Viktor 2★ dummy: one Garen 4 rows out, frames 600-1300 ms (beam from about 567 ms). Viktor real: the storm cast frames must match between columns (seed fix). Zeri 2★ dummy: empowered third shot. Mel: real combat, could not be spread out (internal review only).",
+  "batches": [
+    {
+      "name": "vkbeam2",
+      "before": { "src": "992fcc287", "jobs": "dev/castcmp/jobs/vkbeam2-before.txt" },
+      "after": { "src": "83b3eb5c", "jobs": "dev/castcmp/jobs/vkbeam2-after.txt" },
+      "keyframes": [
+        "--hero viktor --system 87913524 --before vkbeam2-viktor-before --after vkbeam2-viktor-after --times 600,667,733,800,900,1000,1100,1200,1300 --crop me,foe --prefix vkbeam2 --note claw_to_target_line_600-1300ms",
+        "--hero viktor --system 87913524 --before vkbeam2-viktor-real-before --after vkbeam2-viktor-real-after --from 3400 --to 3800 --crop me,foe --prefix storm --note storm_cast_must_match_between_columns",
+        "--hero zeri --system d160dfa9 --before vkbeam2-zeri-before --after vkbeam2-zeri-after --times 300,367,433,500,600,700,800,900 --crop me,foe --prefix vkbeam2",
+        "--hero mel --system 4f2eb343 --before vkbeam2-mel-real-before --after vkbeam2-mel-real-after --from 8050 --to 8950 --crop me,foe --prefix vkbeam2 --note third_cast_internal_review"
+      ]
+    }
+  ]
+}
