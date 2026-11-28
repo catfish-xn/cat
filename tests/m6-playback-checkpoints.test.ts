@@ -144,7 +144,14 @@ describe('validated playback checkpoints preserve the unoptimized trajectory', (
     // 梅尔连发 v1: contentDigest 36e7e2c1 -> 57ffb53e in the record only.
     // 杰斯水晶连锁 v1: contentDigest 57ffb53e -> 33d330e9 in the record only.
     // 远程普攻前摇 v1: contentDigest 33d330e9 -> d6493c11 in the record only.
-    const newer = JSON.stringify(before628).split('d6493c11').join('33d330e9').split('33d330e9').join('57ffb53e').split('57ffb53e').join('36e7e2c1').split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
+    // 蔚奥莱连击 v2: contentDigest d6493c11 -> 8bb37864 in the record only.
+    // 塞薇卡重拳 v1: contentDigest 8bb37864 -> 64c5e278 in the record only.
+    // 卡西奥佩娅主弹 v1: contentDigest 64c5e278 -> eb067864 in the record only.
+    // 斯特卜治疗 v1: contentDigest eb067864 -> 85411c71 in the record only.
+    // 金克丝大火箭镜像 v1: contentDigest 85411c71 -> 190a62ea in the record only.
+    // 史密奇击杀后再跳 v2 与刀间隔 v1: contentDigest 190a62ea -> 8ba38fcc in the record only.
+    // 图奇试验品比例 v1: contentDigest 8ba38fcc -> 02b6424a in the record only.
+    const newer = JSON.stringify(before628).split('02b6424a').join('8ba38fcc').split('8ba38fcc').join('190a62ea').split('190a62ea').join('85411c71').split('85411c71').join('eb067864').split('eb067864').join('64c5e278').split('64c5e278').join('8bb37864').split('8bb37864').join('d6493c11').split('d6493c11').join('33d330e9').split('33d330e9').join('57ffb53e').split('57ffb53e').join('36e7e2c1').split('36e7e2c1').join('946379e4').split('946379e4').join('6130956b').split('6130956b').join('1ca19aae').split('1ca19aae').join('b74b81b0').split('b74b81b0').join('31713f8c').split('31713f8c').join('57428247').split('57428247').join('6983672c').split('6983672c').join('2f642cc0').split('2f642cc0').join('cf212873').split('cf212873').join('d94c78f1').split('d94c78f1').join('db6dc9b6').split('db6dc9b6').join('f37c6970').split('f37c6970').join('c7f0a2f3').split('9c98c8ef').join('b53841c0');
     expect(bytesHash(JSON.parse(newer))).toBe('2e8c99f41632f1bc97531fb7dc2219404d73b2f395e9b21a871cd59c7b9f2e39');
     const back = newer.split('c7f0a2f3').join('150d825d').split('b53841c0').join('a56b2c4a');
     expect(bytesHash(JSON.parse(back.split('150d825d').join('ed366cad')))).toBe('acb1bd7937a74cc34d6ee7af3f917dbbb8230e08acd0fa59b292168c33fa686a');

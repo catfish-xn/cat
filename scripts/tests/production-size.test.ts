@@ -128,7 +128,14 @@ describe('production representation preserves runtime semantics', () => {
     // 梅尔连发 v1 (2026-11-21): 36e7e2c1 → 57ffb53e (S13_COMBAT_RULES.melBolts).
     // 杰斯水晶连锁 v1 (2026-11-21): 57ffb53e → 33d330e9 (S13_COMBAT_RULES.jayceCrystals).
     // 远程普攻前摇 v1 (2026-11-21): 33d330e9 → d6493c11 (S13_COMBAT_RULES.rangedAttackWindup, rangedAttackWindupCancel).
-    expect(parsed.content).toBe('fnv1a32-utf16:d6493c11');
+    // 蔚奥莱连击 v2 (2026-11-24): d6493c11 → 8bb37864 (S13_COMBAT_RULES.violetCombo).
+    // 塞薇卡重拳 v1 (2026-11-24): 8bb37864 → 64c5e278 (S13_COMBAT_RULES.sevikaPunch).
+    // 卡西奥佩娅主弹 v1 (2026-11-24): 64c5e278 → eb067864 (S13_COMBAT_RULES.cassiopeiaBolt).
+    // 斯特卜治疗 v1 (2026-11-24): eb067864 → 85411c71 (S13_COMBAT_RULES.stebHeal).
+    // 金克丝大火箭镜像 v1 (2026-11-25): 85411c71 → 190a62ea (S13_COMBAT_RULES.jinxRocketMirror).
+    // 史密奇击杀后再跳 v2 与刀间隔 v1 (2026-11-25): 190a62ea → 8ba38fcc (S13_COMBAT_RULES.smeechReleapAfterKill).
+    // 图奇试验品比例 v1 (2026-11-28): 8ba38fcc → 02b6424a (S13_COMBAT_RULES.twitchExperimentShare).
+    expect(parsed.content).toBe('fnv1a32-utf16:02b6424a');
     expect(parsed.loot).toBe('fnv1a32-utf16:9c98c8ef');
     for (const route of parsed.routes) expect(route.restored).toBe(route.serialized);
   }, 120_000);

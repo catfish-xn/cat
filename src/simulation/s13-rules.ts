@@ -60,8 +60,8 @@ export const S13_COMBAT_RULES = Object.freeze({
   // Mel's cast v2 (11-21): bolts settle where they land, her dash lands and her bolts leave later (MEL_DASH_LAND_TICKS,
   // MEL_RELEASE_TICKS in cast-windup.ts); every normal cast dashes, the third does not move; v3: ties go away from the nearest foe.
   melBarrage: 'mel-barrage-settle-on-landing-dash-each-normal-cast-away-from-foes-v3',
-  // Violet's combo v1 (11-21): two jabs and the uppercut each settle on their own tick (cast-windup.ts); the knock-up starts with the uppercut.
-  violetCombo: 'violet-combo-settle-per-hit-v1',
+  // Violet's combo (11-21; v2 11-24: its ticks re-aligned from her mana bar emptying): two jabs and the uppercut each settle on their own tick (cast-windup.ts); the knock-up starts with the uppercut.
+  violetCombo: 'violet-combo-settle-per-hit-v2',
   // Jinx's rocket v1 (11-21): it leaves and explodes later (cast-windup.ts) and settles where it explodes. Zap and chompers unchanged.
   jinxRocket: 'jinx-rocket-settle-on-explosion-v1',
   // Vi's slam v2 (11-21): it lands VI_SLAM_TICKS after the cast, aligned to the original (v1 was a fitted wait); the row shockwave stays on the slam.
@@ -73,7 +73,25 @@ export const S13_COMBAT_RULES = Object.freeze({
   jayceCrystals: 'jayce-crystals-land-then-chain-explode-v1',
   // Ranged attack wind-up (11-19): a ranged attack starts, then launches RANGED_ATTACK_WINDUP_TICKS later (cast-windup.ts).
   rangedAttackWindup: 'ranged-attack-start-then-launch-after-windup-v1',
-  // Its cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
+  // Smeech after a kill (11-25, user decision): when his stab kills the target he stands still, and SMEECH_RELEAP_AFTER_KILL_TICKS
+  // later strikes the next one at once if it is next to him, else takes off and strikes on landing, SMEECH_RELEAP_FLIGHT_TICKS
+  // after (cast-windup.ts). v2 (11-25 Fable): no flight to an adjacent target, the flight before landing otherwise (v1 struck on
+  // take-off).
+  smeechReleapAfterKill: 'smeech-stands-then-strikes-adjacent-or-flies-to-next-v2',
+  // Smeech's stab interval (11-25, authorization ②): SMEECH_STAB_TICKS measured on official-server footage, fixed.
+  smeechStabInterval: 'smeech-stab-interval-from-official-footage-v1',
+  // Jinx's Death Rocket (11-25, user decision): it explodes on the board's centre hex on her enemies' side, mirrored for an
+  // enemy-side Jinx (ability-projectile.ts jinxRocketEpicenter), so both sides' rockets fall alike.
+  jinxRocketMirror: 'jinx-death-rocket-epicenter-mirrors-to-caster-side-v1',
+  // Steb's heal (11-24): it lands STEB_HEAL_TICKS after his cast (cast-windup.ts).
+  stebHeal: 'steb-heal-lands-after-cast-v1',
+  // Cassiopeia's main bolt (11-24): it settles where it lands, CASSIOPEIA_BOLT_FLIGHT_TICKS after her cast (cast-windup.ts).
+  cassiopeiaBolt: 'cassiopeia-main-bolt-settles-on-landing-v1',
+  // Sevika's punch (11-24): it lands SEVIKA_PUNCH_HIT_TICKS after her slot machine stops (cast-windup.ts).
+  sevikaPunch: 'sevika-punch-lands-on-fist-hit-after-slot-stop-v1',
+  // Twitch's Experiment bonus (11-25, user decision): its max-HP share comes from the 14.24 client data (g2-3-experiment.ts).
+  twitchExperimentShare: 'twitch-experiment-max-hp-share-from-client-data-v1',
+  // The ranged attack wind-up's cancel cases (11-24 Fable): the wind-up holds only for the attacker's current target; when that target changes (dies,
   // turns unselectable, is forced away) or the attacker cannot act this tick, it is cancelled.
   rangedAttackWindupCancel: 'ranged-attack-windup-cancels-when-current-target-changes-or-attacker-idle-v1',
 });

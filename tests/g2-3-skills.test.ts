@@ -4,16 +4,23 @@ import { resolveAbility } from '../src/simulation/combat-abilities';
 import { EMPTY_RUNTIME, variable } from '../src/simulation/combat-s13-state';
 import { battle,unit,freeze } from './combat-helpers';
 import { packets,heals } from './helpers/replay2-views';
-import { JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick } from '../src/simulation/cast-windup';
+import { CASSIOPEIA_BOLT_LAUNCH_TICKS, cassiopeiaBoltFlightTicks, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick } from '../src/simulation/cast-windup';
 function hero(name:string,patch:Partial<CombatUnit>={}):CombatUnit{return unit('p','player',1,3,{definitionId:name,ability:resolveAbility(name+'-ability',1),hp:4000,maxHp:5000,armor:0,magicResist:0,mana:100,maxMana:100,attackDamage:100,attackRange:6,abilityPower:100,baseAttackSpeedBps:1,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],mechanics:[],...patch});}
 function dummy(id='e',patch:Partial<CombatUnit>={}):CombatUnit{return unit(id,'enemy',2,3,{definitionId:'neutral-stage-2',ability:resolveAbility('neutral-attack',1),hp:10000,maxHp:10000,mana:0,maxMana:1,attackDamage:0,cooldownTicks:1000,moveCooldownTicks:1000,runtime:{...EMPTY_RUNTIME},statuses:[],shieldLayers:[],tasks:[],...patch});}
 const raw=(events:readonly CombatEvent[])=>packets(events).filter(x=>x.source.ownerId==='p').map(x=>x.raw);
 it.each([
- ['cassiopeia',[230]],['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
+ ['elise',[120]],['elise-ranged',[200]],['swain-ranged',[310]],
  ['gangplank',[680]],['gangplank-ranged',[305]],['smeech',[190]],['jayce',[500]],
 ] as const)('%s source-backed first-cast coefficients',(name,expected)=>{
  const initial=freeze(battle([hero(name),dummy()],{rngState:42})),saved=JSON.stringify(initial);
  expect(raw(stepCombat(initial).events)).toEqual(expected);expect(JSON.stringify(initial)).toBe(saved);
+});
+// Cassiopeia's main bolt (11-24): it leaves CASSIOPEIA_BOLT_LAUNCH_TICKS after the cast and lands cassiopeiaBoltFlightTicks(1)
+// later on the dummy one hex away (was [230] on the cast, in the table above).
+it('cassiopeia source-backed first-cast coefficients: the main bolt lands after its launch and flight',()=>{
+ let state=freeze(battle([hero('cassiopeia'),dummy()],{rngState:42}));const at:[number,number][]=[],land=CASSIOPEIA_BOLT_LAUNCH_TICKS+cassiopeiaBoltFlightTicks(1);
+ for(let i=0;i<=land+1;i++){const step=stepCombat(freeze(state));state=step.state;for(const p of packets(step.events).filter(p=>p.source.ownerId==='p'))at.push([i,p.raw]);}
+ expect(at).toEqual([[land,230]]);
 });
 // Jayce's ranged cast (11-21): the main hit lands JAYCE_MAIN_HIT_TICKS after the cast and the crystals explode later, one after
 // another (cast-windup.ts). Against one enemy every crystal is thrown at it, and the nearest enemy takes no explosion of its own
@@ -30,7 +37,11 @@ it('renata source-backed first-cast coefficients, landing CAST_WINDUP_TICKS.rena
  expect(at).toEqual([[CAST_WINDUP_TICKS.renata,310]]);
 });
 it('Cassiopeia every third cast splashes only two other targets',()=>{
- const r=stepCombat(battle([hero('cassiopeia',{runtime:{...EMPTY_RUNTIME,castCount:2}}),dummy(),dummy('a',{cell:{col:3,row:3}}),dummy('b',{cell:{col:2,row:2}}),dummy('c',{cell:{col:3,row:2}})],{rngState:42}));
+ // Cassiopeia's main bolt (11-24, window only): the splash settles on the cast, the main bolt after its launch and flight; the window
+ // runs to its landing and keeps every event.
+ let first=stepCombat(battle([hero('cassiopeia',{runtime:{...EMPTY_RUNTIME,castCount:2}}),dummy(),dummy('a',{cell:{col:3,row:3}}),dummy('b',{cell:{col:2,row:2}}),dummy('c',{cell:{col:3,row:2}})],{rngState:42}));
+ const all=[...first.events];for(let i=0;i<CASSIOPEIA_BOLT_LAUNCH_TICKS+cassiopeiaBoltFlightTicks(1);i++){first=stepCombat(first.state);all.push(...first.events);}
+ const r={state:first.state,events:all};
  // targeting-p1 (8106acee): e and b are both adjacent, so the equal-distance tie now draws the combat lcg32 stream.
  // With rngState 42 the draw picks e (v25 always took b, giving [230 on b, 160 on c, 160 on e]). The primary still
  // takes 230 (ordinal 0) and exactly two other targets 160; events list the packets in target order.
@@ -73,15 +84,16 @@ it('Rumble3 self-destruct deals20000% resists before last-unit elimination',()=>
  const r=stepCombat(battle([player,enemy],{rngState:42}));
  const explosion=packets(r.events).find(p=>p.source.definitionId==='junker-king');expect(explosion?.raw).toBe(20000);expect(r.state.result).toBe('draw');
 });
-// Wind-up batch 2 (2026-11-16): the three stabs land SMEECH_STAB_TICKS apart; a dead target's next stab slot is the re-leap
-// (SMEECH_STAB_TICKS after the death), and a target that dies on the last stab is checked SMEECH_STAB_TICKS after it.
+// Wind-up batch 2 (2026-11-16): the three stabs land SMEECH_STAB_TICKS apart. Re-leap (2026-11-25, user decision, replaces the
+// 11-16 "next stab slot"): a target killed by his stab is followed by the re-leap SMEECH_RELEAP_AFTER_KILL_TICKS after the kill,
+// whichever stab killed it; he stands still meanwhile.
 it('Smeech stabs three times, SMEECH_STAB_TICKS apart, each 190 taken on the cast',()=>{
  let state=battle([hero('smeech'),dummy()],{rngState:42});const at:[number,number][]=[];
  for(let i=0;i<=2*SMEECH_STAB_TICKS;i++){const step=stepCombat(freeze(state));state=step.state;
   for(const p of packets(step.events).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability'))at.push([i,p.raw]);}
  expect(at).toEqual([[0,190],[SMEECH_STAB_TICKS,190],[2*SMEECH_STAB_TICKS,190]]);
 });
-it('Smeech leaps again one stab interval after a kill, with the next three slashes reduced by source30%',()=>{
+it('Smeech leaps again SMEECH_RELEAP_AFTER_KILL_TICKS after a kill, with the next three slashes reduced by the re-leap reduction',()=>{
  let state=battle([hero('smeech'),dummy('e',{hp:1,maxHp:1}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});
  const first=stepCombat(state);state=first.state;
  expect(state.units.find(u=>u.id==='e')!.alive).toBe(false);
@@ -89,19 +101,23 @@ it('Smeech leaps again one stab interval after a kill, with the next three slash
  const later:CombatEvent[]=[];
  for(let i=0;i<4*SMEECH_STAB_TICKS;i++){const step=stepCombat(state);state=step.state;later.push(...step.events);}
  const hits=packets(later).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability');
- // The target dies on the cast's first stab; the next stab slot is the re-leap, whose three stabs are 133 each.
+ // The target dies on the cast's first stab; the re-leap follows SMEECH_RELEAP_AFTER_KILL_TICKS later, its three stabs 133 each.
+ // (11-25 re-pin: was [1,2,3]*SMEECH_STAB_TICKS, the next stab slot.)
  expect(hits.map(p=>[p.unitId,p.raw])).toEqual([['far',133],['far',133],['far',133]]);
- expect(hits.map(p=>p.tick-first.state.tick)).toEqual([1,2,3].map(i=>i*SMEECH_STAB_TICKS));
+ // (v2: plus SMEECH_RELEAP_FLIGHT_TICKS, the stabs start on landing.)
+ expect(hits.map(p=>p.tick-first.state.tick)).toEqual([0,1,2].map(i=>SMEECH_RELEAP_AFTER_KILL_TICKS+SMEECH_RELEAP_FLIGHT_TICKS+i*SMEECH_STAB_TICKS));
  expect(later.some(e=>e.type==='movement'&&e.unitId==='p')).toBe(true);
 });
 
-it('Smeech: a target killed by a later stab is followed by the re-leap one stab interval later; a target that lives takes all three',()=>{
- for(const [hp,leapAt] of [[380,2*SMEECH_STAB_TICKS],[570,3*SMEECH_STAB_TICKS]] as const){
+it('Smeech: a target killed by a later stab is followed by the re-leap SMEECH_RELEAP_AFTER_KILL_TICKS after the kill, on the second or the last stab',()=>{
+ // 11-25 re-pin: the re-leap was the next stab slot (2 and 3 stab intervals); it is now that many stabs on the target, then
+ // SMEECH_RELEAP_AFTER_KILL_TICKS after the killing stab. The stab count is now given with each case instead of derived from leapAt.
+ for(const [hp,stabs] of [[380,2],[570,3]] as const){const leapAt=(stabs-1)*SMEECH_STAB_TICKS+SMEECH_RELEAP_AFTER_KILL_TICKS+SMEECH_RELEAP_FLIGHT_TICKS; // v2: + flight
   let state=battle([hero('smeech'),dummy('e',{hp,maxHp:hp}),dummy('far',{cell:{col:5,row:3}})],{rngState:42});const start=state.tick;const all:CombatEvent[]=[];
   for(let i=0;i<=4*SMEECH_STAB_TICKS;i++){const step=stepCombat(state);state=step.state;all.push(...step.events);}
   const hits=packets(all).filter(p=>p.source.ownerId==='p'&&p.source.sourceKind==='ability').map(p=>[p.unitId,p.tick-start-1]);
   const onE=hits.filter(([id])=>id==='e'),onFar=hits.filter(([id])=>id==='far');
-  expect(onE.map(([,t])=>t),String(hp)).toEqual(Array.from({length:leapAt/SMEECH_STAB_TICKS},(_,i)=>i*SMEECH_STAB_TICKS));
+  expect(onE.map(([,t])=>t),String(hp)).toEqual(Array.from({length:stabs},(_,i)=>i*SMEECH_STAB_TICKS));
   expect(onFar[0]?.[1],String(hp)).toBe(leapAt);
  }
 });
@@ -110,7 +126,7 @@ import {reviveG23Forge} from '../src/simulation/combat-g2-3-summons';
 import type {AbilityContext} from '../src/simulation/combat-s13-abilities';
 import type {S13Unit} from '../src/simulation/combat-s13-state';
 import {DEFAULT_BOARD} from '../src/simulation/board';
-import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
+import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_RELEAP_AFTER_KILL_TICKS, SMEECH_RELEAP_FLIGHT_TICKS, SMEECH_STAB_TICKS } from '../src/simulation/cast-windup';
 it('forge revival relocates in owner coordinates, mirrors on the enemy side, and never duplicates or draws RNG',()=>{
  for(const team of ['player','enemy'] as const){
   const row=(value:number)=>team==='player'?value:7-value;

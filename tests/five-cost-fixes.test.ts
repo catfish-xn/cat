@@ -5,7 +5,7 @@ import { EMPTY_RUNTIME } from '../src/simulation/combat-s13-state';
 import { nextRandom } from '../src/simulation/rng';
 import { applyStatus, grantShield, origin, type S13Unit } from '../src/simulation/combat-s13-state';
 import { battle, freeze, unit } from './combat-helpers';
-import { MALZAHAR_3STAR_GATE_TICKS } from '../src/simulation/cast-windup';
+import { MALZAHAR_3STAR_GATE_TICKS, SEVIKA_PUNCH_HIT_TICKS } from '../src/simulation/cast-windup';
 
 function hero(name: string, star: 1|2|3 = 1, patch: Partial<CombatUnit> = {}): CombatUnit {
   return unit('p','player',1,3,{definitionId:name,starLevel:star,ability:resolveAbility(name+'-ability',star),
@@ -45,7 +45,9 @@ describe('14.24b five-cost independent vectors; AD100/AP100, zero resists',()=>{
     [1,260,780,338,832], [2,270,810,351,864], [3,2000,6000,2600,6400],
   ] as const)('Sevika %s star: flame base and both multipliers, same two RNG words',(star,base,punch,splash,bite)=>{
     const flame=roll(battle([hero('sevika',star),dummy()],{rngState:seed[0]}));
-    const fist=roll(battle([hero('sevika',star),dummy(),dummy('e2',{cell:{col:3,row:3}})],{rngState:seed[1]}));
+    // Sevika's punch settles on the fist hit, SEVIKA_PUNCH_HIT_TICKS after the slot machine stops (rule chain 11-24): the scene runs
+    // on to that hit; the amounts are unchanged.
+    const fist=advance(battle([hero('sevika',star),dummy(),dummy('e2',{cell:{col:3,row:3}})],{rngState:seed[1]}),1+SLOT+SEVIKA_PUNCH_HIT_TICKS);
     // Chomp uses a high-HP target to expose its raw damage separately from the execution packet.
     const chomp=roll(battle([hero('sevika',star),dummy()],{rngState:seed[2]}));
     expect(raw(flame.events)).toEqual([base]);

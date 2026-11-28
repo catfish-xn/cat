@@ -1,6 +1,8 @@
-import { SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
+import { CASSIOPEIA_BOLT_LAUNCH_TICKS, SEVIKA_PUNCH_HIT_TICKS, SWAIN_PULSE_TICKS, SWAIN_PULSES_PER_SECOND } from './cast-windup';
+import { scheduleShot } from './ability-projectile';
 import { splitTotal } from './m8/periodic';
 import { recordAerialMovement } from './augment-pool-batch5-g3-combat';
+import { SMEECH_RELEAP_AFTER_KILL_TICKS, SMEECH_RELEAP_FLIGHT_TICKS } from './cast-windup';
 import { CAST_WINDUP_TICKS, DRMUNDO_BLAST_AFTER_PULSE_TICKS, JAYCE_MAIN_HIT_TICKS, jayceCrystalBlastTick, jayceCrystalChainPlace, jayceCrystalLandTick, NUNU_SECOND_AFTER_PULSE_TICKS, RENNI_LIFT_TICKS, RENNI_SLAM_AFTER_STUN_TICKS, SMEECH_STAB_TICKS } from './cast-windup';
 import { teamup } from './combat-v20-traits';
 import { occupiesCell } from './anomalies/availability';
@@ -10,6 +12,7 @@ import { g23State } from './g2-3-combat';
 /** Fixed-form, finite hex execution. All delayed work is part of the combat snapshot. */
 import { contains, hexDistance, type HexCell } from './board';
 import type { CombatTask } from './combat-types';
+import type { CombatEvent } from './combat';
 import type { S13Unit } from './combat-s13-state';
 import type { AbilityContext, S13Packet } from './combat-s13-abilities';
 import { amount, applyStatus, byDistance, champion, compareText, enemies, grantShield, heroLive, origin, path, variable } from './combat-s13-state';
@@ -45,9 +48,14 @@ function flame(ctx:AbilityContext,u:S13Unit,t:S13Unit,raw:number,seq:number,ordi
 function split(total:number,n:number,i:number){return Math.floor(total/n)+(i<total%n?1:0);}
 /** 约定值: instant leap to the nearest unoccupied adjacent hex; no movement animation. */
 function leapG23(ctx:AbilityContext,u:S13Unit,t:S13Unit):void{
- if(hexDistance(u.cell,t.cell)<=1)return;
+ const cell=leapCell(ctx,u,t);
+ if(cell){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cell}); recordAerialMovement(ctx, u, cell);u.cell=cell;}
+}
+/** Where leapG23 puts u next to t now: undefined if already adjacent or no free hex. */
+function leapCell(ctx:AbilityContext,u:S13Unit,t:S13Unit):{col:number;row:number}|undefined{
+ if(hexDistance(u.cell,t.cell)<=1)return undefined;
  const cells=Array.from({length:ctx.board.rows},(_,row)=>Array.from({length:ctx.board.columns},(_,col)=>({col,row}))).flat().filter(c=>hexDistance(c,t.cell)===1&&!ctx.units.some(x=>occupiesCell(x,ctx.tick)&&x.cell.col===c.col&&x.cell.row===c.row)).sort((a,b)=>hexDistance(u.cell,a)-hexDistance(u.cell,b)||a.row-b.row||a.col-b.col);
- if(cells[0]){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:cells[0]}); recordAerialMovement(ctx, u, cells[0]);u.cell=cells[0];}
+ return cells[0];
 }
 const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.sourceKind==='item').map(s=>s.source.sourceInstanceId),...(u.itemPrograms??[]).filter(p=>p.source.sourceKind==='item').map(p=>p.source.instanceId)].filter(id=>!isSupportAuraInstance(id))).size;
 /** One leap's stabs: the first now, the rest SMEECH_STAB_TICKS apart (amounts taken now); SMEECH_STAB_TICKS after the last,
@@ -56,15 +64,25 @@ const g23ItemCount=(u:S13Unit)=>new Set([...(u.sources??[]).filter(s=>s.source.s
  * 2000+leap*n+i as before. */
 function smeechStabs(ctx:AbilityContext,u:S13Unit,target:S13Unit,raw:number,seq:number,leap:number,total:number):void{
  const n=variable(u,'BaseNumStabs'),ordinal=(i:number)=>leap===0?i:2000+leap*n+i;
- hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');
+ hit(ctx,u,target,split(raw,n,0),seq,ordinal(0),'physical');ctx.packets.at(-1)!.smeechStab=true;
  for(let i=1;i<n;i++)later(ctx,u,target,'g23Stab',i*SMEECH_STAB_TICKS,split(raw,n,i),seq,ordinal(i),n);
  later(ctx,u,target,'g23Smeech',n*SMEECH_STAB_TICKS,raw,seq,leap+1,total);
 }
 function smeechTarget(ctx:AbilityContext,u:S13Unit):S13Unit|undefined{
  return enemies(u,ctx.units).filter(x=>hexDistance(u.cell,x.cell)<=variable(u,'LeapHexRange')).sort((a,b)=>g23ItemCount(a)-g23ItemCount(b)||hexDistance(u.cell,a.cell)-hexDistance(u.cell,b.cell)||compareText(a.id,b.id))[0];
 }
+/** One of Smeech's stabs killed its target (combat-s13 damage resolution): his remaining stabs on it are dropped, he stands
+ * still, and his re-leap check runs SMEECH_RELEAP_AFTER_KILL_TICKS later (11-25, footage qC7Z). A target killed by anything
+ * else is still found dead by his next stab, as before. */
+export function smeechKilled(u:S13Unit,targetId:string,seq:number,tick:number,events:CombatEvent[]):void{
+ const round=(x:CombatTask)=>x.actionSeq===seq&&x.targetId===targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
+ const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech'&&!x.cell);if(!check)return;
+ u.tasks=[...u.tasks.filter(x=>!round(x)),{...check,executeAtTick:tick+SMEECH_RELEAP_AFTER_KILL_TICKS}];
+ // Held through the re-leap's own tick too, so he does not take a step in it before the leap runs.
+ applyStatus(u,origin(u),'channel',0,SMEECH_RELEAP_AFTER_KILL_TICKS+1,tick,events,true,'',seq);
+}
 /** The rolled High Roller spell, once the slot machine has stopped. */
-function sevikaSpell(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number,spell:number,mod:string):void{
+function sevikaSpell(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number,spell:number,mod:string,mods=true):void{
   const v=(k:string)=>variable(u,k),physical=(k:string,a?:string)=>amount(u,ctx.tick,{ad:v(k),ap:a?v(a):0});
   let n=0;const strike=(x:S13Unit,raw:number,type:S13Packet['damageType']='magic',area=false)=>hit(ctx,u,x,raw,seq,n++,type,area);
   const foes=()=>byDistance(u,enemies(u,ctx.units));
@@ -90,6 +108,10 @@ function sevikaSpell(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number,spell:num
     const coin=amount(u,ctx.tick,{ad:jackpotCoinAdBps/10000,ap:v('APBonusDamage')}),pool=[...foes()].sort((a,b)=>compareText(a.id,b.id));
     for(let i=0;i<count&&pool.length;i++){const x=pool[Math.floor(ctx.draw()*pool.length/2**32)];later(ctx,u,x,'g23Physical',interval*(i+1),coin,seq,20+i,20+count);}
   }
+  if(mods)sevikaMods(ctx,u,t,seq,mod);
+}
+/** The High Roller's rocket or shield mod: on the slot machine's stop, whichever spell came up. */
+function sevikaMods(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number,mod:string):void{
   if(mod==='rocket')for(let i=0;i<G23_POLICY.highRoller.rockets;i++)hit(ctx,u,t,G23_POLICY.highRoller.rocketPhysicalDamage,seq,100+i,'physical');
   if(mod==='shield')grantShield(u,origin(u),G23_POLICY.highRoller.shield,ctx.tick+G23_POLICY.highRoller.shieldTicks,ctx.tick,ctx.events);
 }
@@ -125,7 +147,12 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
     case 'cassiopeia': {
       // One read decides the splash and the branch reported (display output only).
       const splash=u.runtime.castCount%v('NumCasts')===0;ctx.castBranch=splash?'splash':'single';
-      strike(t,mag('Damage'));
+      // The main bolt (11-24, authorization ②, timing only): it leaves CASSIOPEIA_BOLT_LAUNCH_TICKS after the cast and settles
+      // where it lands, cassiopeiaBoltFlightTicks(hexes to the target then) later (abilityProjectile 'cassiopeia-bolt'); its amount
+      // and target are taken now, and she stands still until it leaves (channel, self-chosen). The splash still settles on the cast
+      // (its timing is pending).
+      applyStatus(u,origin(u),'channel',0,CASSIOPEIA_BOLT_LAUNCH_TICKS,ctx.tick,ctx.events,true,'',seq);
+      scheduleShot(u,'cassiopeia-bolt',ctx.tick+CASSIOPEIA_BOLT_LAUNCH_TICKS,t.id,mag('Damage'),seq,0,1);ids.push(t.id);
       if(splash)for(const x of byDistance(t,foes()).filter(x=>x.id!==t.id&&hexDistance(t.cell,x.cell)<=v('HexRadius')).slice(0,v('BonusNumEnemies')))strike(x,mag('MiasmaDamage'),'magic',true);break;}
     case 'nunu':{
       const ticks=Math.round(v('DamageDuration')*v('DamageTicksPerSecond'));
@@ -247,8 +274,14 @@ export function planG23Cast(ctx:AbilityContext,u:S13Unit,t:S13Unit,seq:number):s
       g23State(u).highRoller.push({actionSeq:seq,spell,...mod,gold:mod.mod==='coin'?G23_POLICY.highRoller.gold:0});
       applyStatus(u,origin(u),'damageReduction',G23_POLICY.highRoller.durabilityBps,G23_POLICY.highRoller.durabilityTicks,ctx.tick,ctx.events,true);
       const wait=G23_POLICY.highRoller.slotTicks;
-      applyStatus(u,origin(u),'channel',0,wait,ctx.tick,ctx.events,true,'',seq);
-      later(ctx,u,t,'g23Roll',wait,0,seq,0,1);ids.push(t.id);
+      // The punch (11-24, authorization ②, timing only): the slot machine stops on `wait` (its rocket/shield mod there) and the fist
+      // lands SEVIKA_PUNCH_HIT_TICKS later, where the punch's damage, knock-back, leap, area damage and stun all settle together;
+      // she stands still until then (self-chosen). The other spells settle on the stop as before.
+      const punch=spell===1,hold=wait+(punch?SEVIKA_PUNCH_HIT_TICKS:0);
+      applyStatus(u,origin(u),'channel',0,hold,ctx.tick,ctx.events,true,'',seq);
+      if(punch){later(ctx,u,t,'g23Roll',wait,0,seq,0,2);later(ctx,u,t,'g23Roll',hold,0,seq,1,2);}
+      else later(ctx,u,t,'g23Roll',wait,0,seq,0,1);
+      ids.push(t.id);
       // Gold is committed by the battle settlement receipt, never by the combat tick.
       break;
     }
@@ -259,7 +292,14 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   if(task.kind==='g23Roll'){
    const roll=g23State(u).highRoller.find(r=>r.actionSeq===task.actionSeq);
    const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0&&x.team!==u.team)??byDistance(u,enemies(u,ctx.units))[0];
-   if(roll&&target&&u.alive&&u.hp>0)sevikaSpell(ctx,u,target,task.actionSeq,roll.spell,roll.mod);return;
+   if(!roll||!target||!u.alive||u.hp<=0)return;
+   // The punch's two steps (task.total 2): the stop (its mod, and a display marker naming the coming hit tick), then the fist.
+   if(task.total===2&&task.ordinal===0){
+    sevikaMods(ctx,u,target,task.actionSeq,roll.mod);
+    ctx.events.push({type:'abilityMarker',tick:ctx.tick,unitId:u.id,marker:'sevika-punch-thrown',cell:{...target.cell},arrivalTick:ctx.tick+SEVIKA_PUNCH_HIT_TICKS});
+    return;
+   }
+   sevikaSpell(ctx,u,target,task.actionSeq,roll.spell,roll.mod,task.total!==2);return;
   }
   if(task.kind==='g23Chomp'){
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous)return;
@@ -278,10 +318,33 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
    const blue=g23State(u).highRoller.some(r=>r.actionSeq===task.actionSeq&&r.mod==='blue-flamethrower');
    flame(ctx,u,target,task.amount,task.actionSeq,task.ordinal,blue?Math.round(variable(u,'Spell1_Bonus_DamagePercentPerSecond')*10000)*task.ordinal:0);return;
   }
+  // Smeech's re-leap landing (task.cell, 11-25): he lands now, next to his new target, and strikes (task.amount is the amount
+  // before this leap's reduction). If that target died in the air he lands on the hex he aimed at and goes the way of a stab
+  // kill (self-chosen): he stands still and his re-leap check runs SMEECH_RELEAP_AFTER_KILL_TICKS later.
+  if(task.kind==='g23Smeech'&&task.cell){
+   const free=!ctx.units.some(x=>x.id!==u.id&&occupiesCell(x,ctx.tick)&&x.cell.col===task.cell!.col&&x.cell.row===task.cell!.row);
+   const next=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0&&x.team!==u.team);
+   const to=free?task.cell:next?leapCell(ctx,u,next):undefined;
+   if(to&&(to.col!==u.cell.col||to.row!==u.cell.row)){ctx.events.push({type:'movement',tick:ctx.tick,unitId:u.id,from:u.cell,to:{...to}});recordAerialMovement(ctx,u,to);u.cell={...to};}
+   if(next){smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;}
+   const {cell:_landed,...check}=task;
+   u.tasks.push({...check,key:JSON.stringify([u.id,task.actionSeq,'g23Smeech',task.ordinal,task.targetId]),executeAtTick:ctx.tick+SMEECH_RELEAP_AFTER_KILL_TICKS});
+   applyStatus(u,origin(u),'channel',0,SMEECH_RELEAP_AFTER_KILL_TICKS+1,ctx.tick,ctx.events,true,'',task.actionSeq);return;
+  }
   if(task.kind==='g23Smeech'){
    const previous=ctx.units.find(x=>x.id===task.targetId);if(!previous||previous.alive||task.ordinal>=task.total)return;
    const next=smeechTarget(ctx,u);if(!next)return;
-   leapG23(ctx,u,next);smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;
+   // Already next to him (11-25): no flight and no hex change; he strikes it now, and no leap marker is sent.
+   if(hexDistance(u.cell,next.cell)<=1){smeechStabs(ctx,u,next,Math.floor(task.amount*(1-variable(u,'DamageReductionOnLeap'))),task.actionSeq,task.ordinal,task.total);return;}
+   // Else the re-leap (11-25): he takes off now and lands SMEECH_RELEAP_FLIGHT_TICKS later next to `next` (the hex chosen now),
+   // where he strikes; in the air he stays on his hex for the rules, taking no step and no attack.
+   const cell=leapCell(ctx,u,next)??{...u.cell},landing=ctx.tick+SMEECH_RELEAP_FLIGHT_TICKS;
+   applyStatus(u,origin(u),'channel',0,SMEECH_RELEAP_FLIGHT_TICKS+1,ctx.tick,ctx.events,true,'',task.actionSeq);
+   u.tasks.push({key:JSON.stringify([u.id,task.actionSeq,'g23SmeechLand',task.ordinal,next.id]),kind:'g23Smeech',source:origin(u),executeAtTick:landing,targetId:next.id,
+     amount:task.amount,actionSeq:task.actionSeq,ordinal:task.ordinal,total:task.total,cancellable:false,cell:{...cell}});
+   // Display only (authorization ①): the re-leap takes off now; it lands on `cell` at arrivalTick, where the movement event is.
+   ctx.events.push({type:'abilityMarker',tick:ctx.tick,unitId:u.id,marker:'smeech-leap-again',cell:{...cell},arrivalTick:landing});
+   return;
   }
   // Jayce's crystals (display only): one lands, or one explodes, at its cell.
   if(task.kind==='g23CrystalLand'||task.kind==='g23CrystalBlast'){
@@ -296,10 +359,10 @@ export function executeG23Task(ctx:AbilityContext,u:S13Unit,task:CombatTask):voi
   // A later stab: its target, if still alive, takes the amount taken on the cast (a dead one takes nothing; no other is picked).
   if(task.kind==='g23Stab'){
    const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);
-   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');return;}
+   if(target){hit(ctx,u,target,task.amount,task.actionSeq,task.ordinal,'physical');ctx.packets.at(-1)!.smeechStab=true;return;}
    const round=(x:CombatTask)=>x.actionSeq===task.actionSeq&&x.targetId===task.targetId&&(x.kind==='g23Stab'||x.kind==='g23Smeech');
-   const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech');if(!check)return;
-   u.tasks=u.tasks.filter(x=>!round(x));executeG23Task(ctx,u,check);return;
+   const check=u.tasks.find(x=>round(x)&&x.kind==='g23Smeech'&&!x.cell);if(!check)return;
+   u.tasks=u.tasks.filter(x=>!(round(x)&&!x.cell));executeG23Task(ctx,u,check);return;
   }
   const target=ctx.units.find(x=>x.id===task.targetId&&x.alive&&x.hp>0);if(!target)return;
   if(task.kind==='g23Heal')ctx.heals.push({source:task.source,targetId:target.id,amount:task.amount});

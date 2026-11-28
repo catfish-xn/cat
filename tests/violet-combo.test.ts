@@ -31,6 +31,12 @@ describe('Violet combo timing', () => {
     expect(VIOLET_JAB_TICKS.length).toBe(2);
     expect(mine(r.out)).toEqual([...VIOLET_JAB_TICKS.map(at => cast + at), cast + VIOLET_UPPERCUT_TICKS]);
   });
+  // The ticks themselves are pinned (v2, 11-24; measured on official-server footage, not original data: pODUuLLkM9g, counted
+  // from her mana bar emptying). Changing them is a rule change, which this pin makes visible.
+  it('the jab and uppercut ticks are the ones measured on official footage', () => {
+    expect(VIOLET_JAB_TICKS).toEqual([1, 5]);
+    expect(VIOLET_UPPERCUT_TICKS).toBe(21);
+  });
   it('the knock-up starts with the uppercut, not on the cast', () => {
     const stunned = (tick: number) => run(start, tick - start.tick).state.units.find(u => u.id === 'e')!.statuses?.some((x: any) => x.kind === 'stun');
     expect(stunned(cast + VIOLET_UPPERCUT_TICKS - 1)).toBe(false);
@@ -49,16 +55,17 @@ describe('Violet combo timing', () => {
 });
 
 // The combo timing changes battle results, so its rule identifier is part of the content digest: a save written under the
-// digest just before it (Mel's barrage) is turned away as another version, never replayed under the new rule.
-const BEFORE_DIGEST = 'fnv1a32-utf16:1ca19aae';
+// digest just before it is turned away as another version, never replayed under the new rule. v1 (11-21): the digest before it
+// was Mel's barrage (1ca19aae); v2 (11-24, ticks re-aligned from her mana bar emptying): the ranged attack wind-up (d6493c11).
+const BEFORE_DIGEST = 'fnv1a32-utf16:d6493c11';
 describe('Violet combo: files written before it', () => {
   it('the rule has its own identifier and the digest moved', () => {
-    expect(S13_COMBAT_RULES.violetCombo).toBe('violet-combo-settle-per-hit-v1');
+    expect(S13_COMBAT_RULES.violetCombo).toBe('violet-combo-settle-per-hit-v2');
     expect(CONTENT_DIGEST).not.toBe(BEFORE_DIGEST);
   });
   it('a save carrying the earlier digest is rejected as another version, cannot resume or replay, and its archive is quarantined', () => {
     const file = { kind: 'hex-autobattler-save', saveFormatVersion: M8_VERSION.saveFormatVersion, replayFormatVersion: M8_VERSION.replayFormatVersion,
-      runId: 'before-violet', createdAt: '2026-11-21T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE_DIGEST }, battles: [], currentBattle: null };
+      runId: 'before-violet', createdAt: '2026-11-24T00:00:00Z', match: { ...readyMatch(42), contentDigest: BEFORE_DIGEST }, battles: [], currentBattle: null };
     expect(readCompatibility(file)).toEqual({ status: 'rejected', currentRulesVersion: M8_VERSION.rulesVersion, fileRulesVersion: M8_VERSION.rulesVersion,
       canResume: false, canReplay: false, canExportOriginal: false, reason: 'digest-mismatch' });
     expect(routeSaveFile(file).envelope).toBeNull();

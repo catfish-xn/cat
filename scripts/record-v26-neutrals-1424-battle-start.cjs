@@ -24,7 +24,10 @@ async function main() {
   // (2026-11-19 ranged attack wind-up: battle results moved, so seed 20261016 reaches round 23 with six seats alive and no
   // mirror. Re-searched from 20261012: 20261012 faults at round 11 on the integration head too (resolver-error
   // battle-validation:invalid-snapshot, reported separately), 20261013 has six alive; 20261014 has seven, all with full boards.)
-  const seed = 20261014, clock = new ManualClock();
+  // (2026-11-28 rule chain #877: battle results moved again, so seed 20261014 reaches round 23 with six seats alive and no
+  // mirror. Re-searched in order from 20261012 with the same two premises (odd alive roster of at least five at round 23,
+  // every survivor fielding at least seven units): 20261012 has six alive; 20261013 has seven, all with full boards.)
+  const seed = 20261013, clock = new ManualClock();
   const seats = Array.from({ length: 8 }, (_, i) => ({ seatId: i ? `bot-${i}` : 'seat-1', name: `s${i}`, kind: i ? 'bot' : 'human' }));
   const options = clock => ({ ...ROOM_TIMING_DEFAULTS, roomId: 'room-1', seed, clock,
     resolver: new TwoSidedBattleResolver(), combatStreaming: true, sliceTicks: 100, sliceMs: 20,

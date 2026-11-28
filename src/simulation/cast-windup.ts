@@ -9,8 +9,23 @@ export const CAST_WINDUP_TICKS = Object.freeze({ drmundo: 10, trundle: 4, zyra: 
 /**
  * Wind-up batch 2 (user-approved 2026-11-15 authorization, timing only; fitted, not original data): Smeech's stabs land one
  * after another, SMEECH_STAB_TICKS apart, instead of all on the cast tick. Each stab's amount is still taken on the cast.
+ * 11-25 (authorization ②, timing only): the interval is measured on official-server 14.24 footage qC7Z (not original data);
+ * whether it follows attack speed is unknown, so it is fixed (was a fitted value).
  */
-export const SMEECH_STAB_TICKS = 7;
+export const SMEECH_STAB_TICKS = 8;
+/**
+ * Smeech after a kill (11-25, measured on official-server 14.24 footage qC7Z, two samples, fitted; not original data): when one
+ * of his stabs kills his target he stands still (no move, no attack) and goes on to the next one SMEECH_RELEAP_AFTER_KILL_TICKS
+ * later: striking at once if it is already next to him, else taking off for it (SMEECH_RELEAP_FLIGHT_TICKS). Before, the
+ * re-leap waited for the next stab's slot and he could walk meanwhile.
+ */
+export const SMEECH_RELEAP_AFTER_KILL_TICKS = 5;
+/**
+ * Smeech's re-leap flight (11-25, measured on official-server 14.24 footage qC7Z, one sample; not original data): when his new
+ * target is not next to him he lands SMEECH_RELEAP_FLIGHT_TICKS after taking off and strikes on landing. In the air he stays on his old hex for the rules and
+ * takes no step and no attack (self-chosen). The cast's own leap is unchanged (instant).
+ */
+export const SMEECH_RELEAP_FLIGHT_TICKS = 6;
 
 /** Wind-up batch 2 (same authorization; fitted, not original data): Dr. Mundo's closing blast lands this many ticks after his
  * last once-a-second damage instead of on the same tick. Its amount is still taken on the cast. */
@@ -115,10 +130,10 @@ export const SWAIN_PULSE_TICKS = 5, SWAIN_PULSES_PER_SECOND = 4;
  * hit time is not measured) and settle where they land. */
 export const MEL_DASH_LAND_TICKS = 10, MEL_RELEASE_TICKS = 15, MEL_BOLT_TICKS_PER_HEX = 2;
 
-/** Violet's combo (11-21, authorization ②): two jabs then an uppercut on the target taken at the cast, each landing on its own
- * tick after the cast (aligned to the original frame by frame; which hit is hers is not fully verified, see
+/** Violet's combo (11-21, authorization ②; re-aligned 11-24): two jabs then an uppercut on the target taken at the cast, each
+ * landing on its own tick after the cast, counted from her mana bar emptying (aligned to the original frame by frame, see
  * docs/S13_RULES_GAP.md 蔚奥莱连击). The uppercut's knock-up starts with it. */
-export const VIOLET_JAB_TICKS: readonly number[] = [16, 20], VIOLET_UPPERCUT_TICKS = 29;
+export const VIOLET_JAB_TICKS: readonly number[] = [1, 5], VIOLET_UPPERCUT_TICKS = 21;
 
 /** Jinx's rocket (11-21, authorization ②): it leaves JINX_ROCKET_LAUNCH_TICKS after the cast and explodes JINX_ROCKET_FLIGHT_TICKS
  * later (both aligned to the original frame by frame; docs/S13_RULES_GAP.md 金克丝飞弹). Who is hit is read where it explodes. */
@@ -161,3 +176,18 @@ export function rangedAttackWindupTicks(championId: string, intervalTicks: numbe
   const ticks = Math.min(RANGED_ATTACK_WINDUP_TICKS[championId] ?? RANGED_ATTACK_WINDUP_DEFAULT, RANGED_ATTACK_WINDUP_MAX);
   return Math.max(0, Math.min(ticks, Math.floor(intervalTicks / 2)));
 }
+
+/** Sevika's punch (11-24, authorization ②, timing only): the fist lands SEVIKA_PUNCH_HIT_TICKS after her slot machine stops
+ * (G23_POLICY.highRoller.slotTicks after the cast); the punch's damage, knock-back, leap, area damage and stun settle on that
+ * tick. Aligned to original footage frame by frame (one sample; see docs/S13_RULES_GAP.md 塞薇卡重拳). */
+export const SEVIKA_PUNCH_HIT_TICKS = 20;
+
+/** Cassiopeia's main bolt (11-24, authorization ②, timing only): it leaves CASSIOPEIA_BOLT_LAUNCH_TICKS after her cast (measured
+ * on official footage, not original data) and settles where it lands, flying CASSIOPEIA_BOLT_TICKS_PER_HEX a hex to the target
+ * (its speed from the skill data, rounded to ticks; see docs/S13_RULES_GAP.md 卡西奥佩娅主弹). */
+export const CASSIOPEIA_BOLT_LAUNCH_TICKS = 10, CASSIOPEIA_BOLT_TICKS_PER_HEX = 2;
+export const cassiopeiaBoltFlightTicks = (hexes: number): number => Math.max(1, Math.ceil(hexes * CASSIOPEIA_BOLT_TICKS_PER_HEX));
+
+/** Steb's heal (11-24, authorization ②, timing only): it lands STEB_HEAL_TICKS after his cast; his strike stays on the cast
+ * (measured on official footage, not original data; see docs/S13_RULES_GAP.md 斯特卜治疗). */
+export const STEB_HEAL_TICKS = 5;

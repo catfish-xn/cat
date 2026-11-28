@@ -518,7 +518,9 @@ describe.each([
   // Sion kills enemy-r8-1 at tick 224 (same seed and Cassiopeia/Vladimir cells).
   // Ranged attack wind-up (#791, scene change): seed 2 at (4,6) now has Morgana hit the target on the kill tick. The same
   // task-mechanism-restore layout as above, seed 5, Morgana (6,7): Sion kills enemy-r4-2 at tick 420 with her prior contribution.
-  { contribution: true, seed: 5, cells: [{ col: 6, row: 7 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 420, targetId: 'enemy-r4-2' },
+  // Cassiopeia's main bolt settles where it lands (11-24, scene change): seed 5 at (6,7) no longer gives it. Searched seeds from 0
+  // over all Morgana cells (same Cassiopeia/Vladimir cells): seed 1, Morgana (3,5) is the first; Sion kills enemy-r4-2 at tick 333.
+  { contribution: true, seed: 1, cells: [{ col: 3, row: 5 }, { col: 0, row: 4 }, { col: 3, row: 4 }], tick: 333, targetId: 'enemy-r4-2' },
 ])('summon public combat fixture: contribution=$contribution', ({ contribution, seed, cells, tick, targetId }) => {
   // Script only the draw; the following equality checks the fixture, not real-RNG availability.
   let restoreOffers: () => void;

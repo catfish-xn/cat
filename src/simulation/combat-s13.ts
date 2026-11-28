@@ -38,7 +38,7 @@ import {chooseFishbonesTarget, advanceDeferredItemDamage} from './g2-4b-item-ker
 import {recordItemGold,type ItemGoldKind} from './g2-4b-item-gold';
 import {scaleItemSummonHp} from './g2-4b-summons';
 import {advanceSpectralCutlass,returnZephyrUnits} from './combat-g2-4b';
-import { advanceG23Skills,recordG23SkillDamage,extendG23Swain } from './combat-g2-3';
+import { advanceG23Skills,recordG23SkillDamage,extendG23Swain,smeechKilled } from './combat-g2-3';
 import { advanceG23Summons,deathG23Sion,g23Bound } from './combat-g2-3-summons';
 import { advanceG23Anomalies,recordG23Conquest,settleG23ExperimentKills,recordG23Attack,recordG23Damage,g23Anomaly } from './g2-3-combat';
 import { openingB4Combat, castB4Combat, attackB4Combat, damageB4Combat } from './augment-pool-batch4-b4combat';
@@ -729,6 +729,7 @@ export function advanceS13Tick(state: CombatState): CombatStep {
           executeAtTick:tick+1,targetId:target.id,amount:Math.floor(packet.raw*Math.round(variable(owner,'Spell3_ResetDamageFalloff')*10000)/10000),
           actionSeq:packet.actionSeq,ordinal:packet.ordinal+1,total:packet.ordinal+2,cancellable:true});return;}
       }
+      if(owner&&packet.smeechStab&&outcome.hit&&!context.redirected&&virtualHp.get(target.id)===0)smeechKilled(owner,target.id,packet.actionSeq,tick,events);
       const blade=chainblade(owner);
       if(owner&&blade&&!context.redirected&&['basic-attack','ability-direct','ability-periodic','attack-extra'].includes(context.delivery)
         &&absorbed+actual>0&&remaining>0&&owner.team!==target.team&&BigInt(remaining)*10000n<BigInt(target.maxHp)*BigInt(V19_MECHANICS.chainblade.executeBps)){

@@ -8,7 +8,11 @@ import {deriveEffectiveTrait,projectEffectiveMembership} from './traits/effectiv
 import type { TraitSnapshot } from './strategy-types';
 import { EMBLEM_SOURCE } from './content/emblem-source';
 import { G23_TRAIT_SOURCE } from './content/g2-3-trait-runtime';
+import { G2_ABILITY_DATA } from './content/g2-abilities';
 const EMBLEM=EMBLEM_SOURCE.find(r=>r.traitId==='experiment')!;
+/** Twitch's Experiment bonus (user 11-25): the share of the nearest enemy's max HP dealt every few attacks, from the 14.24
+ * client data (his ability's experiment variable, the same at every star), in basis points. It was an agreed guide-site value. */
+const TWITCH_EXPERIMENT_MAX_HP_BPS=Math.round(G2_ABILITY_DATA['twitch-ability']!.variables.ExperimentMaxHealthDamage![0]!*10000);
 /** Option A (P-EX1, 2026-10-24): clone max HP = PercentMaxHealth 0.6 x tier Scaling {a02e81c2}
  * (1.15/1.3/1.5) = 69/78/90%; the tier-7 bonus increase does not apply again. */
 export function experimentCloneHealthBps(tier:number):number {
@@ -36,6 +40,6 @@ export function g23ExperimentEffects(state:CombatStrategyInputs,unit:Unit,traits
  // The emblem holder on a Laboratory donates "summon a copy of this unit" to every Experiment on a Laboratory.
  const cloner=donors.some(u=>state.items.some(i=>i.definitionId===EMBLEM.apiName&&i.location.kind==='unit'&&i.location.unitId===u.id));
  return addMutationDonation(state,unit,traits??[experiment!],[{kind:'statFlat',stat:'maxHp',amount:(tier>=5?300:100)+(donors.some(u=>u.definitionId==='drmundo')?120*factor:0)},
-  {kind:'mechanic',mechanic:'g23Experiment',values:{...(donors.some(u=>u.definitionId==='warwick')?{warwick:20*factor}:{}),mundo:donors.some(u=>u.definitionId==='drmundo')?60*factor:0,nunu:donors.some(u=>u.definitionId==='nunu')?300*factor:0,zyra:donors.some(u=>u.definitionId==='zyra')?5000*factor:0,urgot:donors.some(u=>u.definitionId==='urgot')?2000*factor:0,twitch:donors.some(u=>u.definitionId==='twitch')?2000*factor:0}},
+  {kind:'mechanic',mechanic:'g23Experiment',values:{...(donors.some(u=>u.definitionId==='warwick')?{warwick:20*factor}:{}),mundo:donors.some(u=>u.definitionId==='drmundo')?60*factor:0,nunu:donors.some(u=>u.definitionId==='nunu')?300*factor:0,zyra:donors.some(u=>u.definitionId==='zyra')?5000*factor:0,urgot:donors.some(u=>u.definitionId==='urgot')?2000*factor:0,twitch:donors.some(u=>u.definitionId==='twitch')?TWITCH_EXPERIMENT_MAX_HP_BPS*factor:0}},
   ...(cloner?[{kind:'mechanic' as const,mechanic:'g23ExperimentClone',values:{healthBps:experimentCloneHealthBps(tier),splitTick:EXPERIMENT_SPLIT_TICK}}]:[])],tier,labs,experimentCloneHealthBps(tier),EXPERIMENT_SPLIT_TICK);
 }
