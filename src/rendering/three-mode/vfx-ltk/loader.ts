@@ -347,7 +347,12 @@ export function createVfxLibrary(root: string, reader: VfxReader, options: VfxLi
     if (held) return held;
     held = (async () => {
       const raw = await reader.readJson(urlOf(index.systems[id])); ensureOpen(); validateSystem(raw);
-      const parsed = readVfxSystem(raw), disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
+      const read = readVfxSystem(raw);
+      // RECORDING ONLY (claude/rec-garen-glow-a, never merge): Garen's glow layer counts its emission end from its first
+      // emission instead of from the system's start, so its slow rate gets a second particle. One system, one emitter.
+      const parsed = id === '97c28077' ? { ...read, emitters: read.emitters.map(e => e.name === 'sword_base_fade' && e.lifetime !== null
+        ? { ...e, lifetime: e.lifetime + e.timeBeforeFirstEmission } : e) } : read;
+      const disabled = DISABLED_EMITTERS[id], whole = ATTACHED_WHOLE_BODY[id], heldOn = EMITTERS_HELD_ON[id];
       const faint = EMITTER_ALPHA[id], unpushed = WORLD_ACCELERATION_OFF[id], blended = EMITTER_BLEND[id];
       const model = disabled || whole || heldOn || faint || unpushed || blended ? { ...parsed, emitters: parsed.emitters.map(e => disabled?.includes(e.name ?? '') ? { ...e, disabled: true }
         : whole?.includes(e.name ?? '') ? { ...e, attachedSubmeshes: null }
