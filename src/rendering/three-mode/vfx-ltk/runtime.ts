@@ -1,4 +1,4 @@
-import { Vector3, type Camera, type Material, type Object3D, type Scene, type WebGLRenderer } from 'three';
+import { Object3D, Vector3, type Camera, type Material, type Scene, type WebGLRenderer } from 'three';
 import { applyStencil, stencilStates, type StencilClaim } from './rendering/utils/stencil';
 import { BOARD_CELL, cueSize } from './fx-size';
 import { createLtkParticles, measurePeak, measureChildren, childRoomOf, pointAnchor, rootRoomOf, unitAnchor, unitJoints, FX_SCALE, ROOT_PARTICLES, ROOT_PARTICLES_ATTACK_MOST, ROOT_PARTICLES_MOST, CHILD_PARTICLES, type ChildRoom, type LtkParticles } from './particles';
@@ -7,7 +7,7 @@ import { AXIS_SIGN } from './space';
 import { CRIT_ATTACK_HIT, ROOT_ROOM_MOST, SUSTAIN_CAPS, SUSTAIN_READMIT, UNPINNED_BEAM_SYSTEMS } from './cue-overrides';
 import { peak } from './engine/model/systemModel';
 import type { PreparedVfx, VfxLibrary } from './loader';
-import { mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
+import { DEFAULT_ATTACK_FLIGHT_SECONDS, mapSkillTimeline, selectTimeline, type TimelineAction, type TimelineCue, type TimelineVariant, type TimelineSpawn, type WorldPoint } from './timeline';
 import { createVfxPasses } from './rendering/passes';
 import { flushDrawBufferPool } from './rendering/utils/drawBufferPool';
 import { flushFrameTargetPool } from './rendering/utils/frame';
@@ -132,7 +132,14 @@ export const LTK_RUN_STATS = { peakRunning: 0, started: {} as Record<string, num
    * Give-way cues (TimelineCue.giveWay), by system: not started for want of free room, or ended for a newcomer. Kept apart
    * from `dropped`: such a cue never takes room another run needs (Fable 11-21, as #812's tails give way).
    */
-  gaveWay: {} as Record<string, number> };
+  gaveWay: {} as Record<string, number>,
+  /**
+   * Attack plays split by the rules' landing (LtkPlayOptions.landing) that had no cue in their phase although every cue of the
+   * attack was ready, by `${champion} ${phase}`: a wind-up for an attack whose timeline is only its shot (projectile and hit) is
+   * done (nothing of it plays before the launch; not a refusal, no host fallback); an empty launch is still refused
+   * ('nothing-left') and listed here to be explained. A play whose cues are not all loaded is refused 'not-ready' as before.
+   */
+  emptyPhase: {} as Record<string, number> };
 const countGaveWay = (system: string) => { LTK_RUN_STATS.gaveWay[system] = (LTK_RUN_STATS.gaveWay[system] ?? 0) + 1; };
 /**
  * Why a cast played without one of its cues: the timeline could not map it (timeline.ts unsupported reasons), its target
@@ -209,6 +216,11 @@ export interface LtkPlayOptions {
    * moves at most 2 s either way and never before the start. The default ltk.play path and the batch2 bridge take it.
    */
   release?: { atSeconds: number; clipSeconds: number; tailSpeed: number };
+  /**
+   * A ranged attack's landing as the rules time it (attackLaunched / attackLanded display events): its projectile lands and its
+   * hit plays `seconds` after the attack event, on the arrival tick (landingCues). Applied after `release`.
+   */
+  landing?: AttackLanding;
   /** Every cue not yet started is dropped if the caster dies first, hits included: the rules never deliver it (Sevika's slot wait). */
   cancelWithSource?: boolean;
   /**
@@ -227,6 +239,10 @@ export interface LtkPlayOptions {
    * and spanFlight cues last it, in place of a flight estimated from the distance (TimelineCue.flightTicks).
    */
   flightSeconds?: number;
+  /** Its projectile cues reach their target this share of the way through their flight and wait there (TimelineCue.arriveShare). */
+  arriveShare?: number;
+  /** Its cast-start cues on the caster face this board point instead of the cast's primary target (TimelineSpawn.aimPoint). */
+  aimPoint?: WorldPoint;
 }
 interface Waiting { at: number; spawn: TimelineSpawn; library: VfxLibrary; snapshot?: WorldPoint; persistent?: boolean; group?: string; withSource?: boolean;
   /** Its projectile flies on without its caster (LtkPlayOptions.outlivesSource). */
@@ -373,6 +389,70 @@ export function withFlightSeconds<T extends TimelineCue>(cue: T, seconds: number
 /** Where a unit stands: its root, which a knock-up does not move (the renderer lifts the body under it). */
 export function standingPoint(root: Object3D): WorldPoint {
   const at = root.getWorldPosition(new Vector3()); return [at.x, at.y, at.z];
+}
+/** A ranged attack's landing (LtkPlayOptions.landing): seconds from the attack event to the rules' arrival tick, and
+ * whether the shot is an instant beam (the rules land it on the attack tick itself). */
+/**
+ * A ranged attack as the rules time it. With the rules' wind-up (attackWindup, 11-19) it plays in two phases: 'windup' on the
+ * attack start (the swing and its own cues, no shot; `windupSeconds` to the launch) and 'launch' on the attack itself (only the
+ * shot and its hit: the shot leaves now and lands `seconds` later). Without a phase (no wind-up), the whole attack as before.
+ */
+export interface AttackLanding { seconds: number; beam?: boolean; phase?: 'windup' | 'launch'; windupSeconds?: number }
+/** The shortest flight a projectile is drawn with, so a near shot never jumps across in one frame. Fitted (Fable 11-18),
+ * not original: a target too near for it is hit up to this much after its damage number. */
+export const MIN_FLIGHT_SECONDS = 0.1;
+/** A beam's missile (the rules land it on the attack tick): drawn for one tick, its hit on the attack event with it. */
+export const BEAM_FLIGHT_SECONDS = 0.05;
+/** Where an attack's projectile leaves: at its release frame (the default) or on the attack event itself, the rules'
+ * launch tick, which flies exactly the rules' ticks but leaves before the hand does. Kept to compare the two (Fable 11-18). */
+export const LANDING_DEPART: 'release' | 'event' = 'release';
+/**
+ * Attack cues timed by the rules' landing instead of a fixed flight: each projectile leaves at its own (release-mapped)
+ * delay (or on the attack event, LANDING_DEPART) and lands on the arrival tick, flying at least MIN_FLIGHT_SECONDS, and keeps
+ * what it plays after landing; the attack's hits start when its projectile lands. A beam's projectile and hits play at the
+ * arrival, the attack event itself (a missile drawn for BEAM_FLIGHT_SECONDS). An attack without a projectile (melee) is
+ * returned as it is, and so is a stationary beam the rules give a flight.
+ */
+export function landingCues<T extends Pick<TimelineCue, 'action' | 'event' | 'delay' | 'duration' | 'travelSeconds' | 'stationary'>>(cues: readonly T[], landing: AttackLanding,
+  depart: 'release' | 'event' = LANDING_DEPART): T[] {
+  const attack = (cue: T) => (cue.action ?? 'cast') === 'attack';
+  const shotCue = (cue: T) => attack(cue) && (cue.event === 'projectile' || cue.event === 'hit');
+  if (landing.phase === 'windup') {
+    // The swing's own cues, none of its shot; a fire frame later than the launch (more than the wind-up cap) is reached sooner:
+    // what comes before it speeds up so it fires on the launch tick (self-chosen, Fable 11-19).
+    const fire = cues.find(cue => attack(cue) && cue.event === 'projectile' && !cue.stationary)?.delay ?? 0;
+    const launch = Math.max(0, landing.windupSeconds ?? fire);
+    const map = (t: number) => fire > launch && fire > 0 ? (t < fire ? t * launch / fire : t - fire + launch) : t;
+    return cues.filter(cue => !shotCue(cue)).map(cue => attack(cue) ? { ...cue, delay: map(cue.delay) } : cue);
+  }
+  if (landing.phase === 'launch') {
+    // Only the shot: it leaves on the launch (the attack event) and lands on the arrival.
+    const shot = cues.filter(shotCue);
+    // A shot that does not fly (Viktor's standing beam) lights now and its hit lands on the arrival with it.
+    if (!shot.some(cue => cue.event === 'projectile' && !cue.stationary))
+      return shot.map(cue => ({ ...cue, delay: cue.event === 'hit' ? Math.max(0, landing.seconds) : 0 }));
+    return landingCues(shot, { seconds: landing.seconds, ...(landing.beam ? { beam: true } : {}) }, 'event');
+  }
+  const arrive = Math.max(0, landing.seconds);
+  if (landing.beam) {
+    // A beam (stationary or drawn as a missile) and its hits go off on the arrival, the attack event itself.
+    if (!cues.some(cue => attack(cue) && cue.event === 'projectile')) return [...cues];
+    return cues.map(cue => !attack(cue) || (cue.event !== 'projectile' && cue.event !== 'hit') ? cue
+      : cue.event === 'projectile' && !cue.stationary ? { ...cue, delay: arrive, travelSeconds: BEAM_FLIGHT_SECONDS,
+        duration: Math.max(BEAM_FLIGHT_SECONDS, cue.duration - (cue.travelSeconds ?? DEFAULT_ATTACK_FLIGHT_SECONDS) + BEAM_FLIGHT_SECONDS) }
+      : { ...cue, delay: arrive });
+  }
+  const flies = (cue: T) => attack(cue) && cue.event === 'projectile' && !cue.stationary;
+  if (!cues.some(flies)) return [...cues];
+  let lands = arrive;
+  const moved = cues.map(cue => {
+    if (!flies(cue)) return cue;
+    const delay = depart === 'event' ? 0 : cue.delay, travel = Math.max(MIN_FLIGHT_SECONDS, arrive - delay);
+    lands = Math.max(lands, delay + travel);
+    const tail = cue.duration - (cue.travelSeconds ?? DEFAULT_ATTACK_FLIGHT_SECONDS);
+    return { ...cue, delay, travelSeconds: travel, duration: Math.max(travel, tail + travel) };
+  });
+  return moved.map(cue => attack(cue) && cue.event === 'hit' ? { ...cue, delay: lands } : cue);
 }
 /** An attack cue's delay on a swing retimed to its release (LtkPlayOptions.release), moved at most 2 s and never below 0. */
 export function releaseDelay(t: number, at: number, clip: number, tail: number): number {
@@ -805,6 +885,11 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const shift = Math.min(2, Math.max(-2, context.releaseShift));
         selected = selected?.map(cue => (cue.action ?? 'cast') === 'attack' ? { ...cue, delay: Math.max(0, cue.delay + shift) } : cue);
       }
+      const beforeLanding = selected;
+      if (context.landing !== undefined) {
+        if (!Number.isFinite(context.landing.seconds) || context.landing.seconds < 0 || context.landing.seconds > 5) return false;
+        selected = selected && landingCues(selected, context.landing);
+      }
       if (context.critFlash && critFlashesOut() >= CRIT_FLASH_MAX) return false;
       // A crit plays its attack as critAttack does; its crit flash only while fewer than CRIT_FLASH_MAX of them are out.
       if (context.crit && action === 'attack' && selected) selected = critAttack(champion, selected, critFlashesOut() < CRIT_FLASH_MAX, id => !!catalog.get(id));
@@ -815,7 +900,18 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
       }
       const cues = selectTimeline(champion, selected, id => !!catalog.get(id), !!available);
       const source = findUnit(sourceId);
-      if (!cues) return refuse('not-ready');
+      if (!cues) {
+        // Readiness first: a play whose cues are not all loaded is refused 'not-ready' (the host plays its own effect), as before.
+        // Only when every cue was ready and the landing's phase left none is the phase empty (LTK_RUN_STATS.emptyPhase).
+        const ready = !!available && !!beforeLanding?.length && beforeLanding.every(cue => !!catalog.get(cue.system));
+        if (ready && context.landing !== undefined && selected?.length === 0) {
+          const key = `${champion} ${context.landing.phase ?? 'landing'}`;
+          LTK_RUN_STATS.emptyPhase[key] = (LTK_RUN_STATS.emptyPhase[key] ?? 0) + 1;
+          if (context.landing.phase === 'windup') return true;
+          return refuse('nothing-left');
+        }
+        return refuse('not-ready');
+      }
       const mapped = mapSkillTimeline(cues, sourceId, targetIds, context.board);
       const facing = context.boardFacing;
       const faced = facing ? mapped.spawns.map(spawn => spawn.point && spawn.location === 'board' ? { ...spawn, facing } : spawn) : mapped.spawns;
@@ -889,6 +985,9 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           const to = snapshot ?? (aimed && !aimed.disposed ? standingPoint(aimed.root) : undefined);
           spawn = withFlight(spawn, caster && !caster.disposed && to ? flightCells(standingPoint(caster.root), to, options.board?.() ?? null) : null);
         }
+        // Flown in and waiting (TimelineCue.arriveShare), whatever timed the flight.
+        if (context.arriveShare !== undefined && spawn.event === 'projectile') spawn = { ...spawn, arriveShare: context.arriveShare };
+        if (context.aimPoint && spawn.event === 'cast-start') spawn = { ...spawn, aimPoint: context.aimPoint };
         waiting.push({ at: clock + spawn.delay, spawn, seed: seedOf(spawn), library: catalog, snapshot, persistent: independent && context.persistAcrossPhase, ...(context.cancelWithSource ? { withSource: true } : {}), ...(context.outlivesSource && spawn.event === 'projectile' ? { outlives: true } : {}), ...(from ? { from } : {}),
           ...(spawn.together ? { together: `${play}:${spawn.together}` } : together ? { together: `${play}:${together}` } : {}), ...(part ? { part } : {}),
           ...(place ? { place } : {}), ...(atPlace ? { atPlace } : {}), ...(fan ? { fan } : {}) });
@@ -1198,7 +1297,10 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
         const fixed = snapshot ?? spawn.point;
         // A cast faces its primary target; a cast on itself faces the nearest foe, though the model may still look elsewhere
         // (11-07 field: Irelia's W swipe, 1.5 s after a self-cast, cut toward the camera or away from her attackers).
-        const aim = spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
+        // A play aimed at a board point (LtkPlayOptions.aimPoint) faces it; else the cast's primary target, while it lives.
+        const aimAt = spawn.aimPoint ? new Object3D() : null;
+        if (aimAt) aimAt.position.set(spawn.aimPoint![0], spawn.aimPoint![1], spawn.aimPoint![2]);
+        const aim = aimAt ? () => aimAt : spawn.aimId ? () => { const unit = findUnit(spawn.aimId!); return unit?.alive && !unit.disposed ? unit.root : null; }
           : spawn.event === 'cast-start' && (spawn.action ?? 'cast') === 'cast' && options.foe ? () => options.foe!(spawn.sourceId) : undefined;
         // A row's ends, else a ground line's: either runs between two fixed board points, on no unit.
         const rowEnds = rowStart ? rowPath(rowStart, spawn.rowSide!, rowCells, board ? Math.sqrt(3) * board.radius : BOARD_CELL) : lineEnds;
@@ -1229,6 +1331,7 @@ export function createLtkRuntime(library: VfxLibrary, scene: Object3D, findUnit:
           duration: runFor, projectileSeconds: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? flight : undefined, fixedTime: !!dropFrom,
           arc: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arc : undefined,
           curve: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.curve : undefined,
+          arriveShare: spawn.event === 'projectile' && !spawn.stationary && row.part !== 'beam' ? spawn.arriveShare : undefined,
           brightness: spawn.brightness,
           stopAfter: spawn.stopAfter, fadeOut: spawn.fadeOut, fadeFrom, seed: runSeed, scale, childRoom: room, rootRoom,
           // A cue (not a projectile) that plays out past its end still fades, as a plain cue would, the emitters whose

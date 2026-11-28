@@ -22,7 +22,9 @@ import { syntheticSystem } from './vfx-ltk-synthetic';
 // drawn flying. Off by default, where a projectile from a caster who dies still goes with the caster.
 const skills: Record<string, TimelineCue[]> = { missile: [{ system: 'shot', action: 'cast', event: 'projectile', delay: 0, duration: 0.5, travelSeconds: 0.5 }],
   // TimelineCue.flightOutlivesSource: once flying it flies on; not started yet it goes with the caster.
-  rocket: [{ system: 'shot', action: 'cast', event: 'projectile', delay: 0, duration: 0.5, travelSeconds: 0.5, flightOutlivesSource: true }] };
+  rocket: [{ system: 'shot', action: 'cast', event: 'projectile', delay: 0, duration: 0.5, travelSeconds: 0.5, flightOutlivesSource: true }],
+  // The flag on a cue that is not a projectile (an effect on the caster): it does nothing there.
+  aura: [{ system: 'shot', action: 'cast', event: 'cast-start', delay: 0, duration: 1, flightOutlivesSource: true }] };
 const toSystem = (p: { x: number; y: number; z: number }) => [p.x * AXIS_SIGN[0] / FX_SCALE, p.y / FX_SCALE, p.z / FX_SCALE];
 
 async function setup() {
@@ -33,7 +35,7 @@ async function setup() {
   const scene = new Scene(), units = new Map<string, { root: Group; body: null; alive: boolean; disposed?: boolean }>();
   ['caster', 'a'].forEach((id, i) => { const root = new Group(); root.position.set(10 + i * 60, 0, 20 + i * 30); scene.add(root); root.updateMatrixWorld(); units.set(id, { root, body: null, alive: true }); });
   const runtime = createLtkRuntime(library, scene, id => units.get(id), {});
-  await runtime.warm('missile'); await runtime.warm('rocket');
+  await runtime.warm('missile'); await runtime.warm('rocket'); await runtime.warm('aura');
   const camera = new Camera(), step = (seconds: number) => { for (let t = 0; t < seconds - 1e-9; t += 1 / 60) runtime.update(1 / 60, camera); };
   const dies = (id: string) => { units.get(id)!.alive = false; runtime.stopUnit(id); };
   return { runtime, units, step, dies };
@@ -97,16 +99,32 @@ describe('flightOutlivesSource (cue): only a projectile already flying outlives 
   });
 });
 
+describe('flightOutlivesSource is for projectiles only', () => {
+  it('on an effect on the caster (not a projectile) the flag does nothing: it goes with its caster', async () => {
+    const { runtime, step, dies } = await setup();
+    runtime.play('aura', 'caster', ['a'], 'cast', { board, snapshotTargets: true });
+    step(0.1); expect(runtime.playing('caster')).toBe(true);
+    dies('caster');
+    expect(runtime.playing('caster')).toBe(false);
+  });
+});
 describe('which cues outlive their caster in flight (rule receipts: tests/landing-settle, tests/cast-windup-batch3)', () => {
   it("Heimerdinger's rockets and Renata's missiles, each drawn leaving on the rules' launch tick", async () => {
     const { CUE_OVERRIDES, HEIMER_ROCKETS, CAST_WINDUP_TICKS } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
     const { RENATA_MISSILE_FLIGHT_TICKS, HEIMER_ROCKET_TIMING } = await import('../src/simulation/cast-windup');
-    const flying = Object.entries(CUE_OVERRIDES).flatMap(([champion, cues]) => cues.filter(c => c.flightOutlivesSource).map(c => [champion, c] as const));
-    expect(flying.map(([champion, c]) => `${champion}:${c.system}`).sort()).toEqual(['heimerdinger:c8d6ee2e', 'renata:faf1aeac']);
+    const { CUE_EXTRA_SKILLS } = await import('../src/rendering/three-mode/vfx-ltk/cue-overrides');
+    const flying = Object.entries({ ...CUE_OVERRIDES, ...CUE_EXTRA_SKILLS }).flatMap(([champion, cues]) => cues.filter(c => c.flightOutlivesSource).map(c => [champion, c] as const));
+    expect(flying.map(([champion, c]) => `${champion}:${c.system}`).sort()).toEqual(['heimerdinger:c8d6ee2e', 'lux:f2d605de', 'mel-bolt-alt:fe407ac6', 'mel-bolt:fe407ac6', 'mel-third-bolt:4f2eb343', 'renata:faf1aeac']);
+    // Every one is a projectile.
+    expect(flying.every(([, c]) => c.event === 'projectile')).toBe(true);
     const [, rocket] = flying.find(([champion]) => champion === 'heimerdinger')!, [, missile] = flying.find(([champion]) => champion === 'renata')!;
     // Drawn leaving when the rules launch it: what the rules settle without the caster is what flies on.
     expect(rocket.delay).toBeCloseTo(HEIMER_ROCKET_TIMING.launchTicks * 0.05, 9); expect(HEIMER_ROCKETS.launchTicks).toBe(HEIMER_ROCKET_TIMING.launchTicks);
     expect(missile.travelSeconds).toBeCloseTo(RENATA_MISSILE_FLIGHT_TICKS * 0.05, 9);
     expect(missile.delay).toBeCloseTo((CAST_WINDUP_TICKS.renata - RENATA_MISSILE_FLIGHT_TICKS) * 0.05, 9);
+    // Lux's shield missile leaves on her cast (the rules launch it on the cast tick) and Mel's bolts on the rules' launch event.
+    const [, shield] = flying.find(([champion]) => champion === 'lux')!;
+    expect([shield.action ?? 'cast', shield.delay]).toEqual(['cast', 0]);
+    for (const [key, cue] of flying.filter(([champion]) => champion.startsWith('mel-'))) expect([key, cue.delay]).toEqual([key, 0]);
   });
 });

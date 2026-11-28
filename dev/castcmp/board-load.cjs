@@ -74,7 +74,7 @@ const foes = opt('foes') ?? board, star = opt('star') ?? '3';
   const frame = perSecond.map(r => r.frameMs).sort((a, b) => a - b);
   const final = await stats();
   const counters = await admission();
-  const report = { warmPending: warming, quiet: quiet.ok, notReady: counters.run?.refused?.['not-ready'] ?? null, board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
+  const report = { warmPending: warming, quiet: quiet.ok, notReady: counters.run?.refused?.['not-ready'] ?? null, emptyPhase: counters.run?.emptyPhase ?? null, board: board.split(','), foes: foes.split(','), star: Number(star), gl: launch.gl, combat: info,
     frameMs: { mean: +(frame.reduce((a, b) => a + b, 0) / frame.length).toFixed(1), median: frame[frame.length >> 1], p95: frame[Math.floor(frame.length * 0.95)], max: frame[frame.length - 1] },
     afterWarm, final, admission: counters, perSecond, warnings: [...new Set(warnings)], errors };
   fs.mkdirSync(path.dirname(out), { recursive: true }); fs.writeFileSync(out, JSON.stringify(report, null, 2));

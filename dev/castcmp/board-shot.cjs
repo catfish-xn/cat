@@ -61,8 +61,8 @@ const at = (opt('at') ?? '300,600,900,1300,1800').split(',').map(Number);
   const stats = await run();
   // Casts refused because an effect was still loading (runtime.ts refuse 'not-ready'): counted from the measured pass only.
   // A run with any is not comparable: those casts are neither started nor dropped, so the board reads lighter than it was.
-  const notReady = stats.refused?.['not-ready'] ?? null;
-  fs.writeFileSync(path.join(out, 'stats.json'), JSON.stringify({ board, foes, star, anchorAt: t0, notReady, warmPending: warming, quiet: quiet.ok, shots, yields, stats, errors }, null, 2));
+  const notReady = stats.refused?.['not-ready'] ?? null, emptyPhase = stats.emptyPhase ?? null;
+  fs.writeFileSync(path.join(out, 'stats.json'), JSON.stringify({ board, foes, star, anchorAt: t0, notReady, emptyPhase, warmPending: warming, quiet: quiet.ok, shots, yields, stats, errors }, null, 2));
   console.log(JSON.stringify({ anchorAt: t0, peakRunning: stats.peakRunning, dropped: stats.dropped, errors: errors.length }));
   process.exit(0);
 })().catch(e => { console.error(e); process.exit(1); });
