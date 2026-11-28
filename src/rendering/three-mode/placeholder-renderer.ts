@@ -336,6 +336,11 @@ interface PieceView {
   starScale: number;
   /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
   facing: string | null;
+  /**
+   * A board point it turns to look at instead of `facing` until `until` (renderer clock seconds), smoothly like any other turn:
+   * the battle-2 bridge points Jinx at where her rocket lands while she fires it (batch2-bridge.ts facePoint).
+   */
+  facePoint: { readonly x: number; readonly z: number; readonly until: number } | null;
   /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
   readonly turn: HeadingTurn;
   /** It stands in (or glides to) a bench cell this frame: it keeps its rest heading and never turns (unit-facing.ts). */
@@ -746,6 +751,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
     attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
+    facePoint: (id, point, seconds) => { const view = pieces.get(id); if (view) view.facePoint = point ? { x: point[0], z: point[2], until: clock + seconds } : null; },
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   const jayceCrystals = createJayceCrystals({ play: (...args) => ltk?.play(...args) ?? false, stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
@@ -1057,7 +1063,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, stars: null, castIndex: 0, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
+      starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, facePoint: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
       lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null, carry: new CarryMotion(), holdPose: new HolderPose(), carryHolder: null, carryApplied: { x: 0, z: 0 } };
     root.rotation.y = view.turn.heading;
@@ -1076,7 +1082,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     held.delete(view); cancelLunge(view); view.attackCadence.reset();
     view.control.clear(); view.held = false; setControl(view, null); releaseControl(view); setLiftOffset(view, 0); setLean(view, 0); view.hop = null;
     view.carry.release(true); view.carryHolder = null; setCarryOffset(view, 0, 0); view.holdPose.stop();
-    view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
+    view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null; view.facePoint = null;
     view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
     view.state.setCastBlend(CAST_AIMED_UNITS.has(view.definitionId) ? 0 : undefined);
@@ -1472,7 +1478,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (!view.alive) { resetAction(view, piece.id); if (frame.fighting && rising.has(piece.id)) view.rise = true; }
         view.alive = true; view.dyingFor = null;
       } else if (view.alive) {
-        view.alive = false; ltk?.stopUnit(piece.id); cancelLunge(view);
+        view.alive = false; view.facePoint = null; ltk?.stopUnit(piece.id); cancelLunge(view);
         const output = view.state.consume({ type: 'death', unitId: piece.id });
         view.mixer?.apply(output);
         view.dyingFor = created ? 0 : models.cache && !view.lease ? 'loading' : deathSeconds(view);
@@ -2147,7 +2153,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       else {
         view.root.position.y = view.target.y; // the floor it stands on: 0, or an arena bench cell's own height
         const step = view.target.clone().sub(view.root.position), aim = view.facing ? pieces.get(view.facing) : undefined;
-        const target = aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
+        // A board point it is told to look at (facePoint) holds until its time runs out, then it turns back to its target.
+        if (view.facePoint && view.facePoint.until <= clock) view.facePoint = null;
+        const target = view.facePoint ? { x: view.facePoint.x, z: view.facePoint.z }
+          : aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
         view.root.rotation.y = view.turn.update(desiredHeading({ team: view.team,
           alive: view.alive, fighting: !!fighting, onBench: view.onBench, position: { x: view.root.position.x, z: view.root.position.z },
           destination: { x: view.target.x, z: view.target.z }, target }), seconds);

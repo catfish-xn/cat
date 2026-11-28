@@ -223,6 +223,8 @@ export interface TimelineSpawn extends TimelineCue {
   readonly facing?: WorldPoint;
   /** A cast-start's primary target other than the caster: the way the cast faces, though the model may still be turning. */
   readonly aimId?: string;
+  /** A board point its cast-start faces instead of `aimId` (LtkPlayOptions.aimPoint). */
+  readonly aimPoint?: WorldPoint;
   /** TimelineCue.fromPrimary: the unit whose place the projectile starts from. */
   readonly fromId?: string;
 }
