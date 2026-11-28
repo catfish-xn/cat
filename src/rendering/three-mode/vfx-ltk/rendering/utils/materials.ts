@@ -212,6 +212,7 @@ export function meshMaterial(
       ...softDefines(layers.soft),
       ...sliceDefines(layers, SLICE.mesh),
       LOCK_ALPHA: layers.mode === UV_MODE.lockAlpha ? ALPHA_LOCK.unscrolled : ALPHA_LOCK.none,
+      ...(layers.multAlphaOnly ? { MULT_ALPHA_ONLY: "" } : {}),
     },
     side,
     depthTest: tests.depthTest,

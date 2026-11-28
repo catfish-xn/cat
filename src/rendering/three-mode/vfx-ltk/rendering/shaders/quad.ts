@@ -579,7 +579,11 @@ void main() {
   texel = colored(texel, vLookup);
 #endif
 #ifdef HAS_MAP_MULT
+#ifdef MULT_ALPHA_ONLY
+  texel.a *= fetch(mapMult, atMult, vShiftMult, cellMult, addressMult).a;
+#else
   texel *= fetch(mapMult, atMult, vShiftMult, cellMult, addressMult);
+#endif
 #endif
   float uneroded = texel.a;
   texel.a *= share;

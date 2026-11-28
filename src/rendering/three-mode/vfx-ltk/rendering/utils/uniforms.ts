@@ -90,6 +90,8 @@ export interface QuadLayers {
   readonly ground: boolean;
   /** `sliceTechniqueRange`, and 0 for an emitter drawing no slice. */
   readonly slice: number;
+  /** RECORDING ONLY (claude/rec-garen-glow-b, never merge): the mult layer scales the alpha alone. */
+  readonly multAlphaOnly?: boolean;
 }
 
 /** Which of the emitter's optional passes this draw path compiles. */
@@ -127,6 +129,7 @@ export function layersOf(
     soft: draws.fade ? fadeOf(emitter) : null,
     ground: emitter.groundLayer,
     slice: emitter.sliceRange,
+    multAlphaOnly: (emitter as { multAlphaOnly?: boolean }).multAlphaOnly === true,
   };
 }
 
