@@ -10,6 +10,13 @@ export const JINX_ROCKET_FLIGHT_TICKS = 10;
 export const JINX_EVENT_SYSTEMS: readonly string[] = ['449d6617', '8b59c09d', '809da1b1'];
 const exported = (system: string) => S13_TIMELINES.jinx.find(cue => cue.system === system)!;
 const rocketFlight = JINX_ROCKET_FLIGHT_TICKS * 0.05;
+/**
+ * While she fires her rocket she looks at where it lands, not at the unit she targets (推断，归属存疑: in three live clips her
+ * body and launcher point where the rocket goes as she fires; none shows a target elsewhere). From her rocket cast she turns
+ * there for at most `holdSeconds` (our own cap, for a cast the rules cut short), and from its launch until it lands and a
+ * moment after (`afterLanding`, our own), then back to her target.
+ */
+export const JINX_ROCKET_FACING = { holdSeconds: 2.5, afterLanding: 0.1 } as const;
 /** It flies at a point this far (board units) above the cell it lands on, so its body does not sink into the floor in its last frames. */
 export const JINX_ROCKET_DRAWN = { aimLift: 50 } as const;
 /**

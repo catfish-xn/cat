@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { DisplayCombatEvent } from '../src/presentation/combat-display';
 import { JINX_ROCKET_EPICENTER, createBatch2VfxBridge } from '../src/rendering/three-mode/vfx-ltk/batch2-bridge';
-import { JINX_EVENT_SKILLS, JINX_EVENT_SYSTEMS, JINX_ROCKET_DRAWN, JINX_ROCKET_FLOWN, JINX_ROCKET_FLIGHT_TICKS as RENDER_FLIGHT, jinxRocketTimes, jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
+import { JINX_EVENT_SKILLS, JINX_EVENT_SYSTEMS, JINX_ROCKET_DRAWN, JINX_ROCKET_FACING, JINX_ROCKET_FLOWN, JINX_ROCKET_FLIGHT_TICKS as RENDER_FLIGHT, jinxRocketTimes, jinxSkills } from '../src/rendering/three-mode/vfx-ltk/champions/jinx';
 import { arrivedShareAt, movementOf } from '../src/rendering/three-mode/vfx-ltk/engine/model/missileSteps';
 import { projectileFlight } from '../src/rendering/three-mode/vfx-ltk/particles';
 import { CUE_EXTRA_SKILLS, CUE_OVERRIDES } from '../src/rendering/three-mode/vfx-ltk/cue-overrides';
@@ -218,5 +218,27 @@ describe("Jinx's rocket from the real rules", () => {
       expect(body.delay ?? 0).toBeCloseTo(times.leaves, 9);
       expect(flash.delay ?? 0).toBeCloseTo(times.flashAt, 9);
     }
+  });
+
+  it('her rocket cast turns her to where it will land, its launch to where it lands, and its landing back to her target', () => {
+    const turns: { id: string; point: unknown; seconds: number }[] = [], plays: { skill: string; aimPoint?: unknown }[] = [];
+    const bridge = createBatch2VfxBridge({ unit: id => ({ definitionId: id === 'jx' ? 'jinx' : 'amumu', form: 'front', starLevel: 2, alive: true }), board: () => FRAME as never,
+      play: (_c, _s, _t, _a, context) => { plays.push({ skill: context.skill!, aimPoint: context.aimPoint }); return true; },
+      facePoint: (id, point, seconds) => { turns.push({ id, point, seconds }); } });
+    // A zap cast turns her nowhere.
+    bridge.event(cast(5, 'zap'), true);
+    expect(turns).toEqual([]);
+    bridge.event(cast(10, 'rocket'), true);
+    expect(turns).toEqual([{ id: 'jx', point: point(3, 3), seconds: JINX_ROCKET_FACING.holdSeconds }]);
+    bridge.event(rocket('abilityProjectileLaunched', 37), true);
+    expect(turns[1]).toEqual({ id: 'jx', point: point(3, 3), seconds: 10 * 0.05 + JINX_ROCKET_FACING.afterLanding });
+    // Her muzzle flash (its smoke with it) faces the landing point too.
+    expect(plays.find(p => p.skill === 'jinx-rocket-flash')!.aimPoint).toEqual(point(3, 3));
+    bridge.event(rocket('abilityProjectileLanded', 47), true);
+    expect(turns[2]).toEqual({ id: 'jx', point: null, seconds: 0 });
+    // A replayed old rocket (joining or seeking: not current) turns her nowhere, though its landing still clears.
+    turns.length = 0;
+    bridge.event(cast(60, 'rocket'), false); bridge.event(rocket('abilityProjectileLaunched', 87), false);
+    expect(turns).toEqual([]);
   });
 });

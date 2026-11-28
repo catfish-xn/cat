@@ -2996,6 +2996,14 @@
       "currentSha256": "fa0140d126ca6a44b08303b4e99f6084fbcb41e352f5bf71e405050b0105e942",
       "firstDifferentByte": 7534
     },
+    "tests/rendering3d-jinx-rocket-facing.test.ts": {
+      "previousExists": false,
+      "previousBytes": 0,
+      "currentBytes": 12273,
+      "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "currentSha256": "428ea5e516ee520a32e87fa50b7603b8180ac6cd58dcc6bc9b8737d2333de760",
+      "firstDifferentByte": 0
+    },
     "tests/rendering3d-landing-fallback.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
@@ -4978,17 +4986,17 @@
     "tests/vfx-ltk-jinx-events.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 18314,
+      "currentBytes": 19998,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "27e1f9c94abc0bb39a6845a5d1714b9133b502015ffb141e008d2492c89b0271",
+      "currentSha256": "9682bcd85ce7e2cdbba2f22e9d92ff09777b0d2eb733dd179bfef0a57c94d163",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-jinx-rocket-render.test.ts": {
       "previousExists": false,
       "previousBytes": 0,
-      "currentBytes": 3538,
+      "currentBytes": 5992,
       "previousSha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-      "currentSha256": "9e53192691f4cc9bc2664643d0f2c0003d537cf74c807b5edf1de2afec5dcfc2",
+      "currentSha256": "6db74db29d1c17a0e66b79672428882c85cd78da6f1f1a131f82fbe0450583c3",
       "firstDifferentByte": 0
     },
     "tests/vfx-ltk-kogmaw-q-flyer.test.ts": {
