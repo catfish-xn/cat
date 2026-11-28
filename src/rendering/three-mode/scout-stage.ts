@@ -14,7 +14,7 @@ import { Box3, CylinderGeometry, Group, Mesh, MeshStandardMaterial, OctahedronGe
 import { UnitActionState, UnitAnimationMixer, createStarMark, hexCenter, type ModelLease, type StarMark } from '../../rendering3d';
 import type { BoardFrame, BoardScout } from '../board-feed';
 import { createUnitOverhead, type OverheadContext, type UnitOverhead } from './unit-overhead';
-import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, starBodyScale, type Envelope } from './model-fit';
+import { fitModel, LEGEND_HEIGHT_RATIO, standingFeet, standingSupport, starBodyScaleOf, type Envelope } from './model-fit';
 import { updateModelGrounding } from './model-grounding';
 import { farLegendSpot, legendOrbSlots, legendSpot } from './tabletop';
 import { loadLegendLease } from './legend-load';
@@ -164,7 +164,7 @@ export function createScoutStage(ctx: ScoutStageContext): ScoutStage {
       if (unitScale && ctx.sourceScale) {
         const envelope = ctx.envelope?.(model, lease);
         // A 2- or 3-star unit is drawn larger, as on the board (STAR_BODY_SCALE); its stars and items follow the height.
-        piece.height = fitModel(lease.scene, { height, width, unitScale: unitScale * starBodyScale(starLevel), sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope), support: standingSupport(model, envelope) });
+        piece.height = fitModel(lease.scene, { height, width, unitScale: unitScale * starBodyScaleOf(model, starLevel), sourceScale: ctx.sourceScale, envelopeRadius: envelope?.radius, ground: envelope?.ground, feet: standingFeet(model, envelope), support: standingSupport(model, envelope) });
         root.add(lease.scene); drawn!(piece.height);
       }
       else root.add(fit(lease.scene, height, width));

@@ -17,7 +17,7 @@ import { createStarUpFx } from './star-up-fx';
 import { createReferenceBurst, createRenataShield, renataShieldCaster, renataShieldTarget, renataRadius, RENATA_IMPACT_DELAY } from './reference-fx';
 import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_FLIGHT_SECONDS, RENATA_LAUNCH_DELAY } from './renata-missile';
-import { planActionEffects, type EffectPlayback } from './action-effect-plan';
+import { landingPlan, planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import { createRenderQuality, pixelRatioFor, placeQualityButton as placeQuality } from './render-quality';
 import { installShopOriginalSkin } from './shop-original-skin';
@@ -60,16 +60,17 @@ function isMutationCell(cell: { readonly col: number; readonly row: number }, ma
   return ownBoard && !!marker && cell.col === marker.col && cell.row === marker.row;
 }
 import { DEFAULT_METER_COLORS, createUnitOverhead, type MeterColors, type UnitOverhead } from './unit-overhead';
-import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScale, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
+import { ENVELOPE_ACTIONS, LOOPING_ACTIONS, HOVERING_MODELS, animationEnvelope, animationEnvelopeSliced, fitModel, readUnitScale, standingFeet, standingSupport, starBodyScaleOf, STAGE_BODY_FACTOR, STAGE_SOURCE_SCALE, type Envelope } from './model-fit';
 import { rescaleModelGrounding, updateModelGrounding } from './model-grounding';
 import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights } from './overhead-follow';
-import { HeadingTurn, desiredHeading, restHeading } from './unit-facing';
+import { CAST_AIMED_UNITS, HeadingTurn, desiredHeading, headingToward, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
+import { WINDUP_SECONDS, tracerDelay, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
-import { createLtkRuntime } from './vfx-ltk/runtime';
+import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
+import { attackEventLanding, attackKey, attackLandings, attackLaunchOf, attackPlayOptions, windupLanding } from './vfx-ltk/attack-landing';
 import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
@@ -82,6 +83,7 @@ import { ARENA_UNIT_SCALE, CHAMPION_SOURCE_SCALE, WEAPON_BONE } from './vfx-ltk/
 /** A quad spans twice its scale0 (scale0 is a half-extent, as vfx-ltk materials.ts REACH draws it). */
 const OLD_PATH_QUAD_REACH = 2;
 import { createLoadReport, createModelWarmup } from './model-warmup';
+import { ENVELOPE_STORE_TIMEOUT_MS, envelopeSource, openEnvelopeStore } from './envelope-store';
 import { createModelRetention, releaseAfterUpload } from './model-memory';
 import { isLegendModel } from './legend-load';
 import { registerGolemModels } from './summon-models';
@@ -108,7 +110,7 @@ const DEATH_FALLBACK_SECONDS = 1.2;
 /** Seconds for a piece to glide to a new token position; the 2D tween itself is 0.22 s. */
 const FOLLOW_SECONDS = 0.12;
 const TEAM_COLOR = { player: '#3d8fd1', enemy: '#d1504a' } as const;
-const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal']);
+const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal', 'attackWindup', 'attackWindupCancelled']);
 /** CSS pixels before a press becomes a drag; BoardScene's own threshold is 6. */
 const DRAG_THRESHOLD = 6;
 /** The dragged piece floats this far above the board. */
@@ -217,10 +219,14 @@ let championIconFor: (id: string) => string | null = () => null;
  */
 let isAnvilPiece: (definitionId: string) => boolean = () => false;
 export function useAnvilTest(next: (definitionId: string) => boolean): void { isAnvilPiece = next; }
+// The shop cost of a definition (simulation/units), injected by three-loader.ts like the anvil test: a five-cost three-star
+// draws bigger (model-fit.ts FIVE_COST_THREE_STAR_SCALE).
+export { useUnitCost } from './model-fit';
 export function useChampionIcon(next: (id: string) => string | null): void { championIconFor = next; }
 
-type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown> }
-  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null };
+/** `modelSha`: each model's envelope source (envelope-store.ts: file sha256 from precache.json + clip settings), by model id. */
+type Models = { cache: ModelCache; status: 'assets'; detail: string; preloader: AssetPreloader; reader: AssetReader; preloaded: Promise<unknown>; modelSha: ReadonlyMap<string, string> }
+  | { cache: null; status: 'placeholder'; detail: string; preloader: null; reader: null; preloaded: null; modelSha?: undefined };
 
 const fetchJson = async (url: string, timeoutMs = MANIFEST_TIMEOUT_MS): Promise<unknown> => {
   const controller = new AbortController();
@@ -273,7 +279,11 @@ async function openModels(assetBase: string | null, renderer: WebGLRenderer, onP
       : progress.totalBytes > 0 ? progress.readyBytes / progress.totalBytes : progress.readyFiles / Math.max(1, progress.totalFiles)));
     void navigator.storage?.persist?.().catch(() => false);
     const preloaded = preloader.start().catch(() => null);
-    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader, preloaded };
+    const shaByPath = new Map(list.files.flatMap(file => file.sha256 ? [[file.path, file.sha256] as const] : []));
+    const modelSha = new Map(Object.entries(cache.manifest.models).flatMap(([id, entry]) => {
+      const sha = shaByPath.get(entry.path); return sha ? [[id, envelopeSource(sha, entry)] as const] : [];
+    }));
+    return { cache, status: 'assets', detail: `已读取素材清单（${Object.keys(cache.manifest.models).length} 个模型）`, preloader, reader, preloaded, modelSha };
   } catch {
     return none('素材地址无法访问或清单格式不符，显示占位棋子');
   }
@@ -333,6 +343,11 @@ interface PieceView {
   starScale: number;
   /** The unit it last attacked or cast on in the shown combat (null: none, itself, or gone): it turns to look at it. */
   facing: string | null;
+  /**
+   * A board point it turns to look at instead of `facing` until `until` (renderer clock seconds), smoothly like any other turn:
+   * the battle-2 bridge points Jinx at where her rocket lands while she fires it (batch2-bridge.ts facePoint).
+   */
+  facePoint: { readonly x: number; readonly z: number; readonly until: number } | null;
   /** Its root's rotation.y, turned smoothly (unit-facing.ts). */
   readonly turn: HeadingTurn;
   /** It stands in (or glides to) a bench cell this frame: it keeps its rest heading and never turns (unit-facing.ts). */
@@ -471,6 +486,24 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Animation envelope per model id (model-fit.ts), shared by the warm-up (measured in idle slices) and mounting.
   const envelopes = new Map<string, Envelope>();
+  // This browser's earlier measurements (envelope-store.ts), by model id and file sha256: a model measured on an earlier
+  // visit fits at once, even when it first loads during a combat. Every new measurement is kept there too.
+  const envelopeStore = models.cache ? openEnvelopeStore() : null;
+  const keepEnvelope = (id: string, envelope: Envelope) => {
+    if (envelopes.has(id)) return; // the first measurement stands (pieces sharing one, a stored one read meanwhile)
+    envelopes.set(id, envelope);
+    const sha = models.modelSha?.get(id);
+    if (sha) void envelopeStore?.then(store => store.keep(id, sha, envelope)).catch(() => undefined); // a store failure never reaches the game
+  };
+  // Bounded: a store that never answers (an IndexedDB open or read that never calls back) counts as empty, so the warm-up
+  // and a mid-combat first load measure as without one instead of waiting forever (the model would stay a pawn).
+  const storedEnvelopes = envelopeStore && new Promise<void>(resolve => {
+    const giveUp = setTimeout(resolve, 2 * ENVELOPE_STORE_TIMEOUT_MS);
+    void envelopeStore.then(async store => {
+      const wanted = new Map([...models.modelSha ?? []].filter(([id]) => !HOVERING_MODELS.has(id) && !!readUnitScale(models.cache?.manifest.models, id)));
+      for (const [id, envelope] of await store.load(wanted)) if (!envelopes.has(id)) envelopes.set(id, envelope);
+    }).catch(() => undefined).finally(() => { clearTimeout(giveUp); resolve(); });
+  });
   const envelopeClips = (lease: ModelLease) => {
     const nameOf = (action: string) => lease.animationNames[action as keyof typeof lease.animationNames] ?? action;
     const names = new Set(ENVELOPE_ACTIONS.map(nameOf));
@@ -480,10 +513,11 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         feet: clip.name === nameOf('idle') }));
   };
   const prepareEnvelope = async (id: string, lease: ModelLease): Promise<boolean> => {
+    await storedEnvelopes; // measured on an earlier visit: nothing to do
     if ((id.startsWith('pve-') && HOVERING_MODELS.has(id)) || envelopes.has(id) || !readUnitScale(models.cache?.manifest.models, id)) return true; // only official-scale models use it
     const envelope = await animationEnvelopeSliced(lease.scene, envelopeClips(lease), { budgetMs: 3, stop: () => closed || !!fighting });
     if (envelope === null) return false;
-    if (!envelopes.has(id)) envelopes.set(id, envelope);
+    keepEnvelope(id, envelope);
     return true;
   };
   const warmup = retention ? createModelWarmup({ load: id => loadLit!(id), has: id => Object.hasOwn(models.cache!.manifest.models, id),
@@ -743,6 +777,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     board: () => grid?.radius !== undefined && grid.origin ? { columns: grid.columns, radius: grid.radius, origin: grid.origin } : null,
     attachedLayers: () => !reducedMotion() && !skillFxOff() && !attachedOff(), tick: () => ltkTick }) : null;
   const batch2Vfx = createBatch2VfxBridge({ unit: id => pieces.get(id), board: () => lastFrame,
+    facePoint: (id, point, seconds) => { const view = pieces.get(id); if (view) view.facePoint = point ? { x: point[0], z: point[2], until: clock + seconds } : null; },
     play: (...args) => !reducedMotion() && (ltk?.play(...args) ?? false), stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   const jayceCrystals = createJayceCrystals({ play: (...args) => ltk?.play(...args) ?? false, stopSystems: (source, systems) => ltk?.stopSystems(source, systems) });
   if (ltk) batch3 = createBatch3Vfx(ltk, scene, id => pieces.get(id), { load: loadModel ?? undefined, reduced: reducedMotion });
@@ -816,15 +851,34 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     return fit(pawn, PAWN_HEIGHT, PAWN_WIDTH);
   };
   /** Animation envelope radius per model id (unscaled source units), measured on its first lease. */
-  /** Models first seen during a shown combat: drawn from their bind box, measured and re-attached at the next preparation. */
+  /**
+   * Models first seen during a shown combat that were not measured on the way in (a scouted or stage copy, a monster, a
+   * measurement cut short): drawn from their bind box, measured and re-attached at the next preparation.
+   */
   const envelopePending = new Set<string>();
+  /**
+   * A champion's envelope measured during a combat (attachBody): one measurement per model at a time, shared by every
+   * piece waiting for it, in slices of about COMBAT_SLICE_BUDGET_MS at most one a frame, so the combat never gets a long task.
+   */
+  const combatMeasuring = new Map<string, Promise<Envelope | null>>();
+  const COMBAT_SLICE_PAUSE_MS = 16, COMBAT_SLICE_BUDGET_MS = 2;
+  const combatEnvelope = (id: string, lease: ModelLease): Promise<Envelope | null> => {
+    let measuring = combatMeasuring.get(id);
+    if (!measuring) {
+      measuring = animationEnvelopeSliced(lease.scene, envelopeClips(lease), {
+        budgetMs: COMBAT_SLICE_BUDGET_MS, stop: () => closed, pause: () => new Promise<void>(resolve => setTimeout(resolve, COMBAT_SLICE_PAUSE_MS)),
+      }).finally(() => combatMeasuring.delete(id));
+      combatMeasuring.set(id, measuring);
+    }
+    return measuring;
+  };
   const envelopeOf = (id: string, lease: ModelLease): Envelope | undefined => {
     // Flying monsters use only their authored bind fit, never an unused animation envelope.
     if (id.startsWith('pve-') && HOVERING_MODELS.has(id)) return undefined;
     let envelope = envelopes.get(id);
     if (envelope === undefined && (fighting || id.startsWith('pve-'))) { envelopePending.add(id); return undefined; } // no long task mid-combat
     // Not warmed yet (the warm-up measures in slices ahead of time): measured now, at once.
-    if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); envelopes.set(id, envelope); }
+    if (envelope === undefined) { envelope = animationEnvelope(lease.scene, envelopeClips(lease)); keepEnvelope(id, envelope); }
     return envelope;
   };
   // Cast lunges: the world-plane offset (x, z) is turned into the root's frame (it rotates to face) and put on the body
@@ -956,7 +1010,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
           });
         } catch (error) { lease.release(); throw error; }
         if (closed || view.disposed || view.definitionId !== originalId || attaching.get(view) !== request) { lease.release(); return; }
-        if (measured) envelopes.set(definitionId, measured);
+        if (measured) keepEnvelope(definitionId, measured);
+      }
+      // A champion first seen during a combat: measured here once (in slices, at most one a frame) while the stand-in pawn
+      // still stands, so its model arrives with the idle's foot calibration instead of its bind box, rather than drawn off
+      // its cell until the next preparation. The result is kept per model like any other envelope.
+      if (!lease.placeholder && fighting && !monsterFit(definitionId) && readUnitScale(models.cache?.manifest.models, definitionId)
+        && !HOVERING_MODELS.has(definitionId) && !envelopes.has(definitionId)) {
+        let measured: Envelope | null = null;
+        // This browser may have it already (the store is read once, right after mounting).
+        await storedEnvelopes;
+        if (!envelopes.has(definitionId)) {
+          try { measured = await combatEnvelope(definitionId, lease); } catch (error) { lease.release(); throw error; }
+        }
+        if (closed || view.disposed || attaching.get(view) !== request || view.bodyRevision !== revision || view.definitionId !== originalId) { lease.release(); return; }
+        if (measured) keepEnvelope(definitionId, measured);
       }
       championLighting?.apply(lease.scene, definitionId);
       cancelLunge(view); setCarryOffset(view, 0, 0); setLiftOffset(view, 0); setLean(view, 0); // the stand-in pawn gives way: the lunge's offset never moves to the model
@@ -1031,7 +1099,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   /** Rescales an attached champion body from the star factor it carries to its current star level's (feet stay put). */
   const applyStarScale = (view: PieceView, body: Object3D) => {
-    const next = starBodyScale(view.starLevel), ratio = next / view.starScale;
+    const next = starBodyScaleOf(view.definitionId, view.starLevel), ratio = next / view.starScale;
     if (ratio === 1) return;
     body.scale.multiplyScalar(ratio); body.position.multiplyScalar(ratio); rescaleModelGrounding(body, ratio);
     view.starHeight = (view.starHeight - STAR_GAP) * ratio + STAR_GAP;
@@ -1054,13 +1122,14 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     const overhead = createUnitOverhead(overheadContext); scene.add(overhead.object);
     const view: PieceView = { root, stars: null, castIndex: 0, starHeight: PAWN_HEIGHT + STAR_GAP, overhead, state: new UnitActionState(piece.id, ACTION_CONFIG), body: null, lease: null, mixer: null, team: piece.team,
       definitionId: piece.definitionId, model, bodyRevision: 0, target: new Vector3(piece.x, 0, piece.y), placed: false, disposed: false, alive: true, dyingFor: null, modelScale: null,
-      starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
+      starLevel: piece.starLevel, form: 'back', attackCadence: new AttackCadence(), facing: null, facePoint: null, turn: new HeadingTurn(restHeading(piece.team)), onBench: false, dance: null, rise: false,
       lunge: null, lungeOffset: { x: 0, z: 0 }, control: new ControlMotion(), halo: null, held: false, liftOffset: 0, leanOffset: 0, hop: null, starScale: 1,
       lungeWorld: { x: 0, z: 0 }, follow: new OverheadFollow(), bodyModelId: null, carry: new CarryMotion(), holdPose: new HolderPose(), carryHolder: null, carryApplied: { x: 0, z: 0 } };
     root.rotation.y = view.turn.heading;
     attachBody(view); syncStars(view, piece);
     view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
+    view.state.setCastBlend(CAST_AIMED_UNITS.has(view.definitionId) ? 0 : undefined);
     return view;
   };
   // Time a piece's mixer held while nobody could see it (the tick below), with the action revision and mixer it is for:
@@ -1072,9 +1141,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     held.delete(view); cancelLunge(view); view.attackCadence.reset();
     view.control.clear(); view.held = false; setControl(view, null); releaseControl(view); setLiftOffset(view, 0); setLean(view, 0); view.hop = null;
     view.carry.release(true); view.carryHolder = null; setCarryOffset(view, 0, 0); view.holdPose.stop();
-    view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null;
+    view.state = new UnitActionState(id, ACTION_CONFIG); view.facing = null; view.facePoint = null;
     view.state.setAttackInterval(() => view.attackCadence.intervalSeconds);
     view.state.setHoldAttack(ATTACK_HOLD_UNITS.has(view.definitionId));
+    view.state.setCastBlend(CAST_AIMED_UNITS.has(view.definitionId) ? 0 : undefined);
     view.mixer?.dispose(); view.mixer = null;
     if (view.lease && !view.lease.placeholder) {
       view.mixer = new UnitAnimationMixer(view.lease.scene, view.lease.animations, view.lease.animationNames, view.lease);
@@ -1256,26 +1326,29 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Attack cues move with the swing only when the mixer actually retimed this attack to its release (AttackRelease):
   // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
+  // Attacks winding up (attackWindup, the rules' wind-up 11-19): attacker → its launch tick, whose attack event only adds the shot.
+  const windups = new Map<string, number>();
   const releaseOf = (source: PieceView) => {
     const release = source.lease?.attackRelease, output = source.state.output;
     const played = output.state === 'attack' ? output.playback?.release : undefined;
     return release && played ? { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } : undefined;
   };
-  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, crit: boolean) => {
-    const release = releaseOf(source);
-    return release || crit ? { variant, ...(release ? { release } : {}), ...(crit ? { crit } : {}) } : variant;
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, landing: AttackLanding | undefined, crit: boolean) => {
+    return attackPlayOptions(variant, releaseOf(source), landing, crit);
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
-    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }, crit = false) => {
+    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }>; landing?: AttackLanding }, crit = false) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const cast = extra && typeof extra === 'object' && 'type' in extra ? extra
       : extra && typeof extra === 'object' && 'cast' in extra ? extra.cast : undefined;
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
+    // The rules' landing of a ranged attack (attackLaunched): its projectile lands and its hit plays on the arrival tick.
+    const landing = action === 'attack' && extra && typeof extra === 'object' && 'landing' in extra ? extra.landing : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, action === 'attack' && crit)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, landing, action === 'attack' && crit)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, landing, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1286,7 +1359,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
       attackFrom.copy(source.root.position).setY(impactHeight(source) * 1.1); attackTo.copy(target.root.position).setY(impactHeight(target));
       if (ranged) attackFrom.addScaledVector(attackDelta.copy(attackTo).sub(attackFrom).setY(0).normalize(), 14);
-      feel.attack(attackFrom, attackTo, ranged, ranged ? 0.1 : 0.18);
+      // Reduced motion and champions without a timeline land here too: a ranged spark follows the rules' arrival.
+      const tracer = ranged ? tracerDelay(landing) : 0.18;
+      if (tracer !== undefined) feel.attack(attackFrom, attackTo, ranged, tracer);
       return;
     }
     let castPlan: ReturnType<typeof planActionEffects> | null = null;
@@ -1330,7 +1405,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
-    for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
+    const planned = castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback);
+    // The asset fallback (reduced motion, no timeline) times a ranged attack's projectile and hit by the rules' landing too.
+    for (const { id, playback: spec } of landing && action === 'attack' ? landingPlan(planned, landing, MIN_FLIGHT_SECONDS, BEAM_FLIGHT_SECONDS) : planned) {
       if (queued.length >= MAX_QUEUED) return;
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : effectCorrection(id)) });
     }
@@ -1427,7 +1504,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     fighting = frame.fighting;
     // What the room says comes next (board-feed warm hints): queued once per change, after the preload, in a match.
     const hints = feed?.warmHints?.();
-    if (hints && hints.version !== hintVersion && preloaded && matchShown && warmup) { hintVersion = hints.version; warmup.want(hints.ids); }
+    if (hints && hints.version !== hintVersion && preloaded && matchShown && warmup) { hintVersion = hints.version; warmup.want([...hints.ids, ...hints.later ?? []]); }
     // Back in preparation: measure what a combat skipped and re-attach those pieces at their full envelope.
     if (!fighting && envelopePending.size) {
       const ids = new Set(envelopePending); envelopePending.clear();
@@ -1467,7 +1544,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         if (!view.alive) { resetAction(view, piece.id); if (frame.fighting && rising.has(piece.id)) view.rise = true; }
         view.alive = true; view.dyingFor = null;
       } else if (view.alive) {
-        view.alive = false; ltk?.stopUnit(piece.id); cancelLunge(view);
+        view.alive = false; view.facePoint = null; ltk?.stopUnit(piece.id); cancelLunge(view);
         const output = view.state.consume({ type: 'death', unitId: piece.id });
         view.mixer?.apply(output);
         view.dyingFor = created ? 0 : models.cache && !view.lease ? 'loading' : deathSeconds(view);
@@ -1498,6 +1575,12 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
     // Every attack or cast replaces the target: one on itself, on nobody or on a unit not drawn leaves none to follow.
     if (source) source.facing = targetId && targetId !== sourceId && pieces.has(targetId) ? targetId : null;
   };
+  const aimAtOnce = (sourceId: string, targetId: string | undefined) => {
+    const source = pieces.get(sourceId), target = targetId ? pieces.get(targetId) : undefined;
+    if (!source || !target || !CAST_AIMED_UNITS.has(source.definitionId) || !source.alive) return;
+    const heading = headingToward({ x: source.root.position.x, z: source.root.position.z }, { x: target.root.position.x, z: target.root.position.z });
+    if (heading !== null) { source.turn.set(heading); source.root.rotation.y = heading; }
+  };
   const onEvents = (events: readonly DisplayCombatEvent[]) => {
     // A batch spanning many ticks is the replay catching up after dropped frames: every event still moves the action
     // states, but only its last EFFECT_TICKS start effects (the earlier ones would all burst in this one frame).
@@ -1516,6 +1599,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    const landings = attackLandings(events);
     // Basic attacks that crit (CRIT_ATTACK_HIT): the rules deal an attack's damage on its own tick, so its packet is in this batch.
     const crits = new Set<string>();
     for (const event of events) if (event.type === 'packetDamage' && event.critical && event.delivery === 'basic-attack') crits.add(`${event.sourceId}>${event.targetId}@${event.tick}`);
@@ -1662,7 +1746,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         continue;
       }
       // Observe even attacks covered by a cast's protected ending; the next visible swing needs their spacing.
-      if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
+      // The rules' wind-up (11-19): the swing starts on attackWindup; its attack event (the launch) only adds the shot.
+      if (event.type === 'attackWindup') { windups.set(event.attackerId, event.launchTick); pieces.get(event.attackerId)?.attackCadence.observe(event.tick); }
+      else if (event.type === 'attackWindupCancelled') { windups.delete(event.attackerId); if ((tickOf(event) ?? latest) > latest - EFFECT_TICKS) ltk?.stopAction(event.attackerId, 'attack'); }
+      const launchOf = event.type === 'attack' ? attackLaunchOf(windups.get(event.attackerId), landings.has(attackKey(event.attackerId, event.tick)), event.tick) : undefined;
+      const launch = !!launchOf?.launch;
+      if (launch) windups.delete((event as { attackerId: string }).attackerId);
+      if (event.type === 'attack' && (!launch || launchOf?.swing)) pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
       // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
@@ -1676,18 +1766,27 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'cast') {
         const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
-      for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
+      if (event.type === 'attackWindup') { for (const view of pieces.values()) view.state.consume({ type: 'attack', attackerId: event.attackerId } as unknown as AnimationEvent); }
+      else if (!launch || launchOf?.swing) for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
+      if (event.type === 'attackWindup') {
+        face(event.attackerId, event.targetId);
+        if (current && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, event.targetId, [event.targetId],
+          { landing: windupLanding(event) });
+      }
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
         // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
         // she holds (#737), and should one come it draws no swing.
-        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
+        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets,
+          { variant: planned.variant, landing: attackEventLanding(landings.get(attackKey(event.attackerId, event.tick)), launch) }, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
         face(event.sourceId, event.targetIds[0]);
+        // A cast that fires on its own first tick faces its target at once (unit-facing.ts CAST_AIMED_UNITS).
+        if (current) aimAtOnce(event.sourceId, event.targetIds[0]);
         if (current) { if (planned.fresh && !planned.noCastEffect) playAction('cast', event.sourceId, event.targetIds[0], event.targetIds, { variant: planned.variant, cast: event }); startLunge(event.sourceId, event.targetIds[0]); }
         // A holder's cast is its lift: its hold pose runs from here until the rules let go (or no lift comes).
         const caster = pieces.get(event.sourceId);
@@ -2134,7 +2233,10 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       else {
         view.root.position.y = view.target.y; // the floor it stands on: 0, or an arena bench cell's own height
         const step = view.target.clone().sub(view.root.position), aim = view.facing ? pieces.get(view.facing) : undefined;
-        const target = aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
+        // A board point it is told to look at (facePoint) holds until its time runs out, then it turns back to its target.
+        if (view.facePoint && view.facePoint.until <= clock) view.facePoint = null;
+        const target = view.facePoint ? { x: view.facePoint.x, z: view.facePoint.z }
+          : aim?.alive && aim.root.visible ? { x: aim.root.position.x, z: aim.root.position.z } : null;
         view.root.rotation.y = view.turn.update(desiredHeading({ team: view.team,
           alive: view.alive, fighting: !!fighting, onBench: view.onBench, position: { x: view.root.position.x, z: view.root.position.z },
           destination: { x: view.target.x, z: view.target.z }, target }), seconds);

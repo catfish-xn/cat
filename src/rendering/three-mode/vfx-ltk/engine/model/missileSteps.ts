@@ -53,6 +53,8 @@ export function movementOf(movement: MissileMovement, start: Vec, target: Vec): 
       return fixedSpeed(movement.speed, start, target);
     case "fixedTime":
       return fixedTime(movement.travelTime, start, target);
+    case "fixedTimeThenHold":
+      return fixedTimeThenHold(movement, start, target);
     case "accelerating":
       return accelerating(movement, start, target, false);
     case "decelToLocation":
@@ -95,6 +97,33 @@ function fixedTime(travelTime: number, start: Vec, target: Vec): Movement {
       const displacement = arrived
         ? sub(target, position)
         : scale(velocity, Math.min(remaining, dt));
+      return { displacement, velocity, speed, arrived };
+    },
+  };
+}
+
+/**
+ * Ours, not the engine's (MissileMovement "fixedTimeThenHold"): the share of the horizontal distance from the launch it
+ * has covered at `now`, at a steady pace that reaches the target `arriveShare` of the way through `travelTime`, then held.
+ */
+export function arrivedShareAt(now: number, travelTime: number, arriveShare: number): number {
+  const arriveTime = travelTime * Math.min(Math.max(arriveShare, 0), 1);
+  if (!(arriveTime > 0) || now >= arriveTime) return 1;
+  return Math.max(now, 0) / arriveTime;
+}
+function fixedTimeThenHold(fields: { readonly travelTime: number; readonly arriveShare: number }, start: Vec, target: Vec): Movement {
+  const total = flat(sub(target, start));
+  const arriveTime = fields.travelTime * Math.min(Math.max(fields.arriveShare, 0), 1);
+  return {
+    velocity: horizontalLength(sub(target, start), arriveTime > 0 ? total / arriveTime : 0),
+    step(position, now, dt) {
+      const arrived = now >= fields.travelTime;
+      const left = total * (1 - arrivedShareAt(now, fields.travelTime, fields.arriveShare));
+      const remaining = flat(sub(target, position));
+      const travel = Math.max(remaining - left, 0);
+      const speed = dt > 0 ? travel / dt : 0;
+      const velocity = horizontalLength(sub(target, position), speed);
+      const displacement = arrived || left <= 0 ? sub(target, position) : scale(velocity, dt);
       return { displacement, velocity, speed, arrived };
     },
   };

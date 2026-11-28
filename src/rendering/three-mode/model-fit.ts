@@ -17,7 +17,24 @@ import { createSupportSampler, registerModelGrounding, supportRotation, supportV
  * merge in 1080p ranked footage, castcmp-1103; the measured spans stay with that review, not here). A promoted 4 draws as 3.
  */
 export const STAR_BODY_SCALE: Readonly<Record<number, number>> = { 1: 1, 2: 1.18, 3: 1.33 };
-export const starBodyScale = (level: number): number => STAR_BODY_SCALE[Math.min(3, Math.max(1, Math.round(level)))] ?? 1;
+/**
+ * A five-cost (or dearer) champion's three-star size: much bigger over its two-star than a cheaper champion's three-star
+ * is, about 1.42 times its two-star size (量自正式服画面，非原版数据: five-cost three-stars against their two-stars in the
+ * official game's footage). One- and two-star sizes, and every cheaper champion's, keep STAR_BODY_SCALE.
+ */
+export const FIVE_COST_THREE_STAR_SCALE = STAR_BODY_SCALE[2]! * 1.42;
+/** The cost from which a champion's three-star draws at FIVE_COST_THREE_STAR_SCALE. */
+export const BIG_THREE_STAR_COST = 5;
+/** A champion's drawn star factor; `cost` is its shop cost (1 when unknown, as for a summon or a monster). */
+export const starBodyScale = (level: number, cost = 1): number => {
+  const star = Math.min(3, Math.max(1, Math.round(level)));
+  return star === 3 && cost >= BIG_THREE_STAR_COST ? FIVE_COST_THREE_STAR_SCALE : STAR_BODY_SCALE[star] ?? 1;
+};
+/** The shop cost of a definition, as the host injects it (three-loader.ts); 1 until it does. */
+let unitCostOf: (definitionId: string) => number = () => 1;
+export function useUnitCost(next: (definitionId: string) => number): void { unitCostOf = next; }
+/** starBodyScale for a definition at a star level, at its injected cost. */
+export const starBodyScaleOf = (definitionId: string, level: number): number => starBodyScale(level, unitCostOf(definitionId));
 
 /**
  * Whether the carousel, the scout stage and the little legends (tabletop, carousel, scout) take the board's champion
@@ -46,6 +63,12 @@ const ENVELOPE_SAMPLES = 8, ENVELOPE_STRIDE = 7;
 const ENVELOPE_QUANTILE = 0.98;
 /** The clips a board piece stands, walks and fights in; death, dances and the like do not size its cell. */
 export const ENVELOPE_ACTIONS = ['idle', 'move', 'attack', 'hit'] as const;
+/**
+ * The measurement's version in the browser's envelope store (envelope-store.ts): raise it whenever envelopeSteps, the
+ * clips it reads or the support sampler (model-grounding.ts) change what an envelope holds, so stored ones are measured again.
+ * That includes how a loaded model's clips are cut (rendering3d: IN_PLACE_CLIPS, trimClip, holdRootInPlace) and ENVELOPE_ACTIONS.
+ */
+export const ENVELOPE_VERSION = 1;
 /** Of those, the ones that loop (sampled at distinct times; the others play once and keep their last frame). */
 export const LOOPING_ACTIONS: ReadonlySet<string> = new Set(['idle', 'move']);
 /**
@@ -199,7 +222,9 @@ function* envelopeSteps(body: Object3D, clips: readonly EnvelopeClip[]): Generat
       restore();
     }
   } finally {
-    mixer.stopAllAction(); mixer.uncacheRoot(body);
+    // No uncacheRoot: this mixer is local and dropped here, so its caches go with it, while uncaching them ran 10-20 ms
+    // in one step on the largest rigs (a frame-long stall in the sliced form). restore() puts every node back.
+    mixer.stopAllAction();
     restore();
   }
   const low = Number.isFinite(ground) ? ground : null, plain = Number.isFinite(feet) ? feet : null;

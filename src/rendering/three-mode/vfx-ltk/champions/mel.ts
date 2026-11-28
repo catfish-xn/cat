@@ -36,8 +36,9 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
   // Each plain-cast bolt flies a curve, not a straight line (11-24): it swings out to one side mid-flight with a little lift and
   // comes back onto its target; consecutive bolts swing to opposite sides ('mel-bolt' / 'mel-bolt-alt', batch2-bridge.ts by the
   // bolt's place in the cast). Its ends and its flight time stay the rules' own. MEL_BOLT_CURVE is fitted, not original data.
-  'mel-bolt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true, curve: MEL_BOLT_CURVE }],
-  'mel-bolt-alt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true, curve: mirrored(MEL_BOLT_CURVE) }],
+  // A bolt that has left lands even if she dies (the rules' skill shot): it flies on (TimelineCue.flightOutlivesSource).
+  'mel-bolt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true, curve: MEL_BOLT_CURVE, flightOutlivesSource: true }],
+  'mel-bolt-alt': [{ system: 'fe407ac6', event: 'projectile', bone: 'L_Buffbone_Glb_Hand_Loc', delay: 0, duration: .3, travelSeconds: .3, flightTicks: MEL_BOLT_FLIGHT, giveWay: true, curve: mirrored(MEL_BOLT_CURVE), flightOutlivesSource: true }],
   'mel-bolt-hit': [{ system: '801006a8', event: 'hit', delay: 0, duration: .6 }],
   // Her third cast: its own cast effects on her (no rule event ends them: each plays to its system's own end, 11-15); its
   // beams leave and land with the rules' bolts as above, and its explosion plays on the main target when that bolt lands.
@@ -45,7 +46,7 @@ export const melSkills: Record<string, readonly TimelineCue[]> = {
     { system: 'e2f2798d', event: 'cast-start', delay: 0, duration: 2.3 },
     { system: '4c885a29', event: 'cast-start', delay: 0, duration: 1.2 },
   ],
-  'mel-third-bolt': [{ system: '4f2eb343', event: 'projectile', delay: 0, duration: .4, travelSeconds: .4, flightTicks: MEL_BOLT_FLIGHT }],
+  'mel-third-bolt': [{ system: '4f2eb343', event: 'projectile', delay: 0, duration: .4, travelSeconds: .4, flightTicks: MEL_BOLT_FLIGHT, flightOutlivesSource: true }],
   'mel-third-hit': [{ system: 'a9cc7bf3', event: 'hit', delay: 0, duration: 1 }],
   'mel-third-blast': [{ system: '3857e78b', event: 'hit', delay: 0, duration: 6.5 }],
   // Her shield's visual plays its own life and ends when that ally's shield from her ability ends (cue-overrides.ts CUE_RULE_STOPS

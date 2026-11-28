@@ -51,6 +51,8 @@ export class UnitActionState {
   /** A finished swing holding its last pose for the next attack (holdAttack). */
   private holding = false;
   private holdAttack: boolean;
+  /** Seconds the crossfade into a cast takes, when it is not the usual blend (setCastBlend). */
+  private castBlend?: number;
   private attackInterval?: () => number | undefined;
   constructor(readonly unitId: string, config: ActionConfig = {}) {
     this.blend = config.blendSeconds ?? 0.12;
@@ -63,13 +65,18 @@ export class UnitActionState {
   /** True while a stun holds the flinch pose (stun()). */
   get stunned(): boolean { return this.held; }
   get output(): ActionOutput {
-    return { state: this.state, previous: this.previous, blendSeconds: this.blend,
+    return { state: this.state, previous: this.previous, blendSeconds: this.state === 'cast' && this.castBlend !== undefined ? this.castBlend : this.blend,
       loop: this.state === 'idle' || this.state === 'move', revision: this.revision,
       ...(this.playback ? { playback: this.playback } : {}) };
   }
   setPlaybackResolver(resolve: ResolveActionPlayback): void { this.resolvePlayback = resolve; }
   setAttackInterval(interval: () => number | undefined): void { this.attackInterval = interval; }
   setHoldAttack(hold: boolean): void { this.holdAttack = hold; }
+  /** The crossfade into this unit's casts, in seconds (undefined: the usual blend). A cast that must show its first pose at once takes 0. */
+  setCastBlend(seconds: number | undefined): void {
+    if (seconds !== undefined && !(Number.isFinite(seconds) && seconds >= 0)) throw new Error('invalid-action-config');
+    this.castBlend = seconds;
+  }
   /** True while a finished swing holds its last pose for the next attack. */
   get holdingAttack(): boolean { return this.holding; }
   /** A summon rising (it appears or is revived) plays its spawn clip once, when its model names one. */

@@ -464,7 +464,10 @@ export class OnlineApplication implements SceneApplication {
    * ?render=3d: the open seat (never mine) is drawn on the 3D board from its public build only; the panel shrinks to its
    * strip and the trait column shows that seat's traits. Without a 3D layer nothing changes.
    */
-  /** Models the 3D layer may warm next (board-feed.ts): my shop's heroes, the next opponent's board, the board I scout. */
+  /**
+   * Models the 3D layer may warm next (board-feed.ts): my shop's heroes, the next opponent's board, the board I scout; then,
+   * while the next opponent is not drawn yet, the boards of every candidate (measured in preparation, never kept pinned).
+   */
   private syncWarmHints() {
     // Outside a match (the lobby, after leaving) nothing is warmed for it; a late close or push cannot refill the list.
     if (this.mode !== 'active' || !this.view) { setBoardWarmHints([]); return; }
@@ -473,7 +476,8 @@ export class OnlineApplication implements SceneApplication {
       return (seat?.publicBoard?.units ?? []).filter(unit => !unit.summon).map(unit => unit.definitionId);
     };
     const shop = (this.session.state?.shop?.slots ?? []).flatMap(offer => offer.status === 'available' ? [offer.definitionId] : []);
-    setBoardWarmHints([...shop, ...board(view?.opponentSeatId), ...board(this.opponentBoard.openSeatId)]);
+    const candidates = view.opponentSeatId ? [] : (view.opponentCandidates ?? []).flatMap(seatId => board(seatId));
+    setBoardWarmHints([...shop, ...board(view?.opponentSeatId), ...board(this.opponentBoard.openSeatId)], candidates);
   }
   private syncScout() {
     this.syncWarmHints(); // the scouted board joins or leaves the warm list as the panel opens or closes

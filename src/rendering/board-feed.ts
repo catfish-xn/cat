@@ -299,14 +299,16 @@ export function provideLegendControls(next: LegendControls): () => void {
 /**
  * Champion ids the 3D layer may warm ahead (three-mode/model-warmup.ts), most likely first: my shop's heroes, the next
  * opponent's public board, the board I scout. The online application sets them from each view and state push; the
- * version grows only when the list changes, so the layer asks for new models once.
+ * version grows only when the list changes, so the layer asks for new models once. `later`: warmed after those (their
+ * animation envelope measured in preparation, so a model first shown in a combat already stands on its cell) but not
+ * kept from eviction: the boards of every possible next opponent while the draw is still open.
  */
-export interface BoardWarmHints { readonly version: number; readonly ids: readonly string[] }
+export interface BoardWarmHints { readonly version: number; readonly ids: readonly string[]; readonly later?: readonly string[] }
 let warmHints: BoardWarmHints = { version: 0, ids: [] }, warmKey = '';
-export function setBoardWarmHints(ids: readonly string[]): void {
-  const unique = [...new Set(ids)], key = unique.join(',');
+export function setBoardWarmHints(ids: readonly string[], later: readonly string[] = []): void {
+  const unique = [...new Set(ids)], rest = [...new Set(later)].filter(id => !unique.includes(id)), key = `${unique.join(',')}|${rest.join(',')}`;
   if (key === warmKey) return;
-  warmKey = key; warmHints = { version: warmHints.version + 1, ids: unique };
+  warmKey = key; warmHints = { version: warmHints.version + 1, ids: unique, later: rest };
 }
 
 /** What three-loader.ts hands the 3D chunk (it must not import this module itself; see placeholder-renderer.ts). */
