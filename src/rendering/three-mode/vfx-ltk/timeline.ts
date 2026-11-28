@@ -213,6 +213,15 @@ export interface TimelineCue {
    */
   readonly flightOutlivesSource?: boolean;
 }
+/** An attack projectile's flight when no landing event times it (LtkPlayOptions.landing is absent: a dummy target, an older
+ * replay, a ranged unit the rules still settle on the attack tick). Fitted, not original; with the event the rules' arrival
+ * tick decides (runtime.ts landingCues). */
+export const DEFAULT_ATTACK_FLIGHT_SECONDS = 0.3;
+/** An attack's flying projectile written without a flight gets DEFAULT_ATTACK_FLIGHT_SECONDS; every other cue is unchanged. */
+export function withAttackFlight<T extends TimelineCue>(cue: T): T {
+  return (cue.action ?? 'cast') === 'attack' && cue.event === 'projectile' && !cue.stationary && cue.travelSeconds === undefined
+    ? { ...cue, travelSeconds: DEFAULT_ATTACK_FLIGHT_SECONDS } : cue;
+}
 export type WorldPoint = readonly [number, number, number];
 export interface TimelineSpawn extends TimelineCue {
   readonly sourceId: string; readonly targetId?: string; readonly point?: WorldPoint;

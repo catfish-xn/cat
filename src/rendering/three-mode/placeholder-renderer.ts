@@ -17,7 +17,7 @@ import { createStarUpFx } from './star-up-fx';
 import { createReferenceBurst, createRenataShield, renataShieldCaster, renataShieldTarget, renataRadius, RENATA_IMPACT_DELAY } from './reference-fx';
 import { prepareRenataModel } from './renata-glass';
 import { createRenataMissile, RENATA_FLIGHT_SECONDS, RENATA_LAUNCH_DELAY } from './renata-missile';
-import { planActionEffects, type EffectPlayback } from './action-effect-plan';
+import { landingPlan, planActionEffects, type EffectPlayback } from './action-effect-plan';
 import { installHudStyle } from './hud-style';
 import { createRenderQuality, pixelRatioFor, placeQualityButton as placeQuality } from './render-quality';
 import { installShopOriginalSkin } from './shop-original-skin';
@@ -66,10 +66,11 @@ import { OverheadFollow, castMovesBars, missingCastTravelClips, overheadHeights 
 import { CAST_AIMED_UNITS, HeadingTurn, desiredHeading, headingToward, restHeading } from './unit-facing';
 import { CastLunge, castLungeFor } from './cast-lunge';
 import { CARRY_HOLDS, CarryMotion, CONTROL_3D, hitFlashSpot, HolderPose, carryRise, heldBarLift, ControlMotion, DISPLACEMENT_HOP, GRAB_3D, DISPLACEMENT_REASONS, createHitFlash, createStunHalo, displacementHop, type CarryOffset, type HitFlash, type StunHalo } from './unit-control';
-import { WINDUP_SECONDS, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
+import { WINDUP_SECONDS, tracerDelay, castEffectTuning, createSkillFeel, effectCorrection, impactDelay, impactFeel, simplifyCast, skillColor, skillFeelFor, skillFxOff, attachedOff } from './skill-feel';
 import { createEffectLibrary } from './effect-library';
 import { createVfxLibrary } from './vfx-ltk/loader';
-import { createLtkRuntime } from './vfx-ltk/runtime';
+import { BEAM_FLIGHT_SECONDS, MIN_FLIGHT_SECONDS, createLtkRuntime, type AttackLanding } from './vfx-ltk/runtime';
+import { attackEventLanding, attackKey, attackLandings, attackLaunchOf, attackPlayOptions, windupLanding } from './vfx-ltk/attack-landing';
 import { CRIT_SKILL_HIT, CUE_END_STOPS, CUE_RULE_STOPS, DRAVEN_AXE, LEBLANC_CHAIN_FROM_PRIMARY, RUMBLE_MISSILE, SHIELD_END_FADE_SECONDS, STUN_END_FADE_SECONDS, TIMED_FORM_STOPS } from './vfx-ltk/cue-overrides';
 import { ATTACK_HOLD_UNITS } from '../../rendering3d/attack-hold';
 import { createAnvilIdleLoop } from './anvil-idle-vfx';
@@ -108,7 +109,7 @@ const DEATH_FALLBACK_SECONDS = 1.2;
 /** Seconds for a piece to glide to a new token position; the 2D tween itself is 0.22 s. */
 const FOLLOW_SECONDS = 0.12;
 const TEAM_COLOR = { player: '#3d8fd1', enemy: '#d1504a' } as const;
-const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal']);
+const ANIMATION_EVENTS = new Set(['movement', 'death', 'unitRevived', 'attack', 'cast', 'packetDamage', 'heal', 'attackWindup', 'attackWindupCancelled']);
 /** CSS pixels before a press becomes a drag; BoardScene's own threshold is 6. */
 const DRAG_THRESHOLD = 6;
 /** The dragged piece floats this far above the board. */
@@ -1267,26 +1268,29 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
   };
   // Attack cues move with the swing only when the mixer actually retimed this attack to its release (AttackRelease):
   // a model not loaded yet, an attack sequence or a form attack clip keeps both the clip speed and the cues.
+  // Attacks winding up (attackWindup, the rules' wind-up 11-19): attacker → its launch tick, whose attack event only adds the shot.
+  const windups = new Map<string, number>();
   const releaseOf = (source: PieceView) => {
     const release = source.lease?.attackRelease, output = source.state.output;
     const played = output.state === 'attack' ? output.playback?.release : undefined;
     return release && played ? { atSeconds: played.atSeconds, clipSeconds: release.clipSeconds, tailSpeed: played.tailSpeed } : undefined;
   };
-  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, crit: boolean) => {
-    const release = releaseOf(source);
-    return release || crit ? { variant, ...(release ? { release } : {}), ...(crit ? { crit } : {}) } : variant;
+  const attackTiming = (source: PieceView, variant: TimelineVariant | undefined, landing: AttackLanding | undefined, crit: boolean) => {
+    return attackPlayOptions(variant, releaseOf(source), landing, crit);
   };
   const playAction = (action: 'attack' | 'cast', sourceId: string, targetId: string | undefined, targetIds: readonly string[] = targetId ? [targetId] : [],
-    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }> }, crit = false) => {
+    extra?: TimelineVariant | Extract<DisplayCombatEvent, { type: 'cast' }> | { variant?: TimelineVariant; cast?: Extract<DisplayCombatEvent, { type: 'cast' }>; landing?: AttackLanding }, crit = false) => {
     const source = pieces.get(sourceId);
     if (!source?.alive) return;
     const cast = extra && typeof extra === 'object' && 'type' in extra ? extra
       : extra && typeof extra === 'object' && 'cast' in extra ? extra.cast : undefined;
     const variant = typeof extra === 'string' ? extra : extra && typeof extra === 'object' && 'variant' in extra ? extra.variant : undefined;
+    // The rules' landing of a ranged attack (attackLaunched): its projectile lands and its hit plays on the arrival tick.
+    const landing = action === 'attack' && extra && typeof extra === 'object' && 'landing' in extra ? extra.landing : undefined;
     if (!reducedMotion()) {
       const handled = action === 'cast' ? batch3?.cast(sourceId, targetIds) : undefined;
-      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, action === 'attack' && crit)
-        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
+      if (handled === true || (handled === undefined && (batch2Vfx.action(action, sourceId, targetIds, cast, action === 'attack' ? releaseOf(source) : undefined, landing, action === 'attack' && crit)
+        ?? ltk?.play(source.definitionId, sourceId, targetIds, action, action === 'attack' ? attackTiming(source, variant, landing, crit) : cast?.branch ? { variant, branch: cast.branch.branch } : variant)))) return;
     }
     const owner = generation;
     const sample = skillFeelFor(source.definitionId);
@@ -1297,7 +1301,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       const ranged = !!actionEffects?.resolve(source.definitionId, 'attack').some(({ id }) => actionEffects.playback[id]?.anchor === 'projectile');
       attackFrom.copy(source.root.position).setY(impactHeight(source) * 1.1); attackTo.copy(target.root.position).setY(impactHeight(target));
       if (ranged) attackFrom.addScaledVector(attackDelta.copy(attackTo).sub(attackFrom).setY(0).normalize(), 14);
-      feel.attack(attackFrom, attackTo, ranged, ranged ? 0.1 : 0.18);
+      // Reduced motion and champions without a timeline land here too: a ranged spark follows the rules' arrival.
+      const tracer = ranged ? tracerDelay(landing) : 0.18;
+      if (tracer !== undefined) feel.attack(attackFrom, attackTo, ranged, tracer);
       return;
     }
     let castPlan: ReturnType<typeof planActionEffects> | null = null;
@@ -1341,7 +1347,9 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       // Continue into the asset plan: ignition and tar complement the single procedural flight/area.
     }
     if (!actionEffects || (source.definitionId === 'renata' && reducedMotion())) return;
-    for (const { id, playback: spec } of castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback)) {
+    const planned = castPlan ?? planActionEffects(source.definitionId, action, actionEffects.resolve(source.definitionId, action), actionEffects.playback);
+    // The asset fallback (reduced motion, no timeline) times a ranged attack's projectile and hit by the rules' landing too.
+    for (const { id, playback: spec } of landing && action === 'attack' ? landingPlan(planned, landing, MIN_FLIGHT_SECONDS, BEAM_FLIGHT_SECONDS) : planned) {
       if (queued.length >= MAX_QUEUED) return;
       queued.push({ at: clock + spec.delay, generation: owner, run: () => playEffect(id, spec, sourceId, targetId, owner, targetPoint, castPlan ? castEffectTuning(id) : effectCorrection(id)) });
     }
@@ -1533,6 +1541,7 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       return RENATA_LAUNCH_DELAY + RENATA_FLIGHT_SECONDS * share;
     };
     batch2Vfx.begin(events);
+    const landings = attackLandings(events);
     // Basic attacks that crit (CRIT_ATTACK_HIT): the rules deal an attack's damage on its own tick, so its packet is in this batch.
     const crits = new Set<string>();
     for (const event of events) if (event.type === 'packetDamage' && event.critical && event.delivery === 'basic-attack') crits.add(`${event.sourceId}>${event.targetId}@${event.tick}`);
@@ -1679,7 +1688,13 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
         continue;
       }
       // Observe even attacks covered by a cast's protected ending; the next visible swing needs their spacing.
-      if (event.type === 'attack') pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
+      // The rules' wind-up (11-19): the swing starts on attackWindup; its attack event (the launch) only adds the shot.
+      if (event.type === 'attackWindup') { windups.set(event.attackerId, event.launchTick); pieces.get(event.attackerId)?.attackCadence.observe(event.tick); }
+      else if (event.type === 'attackWindupCancelled') { windups.delete(event.attackerId); if ((tickOf(event) ?? latest) > latest - EFFECT_TICKS) ltk?.stopAction(event.attackerId, 'attack'); }
+      const launchOf = event.type === 'attack' ? attackLaunchOf(windups.get(event.attackerId), landings.has(attackKey(event.attackerId, event.tick)), event.tick) : undefined;
+      const launch = !!launchOf?.launch;
+      if (launch) windups.delete((event as { attackerId: string }).attackerId);
+      if (event.type === 'attack' && (!launch || launchOf?.swing)) pieces.get(event.attackerId)?.attackCadence.observe(event.tick);
       else if (event.type === 'cast') pieces.get(event.sourceId)?.attackCadence.pause();
       else if (event.type === 'movement') pieces.get(event.unitId)?.attackCadence.pause();
       // A unit struck by an ability's direct hit flashes white (a basic attack's hit does not: its spark is the
@@ -1693,14 +1708,21 @@ export const mountRenderer3d: MountRenderer3d = async (host, options) => {
       if (event.type === 'cast') {
         const source = pieces.get(event.sourceId); if (source) { source.castBranch = batch2Vfx.branch(event); source.castIndex = event.castIndex ?? 0; }
       }
-      for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
+      if (event.type === 'attackWindup') { for (const view of pieces.values()) view.state.consume({ type: 'attack', attackerId: event.attackerId } as unknown as AnimationEvent); }
+      else if (!launch || launchOf?.swing) for (const view of pieces.values()) view.state.consume(event as unknown as AnimationEvent);
       const tick = tickOf(event), current = tick === null || tick > latest - EFFECT_TICKS;
+      if (event.type === 'attackWindup') {
+        face(event.attackerId, event.targetId);
+        if (current && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, event.targetId, [event.targetId],
+          { landing: windupLanding(event) });
+      }
       if (event.type === 'attack') {
         const targets = planned.targets ?? [event.targetId];
         face(event.attackerId, targets[0]);
         // A holder holding someone up keeps its held pose (HolderPose); a backstop: the rules resolve no attack for Renni while
         // she holds (#737), and should one come it draws no swing.
-        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets, planned.variant, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
+        if (current && planned.fresh && !pieces.get(event.attackerId)?.holdPose.active) playAction('attack', event.attackerId, targets[0], targets,
+          { variant: planned.variant, landing: attackEventLanding(landings.get(attackKey(event.attackerId, event.tick)), launch) }, crits.has(`${event.attackerId}>${targets[0]}@${event.tick}`));
       }
       else if (event.type === 'cast') {
         if (planned.skipCast) continue;
